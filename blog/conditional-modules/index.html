@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <style>
+      body {
+        background-color: #1e2a38; /* Dark background */
+        color: #ffffff; /* Light text for readability */
+      }
+    </style>
+  </head>
+
+  <body>
+    <section class="section">
+      <div class="container">
+<h1 class="title">Conditional Configuration</h1>
+<p class="subtitle"><strong>2025-05-06</strong></p>
+<h2 id="conditional-configuration">Conditional Configuration</h2>
+<p>With options it's easy to conditionally install something based on if another program is enabled in your configuration.</p>
+<p>For example, if I have an option to enable or disable hyprland like this:</p>
+<pre data-lang="nix hyprland.nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix hyprland.nix "><code class="language-nix hyprland.nix" data-lang="nix hyprland.nix"><span>{
+</span><span>  pkgs,
+</span><span>  lib,
+</span><span>  config,
+</span><span>  inputs,
+</span><span>  ...
+</span><span>}: let
+</span><span>  cfg = config.custom.hyprland;
+</span><span>in {
+</span><span>  options.custom.hyprland = {
+</span><span>    enable = lib.mkOption {
+</span><span>      type = lib.types.bool;
+</span><span>      default = false;
+</span><span>      description = &quot;Enable hyprland module&quot;;
+</span><span>    };
+</span><span>  };
+</span><span>   config = lib.mkIf cfg.enable {
+</span><span>    home.packages = with pkgs; [
+</span><span>      # swww
+</span><span>      grim
+</span><span>      slurp
+</span><span>      wl-clipboard-rs
+</span><span>      cliphist
+</span><span>      swappy
+</span><span>      ydotool
+</span><span>      wpaperd
+</span><span>      wofi
+</span><span>      hyprpicker
+</span><span>      pavucontrol
+</span><span>      blueman
+</span><span>      # lxqt.lxqt-policykit
+</span><span>      brightnessctl
+</span><span>      polkit_gnome
+</span><span>      wlr-randr
+</span><span>      wtype
+</span><span>      rose-pine-cursor
+</span><span>      # nwg-look
+</span><span>      # yad
+</span><span>      # gtk-engine-murrine
+</span><span>    ];
+</span><span>
+</span><span># .. snip ..
+</span></code></pre>
+<ul>
+<li>
+<p>Since the above module is set to false, it is necessary to add <code>custom.hyprland.enable = true</code> to my <code>home.nix</code> to have Nix add it to my configuration. And since <code>home.packages</code> is wrapped in <code>config = lib.mkIf cfg.enable</code> Those packages will only be installed if the module is enabled.</p>
+</li>
+<li>
+<p>if I used <code>programs.hyprland.enable</code> and added <code>home.packages = [ pkgs.waybar ];</code> without conditionals, waybar would install even if hyprland was disabled.</p>
+</li>
+</ul>
+<p>I can then have my default for something like wlogout be to install only if the <code>custom.hyprland</code> module is enabled:</p>
+<pre data-lang="nix wlogout.nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix wlogout.nix "><code class="language-nix wlogout.nix" data-lang="nix wlogout.nix"><span>{
+</span><span>  config,
+</span><span>  lib,
+</span><span>  ...
+</span><span>}: let
+</span><span>  cfg = config.custom.wlogout;
+</span><span>in {
+</span><span>  options.custom.wlogout = {
+</span><span>    enable = lib.mkOption {
+</span><span>      type = lib.types.bool;
+</span><span>      default = config.custom.hyprland.enable;
+</span><span>      description = &quot;Enable wlogout module&quot;;
+</span><span>    };
+</span><span>  };
+</span><span>    config = lib.mkIf cfg.enable {
+</span><span>    programs.wlogout = {
+</span><span>      enable = true;
+</span><span>    }
+</span><span>    }
+</span><span># .. snip ..
+</span></code></pre>
+<ul>
+<li>The default value of <code>config.custom.wlogout.enable</code> is set to <code>config.custom.hyprland.enable</code>. Therefore, if <code>config.custom.hyprland.enable</code> evaluates to true, the wlogout module will be enabled by default.</li>
+</ul>
+<p>The <code>lib.mkIf cfg.enable</code> ensures that wlogout’s configuration (e.g., enabling <code>programs.wlogout</code>) is only applied when <code>custom.wlogout.enable = true</code>, which defaults to <code>custom.hyprland.enable</code>. This means wlogout is enabled by default only if Hyprland is enabled, but I can override this (e.g., <code>custom.wlogout.enable = true</code> without Hyprland). This conditional logic prevents wlogout from being installed unnecessarily when Hyprland is disabled, unlike a simpler approach like <code>programs.wlogout.enable = config.programs.hyprland.enable</code>, which hardcodes the dependency and offers less flexibility.</p>
+ </div>
+    </section>
+  </body>
+</html>
