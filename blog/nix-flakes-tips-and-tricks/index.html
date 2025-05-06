@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <style>
+      body {
+        background-color: #1e2a38; /* Dark background */
+        color: #ffffff; /* Light text for readability */
+      }
+    </style>
+  </head>
+
+  <body>
+    <section class="section">
+      <div class="container">
+<h1 class="title">Nix Flakes Tips and Tricks</h1>
+<p class="subtitle"><strong>2025-05-06</strong></p>
+<h3 id="nix-flake-tips-and-tricks">Nix Flake Tips and Tricks</h3>
+<ol>
+<li>Shallow clone nixpkgs, the full Git history isn't always necessary and this can speed up build times.</li>
+</ol>
+<ul>
+<li>The only issue I've had is <code>nix-index-database</code> not working well with the shallow clone... Other than that no issues after running for a few months.</li>
+</ul>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#f29718;">inputs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">nixpkgs</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;git+https://github.com/NixOS/nixpkgs?shallow=1&amp;ref=nixos-unstable&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>}</span><span style="color:#ff3333;">;
+</span></code></pre>
+<ul>
+<li>Some times when you might need a full clone are debugging and working with repository history
+but those are rare.</li>
+</ul>
+<ol start="2">
+<li>Importing your non-flake wallpapers repo:</li>
+</ol>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#f29718;">inputs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">wallpapers </span><span style="color:#f29668;">= </span><span>{
+</span><span>      </span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;git+ssh://git@github.com/TSawyer87/wallpapers.git&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>      </span><span style="color:#ffb454;">flake </span><span style="color:#f29668;">= </span><span style="color:#f29718;">false</span><span style="color:#bfbab0cc;">;
+</span><span>    }</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>After adding the input I can access individual wallpapers by adding the <code>inputs</code> argument and
+something like <code>path = "${inputs.wallpapers}/Aesthetic Scenery.jpg";</code></li>
+</ul>
+<ol start="3">
+<li>Understanding <code>@-patterns</code>, being able to reference your outputs argument set as a whole. An
+<code>@-pattern</code> is a way for a function can access variadic attributes (i.e. varying number of
+arguments).</li>
+</ol>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#f29718;">inputs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;github:nix-community/home-manager/master&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">inputs</span><span>.</span><span style="color:#ffb454;">nixpkgs</span><span>.</span><span style="color:#ffb454;">follows </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;nixpkgs&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">stylix</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;github:danth/stylix&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>}</span><span style="color:#ff3333;">;
+</span><span style="color:#f29718;">outputs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>    </span><span style="color:#f29718;">self</span><span style="color:#f29668;">,
+</span><span>    </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">,
+</span><span>    </span><span style="color:#f29718;">home-manager</span><span style="color:#f29668;">,
+</span><span>} @ </span><span style="color:#f29718;">inputs</span><span>:
+</span></code></pre>
+<p>With the above example to add the modules to your nixosConfigurations you would add something
+like this:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#f29718;">nixosConfigurations</span><span style="color:#f29668;">.</span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">host</span><span style="font-style:italic;color:#bfbab0;">} </span><span style="color:#ff3333;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">lib</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosSystem </span><span>{
+</span><span>  </span><span style="color:#ff7733;">inherit </span><span style="color:#ffb454;">system</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">specialArgs </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ff7733;">inherit </span><span style="color:#ffb454;">inputs username host email systemSettings</span><span style="color:#bfbab0cc;">;
+</span><span>}</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ffb454;">modules </span><span style="color:#f29668;">= </span><span>[
+</span><span>  </span><span style="color:#c2d94c;">./hosts</span><span style="color:#f29668;">/</span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">host</span><span style="font-style:italic;color:#bfbab0;">}</span><span style="color:#c2d94c;">/config.nix
+</span><span>  </span><span style="color:#f29718;">inputs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">stylix</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosModules</span><span style="color:#f29668;">.</span><span style="color:#f29718;">stylix
+</span><span>  </span><span style="color:#f29718;">home-manager</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosModules</span><span style="color:#f29668;">.</span><span style="color:#f29718;">home-manager
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># .. snip ..
+</span><span>]</span><span style="color:#bfbab0cc;">;
+</span></code></pre>
+<ul>
+<li>Notice that since home-manager was explicitly listed in the outputs arguments:
+<code>outputs = { self, nixpkgs, home-manager, }; </code> the <code>inputs</code> prefix is unnecessary.
+If home-manager was removed from the outputs arguments: <code>outputs = { self, ... }</code>
+then you would need <code>modules = [ inputs.home-manager.nixosModules.home-manager];</code> This can be confusing
+because many docs assume your not using an @-pattern so if you have one in your flake you need to prefix
+with <code>inputs</code>. I use this to reference my personal wallpapers repo mentioned earlier.</li>
+</ul>
+<ol start="4">
+<li>Understanding <code>specialArgs</code> (nixos) and <code>extraSpecialArgs</code> (home-manager). Building on the @-patterns, using
+<code>specialArgs</code> and <code>extraSpecialArgs</code> is a way to pass arguments from your flake to your NixOS and home-manager
+modules.</li>
+</ol>
+<p>For example, here is a snippet of some variables I set:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#f29718;">outputs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>  </span><span style="color:#f29718;">self</span><span style="color:#f29668;">,
+</span><span>  </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">,
+</span><span>  </span><span style="color:#f29718;">home-manager</span><span style="color:#f29668;">,
+</span><span>  </span><span style="color:#f29668;">...
+</span><span>} @ </span><span style="color:#f29718;">inputs</span><span>: </span><span style="color:#ff7733;">let
+</span><span>  </span><span style="color:#ffb454;">system </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;x86_64-linux&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">host </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;magic&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">username </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;jr&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">userVars </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">timezone </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;America/New_York&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">locale </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;en_US.UTF-8&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">gitUsername </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;TSawyer87&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">dotfilesDir </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;~/.dotfiles&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">wm </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;hyprland&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">browser </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;firefox&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">term </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;ghostty&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">editor </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;hx&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">keyboardLayout </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;us&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ff7733;">in
+</span></code></pre>
+<p>Now I can pass them as special args like this:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#f29718;">nixosConfigurations </span><span style="color:#ff3333;">= </span><span>{
+</span><span>      </span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">host</span><span style="font-style:italic;color:#bfbab0;">} </span><span style="color:#f29668;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">lib</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosSystem </span><span>{
+</span><span>        </span><span style="color:#ff7733;">inherit </span><span style="color:#ffb454;">system</span><span style="color:#bfbab0cc;">;
+</span><span>        </span><span style="color:#ffb454;">specialArgs </span><span style="color:#f29668;">= </span><span>{
+</span><span>          </span><span style="color:#ff7733;">inherit
+</span><span>            </span><span style="color:#ffb454;">inputs
+</span><span>            </span><span style="color:#ffb454;">username
+</span><span>            </span><span style="color:#ffb454;">system
+</span><span>            </span><span style="color:#ffb454;">host
+</span><span>            </span><span style="color:#ffb454;">userVars
+</span><span>            </span><span style="color:#bfbab0cc;">;
+</span><span>        }</span><span style="color:#bfbab0cc;">;
+</span><span>        </span><span style="color:#ffb454;">modules </span><span style="color:#f29668;">= </span><span>[
+</span><span>        </span><span style="color:#c2d94c;">./hosts</span><span style="color:#f29668;">/</span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">host</span><span style="font-style:italic;color:#bfbab0;">}</span><span style="color:#c2d94c;">/configuration.nix
+</span><span>        </span><span style="color:#f29718;">home-manager</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosModules</span><span style="color:#f29668;">.</span><span style="color:#f29718;">home-manager
+</span><span>        </span><span style="color:#f29718;">inputs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">stylix</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosModules</span><span style="color:#f29668;">.</span><span style="color:#f29718;">stylix
+</span><span>        {
+</span><span>          </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">useGlobalPkgs </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>          </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">useUserPackages </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>          </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">users</span><span>.</span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">username</span><span style="font-style:italic;color:#bfbab0;">} </span><span style="color:#f29668;">= </span><span style="color:#f07178;">import </span><span style="color:#c2d94c;">./hosts</span><span style="color:#f29668;">/</span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">host</span><span style="font-style:italic;color:#bfbab0;">}</span><span style="color:#c2d94c;">/home.nix</span><span style="color:#bfbab0cc;">;
+</span><span>          </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">backupFileExtension </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;backup&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>          </span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">extraSpecialArgs </span><span style="color:#f29668;">= </span><span>{
+</span><span>            </span><span style="color:#ff7733;">inherit
+</span><span>              </span><span style="color:#ffb454;">inputs
+</span><span>              </span><span style="color:#ffb454;">username
+</span><span>              </span><span style="color:#ffb454;">system
+</span><span>              </span><span style="color:#ffb454;">host
+</span><span>              </span><span style="color:#ffb454;">userVars
+</span><span>              </span><span style="color:#bfbab0cc;">;
+</span><span>          }</span><span style="color:#bfbab0cc;">;
+</span><span>        }
+</span><span>      ]</span><span style="color:#bfbab0cc;">;
+</span></code></pre>
+<ul>
+<li>To access values in <code>userVars</code> for example:</li>
+</ul>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># git.nix
+</span><span>{ </span><span style="color:#f29718;">userVars</span><span style="color:#f29668;">, ... </span><span>}: {
+</span><span>  </span><span style="color:#ffb454;">programs </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">git </span><span style="color:#f29668;">= </span><span>{
+</span><span>      </span><span style="color:#ffb454;">enable </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>      </span><span style="color:#ffb454;">userName </span><span style="color:#f29668;">= </span><span style="color:#f29718;">userVars</span><span style="color:#f29668;">.</span><span style="color:#f29718;">gitUsername</span><span style="color:#bfbab0cc;">;
+</span><span>    }</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ol start="5">
+<li>Set up <code>checks</code> and <code>formatter</code> outputs with <code>treefmt-nix</code>. Add <code>treefmt-nix</code> to your inputs and outputs arguments.
+Inside the <code>let</code> expression from tip 4 I would add:</li>
+</ol>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#ff7733;">let
+</span><span style="font-style:italic;color:#5c6773;"># ... snip ...
+</span><span style="color:#ffb454;">pkgs </span><span style="color:#f29668;">= </span><span style="color:#f07178;">import </span><span style="color:#f29718;">nixpkgs </span><span>{
+</span><span>  </span><span style="color:#ff7733;">inherit </span><span style="color:#ffb454;">system</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">config</span><span>.</span><span style="color:#ffb454;">allowUnfree </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>}</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ffb454;">treefmtEval </span><span style="color:#f29668;">= </span><span style="color:#f29718;">treefmt-nix</span><span style="color:#f29668;">.</span><span style="color:#f29718;">lib</span><span style="color:#f29668;">.</span><span style="color:#f29718;">evalModule pkgs </span><span style="color:#c2d94c;">./treefmt.nix</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ff7733;">in
+</span><span>{
+</span><span>  </span><span style="color:#ffb454;">checks</span><span>.</span><span style="color:#ffb454;">x86_64-linux</span><span>.</span><span style="color:#ffb454;">style </span><span style="color:#f29668;">= </span><span style="color:#f29718;">treefmtEval</span><span style="color:#f29668;">.</span><span style="color:#f29718;">config</span><span style="color:#f29668;">.</span><span style="color:#f29718;">build</span><span style="color:#f29668;">.</span><span style="color:#f29718;">check self</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffb454;">formatter</span><span>.</span><span style="color:#ffb454;">x86_64-linux </span><span style="color:#f29668;">= </span><span style="color:#f29718;">treefmtEval</span><span style="color:#f29668;">.</span><span style="color:#f29718;">config</span><span style="color:#f29668;">.</span><span style="color:#f29718;">build</span><span style="color:#f29668;">.</span><span style="color:#f29718;">wrapper</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># ... snip ...
+</span><span>}
+</span></code></pre>
+<p>And in the <code>treefmt.nix</code>:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># treefmt.nix
+</span><span>{
+</span><span style="color:#ffb454;">projectRootFile </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;flake.nix&quot;</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ffb454;">programs </span><span style="color:#f29668;">= </span><span>{
+</span><span>  </span><span style="color:#ffb454;">deadnix</span><span>.</span><span style="color:#ffb454;">enable </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">statix</span><span>.</span><span style="color:#ffb454;">enable </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">keep-sorted</span><span>.</span><span style="color:#ffb454;">enable </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">nixfmt </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">enable </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">strict </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>}</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ffb454;">settings</span><span>.</span><span style="color:#ffb454;">excludes </span><span style="color:#f29668;">= </span><span>[
+</span><span>  </span><span style="color:#c2d94c;">&quot;*.age&quot;
+</span><span>  </span><span style="color:#c2d94c;">&quot;*.jpg&quot;
+</span><span>  </span><span style="color:#c2d94c;">&quot;*.nu&quot;
+</span><span>  </span><span style="color:#c2d94c;">&quot;*.png&quot;
+</span><span>  </span><span style="color:#c2d94c;">&quot;.jj/*&quot;
+</span><span>  </span><span style="color:#c2d94c;">&quot;flake.lock&quot;
+</span><span>  </span><span style="color:#c2d94c;">&quot;justfile&quot;
+</span><span>]</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ffb454;">settings</span><span>.</span><span style="color:#ffb454;">formatter </span><span style="color:#f29668;">= </span><span>{
+</span><span>  </span><span style="color:#ffb454;">deadnix </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">priority </span><span style="color:#f29668;">= </span><span style="color:#f29718;">1</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffb454;">statix </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">priority </span><span style="color:#f29668;">= </span><span style="color:#f29718;">2</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffb454;">nixfmt </span><span style="color:#f29668;">= </span><span>{
+</span><span>    </span><span style="color:#ffb454;">priority </span><span style="color:#f29668;">= </span><span style="color:#f29718;">3</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>}</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>
+<p>Use <code>treefmt-nix</code> to manage code formatters and linters as flake outputs. This ensures consistent styling
+and catches issues with tools like <code>deadnix</code>, <code>statix</code>, and <code>nixfmt</code>.</p>
+</li>
+<li>
+<p>Use <code>nix fmt</code> in the flake directory to format your whole configuration.</p>
+</li>
+<li>
+<p>Now you can run <code>nix flake check</code> to run your checks. Running <code>nix flake show</code> will list your outputs.</p>
+</li>
+<li>
+<p>Tools like <code>nix-fast-build</code> rely on flake checks and can be used after setting this up.</p>
+</li>
+</ul>
+<ol start="6">
+<li>Make a devShell output:</li>
+</ol>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span> </span><span style="color:#ff3333;">in
+</span><span>    {
+</span><span>      </span><span style="color:#ffb454;">checks</span><span>.</span><span style="color:#ffb454;">x86_64-linux</span><span>.</span><span style="color:#ffb454;">style </span><span style="color:#f29668;">= </span><span style="color:#f29718;">treefmtEval</span><span style="color:#f29668;">.</span><span style="color:#f29718;">config</span><span style="color:#f29668;">.</span><span style="color:#f29718;">build</span><span style="color:#f29668;">.</span><span style="color:#f29718;">check self</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>      </span><span style="color:#ffb454;">formatter</span><span>.</span><span style="color:#ffb454;">x86_64-linux </span><span style="color:#f29668;">= </span><span style="color:#f29718;">treefmtEval</span><span style="color:#f29668;">.</span><span style="color:#f29718;">config</span><span style="color:#f29668;">.</span><span style="color:#f29718;">build</span><span style="color:#f29668;">.</span><span style="color:#f29718;">wrapper</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>      </span><span style="color:#ffb454;">devShells</span><span>.</span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">system</span><span style="font-style:italic;color:#bfbab0;">}</span><span>.</span><span style="color:#ffb454;">default </span><span style="color:#f29668;">= </span><span style="color:#f07178;">import </span><span style="color:#c2d94c;">./lib/dev-shell.nix </span><span>{ </span><span style="color:#ff7733;">inherit </span><span style="color:#ffb454;">inputs</span><span style="color:#bfbab0cc;">; </span><span>}</span><span style="color:#bfbab0cc;">;
+</span></code></pre>
+<p>and in the <code>dev-shell.nix</code> you could put something like this:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># dev-shell.nix
+</span><span>{
+</span><span>  </span><span style="color:#f29718;">inputs</span><span style="color:#f29668;">,
+</span><span>  </span><span style="color:#f29718;">system </span><span style="color:#f29668;">? </span><span style="color:#c2d94c;">&quot;x86_64-linux&quot;</span><span style="color:#f29668;">,
+</span><span>}:
+</span><span style="color:#ff7733;">let
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Instantiate nixpkgs with the given system and allow unfree packages
+</span><span>  </span><span style="color:#ffb454;">pkgs </span><span style="color:#f29668;">= </span><span style="color:#f07178;">import </span><span style="color:#f29718;">inputs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixpkgs </span><span>{
+</span><span>    </span><span style="color:#ff7733;">inherit </span><span style="color:#ffb454;">system</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">config</span><span>.</span><span style="color:#ffb454;">allowUnfree </span><span style="color:#f29668;">= </span><span style="color:#f29718;">true</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="color:#ffb454;">overlays </span><span style="color:#f29668;">= </span><span>[
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># Add overlays if needed, e.g., inputs.neovim-nightly-overlay.overlays.default
+</span><span>    ]</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ff7733;">in
+</span><span style="color:#f29718;">pkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">mkShell </span><span>{
+</span><span>  </span><span style="color:#ffb454;">name </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;nixos-dev&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">packages </span><span style="color:#f29668;">= </span><span style="color:#ff7733;">with </span><span style="color:#f29718;">pkgs</span><span>; [
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Nix tools
+</span><span>    </span><span style="color:#f29718;">nixfmt-rfc-style </span><span style="font-style:italic;color:#5c6773;"># Formatter
+</span><span>    </span><span style="color:#f29718;">deadnix </span><span style="font-style:italic;color:#5c6773;"># Dead code detection
+</span><span>    </span><span style="color:#f29718;">nixd </span><span style="font-style:italic;color:#5c6773;"># Nix language server
+</span><span>    </span><span style="color:#f29718;">nil </span><span style="font-style:italic;color:#5c6773;"># Alternative Nix language server
+</span><span>    </span><span style="color:#f29718;">nh </span><span style="font-style:italic;color:#5c6773;"># Nix helper
+</span><span>    </span><span style="color:#f29718;">nix-diff </span><span style="font-style:italic;color:#5c6773;"># Compare Nix derivations
+</span><span>    </span><span style="color:#f29718;">nix-tree </span><span style="font-style:italic;color:#5c6773;"># Visualize Nix dependencies
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Code editing
+</span><span>    </span><span style="color:#f29718;">helix
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># General utilities
+</span><span>    </span><span style="color:#f29718;">git
+</span><span>    </span><span style="color:#f29718;">ripgrep
+</span><span>    </span><span style="color:#f29718;">jq
+</span><span>    </span><span style="color:#f29718;">tree
+</span><span>  ]</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffb454;">shellHook </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&#39;&#39;
+</span><span style="color:#c2d94c;">    echo &quot;Welcome to the NixOS development shell!&quot;
+</span><span style="color:#c2d94c;">    echo &quot;System: </span><span style="font-style:italic;color:#bfbab0;">${</span><span style="font-style:italic;color:#f29718;">system</span><span style="font-style:italic;color:#bfbab0;">}</span><span style="color:#c2d94c;">&quot;
+</span><span style="color:#c2d94c;">    echo &quot;Tools available: nixfmt, deadnix, nixd, nil, nh, nix-diff, nix-tree, helix, git, ripgrep, jq, tree&quot;
+</span><span style="color:#c2d94c;">  &#39;&#39;</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>You can enter this devshell with <code>nix develop</code> or automatically with <code>direnv</code>.</li>
+</ul>
+ </div>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <style>
+      body {
+        background-color: #1e2a38; /* Dark background */
+        color: #ffffff; /* Light text for readability */
+      }
+    </style>
+  </head>
+
+  <body>
+    <section class="section">
+      <div class="container">
+<h1 class="title">Nix Flakes Explained</h1>
+<p class="subtitle"><strong>2025-05-05</strong></p>
+<h3 id="nix-flakes-for-nixos-configuration-explained">Nix Flakes For NixOS Configuration Explained</h3>
+<ul>
+<li>
+<p>This is more intended to highlight some common gotchas and places of confusion for beginners than to be a complete guide.</p>
+</li>
+<li>
+<p>You can think of the <code>flake.nix</code> as an entry point and a way of acquiring dependencies (<code>inputs</code>) that are required for evaluation.</p>
+</li>
+<li>
+<p>A flake is simply a source tree (e.g. git repo) containing a <code>flake.nix</code> that provides a standardized interface to Nix artifacts (e.g. packages, modules)</p>
+</li>
+<li>
+<p>Attribute sets are all over Nix Code, they are simply name value pairs wrapped in curly braces:</p>
+</li>
+</ul>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ff7733;">let
+</span><span>  </span><span style="color:#ffb454;">my_attrset </span><span style="color:#f29668;">= </span><span>{ </span><span style="color:#ffb454;">foo </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;bar&quot;</span><span style="color:#bfbab0cc;">; </span><span>}</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ff7733;">in </span><span style="color:#f29718;">my_attrset</span><span style="color:#f29668;">.</span><span style="color:#f29718;">foo
+</span></code></pre>
+<p>Output: <code>"bar"</code></p>
+<ul>
+<li>
+<p>Note: <code>{}</code> is a valid attribute set in Nix.</p>
+</li>
+<li>
+<p>Flakes have what are called top-level attributes (i.e. you can access them without using dot notation). Some top-level attributes are <code>inputs</code>, <code>outputs</code>, and <code>nixConfig</code>.</p>
+</li>
+<li>
+<p>Flake commands are space separation for subcommands like this: <code>nix build</code>, the older cli commands are written with a hyphen <code>nix-build</code>.</p>
+</li>
+</ul>
+<p>Basic Flake Structure:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
+</span><span>  </span><span style="color:#ffb454;">description </span><span style="color:#f29668;">= </span><span style="color:#f29718;">package description
+</span><span>  </span><span style="color:#f29718;">inputs </span><span style="color:#ff3333;">= </span><span style="color:#f29718;">dependencies
+</span><span>  </span><span style="color:#f29718;">outputs </span><span style="color:#ff3333;">= </span><span style="color:#f29718;">what the flake produces
+</span><span>  </span><span style="color:#f29718;">nixConfig </span><span style="color:#ff3333;">= </span><span style="color:#f29718;">advanced configuration options
+</span><span style="color:#ff3333;">}
+</span></code></pre>
+<ul>
+<li>The <code>flake.nix</code> file must contain an attribute set with one required attribute - <code>outputs</code> - and optionally <code>description</code> and <code>inputs</code>.</li>
+</ul>
+<h4 id="inputs">Inputs</h4>
+<ul>
+<li>
+<p>You can think of <code>inputs</code> as the dependencies this flake relies on.</p>
+</li>
+<li>
+<p><code>inputs</code>: An attribute set specifying the dependencies of the flake where the keys are the names of your flakes dependencies, and the values are references to those other flakes. To access something from a dependency, you would typically go through <code>inputs</code> (i.e. <code>inputs.helix.packages</code>)</p>
+</li>
+</ul>
+<p>The following specifies a dependency on the <code>nixpkgs</code> and <code>import-cargo</code> repositories:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#f29718;">inputs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>  </span><span style="color:#ffb454;">import-cargo</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;github:edolstra/import-cargo&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">nixpkgs</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;nixpkgs&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>
+<p>Each input is fetched, evaluated and passed to the <code>outputs</code> function as a set of attributes with the same name as the corresponding input.</p>
+<ul>
+<li>
+<p>The special input <code>self</code> refers to the outputs and source tree of <em>this flake</em>.</p>
+</li>
+<li>
+<p>Each input is fetched, evaluated and passed to the <code>outputs</code> function as a set of attributes with the same name as the corresponding input.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="outputs">Outputs</h4>
+<ul>
+<li>
+<p>You can think of outputs as the things your flake provides (i.e. Your configuration, packages, devShells, derivations)</p>
+</li>
+<li>
+<p>Flakes can provide arbitrary Nix values, such as packages, NixOS modules or library functions. These are called <em>outputs</em>. Some outputs have special meaning to certain Nix commands and therefore must be a specific type. If you look at the <a href="https://nixos.wiki/wiki/Flakes">output schema</a> you'll see that most expect a derivation</p>
+</li>
+</ul>
+<p>Show your flakes outputs with:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#f29718;">nix flake show
+</span></code></pre>
+<p>This command actually takes a flake URI and prints all the outputs of the flake as a nice tree structure, mapping attribute paths to the types of values.</p>
+<ul>
+<li>
+<p>Beginners might initially think that <code>self</code> and <code>nixpkgs</code> within the <code>outputs = { self, nixpkgs, ... }</code> definition are the 'outputs' themselves. However, these are actually the <em>input arguments</em> (which are often called <em>output arguments</em>) to the <code>outputs</code> function. This distinction is key to grasping the outputs of a flake.</p>
+</li>
+<li>
+<p>Remember that the <code>outputs</code> function itself takes a single argument, which is an attribute set. Even though it looks like multiple arguments <code>{ self, nixpkgs, ... }</code>, this syntax in Nix is destructuring that single input attribute set to extract its individual fields.</p>
+</li>
+<li>
+<p><code>self</code> is a way to reference "this" flake. You could use <code>self.inputs</code> to access the <code>inputs</code> top-level attribute. The <code>outputs</code> function always receives an argument conventionally named <code>self</code>. This argument is a reference to the flake itself including all of it's top-level attributes. You typically use <code>self</code> to refer to things within your own flake. (i.e. <code>self.packages.my-package</code>)</p>
+</li>
+</ul>
+<blockquote>
+<p>[!NOTE]: The <code>...</code> syntax is for variadic attributes, (i.e. a varying number of attributes). If you notice most flakes have many more inputs than are explicitly listed in the <em>input arguments</em> this is possible because of variadic attributes.</p>
+</blockquote>
+<p>In the following example <code>c = 2</code> is an extra attribute:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#f29718;">mul </span><span style="color:#ff3333;">= </span><span>{ </span><span style="color:#f29718;">a</span><span style="color:#f29668;">, </span><span style="color:#f29718;">b</span><span style="color:#f29668;">, ... </span><span>}: </span><span style="color:#f29718;">a</span><span style="color:#f29668;">*</span><span style="color:#f29718;">b
+</span><span style="color:#f29718;">mul </span><span>{ </span><span style="color:#ffb454;">a </span><span style="color:#f29668;">= </span><span style="color:#f29718;">3</span><span style="color:#bfbab0cc;">; </span><span style="color:#ffb454;">b </span><span style="color:#f29668;">= </span><span style="color:#f29718;">4</span><span style="color:#bfbab0cc;">; </span><span style="color:#ffb454;">c </span><span style="color:#f29668;">= </span><span style="color:#f29718;">2</span><span style="color:#bfbab0cc;">; </span><span>}
+</span></code></pre>
+<p>However, in the function body you cannot access the "c" attribute. The solution is to give a name to the given set with the @-pattern:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#f29718;">nix-repl</span><span style="color:#f29668;">&gt; </span><span style="color:#f29718;">mul </span><span style="color:#ff3333;">= </span><span style="color:#f29718;">s</span><span>@{ </span><span style="color:#f29718;">a</span><span style="color:#f29668;">, </span><span style="color:#f29718;">b</span><span style="color:#f29668;">, ... </span><span>}: </span><span style="color:#f29718;">a</span><span style="color:#f29668;">*</span><span style="color:#f29718;">b</span><span style="color:#f29668;">*</span><span style="color:#f29718;">s</span><span style="color:#f29668;">.</span><span style="color:#f29718;">c  </span><span style="font-style:italic;color:#5c6773;"># s.c = 2
+</span><span style="color:#f29718;">nix-repl</span><span style="color:#f29668;">&gt; </span><span style="color:#f29718;">mul </span><span>{ </span><span style="color:#ffb454;">a </span><span style="color:#f29668;">= </span><span style="color:#f29718;">3</span><span style="color:#bfbab0cc;">; </span><span style="color:#ffb454;">b </span><span style="color:#f29668;">= </span><span style="color:#f29718;">4</span><span style="color:#bfbab0cc;">; </span><span style="color:#ffb454;">c </span><span style="color:#f29668;">= </span><span style="color:#f29718;">2</span><span style="color:#bfbab0cc;">; </span><span>}
+</span><span style="color:#f29718;">24
+</span></code></pre>
+<ul>
+<li>
+<p><code>@-patterns</code> in the <code>outputs</code> function argument list provides a convenient way to bind the entire attribute set to a name (i.e. <code>outputs = { pkgs, ... } @ inputs</code>).</p>
+</li>
+<li>
+<p>When you write <code>outputs = { pkgs, ... } @ inputs</code>, it does the following:</p>
+<ul>
+<li>
+<p>Destructures the input attribute set: It tries to extract the value associated with the key <code>pkgs</code> from the input attribute set and bind it to the variable <code>pkgs</code>. The <code>...</code> allows for other keys in the input attr set to be ignored in this direct destructuring.</p>
+</li>
+<li>
+<p>Binds the entire attribute set to <code>inputs</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
+</span><span>  </span><span style="color:#ffb454;">inputs</span><span>.</span><span style="color:#ffb454;">nixpkgs</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">github:NixOS/nixpkgs/nixos-unstable</span><span style="color:#bfbab0cc;">;
+</span><span>  </span><span style="color:#ffb454;">inputs</span><span>.</span><span style="color:#ffb454;">home-manager</span><span>.</span><span style="color:#ffb454;">url </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">github:nix-community/home-manager</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># outputs is a function that takes an attribute set that returns an
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># attribute set (e.g. outputs multiple values)
+</span><span>  </span><span style="color:#ffb454;">outputs </span><span style="color:#f29668;">= </span><span>{ </span><span style="color:#f29718;">self</span><span style="color:#f29668;">, </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">, ... </span><span>}@</span><span style="color:#f29718;">attrs</span><span>: {
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># a `packages` output
+</span><span>    </span><span style="color:#ffb454;">packages</span><span>.</span><span style="color:#ffb454;">x86_64-linux</span><span>.</span><span style="color:#ffb454;">hello </span><span style="color:#f29668;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">legacyPackages</span><span style="color:#f29668;">.</span><span style="color:#f29718;">x86_64-linux</span><span style="color:#f29668;">.</span><span style="color:#f29718;">hello</span><span style="color:#bfbab0cc;">;
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Below is the nixosConfigurations output (e.g. your NixOs configuration)
+</span><span>    </span><span style="color:#ffb454;">nixosConfigurations</span><span>.</span><span style="color:#ffb454;">fnord </span><span style="color:#f29668;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">lib</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosSystem </span><span>{
+</span><span>      </span><span style="color:#ffb454;">system </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;x86_64-linux&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>      </span><span style="color:#ffb454;">specialArgs </span><span style="color:#f29668;">= </span><span style="color:#f29718;">attrs</span><span style="color:#bfbab0cc;">;
+</span><span>      </span><span style="color:#ffb454;">modules </span><span style="color:#f29668;">= </span><span>[ </span><span style="color:#c2d94c;">./configuration.nix </span><span>]</span><span style="color:#bfbab0cc;">;
+</span><span>    }</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>
+<p>Flakes promise that the outputs of a flake should be the same regardless of the evaluator's environment. Because of this, all flake outputs that have anything to do with packages must specify the platform explicitly in some way.</p>
+<ul>
+<li>
+<p>Platform is a combination of architecture and OS. (e.g. <code>x86_64-linux</code>).</p>
+</li>
+<li>
+<p><code>legacyPackages</code> is designed specifically for nixpkgs. It makes it possible to work with <code>nixpkgs</code> arbitrary attribute format from older packages. What this means is that <code>nixpkgs</code> traditionally organizes packages directly under the top level (e.g. <code>pkgs.hello</code>), and <code>legacyPackages</code> provides a consistent platform-aware way to access these within the flake's structured output format.</p>
+</li>
+<li>
+<p>To expand further, Flakes enforce a more structured way of organizing outputs. For package outputs, the expected schema typically has the platform specification as a top-level attribute (i.e. <code>packages.x86_64-linux.my-package</code>). This ensures that when you ask a flake for a package, it's clear which platform the package is intended for. It's kind of like an API for flakes and legacy packages to be able to work together.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>Flakes take a sole argument which is another point of confusion, how is it a sole argument if im passing <code>{ self, nixpkgs, ... }</code>? This syntax is actually shorthand for a single argument that is an attribute set.</p>
+<ul>
+<li>Remember, a valid attribute set in nix is <code>{}</code>. <code>{ a = 1; }</code> is an attribute set with a single value. An attribute set is simply a set of name value pairs wrapped in curly braces.(e.g. <code>{self, nixpkgs, ... }</code>). Notice also that in the <em>inputs arguments</em> commas are used and everywhere else uses semicolon <code>;</code></li>
+</ul>
+</li>
+<li>
+<p>Outputs (of the Flake): Refers to the attribute set that is returned by the <code>outputs</code> function.</p>
+</li>
+<li>
+<p>To recap the <code>outputs</code> function takes an attribute set as its argument and returns an attribute set.</p>
+</li>
+<li>
+<p>I already covered that <code>nixosConfigurations</code> outputs your NixOS configuration, there can be many other types of outputs explained below.</p>
+</li>
+</ul>
+<h3 id="imports">Imports</h3>
+<ul>
+<li>
+<p>You can think of <code>import</code> as "evaluate the Nix expression in this file" and return its value.</p>
+</li>
+<li>
+<p>The <code>import</code> function in Nix takes a path (usually a string representating a file or directory i.e. <code>./lib/dev-shell.nix</code>) and evaluates the Nix expression found at that location.</p>
+</li>
+<li>
+<p>One point of confusion is the following:</p>
+</li>
+</ul>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
+</span><span>  </span><span style="color:#ffb454;">outputs </span><span style="color:#f29668;">= </span><span>{ </span><span style="color:#f29718;">self</span><span style="color:#f29668;">, </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">, ... </span><span>}: {
+</span><span>    </span><span style="color:#ffb454;">nixosConfigurations</span><span>.</span><span style="color:#ffb454;">my-system </span><span style="color:#f29668;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">lib</span><span style="color:#f29668;">.</span><span style="color:#f29718;">nixosSystem </span><span>{
+</span><span>      </span><span style="color:#ffb454;">system </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;x86_64-linux&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>      </span><span style="color:#ffb454;">modules </span><span style="color:#f29668;">= </span><span>[
+</span><span>        </span><span style="color:#c2d94c;">./modules/base.nix
+</span><span>        (</span><span style="color:#f07178;">import </span><span style="color:#c2d94c;">./modules/desktop.nix </span><span>{ </span><span style="color:#ffb454;">pkgs </span><span style="color:#f29668;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#bfbab0cc;">; </span><span>})
+</span><span>      ]</span><span style="color:#bfbab0cc;">;
+</span><span>    }</span><span style="color:#bfbab0cc;">;
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>With <code>(import ./modules/desktop.nix { pkgs = nixpkgs; })</code> you're actually saying import the file at this location but also export <code>nixpkgs</code> to said file to make it available.</li>
+</ul>
+<p>When you see:</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ff7733;">let
+</span><span>  </span><span style="color:#ffb454;">myHelpers </span><span style="color:#f29668;">= </span><span style="color:#f07178;">import </span><span style="color:#c2d94c;">./lib/my-helpers.nix </span><span>{ </span><span style="color:#ffb454;">pkgs </span><span style="color:#f29668;">= </span><span style="color:#f29718;">nixpkgs</span><span style="color:#bfbab0cc;">; </span><span>}</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ff7733;">in
+</span></code></pre>
+<p>You are:</p>
+<ol>
+<li>
+<p>Importing the Nix expression from <code>./lib/my-helpers.nix</code></p>
+</li>
+<li>
+<p>Passing an attribute set <code>{ pkgs = nixpkgs; }</code> as an argument to the evaluated expression in the imported file.</p>
+</li>
+</ol>
+<p>Inside <code>lib/my-helpers.nix</code>, there will likely be a function definiton that expects an argument (often also named <code>pkgs</code> by convention):</p>
+<pre data-lang="nix" style="background-color:#0f1419;color:#bfbab0;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># ./lib/my-helpers.nix
+</span><span>{ </span><span style="color:#f29718;">pkgs </span><span>}:
+</span><span style="color:#ff7733;">let
+</span><span>  </span><span style="color:#ffb454;">myPackage </span><span style="color:#f29668;">= </span><span style="color:#f29718;">pkgs</span><span style="color:#f29668;">.</span><span style="color:#f29718;">stdenv</span><span style="color:#f29668;">.</span><span style="color:#f29718;">mkDerivation </span><span>{
+</span><span>    </span><span style="color:#ffb454;">name </span><span style="color:#f29668;">= </span><span style="color:#c2d94c;">&quot;my-package&quot;</span><span style="color:#bfbab0cc;">;
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># ...
+</span><span>  }</span><span style="color:#bfbab0cc;">;
+</span><span style="color:#ff7733;">in
+</span><span style="color:#f29718;">myPackage
+</span></code></pre>
+<ul>
+<li>
+<p>By passing <code>{ pkgs = nixpkgs; }</code> during the import, you are essentially saying: The <code>pkgs</code> that the code in <code>./lib/my-helpers.nix</code> expects as an argument should be the <code>nixpkgs</code> that is available within the scope of my current <code>flake.nix</code>(the <code>nixpkgs</code> passed as an argument to the <code>outputs</code> function)</p>
+</li>
+<li>
+<p>When you use import with a path that points to a directory, Nix doesn't just try to import the directory itself (which wouldn't make sense as a Nix value). Instead, it automatically looks for a file named <code>default.nix</code> within that directory.</p>
+</li>
+<li>
+<p>If a <code>default.nix</code> file is found inside the specified directory, Nix will then evaluate the Nix expressions within that <code>default.nix</code> file, just as if you had directly specified the path to <code>default.nix</code> in your import statement. The result of evaluating <code>default.nix</code> becomes the value returned by the import function.</p>
+</li>
+</ul>
+<h4 id="resources">Resources</h4>
+<ul>
+<li>
+<p><a href="https://serokell.io/blog/practical-nix-flakes">practical-nix-flakes</a></p>
+</li>
+<li>
+<p><a href="https://www.tweag.io/blog/2020-07-31-nixos-flakes/">tweag nix-flakes</a></p>
+</li>
+<li>
+<p><a href="https://nixos.wiki/wiki/Flakes">NixOS-wiki Flakes</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/concepts/flakes.html">nix.dev flakes</a></p>
+</li>
+<li>
+<p><a href="https://jade.fyi/blog/flakes-arent-real/">flakes-arent-real</a></p>
+</li>
+<li>
+<p><a href="https://mhwombat.codeberg.page/nix-book/#_attribute_set_operations">wombats-book-of-nix</a></p>
+</li>
+<li>
+<p><a href="https://zero-to-nix.com/concepts/flakes/">zero-to-nix flakes</a></p>
+</li>
+<li>
+<p><a href="https://nixos-and-flakes.thiscute.world/">nixos-and-flakes-book</a></p>
+</li>
+</ul>
+ </div>
+    </section>
+  </body>
+</html>
