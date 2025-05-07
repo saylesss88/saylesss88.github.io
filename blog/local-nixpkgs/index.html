@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <style>
+      body {
+        background-color: #282828; /* Dark background */
+        color: #ebdbb2; /* Light text for readability */
+      }
+      ul li {
+        margin-bottom: 0.75em; /* Add space below each link item */
+      }
+    </style>
+  </head>
+
+  <body>
+    <section class="section">
+      <div class="container">
+<h1 class="title">Working with Nixpkgs Locally &amp; why you might want to</h1>
+<p class="subtitle"><strong>2025-05-07</strong></p>
+<h1 id="working-with-nixpkgs-locally-benefits-and-best-practices">Working with Nixpkgs Locally: Benefits and Best Practices</h1>
+<p>Nixpkgs, the package repository for NixOS, is a powerful resource for building and customizing software. Working with a local copy of Nixpkgs lets you debug, test, and contribute to packages efficiently. This post explains how to set up a local Nixpkgs repository, search for dependencies, and leverage its benefits, with tips from the Nix community.</p>
+<h2 id="why-work-with-nixpkgs-locally">Why Work with Nixpkgs Locally?</h2>
+<p>A local Nixpkgs repository offers several advantages:</p>
+<ul>
+<li>
+<p><strong>Faster Development</strong>: Local searches and builds are quicker than querying remote repositories or channels, speeding up debugging and prototyping.</p>
+</li>
+<li>
+<p><strong>Full Version Control</strong>: Pin specific commits or branches (e.g., <code>nixos-unstable</code>) to ensure reproducibility and avoid unexpected upstream changes.</p>
+</li>
+<li>
+<p><strong>Debugging Flexibility</strong>: Test and modify package derivations locally to fix issues like missing dependencies without waiting for upstream updates.</p>
+</li>
+<li>
+<p><strong>Contribution Workflow</strong>: Develop and test changes (e.g., new packages, patches) before submitting pull requests to Nixpkgs.</p>
+</li>
+<li>
+<p><strong>Up-to-Date Reference</strong>: The repository’s source code and comments often provide the latest documentation, outpacing official guides.</p>
+</li>
+<li>
+<p><strong>Storage Efficiency</strong>: Proper setup (e.g., shallow clones, avoiding flakes) minimizes disk usage and build times.</p>
+</li>
+</ul>
+<p>For reference, here is a comparison of Flake vs. Non-Flake Syntax:</p>
+<ul>
+<li>
+<p>Flake Syntax: Uses <code>nix build .#&lt;package&gt;</code> or similar, where the current directory (.) is treated as a flake.
+For a local Nixpkgs repository, this involves evaluating the flake.nix in the repository root, which defines
+outputs like <code>packages.&lt;system&gt;.&lt;package&gt;</code>. Flakes copy the entire working directory (including checked-out files)
+to /nix/store for evaluation, which can be slow and storage-intensive for large repositories like Nixpkgs.</p>
+</li>
+<li>
+<p>Non-Flake Syntax: Uses <code>nix-build -f . &lt;package&gt;</code> or <code>nix build -f . &lt;package&gt;</code>, where -f . specifies the Nix
+expression in the current directory (e.g., default.nix or a specific file). This evaluates the Nix expression
+directly without copying the worktree to /nix/store, making it faster and more storage-efficient for local development.</p>
+</li>
+</ul>
+<h2 id="setting-up-a-local-nixpkgs-repository">Setting Up a Local Nixpkgs Repository</h2>
+<p>Nixpkgs is a large repository, so cloning it efficiently is key to avoiding slowdowns and storage bloat.</p>
+<ul>
+<li>
+<p>Working on Nixpkgs locally can be powerful, but using it as a flake directly
+can lead to unexpected slowdowns and storage issues...</p>
+</li>
+<li>
+<p>First the Nixpkgs repo is massive. Only clone the latest revision to avoid cloning the entire history of Nixpkgs:</p>
+</li>
+</ul>
+<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">git clone https://github.com/NixOS/nixpkgs --depth 1
+</span><span style="color:#fabd2f;">cd</span><span style="color:#fdf4c1;"> nixpkgs
+</span></code></pre>
+<ul>
+<li>Now you can either fetch all of the branches or just the one you need:</li>
+</ul>
+<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">git fetch --all --prune --depth</span><span style="color:#fe8019;">=</span><span style="color:#fdf4c1;">1
+</span><span style="color:#fdf4c1;">git worktree add -b nixos-unstable nixos-unstable </span><span style="font-style:italic;color:#928374;"># for just unstable
+</span></code></pre>
+<ul>
+<li>
+<p>The <code>worktree</code> is a feature in Git that allows you to have multiple working
+directories attached to the same Git repository. The main working directory is
+created when you clone a repository or run <code>git init</code>. You can then create
+additional worktrees using the <code>git worktree add</code> command. Each worktree has its
+own set of checked-out files, but they all share the same .git directory, which
+contains the repository's history and objects.</p>
+</li>
+<li>
+<p><code>git worktree add</code> Adds a new working directory for a branch or commit, in this case <code>nixos-unstable</code>.</p>
+</li>
+<li>
+<p>Now lets say you want to build a derivation for <code>icat</code> and you get a missing dependency error like this:</p>
+</li>
+</ul>
+<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#fdf4c1;">nix-build </span><span style="color:#fe8019;">-</span><span style="color:#fdf4c1;">A icat
+</span><span style="color:#fdf4c1;">this </span><span style="color:#fabd2f;">derivation </span><span style="color:#fdf4c1;">will be built</span><span>:
+</span><span>  </span><span style="color:#b8bb26;">/nix/store/bw2d4rp2k1l5rg49hds199ma2mz36x47-icat.drv
+</span><span style="color:#fe8019;">...
+</span><span style="color:#fdf4c1;">error</span><span>: </span><span style="color:#fdf4c1;">builder for </span><span style="background-color:#932b1e;color:#fdf4c1;">&#39;</span><span style="color:#b8bb26;">/nix/store/bw2d4rp2k1l5rg49hds199ma2mz36x47-icat.drv</span><span style="background-color:#932b1e;color:#fdf4c1;">&#39;</span><span> </span><span style="color:#fdf4c1;">failed </span><span style="background-color:#932b1e;color:#fdf4c1;">with</span><span> </span><span style="color:#fdf4c1;">exit code </span><span style="color:#d3869b;">2</span><span style="background-color:#932b1e;color:#fdf4c1;">;</span><span>
+</span><span>       </span><span style="color:#fdf4c1;">last </span><span style="color:#d3869b;">10 </span><span style="color:#fdf4c1;">log lines</span><span>:
+</span><span>       </span><span style="background-color:#932b1e;color:#fdf4c1;">&gt;</span><span>                  </span><span style="color:#fdf4c1;">from </span><span style="color:#b8bb26;">icat.c:31:
+</span><span>       </span><span style="color:#fe8019;">&gt; </span><span style="color:#b8bb26;">/nix/store/hkj250rjsvxcbr31fr1v81cv88cdfp4l-glibc-2.37-8-dev/include/features.h</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span style="color:#d3869b;">195</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span style="color:#d3869b;">3</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span> </span><span style="color:#fdf4c1;">warning</span><span>: </span><span style="font-style:italic;color:#928374;">#warning &quot;_BSD_SOURCE and _SVID_SOURCE are deprecated, use _DEFAULT_SOURCE&quot; [8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wcpp-Wcpp8;;]
+</span><span>       </span><span style="background-color:#932b1e;color:#fdf4c1;">&gt;</span><span>   </span><span style="color:#d3869b;">195 </span><span style="background-color:#932b1e;color:#fdf4c1;">|</span><span> </span><span style="font-style:italic;color:#928374;"># warning &quot;_BSD_SOURCE and _SVID_SOURCE are deprecated, use _DEFAULT_SOURCE&quot;
+</span><span>       </span><span style="color:#fe8019;">&gt;       </span><span style="background-color:#932b1e;color:#fdf4c1;">|</span><span>   </span><span style="background-color:#932b1e;color:#fdf4c1;">^~~~~~~</span><span>
+</span><span>       </span><span style="color:#fe8019;">&gt; </span><span style="color:#fdf4c1;">In file included from </span><span style="color:#b8bb26;">icat.c:39:
+</span><span>       </span><span style="color:#fe8019;">&gt; </span><span style="color:#b8bb26;">/nix/store/4fvrh0sjc8sbkbqda7dfsh7q0gxmnh9p-imlib2-1.11.1-dev/include/Imlib2.h</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span style="color:#d3869b;">45</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span style="color:#d3869b;">10</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span> </span><span style="color:#fdf4c1;">fatal error</span><span>: </span><span style="color:#b8bb26;">X11/Xlib.h</span><span style="background-color:#932b1e;color:#fdf4c1;">:</span><span> </span><span style="color:#fdf4c1;">No such file </span><span style="color:#fe8019;">or </span><span style="color:#fdf4c1;">directory
+</span><span>       </span><span style="color:#fe8019;">&gt;    </span><span style="color:#d3869b;">45 </span><span style="background-color:#932b1e;color:#fdf4c1;">|</span><span> </span><span style="font-style:italic;color:#928374;">#include &lt;X11/Xlib.h&gt;
+</span><span>       </span><span style="color:#fe8019;">&gt;       </span><span style="background-color:#932b1e;color:#fdf4c1;">|</span><span>          </span><span style="background-color:#932b1e;color:#fdf4c1;">^~~~~~~~~~~~</span><span>
+</span><span>       </span><span style="color:#fe8019;">&gt; </span><span style="color:#fdf4c1;">compilation terminated</span><span style="color:#fe8019;">.
+</span><span>       </span><span style="color:#fe8019;">&gt; </span><span style="color:#fdf4c1;">make</span><span>: </span><span style="background-color:#932b1e;color:#fdf4c1;">***</span><span> [</span><span style="color:#b8bb26;">Makefile:16: </span><span style="color:#fdf4c1;">icat</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">o</span><span>] </span><span style="color:#fdf4c1;">Error </span><span style="color:#d3869b;">1
+</span><span>       </span><span style="color:#fdf4c1;">For full logs</span><span style="background-color:#932b1e;color:#fdf4c1;">,</span><span> </span><span style="color:#fdf4c1;">run </span><span style="background-color:#932b1e;color:#fdf4c1;">&#39;</span><span style="color:#fdf4c1;">nix log </span><span style="color:#b8bb26;">/nix/store/bw2d4rp2k1l5rg49hds199ma2mz36x47-icat.drv</span><span style="background-color:#932b1e;color:#fdf4c1;">&#39;</span><span style="color:#fe8019;">.
+</span></code></pre>
+<ul>
+<li>
+<p><code>fatal error: X11/xlib.h: No such file or directory</code>(a missing dependency)</p>
+</li>
+<li>
+<p>The easiest way to find what you need is to <a href="https://search.nixos.org/packages">search.nixos.org/packages</a></p>
+</li>
+<li>
+<p>Unfortunately in this case, searching for x11 produces too many irrelevant results because
+X11 is ubiquitous. On the left side bar there is a list package sets, and selecting xorg shows
+something promising.</p>
+</li>
+<li>
+<p>In this case, it helps to become familiar with searching the Nixpkgs source code for keywords.</p>
+</li>
+</ul>
+<p>In the <code>nixpkgs/</code> directory you could run:</p>
+<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">rg </span><span style="color:#b8bb26;">&quot;x11 =&quot;</span><span style="color:#fdf4c1;"> pkgs  </span><span style="font-style:italic;color:#928374;"># case sensitive search
+</span></code></pre>
+<p><strong>Output</strong>:</p>
+<pre data-lang="text" style="background-color:#282828;color:#fdf4c1aa;" class="language-text "><code class="language-text" data-lang="text"><span>pkgs/tools/X11/primus/default.nix
+</span><span>21:  primus = if useNvidia then primusLib_ else primusLib_.override { nvidia_x11 = null; };
+</span><span>22:  primus_i686 = if useNvidia then primusLib_i686_ else primusLib_i686_.override { nvidia_x11 = null; };
+</span><span>
+</span><span>pkgs/applications/graphics/imv/default.nix
+</span><span>38:    x11 = [ libGLU xorg.libxcb xorg.libX11 ];
+</span></code></pre>
+<ul>
+<li>The important bit here is <code>xorg.libX11</code>. We can further refine our search and
+make sure we aren't missing anything with:</li>
+</ul>
+<pre data-lang="text" style="background-color:#282828;color:#fdf4c1aa;" class="language-text "><code class="language-text" data-lang="text"><span>rg -i &quot;libx11 =&quot; pkgs    # case insensitive
+</span></code></pre>
+<p>Output:</p>
+<pre data-lang="text" style="background-color:#282828;color:#fdf4c1aa;" class="language-text "><code class="language-text" data-lang="text"><span>1541:    enableX11 = false;
+</span><span>1726:  bucklespring-x11 = callPackage ../applications/audio/bucklespring { legacy = true; };
+</span><span>5344:    libX11 = xorg.libX11;
+</span><span>6327:    nvidia_x11 = linuxPackages.nvidia_x11;
+</span><span>6564:  mitschemeX11 = mitscheme.override {
+</span></code></pre>
+<h3 id="local-derivation-search">Local derivation search</h3>
+<p>To search derivations on the command line, use <code>nix-locate</code> from <code>nix-index</code></p>
+<blockquote>
+<p>[!NOTE]: You need to first install <code>nix-index</code> and run the command <code>nix-index</code> to create the initial index of your system and takes a while.</p>
+</blockquote>
+<pre data-lang="text" style="background-color:#282828;color:#fdf4c1aa;" class="language-text "><code class="language-text" data-lang="text"><span>nix-locate libx11
+</span><span>2.0.2/share/xdg-ninja/programs/libx11.json
+</span><span>x11basic.out                                          0 s /nix/store/809yni8vijakvfdiha65ym1j85dgc9im-X11basic-1.27/lib/libx11basic.so
+</span><span>x11basic.out                                          0 s /nix/store/809yni8vijakvfdiha65ym1j85dgc9im-X11basic-1.27/lib/libx11basic.so.1
+</span><span>x11basic.out                                    767,712 r /nix/store/809yni8vijakvfdiha65ym1j85dgc9im-X11basic-1.27/lib/libx11basic.so.1.27
+</span><span>vcpkg.out                                             9 d /nix/store/bhhd9xy5n8qn6hc4bfk06c9dc55pcy8p-vcpkg-2024.1
+</span><span># ...
+</span></code></pre>
+<ul>
+<li>
+<p>Combining online resources like <code>search.nixos.org</code> with local searches with <code>rg</code> or <code>grep</code> provides a powerful toolkit.</p>
+</li>
+<li>
+<p>Local searches and builds can be faster than dealing with remote repos.</p>
+</li>
+<li>
+<p>A local copy of Nixpkgs gives you full control over the Nixpkgs version you're using.</p>
+</li>
+<li>
+<p>Documentation can lag behind the Nixpkgs Repository updates making it a good source for new info.</p>
+</li>
+<li>
+<p>Never merge the upstream into your branch! Always rebase your branch on top of
+master (or whatever your upstream branch is). Merging is how you accidentally
+ping like 30,000 people in your PR. This tip came from soulsssx3 on reddit.</p>
+</li>
+<li>
+<p>The following Tips come from ElvishJErrico:</p>
+</li>
+</ul>
+<p>Another tip: For nixpkgs (or any very large repos), avoid using it as a flake when working directly on it. Use nix build -f . hello instead of nix build .#hello. The reason to avoid the flake is that it will copy the worktree into /nix/store. The copy itself is slow, and it takes a couple hundred megabytes. So even just 10 "edit -&gt; rebuild" cycles will waste a couple minutes of time and over a gig of storage. And the worst part is when you go to garbage collect your store. Large numbers of small files (exactly what nixpkgs is) is the worst case scenario for the performance of any file system, so GC'ing one or two hundred nixpkgs copies takes forever. I was convinced to stop using flake syntax while working on nixpkgs when a GC took over an hour longer than I expected because of all the nixpkgs copies.</p>
+<p>There are still some edge cases where you'll want to use flake syntax though. Like the "installer" NixOS tests, which copy the nixpkgs directory. You'll want to use flake syntax so this copy doesn't include the whole .git history, which makes these tests even slower. Also, there's work in development to address all of this so flake syntax doesn't have these problems, but it's slow going and it's not clear when we'll finally benefit from it.</p>
+<p>Another tip: Base your changes on the nixos-unstable branch, not master. It will merge into master just fine assuming no conflicts have come up in the past couple days, and nixos-unstable has much better binary cache hits than master. Even when I'm working on something for staging, I'll base my changes on the merge-base for staging and nixos-unstable if I can.</p>
+<p>Finally, jujutsu. This is a git alternative that's git-compatible. It's so much better than git. It's a little slower at some things, and it takes a lot of getting used to, but it's way more intuitive and makes a lot of workflows very very easy, especially on large monorepos like nixpkgs where you might have a dozen different parallel things you're interested in working on. I've been an emacs-magit user for years (probably the best GUI / TUI for making git easy to use), and I've switched to jujutsu. I still miss how magit is integrated with the editor and how everything is done with lightning fast keystrokes, but jujutsu is worth it. And I can still use magit for a number of things since jujutsu is git compatible.</p>
+ </div>
+    </section>
+  </body>
+</html>
