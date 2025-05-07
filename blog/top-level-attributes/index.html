@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <style>
+      body {
+        background-color: #282828; /* Dark background */
+        color: #ebdbb2; /* Light text for readability */
+      }
+      ul li {
+        margin-bottom: 0.75em; /* Add space below each link item */
+      }
+    </style>
+    <link rel="stylesheet" type="text/css" href="https://saylesss88.github.io/static/syntax-theme-dark.css" media="(prefers-color-scheme: dark)" />
+    <link rel="stylesheet" type="text/css" href="https://saylesss88.github.io/static/syntax-theme-light.css" media="(prefers-color-scheme: light)" />
+  </head>
+
+  <body>
+    <section class="section">
+      <div class="container">
+<h1 class="title">Top-Level Attributes</h1>
+<p class="subtitle"><strong>2025-05-07</strong></p>
+<h2 id="top-level-attributes">Top-Level Attributes</h2>
+<p>The following is a comment by Infinisil (Nix legend) on Reddit:</p>
+<p>A NixOS system is described by a single system derivation. nixos-rebuild builds this derivation with</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ff3333;">$ </span><span style="color:#ffcc66;">nix-build </span><span style="color:#ff3333;">&#39;</span><span style="color:#bae67e;">&lt;nixpkgs/nixos&gt;</span><span style="color:#ff3333;">&#39; </span><span style="color:#f29e74;">-</span><span style="color:#ffcc66;">A system
+</span></code></pre>
+<p>and then switches to that system with</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ff3333;">$ </span><span style="color:#bae67e;">result/bin/switch-to-configuration
+</span></code></pre>
+<p>The entrypoint is the file at <code>'&lt;nixpkgs/nixos&gt;'</code> (<code>./default.nix</code>), which defines the system attribute to be the NixOS option <code>system.build.toplevel</code>. This toplevel option is the topmost level of the NixOS evaluation and it's what almost all options eventually end up influencing through potentially a number of intermediate options.</p>
+<p>As an example:</p>
+<ul>
+<li>
+<p>The high-level option <code>services.nginx.enable</code> uses the lower-level option <code>systemd.services.nginx</code></p>
+</li>
+<li>
+<p>Which in turn uses the even-lower-level option <code>systemd.units."nginx.service"</code></p>
+</li>
+<li>
+<p>Which in turn uses <code>environment.etc."systemd/system"</code></p>
+</li>
+<li>
+<p>Which then ends up as <code>result/etc/systemd/system/nginx.service</code> in the top-level derivation</p>
+</li>
+</ul>
+<p>So high-level options use lower-level ones, eventually ending up at <code>system.build.toplevel</code>.</p>
+<p>How do these options get evaluated though? That's what the NixOS module system does, which lives in the ./lib directory (in modules.nix, options.nix and types.nix). The module system can even be used without NixOS, allowing you to use it for your own option sets. Here's a simple example of this, whose toplevel option you can evaluate with:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> --eval</span><span> file.nix</span><span style="color:#ffcc66;"> -A</span><span> config.toplevel
+</span></code></pre>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffa759;">let
+</span><span>  </span><span style="color:#ffd580;">systemModule </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>    </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">toplevel </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
+</span><span>      </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">str</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>    </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">enableFoo </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
+</span><span>      </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">bool</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>    </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">toplevel </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&#39;&#39;
+</span><span style="color:#bae67e;">      Is foo enabled? </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">lib</span><span style="font-style:italic;color:#f29e74;">.</span><span style="font-style:italic;color:#ffcc66;">boolToString config</span><span style="font-style:italic;color:#f29e74;">.</span><span style="font-style:italic;color:#ffcc66;">enableFoo</span><span style="font-style:italic;color:#ccc9c2;">}
+</span><span style="color:#bae67e;">    &#39;&#39;</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffd580;">userModule </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">enableFoo </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="color:#ffa759;">in </span><span>(</span><span style="color:#f28779;">import </span><span style="color:#bae67e;">&lt;nixpkgs/lib&gt;</span><span>)</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">evalModules </span><span>{
+</span><span>  </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">systemModule userModule </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<p>The module system itself is rather complex, but here's a short overview. A module evaluation consists of a set of "modules", which can do three things:</p>
+<ul>
+<li>
+<p>Import other modules (through <code>imports = [ ./other-module.nix ];</code>)</p>
+</li>
+<li>
+<p>Declare options (through <code>options = { ... };</code>)</p>
+</li>
+<li>
+<p>Define option values (through <code>config = { ... };</code>, or without the config key as a shorthand if you don't have imports or options)</p>
+</li>
+</ul>
+<p>To do the actual evaluation, there's these rough steps:</p>
+<ul>
+<li>
+<p>Recursively collect all modules by looking at all imports statements</p>
+</li>
+<li>
+<p>Collect all option declarations (with options) of all modules and merge them together if necessary</p>
+</li>
+<li>
+<p>For each option, evaluate it by collecting all its definitions (with config) from all modules and merging them together according to the options type.</p>
+</li>
+</ul>
+<p>Note that the last step is lazy (only the options you need are evaluated) and depends on other options itself (all the ones that influence it).</p>
+<p>This is the end of Infinisil's comment.</p>
+<p><code>system.build.toplevel</code> The top-level option that builds the entire NixOS system. Everything else in your configuration is indirectly pulled in by this option. This is what nixos-rebuild builds and what /run/current-system points to afterwards.</p>
+<p>Top-level attributes are those defined directly inside the module's function, they include:</p>
+<ul>
+<li>Imports</li>
+<li>Options</li>
+<li>Config</li>
+</ul>
+<p>In any module that you define a top-level option any non-option attributes need to be moved under the config attribute.</p>
+<p>For example:</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="font-style:italic;color:#5c6773;"># defining this option at top level
+</span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">mine</span><span>.</span><span style="color:#ffd580;">desktop</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;desktop settings&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="font-style:italic;color:#5c6773;"># will cause this to fail
+</span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">=
+</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="color:#ffd580;">appstream</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<p>error: Module has an unsupported attribute 'appstream' This is caused by introducing a top-level <code>config</code> or <code>options</code> attribute. Add configuration attributes immediately on the top level instead, or move all of them into the explicit <code>config</code> attribute.</p>
+<ul>
+<li>The environment.systemPackages and <code>appstream.enable</code> don't declare any options, they assign values to the options so they need to be moved under the config attribute like so:</li>
+</ul>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="font-style:italic;color:#5c6773;"># defining this option at top level
+</span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">mine</span><span>.</span><span style="color:#ffd580;">desktop</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;desktop settings&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{
+</span><span> </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">=
+</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="color:#ffd580;">appstream</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>}</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>
+<p>This lets Nix know that you're not declaring an option, but rather setting/defining them.</p>
+</li>
+<li>
+<p>Otherwise, if you don't have either <code>config</code> or <code>option</code> you can just have them at the top-level, and it will implicitely put all of them under the config section.</p>
+</li>
+<li>
+<p>If you remove the option, the config = { environment.systemPackages will still work.</p>
+</li>
+</ul>
+ </div>
+    </section>
+  </body>
+</html>
