@@ -26,30 +26,30 @@
 <p>First we'll define a custom option in an inline module that has the needed dependencies in its lexical closure inside of <code>flake.nix</code> to inject said dependencies into our NixOS configuration. This makes those dependencies available to all modules that import this configuration, without needing to pass them explicitly via <code>specialArgs</code> in your flakes <code>outputs</code>. It's a more declarative and centralized way to share dependencies across modules.</p>
 </li>
 </ul>
-<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#928374;"># flake.nix
-</span><span style="color:#fa5c4b;">let
-</span><span>  </span><span style="font-style:italic;color:#928374;"># list deps you want passed here
-</span><span>  </span><span style="color:#8ec07c;">depInject </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">pkgs</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span>: {
-</span><span>    </span><span style="color:#8ec07c;">options</span><span>.</span><span style="color:#8ec07c;">dep-inject </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">mkOption </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#928374;"># dep-inject is an attr set of unspecified values
-</span><span>      </span><span style="color:#8ec07c;">type </span><span style="color:#fe8019;">= </span><span style="color:#fa5c4b;">with </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">types</span><span>; </span><span style="color:#fdf4c1;">attrsOf unspecified</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">default </span><span style="color:#fe8019;">= </span><span>{ };
-</span><span>    };
-</span><span>    </span><span style="color:#8ec07c;">config</span><span>.</span><span style="color:#8ec07c;">dep-inject </span><span style="color:#fe8019;">= </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#928374;"># inputs comes from the outer environment of flake.nix
-</span><span>      </span><span style="font-style:italic;color:#928374;"># usually contains flake inputs, user-defined vars
-</span><span>      </span><span style="font-style:italic;color:#928374;"># sys metadata
-</span><span>      </span><span style="color:#8ec07c;">flake-inputs </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">inputs</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">userVars </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">userVars</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">system </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">system</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">host </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">host</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">username </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">username</span><span>;
-</span><span>    };
-</span><span>  };
-</span><span style="color:#fa5c4b;">in </span><span>{
-</span><span>  </span><span style="color:#8ec07c;">nixosModules</span><span>.</span><span style="color:#8ec07c;">default </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">pkgs</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span>: {
-</span><span>    </span><span style="color:#8ec07c;">imports </span><span style="color:#fe8019;">= </span><span>[ </span><span style="color:#fdf4c1;">depInject </span><span>];
-</span><span>  };
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#ffa759;">let
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># list deps you want passed here
+</span><span>  </span><span style="color:#ffd580;">depInject </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>    </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># dep-inject is an attr set of unspecified values
+</span><span>      </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span>; </span><span style="color:#ffcc66;">attrsOf unspecified</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span>{
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># inputs comes from the outer environment of flake.nix
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># usually contains flake inputs, user-defined vars
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># sys metadata
+</span><span>      </span><span style="color:#ffd580;">flake-inputs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">inputs</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">host</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">username</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffa759;">in </span><span>{
+</span><span>  </span><span style="color:#ffd580;">nixosModules</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>    </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">depInject </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
 <ul>
@@ -65,87 +65,87 @@
 </li>
 </ul>
 <p>Example use:</p>
-<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
-</span><span>  </span><span style="color:#8ec07c;">inputs </span><span style="color:#fe8019;">= </span><span>{
-</span><span>    </span><span style="color:#8ec07c;">nixpkgs</span><span>.</span><span style="color:#8ec07c;">url </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;github:NixOS/nixpkgs/nixos-unstable&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">url </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;github:nix-community/home-manager/master&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">inputs</span><span>.</span><span style="color:#8ec07c;">nixpkgs</span><span>.</span><span style="color:#8ec07c;">follows </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;nixpkgs&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">stylix</span><span>.</span><span style="color:#8ec07c;">url </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;github:danth/stylix&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">treefmt-nix</span><span>.</span><span style="color:#8ec07c;">url </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;github:numtide/treefmt-nix&quot;</span><span>;
-</span><span>  };
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
+</span><span>  </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:NixOS/nixpkgs/nixos-unstable&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:nix-community/home-manager/master&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">inputs</span><span>.</span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">follows </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;nixpkgs&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">stylix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:danth/stylix&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">treefmt-nix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:numtide/treefmt-nix&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>  </span><span style="color:#8ec07c;">outputs </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">self</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">nixpkgs</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">home-manager</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">stylix</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">treefmt-nix</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span> @ </span><span style="color:#fdf4c1;">inputs</span><span>: </span><span style="color:#fa5c4b;">let
-</span><span>    </span><span style="color:#8ec07c;">system </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;x86_64-linux&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">host </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;magic&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">username </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;jr&quot;</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">userVars </span><span style="color:#fe8019;">= </span><span>{
-</span><span>      </span><span style="color:#8ec07c;">timezone </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;America/New_York&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">gitUsername </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;TSawyer87&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">locale </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;en_US.UTF-8&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">dotfilesDir </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;~/.dotfiles&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">wm </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;hyprland&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">browser </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;firefox&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">term </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;ghostty&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">editor </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;hx&quot;</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">keyboardLayout </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;us&quot;</span><span>;
-</span><span>    };
-</span><span>    </span><span style="color:#8ec07c;">pkgs </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">import </span><span style="color:#fdf4c1;">nixpkgs </span><span>{
-</span><span>      </span><span style="color:#fa5c4b;">inherit </span><span style="color:#8ec07c;">system</span><span>;
-</span><span>      </span><span style="color:#8ec07c;">config</span><span>.</span><span style="color:#8ec07c;">allowUnfree </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>    };
-</span><span>    </span><span style="color:#8ec07c;">treefmtEval </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">treefmt-nix</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">evalModule pkgs </span><span style="color:#b8bb26;">./treefmt.nix</span><span>;
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">, ... </span><span>} @ </span><span style="color:#ffcc66;">inputs</span><span>: </span><span style="color:#ffa759;">let
+</span><span>    </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;magic&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;jr&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span>{
+</span><span>      </span><span style="color:#ffd580;">timezone </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;America/New_York&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">gitUsername </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;TSawyer87&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">locale </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;en_US.UTF-8&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">dotfilesDir </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;~/.dotfiles&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">wm </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hyprland&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">browser </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;firefox&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">term </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;ghostty&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">editor </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hx&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">keyboardLayout </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;us&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
+</span><span>      </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">allowUnfree </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">treefmtEval </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">evalModule pkgs </span><span style="color:#bae67e;">./treefmt.nix</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>    </span><span style="font-style:italic;color:#928374;"># Define dep-inject module
-</span><span>    </span><span style="color:#8ec07c;">depInject </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">pkgs</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span>: {
-</span><span>      </span><span style="color:#8ec07c;">options</span><span>.</span><span style="color:#8ec07c;">dep-inject </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">mkOption </span><span>{
-</span><span>        </span><span style="color:#8ec07c;">type </span><span style="color:#fe8019;">= </span><span style="color:#fa5c4b;">with </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">types</span><span>; </span><span style="color:#fdf4c1;">attrsOf unspecified</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">default </span><span style="color:#fe8019;">= </span><span>{ };
-</span><span>      };
-</span><span>      </span><span style="color:#8ec07c;">config</span><span>.</span><span style="color:#8ec07c;">dep-inject </span><span style="color:#fe8019;">= </span><span>{
-</span><span>        </span><span style="color:#8ec07c;">flake-inputs </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">inputs</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">userVars </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">userVars</span><span>; </span><span style="font-style:italic;color:#928374;"># Add userVars for convenience
-</span><span>        </span><span style="color:#8ec07c;">system </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">system</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">username </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">username</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">host </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">host</span><span>;
-</span><span>      };
-</span><span>    };
-</span><span>  </span><span style="color:#fa5c4b;">in </span><span>{
-</span><span>    </span><span style="font-style:italic;color:#928374;"># Export dep-inject module
-</span><span>    </span><span style="color:#8ec07c;">nixosModules</span><span>.</span><span style="color:#8ec07c;">default </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">pkgs</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span>: {
-</span><span>          </span><span style="color:#8ec07c;">imports </span><span style="color:#fe8019;">= </span><span>[ </span><span style="color:#fdf4c1;">depInject </span><span>];
-</span><span>    };
-</span><span>    </span><span style="font-style:italic;color:#928374;"># here we don&#39;t need imports = [ depInject { inherit inputs;}]
-</span><span>    </span><span style="font-style:italic;color:#928374;"># because the vars are captured from the surrounding let block
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Define dep-inject module
+</span><span>    </span><span style="color:#ffd580;">depInject </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>      </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
+</span><span>        </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span>; </span><span style="color:#ffcc66;">attrsOf unspecified</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span>{
+</span><span>        </span><span style="color:#ffd580;">flake-inputs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">inputs</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># Add userVars for convenience
+</span><span>        </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">username</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">host</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffa759;">in </span><span>{
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Export dep-inject module
+</span><span>    </span><span style="color:#ffd580;">nixosModules</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>          </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">depInject </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># here we don&#39;t need imports = [ depInject { inherit inputs;}]
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># because the vars are captured from the surrounding let block
 </span><span>
-</span><span>    </span><span style="font-style:italic;color:#928374;"># NixOS configuration
-</span><span>    </span><span style="color:#8ec07c;">nixosConfigurations </span><span style="color:#fe8019;">= </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">host</span><span style="font-style:italic;color:#fdf4c1aa;">} </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">nixpkgs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosSystem </span><span>{
-</span><span>        </span><span style="color:#fa5c4b;">inherit </span><span style="color:#8ec07c;">system</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">modules </span><span style="color:#fe8019;">= </span><span>[
-</span><span>          </span><span style="font-style:italic;color:#928374;"># enable dep-inject
-</span><span>          </span><span style="color:#fdf4c1;">self</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">default
-</span><span>          </span><span style="color:#b8bb26;">./hosts</span><span style="color:#fe8019;">/</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">host</span><span style="font-style:italic;color:#fdf4c1aa;">}</span><span style="color:#b8bb26;">/configuration.nix
-</span><span>          </span><span style="color:#fdf4c1;">home-manager</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">home-manager
-</span><span>          </span><span style="color:#fdf4c1;">stylix</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">stylix
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># NixOS configuration
+</span><span>    </span><span style="color:#ffd580;">nixosConfigurations </span><span style="color:#f29e74;">= </span><span>{
+</span><span>      </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
+</span><span>        </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
+</span><span>          </span><span style="font-style:italic;color:#5c6773;"># enable dep-inject
+</span><span>          </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default
+</span><span>          </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/configuration.nix
+</span><span>          </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
+</span><span>          </span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
 </span><span>          {
-</span><span>            </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">useGlobalPkgs </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>            </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">useUserPackages </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>            </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">users</span><span>.</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">username</span><span style="font-style:italic;color:#fdf4c1aa;">} </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">import </span><span style="color:#b8bb26;">./hosts</span><span style="color:#fe8019;">/</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">host</span><span style="font-style:italic;color:#fdf4c1aa;">}</span><span style="color:#b8bb26;">/home.nix</span><span>;
-</span><span>            </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">backupFileExtension </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;backup&quot;</span><span>;
-</span><span>            </span><span style="font-style:italic;color:#928374;"># Still need extraSpecialArgs for Home Manager (see below)
-</span><span>            </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">extraSpecialArgs </span><span style="color:#fe8019;">= </span><span>{
-</span><span>              </span><span style="color:#fa5c4b;">inherit </span><span style="color:#8ec07c;">username system host userVars</span><span>;
-</span><span>            };
+</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useGlobalPkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useUserPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">users</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">username</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/home.nix</span><span style="color:#ccc9c2cc;">;
+</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">backupFileExtension </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;backup&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>            </span><span style="font-style:italic;color:#5c6773;"># Still need extraSpecialArgs for Home Manager (see below)
+</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">extraSpecialArgs </span><span style="color:#f29e74;">= </span><span>{
+</span><span>              </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">username system host userVars</span><span style="color:#ccc9c2cc;">;
+</span><span>            }</span><span style="color:#ccc9c2cc;">;
 </span><span>          }
-</span><span>        ];
-</span><span>      };
-</span><span>    };
+</span><span>        ]</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>    </span><span style="font-style:italic;color:#928374;"># Other outputs
-</span><span>    </span><span style="color:#8ec07c;">checks</span><span>.</span><span style="color:#8ec07c;">x86_64-linux</span><span>.</span><span style="color:#8ec07c;">style </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">treefmtEval</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">build</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">check self</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">formatter</span><span>.</span><span style="color:#8ec07c;">x86_64-linux </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">treefmtEval</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">build</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">wrapper</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">devShells</span><span>.</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">system</span><span style="font-style:italic;color:#fdf4c1aa;">}</span><span>.</span><span style="color:#8ec07c;">default </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">import </span><span style="color:#b8bb26;">./lib/dev-shell.nix </span><span>{ </span><span style="color:#fa5c4b;">inherit </span><span style="color:#8ec07c;">inputs</span><span>; };
-</span><span>  };
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Other outputs
+</span><span>    </span><span style="color:#ffd580;">checks</span><span>.</span><span style="color:#ffd580;">x86_64-linux</span><span>.</span><span style="color:#ffd580;">style </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">check self</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">formatter</span><span>.</span><span style="color:#ffd580;">x86_64-linux </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">wrapper</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">devShells</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./lib/dev-shell.nix </span><span>{ </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
 <h4 id="use-dep-inject-in-any-module">Use <code>dep-inject</code> in any Module</h4>
@@ -153,14 +153,14 @@
 <li>In any module that's part of this configuration, you can access the injected dependencies via <code>config.dep-inject</code>. You don't need to add <code>inputs</code> or <code>userVars</code> to the module's arguments.</li>
 </ul>
 <p>Example: System Configuration Module</p>
-<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#928374;"># configuration.nix
-</span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">, </span><span style="color:#fdf4c1;">pkgs</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span>: {
-</span><span>  </span><span style="color:#8ec07c;">environment</span><span>.</span><span style="color:#8ec07c;">systemPackages </span><span style="color:#fe8019;">= </span><span style="color:#fa5c4b;">with </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">dep-inject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">flake-inputs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixpkgs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">legacyPackages</span><span style="color:#fe8019;">.</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">pkgs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">system</span><span style="font-style:italic;color:#fdf4c1aa;">}</span><span>; [
-</span><span>    </span><span style="color:#fdf4c1;">firefox
-</span><span>    </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">dep-inject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">userVars</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">editor </span><span style="font-style:italic;color:#928374;"># e.g., helix
-</span><span>  ];
-</span><span>  </span><span style="color:#8ec07c;">time</span><span>.</span><span style="color:#8ec07c;">timeZone </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">dep-inject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">userVars</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">timezone</span><span>;
-</span><span>  </span><span style="color:#8ec07c;">system</span><span>.</span><span style="color:#8ec07c;">stateVersion </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;24.05&quot;</span><span>;
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
+</span><span>{ </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>  </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">pkgs</span><span style="font-style:italic;color:#f29e74;">.</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span>; [
+</span><span>    </span><span style="color:#ffcc66;">firefox
+</span><span>    </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">editor </span><span style="font-style:italic;color:#5c6773;"># e.g., helix
+</span><span>  ]</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">time</span><span>.</span><span style="color:#ffd580;">timeZone </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">timezone</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;24.05&quot;</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
 <ul>
@@ -188,52 +188,52 @@ or</li>
 <ol>
 <li>Using <code>extraSpecialArgs</code></li>
 </ol>
-<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#fdf4c1;">home-manager</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">extraSpecialArgs </span><span style="background-color:#932b1e;color:#fdf4c1;">=</span><span> {
-</span><span>  </span><span style="color:#fa5c4b;">inherit </span><span style="color:#8ec07c;">username system host userVars</span><span>;
-</span><span>  </span><span style="color:#8ec07c;">depInject </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">dep-inject</span><span>; </span><span style="font-style:italic;color:#928374;"># Pass dep-inject
-</span><span>}</span><span style="background-color:#932b1e;color:#fdf4c1;">;</span><span>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">extraSpecialArgs </span><span style="color:#ff3333;">= </span><span>{
+</span><span>  </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">username system host userVars</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">depInject </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># Pass dep-inject
+</span><span>}</span><span style="color:#ff3333;">;
 </span></code></pre>
 <p>Then in <code>./hosts/${host}/home.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#928374;"># home.nix
-</span><span style="color:#d3869b;">{ </span><span style="color:#fdf4c1;">depInject</span><span style="color:#fe8019;">, ... </span><span style="color:#d3869b;">}</span><span>: {
-</span><span>  </span><span style="color:#8ec07c;">programs</span><span>.</span><span style="color:#8ec07c;">git </span><span style="color:#fe8019;">= </span><span>{
-</span><span>    </span><span style="color:#8ec07c;">enable </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">userName </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">depInject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">userVars</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">gitUsername</span><span>;
-</span><span>  };
-</span><span>  </span><span style="color:#8ec07c;">home</span><span>.</span><span style="color:#8ec07c;">packages </span><span style="color:#fe8019;">= </span><span style="color:#fa5c4b;">with </span><span style="color:#fdf4c1;">depInject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">flake-inputs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixpkgs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">legacyPackages</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">x86_64-linux</span><span>; [ </span><span style="color:#fdf4c1;">firefox </span><span>];
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># home.nix
+</span><span>{ </span><span style="color:#ffcc66;">depInject</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>  </span><span style="color:#ffd580;">programs</span><span>.</span><span style="color:#ffd580;">git </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">userName </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">depInject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitUsername</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">home</span><span>.</span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">depInject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">x86_64-linux</span><span>; [ </span><span style="color:#ffcc66;">firefox </span><span>]</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
 <ol start="2">
 <li>Import <code>depInject</code> into home-manager:</li>
 </ol>
-<pre data-lang="nix" style="background-color:#282828;color:#fdf4c1aa;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#928374;"># flake.nix
-</span><span style="color:#fdf4c1;">nixosConfigurations </span><span style="background-color:#932b1e;color:#fdf4c1;">=</span><span> {
-</span><span>  </span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">host</span><span style="font-style:italic;color:#fdf4c1aa;">} </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">nixpkgs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">lib</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosSystem </span><span>{
-</span><span>    </span><span style="color:#fa5c4b;">inherit </span><span style="color:#8ec07c;">system</span><span>;
-</span><span>    </span><span style="color:#8ec07c;">modules </span><span style="color:#fe8019;">= </span><span>[
-</span><span>      </span><span style="color:#fdf4c1;">self</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">default </span><span style="font-style:italic;color:#928374;"># dep-inject for NixOS
-</span><span>      </span><span style="color:#b8bb26;">./hosts</span><span style="color:#fe8019;">/</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">host</span><span style="font-style:italic;color:#fdf4c1aa;">}</span><span style="color:#b8bb26;">/configuration.nix
-</span><span>      </span><span style="color:#fdf4c1;">home-manager</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">home-manager
-</span><span>      </span><span style="color:#fdf4c1;">stylix</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">stylix
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#ffcc66;">nixosConfigurations </span><span style="color:#ff3333;">= </span><span>{
+</span><span>  </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
+</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
+</span><span>      </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default </span><span style="font-style:italic;color:#5c6773;"># dep-inject for NixOS
+</span><span>      </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/configuration.nix
+</span><span>      </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
+</span><span>      </span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
 </span><span>      {
-</span><span>        </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">useGlobalPkgs </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">useUserPackages </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">backupFileExtension </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;backup&quot;</span><span>;
-</span><span>        </span><span style="color:#8ec07c;">home-manager</span><span>.</span><span style="color:#8ec07c;">users</span><span>.</span><span style="font-style:italic;color:#fdf4c1aa;">${</span><span style="color:#fdf4c1;">username</span><span style="font-style:italic;color:#fdf4c1aa;">} </span><span style="color:#fe8019;">= </span><span>{
-</span><span>          </span><span style="color:#8ec07c;">imports </span><span style="color:#fe8019;">= </span><span>[ </span><span style="color:#fdf4c1;">self</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixosModules</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">default </span><span>]; </span><span style="font-style:italic;color:#928374;"># dep-inject for Home Manager
-</span><span>          </span><span style="font-style:italic;color:#928374;"># Your Home Manager config
-</span><span>          </span><span style="color:#8ec07c;">programs</span><span>.</span><span style="color:#8ec07c;">git </span><span style="color:#fe8019;">= </span><span>{
-</span><span>            </span><span style="color:#8ec07c;">enable </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">true</span><span>;
-</span><span>            </span><span style="color:#8ec07c;">userName </span><span style="color:#fe8019;">= </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">dep-inject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">userVars</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">gitUsername</span><span>;
-</span><span>          };
-</span><span>          </span><span style="font-style:italic;color:#928374;"># note: depending on your setup you may need to tweak this
-</span><span>          </span><span style="font-style:italic;color:#928374;"># `legacyPackages.${pkgs.system}` might be needed
-</span><span>          </span><span style="color:#8ec07c;">home</span><span>.</span><span style="color:#8ec07c;">packages </span><span style="color:#fe8019;">= </span><span style="color:#fa5c4b;">with </span><span style="color:#fdf4c1;">config</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">dep-inject</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">flake-inputs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">nixpkgs</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">legacyPackages</span><span style="color:#fe8019;">.</span><span style="color:#fdf4c1;">x86_64-linux</span><span>; [ </span><span style="color:#fdf4c1;">firefox </span><span>];
-</span><span>        };
+</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useGlobalPkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useUserPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">backupFileExtension </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;backup&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">users</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">username</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span>{
+</span><span>          </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default </span><span>]</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># dep-inject for Home Manager
+</span><span>          </span><span style="font-style:italic;color:#5c6773;"># Your Home Manager config
+</span><span>          </span><span style="color:#ffd580;">programs</span><span>.</span><span style="color:#ffd580;">git </span><span style="color:#f29e74;">= </span><span>{
+</span><span>            </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>            </span><span style="color:#ffd580;">userName </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitUsername</span><span style="color:#ccc9c2cc;">;
+</span><span>          }</span><span style="color:#ccc9c2cc;">;
+</span><span>          </span><span style="font-style:italic;color:#5c6773;"># note: depending on your setup you may need to tweak this
+</span><span>          </span><span style="font-style:italic;color:#5c6773;"># `legacyPackages.${pkgs.system}` might be needed
+</span><span>          </span><span style="color:#ffd580;">home</span><span>.</span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">x86_64-linux</span><span>; [ </span><span style="color:#ffcc66;">firefox </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>        }</span><span style="color:#ccc9c2cc;">;
 </span><span>      }
-</span><span>    ];
-</span><span>  };
-</span><span>}</span><span style="background-color:#932b1e;color:#fdf4c1;">;</span><span>
+</span><span>    ]</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>}</span><span style="color:#ff3333;">;
 </span></code></pre>
 <ul>
 <li>

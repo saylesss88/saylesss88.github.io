@@ -33,40 +33,40 @@
 </ul>
 <p>Here's an example:</p>
 <p>Say I have my configuration flake in the <code>~/flakes/</code> directory that is an existing Git repository. To use JJ as the front-end I could do something like:</p>
-<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fabd2f;">cd </span><span style="color:#fdf4c1;">~/flakes
-</span><span style="color:#fdf4c1;">jj git init --colocate
-</span><span style="color:#fdf4c1;">jj describe -m </span><span style="color:#b8bb26;">&quot;first jj commit&quot;
-</span><span style="color:#fdf4c1;">jj commit
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#f28779;">cd </span><span style="font-style:italic;color:#5ccfe6;">~</span><span>/flakes
+</span><span style="color:#ffd580;">jj</span><span> git init</span><span style="color:#ffcc66;"> --colocate
+</span><span style="color:#ffd580;">jj</span><span> describe</span><span style="color:#ffcc66;"> -m </span><span style="color:#bae67e;">&quot;first jj commit&quot;
+</span><span style="color:#ffd580;">jj</span><span> commit
 </span></code></pre>
 <p>Or to do this in a directory that isn't already a git repo you can do something like:</p>
-<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">cargo new hello-world --vcs</span><span style="color:#fe8019;">=</span><span style="color:#fdf4c1;">none
-</span><span style="color:#fabd2f;">cd</span><span style="color:#fdf4c1;"> hello-world
-</span><span style="color:#fdf4c1;">jj git init
-</span><span style="color:#fdf4c1;">Initialized repo in </span><span style="color:#b8bb26;">&quot;.&quot;
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">cargo</span><span> new hello-world</span><span style="color:#ffcc66;"> --vcs</span><span style="color:#f29e74;">=</span><span>none
+</span><span style="color:#f28779;">cd</span><span> hello-world
+</span><span style="color:#ffd580;">jj</span><span> git init
+</span><span style="color:#ffd580;">Initialized</span><span> repo in </span><span style="color:#bae67e;">&quot;.&quot;
 </span></code></pre>
 <p>Or for example, with Git if you wanted to move to a different branch before running <code>nix flake update</code> to see if it introduced errors before merging with your main branch, you could do something like:</p>
-<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">git checkout -b update-test
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">git</span><span> checkout</span><span style="color:#ffcc66;"> -b</span><span> update-test
 </span><span>
-</span><span style="color:#fdf4c1;">nix flake update
+</span><span style="color:#ffd580;">nix</span><span> flake update
 </span><span>
-</span><span style="color:#fdf4c1;">sudo nixos-rebuild test --flake .
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild test</span><span style="color:#ffcc66;"> --flake</span><span> .
 </span></code></pre>
 <p>If you're satisfied you can merge:</p>
-<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">git checkout main
-</span><span style="color:#fdf4c1;">git add . </span><span style="font-style:italic;color:#928374;"># Stage the change
-</span><span style="color:#fdf4c1;">git commit -m </span><span style="color:#b8bb26;">&quot;update&quot;
-</span><span style="color:#fdf4c1;">git branch -D update-test
-</span><span style="color:#fdf4c1;">git merge update-test
-</span><span style="color:#fdf4c1;">sudo nixos-rebuild switch --flake .
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">git</span><span> checkout main
+</span><span style="color:#ffd580;">git</span><span> add . </span><span style="font-style:italic;color:#5c6773;"># Stage the change
+</span><span style="color:#ffd580;">git</span><span> commit</span><span style="color:#ffcc66;"> -m </span><span style="color:#bae67e;">&quot;update&quot;
+</span><span style="color:#ffd580;">git</span><span> branch</span><span style="color:#ffcc66;"> -D</span><span> update-test
+</span><span style="color:#ffd580;">git</span><span> merge update-test
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild switch</span><span style="color:#ffcc66;"> --flake</span><span> .
 </span></code></pre>
 <p>With JJ a similar workflow could be:</p>
-<pre data-lang="bash" style="background-color:#282828;color:#fdf4c1aa;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#fdf4c1;">jj new  </span><span style="font-style:italic;color:#928374;"># Create a new child commit/start working on a new change
-</span><span style="color:#fdf4c1;">nix flake update
-</span><span style="color:#fdf4c1;">sudo nixos-rebuild test --flake .
-</span><span style="color:#fdf4c1;">jj squash </span><span style="font-style:italic;color:#928374;">#  equivalent to `git commit -a --amend`
-</span><span style="color:#fdf4c1;">jj describe -m </span><span style="color:#b8bb26;">&quot;update&quot; </span><span style="font-style:italic;color:#928374;"># Similar to git commit -m
-</span><span style="color:#fdf4c1;">jj commit </span><span style="font-style:italic;color:#928374;"># Finalize the commit
-</span><span style="color:#fdf4c1;">sudo nixos-rebuild switch --flake .
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">jj</span><span> new  </span><span style="font-style:italic;color:#5c6773;"># Create a new child commit/start working on a new change
+</span><span style="color:#ffd580;">nix</span><span> flake update
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild test</span><span style="color:#ffcc66;"> --flake</span><span> .
+</span><span style="color:#ffd580;">jj</span><span> squash </span><span style="font-style:italic;color:#5c6773;">#  equivalent to `git commit -a --amend`
+</span><span style="color:#ffd580;">jj</span><span> describe</span><span style="color:#ffcc66;"> -m </span><span style="color:#bae67e;">&quot;update&quot; </span><span style="font-style:italic;color:#5c6773;"># Similar to git commit -m
+</span><span style="color:#ffd580;">jj</span><span> commit </span><span style="font-style:italic;color:#5c6773;"># Finalize the commit
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild switch</span><span style="color:#ffcc66;"> --flake</span><span> .
 </span></code></pre>
 <ul>
 <li>
