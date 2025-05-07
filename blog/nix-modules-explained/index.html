@@ -277,60 +277,63 @@ directory:</p>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">npins</span><span> init
 </span></code></pre>
 <p>Create a <code>default.nix</code> with the following:</p>
-<pre data-lang="nix default.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix default.nix "><code class="language-nix default.nix" data-lang="nix default.nix"><span>{ system ? builtins.currentSystem, sources ? import ./npins, }:
-</span><span>let
-</span><span>  pkgs = import sources.nixpkgs {
-</span><span>    config = { };
-</span><span>    overlays = [ ];
-</span><span>  };
-</span><span>  inherit (pkgs) lib;
-</span><span>in lib.makeScope pkgs.newScope (self: {
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
+</span><span>{ </span><span style="color:#ffcc66;">system </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">currentSystem</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">sources </span><span style="color:#f29e74;">? </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./npins</span><span style="color:#f29e74;">, </span><span>}:
+</span><span style="color:#ffa759;">let
+</span><span>  </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span>{
+</span><span>    </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[ ]</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffa759;">inherit </span><span>(</span><span style="color:#ffcc66;">pkgs</span><span>) </span><span style="color:#ffd580;">lib</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffa759;">in </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">makeScope pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">newScope </span><span>(</span><span style="color:#ffcc66;">self</span><span>: {
 </span><span>
-</span><span>  shell = pkgs.mkShell { packages = [ pkgs.npins self.myPackage ]; };
+</span><span>  </span><span style="color:#ffd580;">shell </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkShell </span><span>{ </span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">npins self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">myPackage </span><span>]</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>    # inherit lib;
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># inherit lib;
 </span><span>
-</span><span>  nixosSystem = import (sources.nixpkgs + &quot;/nixos&quot;) {
-</span><span>    configuration = ./configuration.nix;
-</span><span>  };
+</span><span>  </span><span style="color:#ffd580;">nixosSystem </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span>(</span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span style="color:#f29e74;">+ </span><span style="color:#bae67e;">&quot;/nixos&quot;</span><span>) {
+</span><span>    </span><span style="color:#ffd580;">configuration </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">./configuration.nix</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>  moduleEvale = lib.evalModules {
-</span><span>    modules = [
-</span><span>      # ...
-</span><span>    ];
-</span><span>  };
+</span><span>  </span><span style="color:#ffd580;">moduleEvale </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">evalModules </span><span>{
+</span><span>    </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># ...
+</span><span>    ]</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>})
 </span></code></pre>
 <p>A <code>configuration.nix</code> with the following:</p>
-<pre data-lang="nix configuration.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix configuration.nix "><code class="language-nix configuration.nix" data-lang="nix configuration.nix"><span>{
-</span><span>  boot.loader.grub.device = &quot;nodev&quot;;
-</span><span>  fileSystems.&quot;/&quot;.device = &quot;/devst&quot;;
-</span><span>  system.stateVersion = &quot;25.05&quot;;
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">loader</span><span>.</span><span style="color:#ffd580;">grub</span><span>.</span><span style="color:#ffd580;">device </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;nodev&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">fileSystems</span><span>.</span><span style="color:#bae67e;">&quot;/&quot;</span><span>.</span><span style="color:#ffd580;">device </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;/devst&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;25.05&quot;</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>  # declaring options means to declare a new option
-</span><span>  # defining options means to define a value of an option
-</span><span>  imports = [
-</span><span>    # ./main.nix
-</span><span>     ./desktop.nix # Files
-</span><span>    # ./minimal.nix
-</span><span>  ];
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># declaring options means to declare a new option
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># defining options means to define a value of an option
+</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># ./main.nix
+</span><span>     </span><span style="color:#bae67e;">./desktop.nix </span><span style="font-style:italic;color:#5c6773;"># Files
+</span><span>    </span><span style="font-style:italic;color:#5c6773;"># ./minimal.nix
+</span><span>  ]</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>  # mine.desktop.enable = true;
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># mine.desktop.enable = true;
 </span><span>}
 </span></code></pre>
 <p>And a <code>desktop.nix</code> with the following:</p>
-<pre data-lang="nix desktop.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix desktop.nix "><code class="language-nix desktop.nix" data-lang="nix desktop.nix"><span>{ pkgs, lib, config, ... }:
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># desktop.nix
+</span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
 </span><span>
 </span><span>{
-</span><span>  imports = [];
+</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>  # Define an option to enable or disable desktop configuration
-</span><span>  options.mine.desktop.enable = lib.mkEnableOption &quot;desktop settings&quot;;
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Define an option to enable or disable desktop configuration
+</span><span>  </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">mine</span><span>.</span><span style="color:#ffd580;">desktop</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;desktop settings&quot;</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span>  # Configuration that applies when the option is enabled
-</span><span>  config = lib.mkIf config.mine.desktop.enable {
-</span><span>    environment.systemPackages = [ pkgs.git ];
-</span><span>  };
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Configuration that applies when the option is enabled
+</span><span>  </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mine</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">desktop</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>{
+</span><span>    </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
 <p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and vice-versa.</p>
