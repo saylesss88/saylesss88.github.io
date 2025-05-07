@@ -22,7 +22,7 @@
 <h1 class="title">NixOS Modules Explained</h1>
 <p class="subtitle"><strong>2025-05-05</strong></p>
 <h2 id="nixos-modules">NixOS Modules</h2>
-<p>TL;DR: In this post I break down the NixOS module system and explain how to define options. I take notes in markdown so it's written in markdown (sorry old reddit). I write about things to deepen understanding, you think you know until you try to explain it to someone. Anyways, I hope this is useful.</p>
+<p>TL;DR: In this post I break down the NixOS module system and explain how to define options. As well as how to test modules with the repl.</p>
 <ul>
 <li>Most modules are functions that take an attribute set and return an attribute set.</li>
 </ul>
@@ -261,24 +261,131 @@
 <p>You declaratively state the desired state of your system by setting options across various modules. The NixOS build system then evaluates and merges these option settings. The culmination of this process, which includes building the entire system closure, is represented by the derivation built by <code>config.system.build.toplevel</code>.</p>
 </li>
 </ul>
-<h4 id="resources-on-modules">Resources on Modules</h4>
+<h3 id="nixos-modules-and-dependency-locking-with-npins">NixOS Modules and Dependency Locking with npins</h3>
+<p>This is the file structure:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">❯</span><span> tree
+</span><span style="color:#f28779;">.
+</span><span style="color:#ffd580;">├──</span><span> configuration.nix
+</span><span style="color:#ffd580;">├──</span><span> default.nix
+</span><span style="color:#ffd580;">├──</span><span> desktop.nix
+</span><span style="color:#ffd580;">└──</span><span> npins
+</span><span>    </span><span style="color:#ffd580;">├──</span><span> default.nix
+</span><span>    </span><span style="color:#ffd580;">└──</span><span> sources.json
+</span></code></pre>
+<p>This uses <code>npins</code> for dependency locking. Install it and run this in the project
+directory:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">npins</span><span> init
+</span></code></pre>
+<p>Create a <code>default.nix</code> with the following:</p>
+<pre data-lang="nix default.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix default.nix "><code class="language-nix default.nix" data-lang="nix default.nix"><span>{ system ? builtins.currentSystem, sources ? import ./npins, }:
+</span><span>let
+</span><span>  pkgs = import sources.nixpkgs {
+</span><span>    config = { };
+</span><span>    overlays = [ ];
+</span><span>  };
+</span><span>  inherit (pkgs) lib;
+</span><span>in lib.makeScope pkgs.newScope (self: {
+</span><span>
+</span><span>  shell = pkgs.mkShell { packages = [ pkgs.npins self.myPackage ]; };
+</span><span>
+</span><span>    # inherit lib;
+</span><span>
+</span><span>  nixosSystem = import (sources.nixpkgs + &quot;/nixos&quot;) {
+</span><span>    configuration = ./configuration.nix;
+</span><span>  };
+</span><span>
+</span><span>  moduleEvale = lib.evalModules {
+</span><span>    modules = [
+</span><span>      # ...
+</span><span>    ];
+</span><span>  };
+</span><span>})
+</span></code></pre>
+<p>A <code>configuration.nix</code> with the following:</p>
+<pre data-lang="nix configuration.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix configuration.nix "><code class="language-nix configuration.nix" data-lang="nix configuration.nix"><span>{
+</span><span>  boot.loader.grub.device = &quot;nodev&quot;;
+</span><span>  fileSystems.&quot;/&quot;.device = &quot;/devst&quot;;
+</span><span>  system.stateVersion = &quot;25.05&quot;;
+</span><span>
+</span><span>  # declaring options means to declare a new option
+</span><span>  # defining options means to define a value of an option
+</span><span>  imports = [
+</span><span>    # ./main.nix
+</span><span>     ./desktop.nix # Files
+</span><span>    # ./minimal.nix
+</span><span>  ];
+</span><span>
+</span><span>  # mine.desktop.enable = true;
+</span><span>}
+</span></code></pre>
+<p>And a <code>desktop.nix</code> with the following:</p>
+<pre data-lang="nix desktop.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix desktop.nix "><code class="language-nix desktop.nix" data-lang="nix desktop.nix"><span>{ pkgs, lib, config, ... }:
+</span><span>
+</span><span>{
+</span><span>  imports = [];
+</span><span>
+</span><span>  # Define an option to enable or disable desktop configuration
+</span><span>  options.mine.desktop.enable = lib.mkEnableOption &quot;desktop settings&quot;;
+</span><span>
+</span><span>  # Configuration that applies when the option is enabled
+</span><span>  config = lib.mkIf config.mine.desktop.enable {
+</span><span>    environment.systemPackages = [ pkgs.git ];
+</span><span>  };
+</span><span>}
+</span></code></pre>
+<p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and vice-versa.</p>
+<p>You can test that this works by running:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> -A</span><span> nixosSystem.system
+</span></code></pre>
+<ul>
+<li><code>nix-instantiate</code> performs only the evaluation phase of Nix expressions.
+During this phase, Nix interprets the Nix code, resolves all dependencies, and
+constructs derivations but does not execute any build actions. Useful for
+testing.</li>
+</ul>
+<p>To check if this worked and <code>git</code> is installed in systemPackages you can
+load it into <code>nix repl</code> but first you'll want <code>lib</code> to be available so uncomment
+this in your <code>default.nix</code>:</p>
+<pre data-lang="nix default.nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix default.nix "><code class="language-nix default.nix" data-lang="nix default.nix"><span>inherit lib;
+</span></code></pre>
+<p>Rerun <code>nix-instantiate -A nixosSystem.system</code></p>
+<p>Then load the repl and check that <code>git</code> is in <code>systemPackages</code>:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> repl</span><span style="color:#ffcc66;"> -f</span><span> .
+</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> builtins.filter (pkg: lib.hasPrefix </span><span style="color:#bae67e;">&quot;git&quot;</span><span> pkg.name) </span><span style="color:#ffd580;">nixosSystem.config.environment.systemPackages
+</span></code></pre>
+<p>This shows the path to the derivation</p>
+<p>Check that mine.desktop.enable is true</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ffcc66;">nixosSystem</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mine</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">desktop</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable
+</span><span style="color:#ffcc66;">true
+</span></code></pre>
+<h2 id="resources-on-modules">Resources on Modules</h2>
 <ul>
 <li>
-<p><a href="https://xeiaso.net/talks/asg-2023-nixos/">xeiaso Nixos Modules for fun &amp; profit</a></p>
+<p><a href="https://nixos.org/manual/nixos/stable/#sec-writing-modules">WritingNixOsModules</a></p>
 </li>
 <li>
-<p><a href="https://nixos.wiki/wiki/NixOS_modules">NixOS Wiki NixOS modules</a></p>
-</li>
-<li>
-<p><a href="https://nix.dev/tutorials/module-system/index.html">nix.dev Module System</a></p>
+<p><a href="https://nixos.wiki/wiki/NixOS_modules">NixWikiNixOSModules</a></p>
 </li>
 <li>
 <p><a href="https://nix.dev/tutorials/module-system/a-basic-module/index.html">nix.dev A basic module</a></p>
 </li>
 <li>
+<p><a href="https://nix.dev/tutorials/module-system/deep-dive#module-system-deep-dive">ModuleSystemDeepDive</a></p>
+</li>
+<li>
+<p><a href="https://xeiaso.net/talks/asg-2023-nixos/">MakingNixOSModulesForFun</a></p>
+</li>
+<li>
+<p><a href="https://xeiaso.net/talks/asg-2023-nixos/">xeiaso Nixos Modules for fun &amp; profit</a></p>
+</li>
+<li>
 <p><a href="https://nixos-and-flakes.thiscute.world/other-usage-of-flakes/module-system">NixOS Flakes Book Module System</a></p>
 </li>
 </ul>
+<h1 id="videos">Videos</h1>
+<p><a href="https://www.youtube.com/watch?v=N7hFP_40DJo&amp;t=17s">NixHour Writing NixOS modules</a> -- This example is from this video
+<a href="https://infinisil.com/modules.mp4">infinisilModules</a></p>
+<p><a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion</a></p>
  </div>
     </section>
   </body>
