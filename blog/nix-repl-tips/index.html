@@ -77,6 +77,8 @@ or values.</li>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix repl
 </span><span>
 </span><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ff3333;">:</span><span style="color:#ffcc66;">lf </span><span style="color:#bae67e;">github:nix-community/home-manager
+</span><span style="font-style:italic;color:#5c6773;"># or
+</span><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ff3333;">:</span><span style="color:#ffcc66;">lf </span><span style="color:#bae67e;">/path/to/your/flake
 </span></code></pre>
 <h3 id="debugging-with-a-flake-repl-output">Debugging with a Flake REPL output</h3>
 <ul>
@@ -104,8 +106,35 @@ or values.</li>
 </span><span>}: {
 </span><span>  </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">flake pkgs lib</span><span style="color:#ccc9c2cc;">;
 </span><span>  </span><span style="color:#ffd580;">configs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">flake</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosConfigurations</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="font-style:italic;color:#5c6773;"># inherit (flake.outputs) userVars;
 </span><span>}
+</span><span style="font-style:italic;color:#5c6773;"># Accepts `lib`, `flake`, `pkgs` from `flake.nix` as arguments
+</span><span style="font-style:italic;color:#5c6773;"># Attributes: flake: all flake outputs (flake.outputs, flake.inputs)
+</span><span style="font-style:italic;color:#5c6773;"># run `nix repl .#repl` to load the REPL environment
+</span><span style="font-style:italic;color:#5c6773;"># :l &lt;nixpkgs&gt;  # load additional Nixpkgs if needed
+</span><span style="font-style:italic;color:#5c6773;"># :p flake.inputs.nixpkgs.rev # nixpkgs revision
+</span><span style="font-style:italic;color:#5c6773;"># :p flake.inputs.home-manager.rev
+</span><span style="font-style:italic;color:#5c6773;"># flake.outputs.packages.x86_64-linux.default # inspect default package
+</span><span style="font-style:italic;color:#5c6773;"># pkgs.helix # access helix package
+</span><span style="font-style:italic;color:#5c6773;"># lib.version # check lib version
+</span><span style="font-style:italic;color:#5c6773;"># configs.magic.config.environment.systemPackages # list packages
+</span><span style="font-style:italic;color:#5c6773;"># configs.magic.config.home-manager.users.jr.home.packages # home packages
+</span><span style="font-style:italic;color:#5c6773;"># :p configs.magic.config.home-manager.users.jr.programs.git.userName
+</span><span style="font-style:italic;color:#5c6773;"># Debugging
+</span><span style="font-style:italic;color:#5c6773;"># :p builtins.typeOf configs.magic (should be `set`)
+</span><span style="font-style:italic;color:#5c6773;"># :p builtins.attrNames configs.magic
+</span><span style="font-style:italic;color:#5c6773;"># :p configs.magic.config # errors indicate issues
+</span><span style="font-style:italic;color:#5c6773;"># :p configs.magic.config.environment # isolate the module or issue
+</span><span style="font-style:italic;color:#5c6773;"># :p builtins.attrNames configs.magic.config.home-manager.users.jr # home attrs
+</span><span style="font-style:italic;color:#5c6773;"># :p configs.magic.config.home-manager.users.jr.programs.git.enable # true/false
+</span><span style="font-style:italic;color:#5c6773;">#  :p lib.filterAttrs (n: v: lib.hasPrefix &quot;firefox&quot; n) pkgs
+</span><span style="font-style:italic;color:#5c6773;"># :p configs.magic.config.stylix # check theming
+</span><span style="font-style:italic;color:#5c6773;"># :p configs.magic.config.home-manager.users.jr.stylix
+</span><span style="font-style:italic;color:#5c6773;"># :p lib.mapAttrsToList (name: cfg: name) configs
 </span></code></pre>
+<blockquote>
+<p>❗: Replace <code>magic</code> with your host name</p>
+</blockquote>
 <h2 id="usage">Usage</h2>
 <p>Load REPL environment with:
 <code>nix repl .#repl</code></p>

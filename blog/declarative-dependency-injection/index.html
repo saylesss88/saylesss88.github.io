@@ -24,10 +24,11 @@
 <h3 id="injecting-dependencies-into-modules-from-a-flake">Injecting Dependencies into Modules from a Flake</h3>
 <ul>
 <li>
-<p>In my last post I touched on <code>specialArgs</code> and <code>extraSpecialArgs</code> being ways to inject dependencies and variables from flakes to modules, this is another way to inject dependencies. <code>specialArgs</code> dumps values directly into every module's argument list, which breaks the usual declarative data flow model of NixOS. Instead of passing dependencies explicitly, your modules suddenly receive extra variables that aren't structured like normal module options.</p>
+<p>In my last <a href="https://saylesss88.github.io/blog/nix-flakes-tips-and-tricks/">post</a> I touched on <code>specialArgs</code> and <code>extraSpecialArgs</code> being ways to inject dependencies and variables from flakes to modules, this is another way to inject dependencies. <code>specialArgs</code> dumps values directly into every module's argument list, which breaks the usual declarative data flow model of NixOS. Instead of passing dependencies explicitly, your modules suddenly receive extra variables that aren't structured like normal module options.</p>
 <p>First we'll define a custom option in an inline module that has the needed dependencies in its lexical closure inside of <code>flake.nix</code> to inject said dependencies into our NixOS configuration. This makes those dependencies available to all modules that import this configuration, without needing to pass them explicitly via <code>specialArgs</code> in your flakes <code>outputs</code>. It's a more declarative and centralized way to share dependencies across modules.</p>
 </li>
 </ul>
+<p>This is defined within the <code>outputs</code> function's <code>let</code> block in your <code>flake.nix</code>:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
 </span><span style="color:#ffa759;">let
 </span><span>  </span><span style="font-style:italic;color:#5c6773;"># list deps you want passed here
@@ -230,6 +231,7 @@ or</li>
 </span><span>          }</span><span style="color:#ccc9c2cc;">;
 </span><span>          </span><span style="font-style:italic;color:#5c6773;"># note: depending on your setup you may need to tweak this
 </span><span>          </span><span style="font-style:italic;color:#5c6773;"># `legacyPackages.${pkgs.system}` might be needed
+</span><span>          </span><span style="font-style:italic;color:#5c6773;"># due to how home-manager handles `pkgs`
 </span><span>          </span><span style="color:#ffd580;">home</span><span>.</span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">x86_64-linux</span><span>; [ </span><span style="color:#ffcc66;">firefox </span><span>]</span><span style="color:#ccc9c2cc;">;
 </span><span>        }</span><span style="color:#ccc9c2cc;">;
 </span><span>      }
@@ -249,6 +251,9 @@ or</li>
 </li>
 <li>
 <p>By explicitly handling dependency injection in a more declarative way (e.g. <code>config.dep-inject</code>), you ensure that dependencies remain accessible accross different modules, regardless of where they are used.</p>
+</li>
+<li>
+<p>I don't personally use this technique for injecting dependencies in my NixOS configuration. It adds complexity that I believe <code>specialArgs</code> was supposed to solve and on modern computers I don't think it will matter too much. This is just another way to do things and a way to enhance understanding.</p>
 </li>
 <li>
 <p>I got this example from <a href="https://jade.fyi/blog/flakes-arent-real/">flakes-arent-real</a> and built on it to enhance understanding. If you have any tips or notice any inaccuracies please let me know.</p>
