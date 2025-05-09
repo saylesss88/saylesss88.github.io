@@ -214,6 +214,38 @@
 </span><span>  </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">pokego
 </span><span>]
 </span></code></pre>
+<h4 id="another-overlay-example">Another Overlay Example</h4>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
+</span><span>  </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;https://flakehub.com/NixOS/nixpkgs/*.tar.gz&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>    </span><span style="color:#ffd580;">nix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nix </span><span>}:
+</span><span>
+</span><span>    </span><span style="color:#ffa759;">let
+</span><span>      </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;aarch64-darwin&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
+</span><span>        </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[
+</span><span>          </span><span style="color:#ffcc66;">nix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default
+</span><span>        ]</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffa759;">in
+</span><span>    {
+</span><span>     </span><span style="font-style:italic;color:#5c6773;"># `pkgs` is nixpkgs for the system, with nix&#39;s overlay applied
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>
+<p>Normally, <code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings. However, the example above customizes this import by passing arguments: </code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}`. This makes the pkgs variable represent nixpkgs specifically for the aarch64-darwin system, with the overlay from the nix flake applied.</p>
+</li>
+<li>
+<p>Consequently, any packages built using this customized <code>pkgs</code> will now depend on or use the specific nix version (2.17.0) provided by the nix flake, instead of the version that comes with the fetched nixpkgs. This technique can be useful for ensuring a consistent environment or testing specific package versions.</p>
+</li>
+</ul>
  </div>
     </section>
   </body>
