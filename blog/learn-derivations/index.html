@@ -73,51 +73,74 @@
 </ul>
 </li>
 <li>
-<p>A Nix derivation encapsulates all this information, telling Nix what inputs to use, how to build it, and what the final output should be.</p>
+<p>A Nix derivation encapsulates all this information, telling Nix what inputs
+to use, how to build it, and what the final output should be.</p>
 </li>
 </ul>
 <h2 id="creating-derivations-in-nix">Creating Derivations in Nix</h2>
 <ul>
 <li>
-<p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function, which is part of the standard environment (<code>stdenv</code>). While a lower-level <code>derivation</code> function exists for advanced use cases, <code>mkDerivation</code> simplifies the process by automatically managing dependencies and the build environment.</p>
+<p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function, which is part of the standard environment (<code>stdenv</code>). While a
+lower-level <code>derivation</code> function exists for advanced use cases,
+<code>mkDerivation</code> simplifies the process by automatically managing dependencies
+and the build environment.</p>
 </li>
 <li>
-<p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument. At a minimum, you'll often encounter these essential attributes:</p>
+<p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument.
+At a minimum, you'll often encounter these essential attributes:</p>
 <ol>
-<li><strong>name:</strong> A human-readable identifier for the derivation (e.g., "foo", "hello.txt"). This helps you and Nix refer to the package.</li>
-<li><strong>system:</strong> Specifies the target architecture for the build (e.g., <code>builtins.currentSystem</code> for your current machine).</li>
-<li><strong>builder:</strong> Defines the program that will execute the build instructions (e.g., <code>bash</code>).</li>
+<li><strong>name:</strong> A human-readable identifier for the derivation
+(e.g., "foo", "hello.txt"). This helps you and Nix refer to the package.</li>
+<li><strong>system:</strong> Specifies the target architecture for the build
+(e.g., <code>builtins.currentSystem</code> for your current machine).</li>
+<li><strong>builder:</strong> Defines the program that will execute the build instructions
+(e.g., <code>bash</code>).</li>
 </ol>
 </li>
 </ul>
 <h2 id="our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder</h2>
 <ul>
-<li>To understand how derivations work, let's create a very basic example using a bash script as our <code>builder</code>.</li>
+<li>To understand how derivations work, let's create a very basic example using a
+bash script as our <code>builder</code>.</li>
 </ul>
 <h3 id="why-a-builder-script">Why a Builder Script?</h3>
 <ul>
-<li>The <code>builder</code> attribute in a derivation tells Nix <em>how</em> to perform the build steps. A simple and common way to define these steps is with a bash script.</li>
+<li>The <code>builder</code> attribute in a derivation tells Nix <em>how</em> to perform the build
+steps. A simple and common way to define these steps is with a bash script.</li>
 </ul>
 <h3 id="the-challenge-with-shebangs-in-nix">The Challenge with Shebangs in Nix</h3>
 <ul>
 <li>
-<p>In typical Unix-like systems, you might start a bash script with a shebang (<code>#!/bin/bash</code> or <code>#!/usr/bin/env bash</code>) to tell the system how to execute it. However, in Nix derivations, we generally avoid this.</p>
+<p>In typical Unix-like systems, you might start a bash script with a shebang
+(<code>#!/bin/bash</code> or <code>#!/usr/bin/env bash</code>) to tell the system how to execute it.
+However, in Nix derivations, we generally avoid this.</p>
 </li>
 <li>
-<p><strong>Reason:</strong> Nix builds happen in an isolated environment where the exact path to common tools like <code>bash</code> isn't known beforehand (it resides within the Nix store). Hardcoding a path or relying on the system's <code>PATH</code> would break Nix's stateless property.</p>
+<p><strong>Reason:</strong> Nix builds happen in an isolated environment where the exact path
+to common tools like <code>bash</code> isn't known beforehand (it resides within the Nix
+store). Hardcoding a path or relying on the system's <code>PATH</code> would break Nix's
+stateless property.</p>
 </li>
 </ul>
 <h3 id="the-importance-of-statelessness-in-nix">The Importance of Statelessness in Nix</h3>
 <ul>
 <li>
-<p><strong>Stateful Systems (Traditional):</strong> When you install software traditionally, it often modifies the core system environment directly. This can lead to dependency conflicts and makes rollbacks difficult.</p>
+<p><strong>Stateful Systems (Traditional):</strong> When you install software traditionally,
+it often modifies the core system environment directly. This can lead to
+dependency conflicts and makes rollbacks difficult.</p>
 </li>
 <li>
-<p><strong>Stateless Systems (Nix):</strong> Nix takes a different approach. When installing a package, it creates a unique, immutable directory in the Nix store. This means:</p>
+<p><strong>Stateless Systems (Nix):</strong> Nix takes a different approach. When installing
+a package, it creates a unique, immutable directory in the Nix store. This
+means:</p>
 <ul>
-<li><strong>No Conflicts:</strong> Different versions of the same package can coexist without interfering with each other.</li>
-<li><strong>Reliable Rollback:</strong> You can easily switch back to previous versions without affecting system-wide files.</li>
-<li><strong>Reproducibility:</strong> Builds are more likely to produce the same result across different machines if they are "pure" (don't rely on external system state).</li>
+<li><strong>No Conflicts:</strong> Different versions of the same package can coexist
+without interfering with each other.</li>
+<li><strong>Reliable Rollback:</strong> You can easily switch back to previous versions
+without affecting system-wide files.</li>
+<li><strong>Reproducibility:</strong> Builds are more likely to produce the same result
+across different machines if they are "pure" (don't rely on external
+system state).</li>
 </ul>
 </li>
 </ul>
@@ -131,15 +154,22 @@
 </span></code></pre>
 <ul>
 <li>
-<p>The command <code>declare -xp</code> lists exported variables (it's a bash builtin function).</p>
+<p>The command <code>declare -xp</code> lists exported variables (it's a bash builtin
+function).</p>
 </li>
 <li>
-<ul>
-<li>Nix needs to know where the final built product (the "cake" in our earlier analogy) should be placed. So, during the derivation process, Nix calculates a unique output path within the Nix store. This path is then made available to our builder script as an environment variable named <code>$out</code>. The <code>.drv</code> file, which is the recipe, contains instructions for the builder, including setting up this <code>$out</code> variable. Our builder script will then put the result of its work (in this case, the "foo" file) into this specific <code>$out</code> directory.</li>
-</ul>
+<p>Nix needs to know where the final built product (the "cake" in our earlier
+analogy) should be placed. So, during the derivation process, Nix calculates
+a unique output path within the Nix store. This path is then made available
+to our builder script as an environment variable named <code>$out</code>. The <code>.drv</code>
+file, which is the recipe, contains instructions for the builder, including
+setting up this <code>$out</code> variable. Our builder script will then put the result
+of its work (in this case, the "foo" file) into this specific <code>$out</code> directory.</p>
 </li>
 <li>
-<p>As mentioned earlier we need to find the nix store path to the bash executable, common way to do this is to load Nixpkgs into the repl and check:</p>
+<p>As mentioned earlier we need to find the nix store path to the bash
+executable, common way to do this is to load Nixpkgs into the repl
+and check:</p>
 </li>
 </ul>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> :l </span><span style="color:#f29e74;">&lt;</span><span>nixpkgs</span><span style="color:#f29e74;">&gt;
@@ -147,8 +177,10 @@
 </span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#bae67e;">&quot;$</span><span>{bash}</span><span style="color:#bae67e;">&quot;
 </span><span style="color:#bae67e;">&quot;/nix/store/ihmkc7z2wqk3bbipfnlh0yjrlfkkgnv6-bash-4.2-p45&quot;
 </span></code></pre>
-<p>So, with this little trick we are able to refer to <code>bin/bash</code> and create our derivation:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> d = derivation { name = </span><span style="color:#bae67e;">&quot;foo&quot;</span><span>; builder = </span><span style="color:#bae67e;">&quot;$</span><span>{bash}</span><span style="color:#bae67e;">/bin/bash&quot;</span><span>; args = </span><span style="color:#ffa759;">[</span><span> ./builder.sh </span><span style="color:#ffa759;">]</span><span>; system = builtins.currentSystem; }
+<p>So, with this little trick we are able to refer to <code>bin/bash</code> and create
+our derivation:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> d = derivation { name = </span><span style="color:#bae67e;">&quot;foo&quot;</span><span>; builder = </span><span style="color:#bae67e;">&quot;$</span><span>{bash}</span><span style="color:#bae67e;">/bin/bash&quot;</span><span>;
+</span><span> args = </span><span style="color:#ffa759;">[</span><span> ./builder.sh </span><span style="color:#ffa759;">]</span><span>; system = builtins.currentSystem; }
 </span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> :b d
 </span><span style="color:#ffd580;">[1</span><span> built, 0.0 MiB DL]
 </span><span>
@@ -157,10 +189,13 @@
 </span></code></pre>
 <ul>
 <li>
-<p>Boom! The contents of <code>/nix/store/w024zci0x1hh1wj6gjq0jagkc1sgrf5r-foo</code> is really foo! We've built our first derivation.</p>
+<p>Boom! The contents of <code>/nix/store/w024zci0x1hh1wj6gjq0jagkc1sgrf5r-foo</code>
+is really foo! We've built our first derivation.</p>
 </li>
 <li>
-<p>Derivations are the primitive that Nix uses to define packages. “Package” is a loosely defined term, but a derivation is simply the result of calling <code>builtins.derivation</code>.</p>
+<p>Derivations are the primitive that Nix uses to define packages. “Package”
+is a loosely defined term, but a derivation is simply the result of calling
+<code>builtins.derivation</code>.</p>
 </li>
 </ul>
 <h2 id="our-second-derivation">Our Second Derivation</h2>
@@ -177,7 +212,8 @@
 </span><span style="color:#ff3333;">«</span><span style="color:#f28779;">derivation </span><span style="color:#bae67e;">/nix/store/ad6c51ia15p9arjmvvqkn9fys9sf1kdw-hello.txt.drv</span><span style="color:#ff3333;">»
 </span></code></pre>
 <ul>
-<li>Derivations have a <code>.drv</code> suffix, as you can see the result of calling <code>hello-drv</code> is the nix store path to a derivation.</li>
+<li>Derivations have a <code>.drv</code> suffix, as you can see the result of calling
+<code>hello-drv</code> is the nix store path to a derivation.</li>
 </ul>
 <h3 id="links-and-short-overview">Links and short Overview</h3>
 <ul>
