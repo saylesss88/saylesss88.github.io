@@ -59,19 +59,23 @@
       <div class="container">
 <h1 class="title">Building your Configuration as a Package</h1>
 <p class="subtitle"><strong>2025-05-05</strong></p>
-<h4 id="building-your-configuration-as-a-package">Building your configuration as a Package</h4>
+<h1 id="building-your-configuration-as-a-package">Building your configuration as a Package</h1>
 <ul>
 <li>
-<p>TL;DR This post demonstrates other ways to modularize your config as well as going into more advanced outputs.</p>
+<p>TL;DR This post demonstrates other ways to modularize your config as well as
+going into more advanced outputs.</p>
 </li>
 <li>
-<p>This is long winded, and maybe unnecessary for your workflow. Also I take notes in markdown so this is written in markdown. It demonstrates other ways to modularize your config as well as going into more advanced outputs.</p>
-</li>
-<li>
-<p>This allows you to build your configuration as a package allowing you to separate the process of creating a configuration artifact and applying it to the live system giving you a reusable artifact that can be used to deploy to different systems. This can make it easier to isolate it from other parts of your system making debugging easier.</p>
+<p>This allows you to build your configuration as a package allowing you to
+separate the process of creating a configuration artifact and applying it to
+the live system giving you a reusable artifact that can be used to deploy to
+different systems. This can make it easier to isolate it from other parts of
+your system making debugging easier.</p>
 </li>
 </ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>  </span><span style="color:#ffcc66;">outputs </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">my-inputs</span><span> @ {
+<p>The following is a snip of my <code>flake.nix</code>:</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span>  </span><span style="color:#ffcc66;">outputs </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">my-inputs</span><span> @ {
 </span><span>    </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">,
 </span><span>    </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
 </span><span>    </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">,
@@ -126,16 +130,21 @@
 </span></code></pre>
 <ul>
 <li>
-<p>I didn't want to change the name of <code>inputs</code> and effect other areas of my config so I first renamed <code>@ inputs</code> to <code>@ my-inputs</code> to make the merged attribute set use the original <code>inputs</code> name.</p>
+<p>I didn't want to change the name of <code>inputs</code> and effect other areas of my
+config so I first renamed <code>@ inputs</code> to <code>@ my-inputs</code> to make the merged
+attribute set use the original <code>inputs</code> name.</p>
 </li>
 <li>
-<p>Note, I'm still using home-manager as a module I just had to move it for all modules to be available inside the artifact built with <code>nix build .#nixos</code></p>
+<p>Note, I'm still using home-manager as a module I just had to move it for all
+modules to be available inside the artifact built with <code>nix build .#nixos</code></p>
 </li>
 </ul>
 <h3 id="benefits-of-nixosconfiguration-as-a-package">Benefits of <code>nixosConfiguration</code> as a Package</h3>
 <p><code>packages.x86_64-linux.nixos = self.nixosConfigurations.magic.config.system.build.toplevel;</code></p>
 <ul>
-<li>This exposes the <code>toplevel</code> derivation of <code>nixosConfiguration.magic</code> as a package, which is the complete system closure of your NixOS configuration.</li>
+<li>The above expression exposes the <code>toplevel</code> derivation of
+<code>nixosConfiguration.magic</code> as a package, which is the complete system closure
+of your NixOS configuration.</li>
 </ul>
 <p>Here is the <code>/hosts/magic/default.nix</code>:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
@@ -147,7 +156,11 @@
 </span><span>}
 </span></code></pre>
 <ul>
-<li>Because we want all modules, not just NixOS modules this requires changing your <code>configuration.nix</code> to include your home-manager configuration. The core reason for this is that the <code>packages.nixos</code> output builds a NixOS system, and home-manager needs to be a part of that system's definition to be included in the build.</li>
+<li>Because we want all modules, not just NixOS modules this requires changing
+your <code>configuration.nix</code> to include your home-manager configuration. The core
+reason for this is that the <code>packages.nixos</code> output builds a NixOS system, and
+home-manager needs to be a part of that system's definition to be included in
+the build.</li>
 </ul>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
 </span><span>{
@@ -186,7 +199,10 @@
 </span><span>  </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span>]</span><span style="color:#ccc9c2cc;">;
 </span></code></pre>
 <blockquote>
-<p>[!NOTE]: <code>inputs.lib.nixOsModules</code> is equivalent to <code>../../home</code> in my case and imports all of my nixOS modules. This comes from the <code>flake.nix</code> where I have <code>nixOsModules = import ./nixos</code> Which looks for a <code>default.nix</code> in the <code>nixos</code> directory.</p>
+<p>[!NOTE]: <code>inputs.lib.nixOsModules</code> is equivalent to <code>../../home</code> in my case
+and imports all of my nixOS modules. This comes from the <code>flake.nix</code> where I
+have <code>nixOsModules = import ./nixos</code> Which looks for a <code>default.nix</code> in the
+<code>nixos</code> directory.</p>
 </blockquote>
 <p>My <code>~/my-nixos/nixos/default.nix</code> looks like this:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
@@ -311,7 +327,9 @@
 <ul>
 <li>Uncomment and add your username to auto login.</li>
 </ul>
-<p>And an <code>apps</code> output that will build and deploy in one step with <code>nix build .#deploy-nixos</code> I'll show <code>packages</code> and <code>apps</code> outputs for context:</p>
+<p>And an <code>apps</code> output that will build and deploy in one step with
+<code>nix build .#deploy-nixos</code> I'll show <code>packages</code> and <code>apps</code> outputs for
+context:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>   </span><span style="font-style:italic;color:#5c6773;"># flake.nix
 </span><span>    </span><span style="font-style:italic;color:#5c6773;"># Default package for tools
 </span><span>    </span><span style="color:#ffcc66;">packages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#ff3333;">= </span><span>{
@@ -355,7 +373,8 @@
 <ul>
 <li>Explore the Package Contents</li>
 </ul>
-<p>Once the build completes, you get a store path like <code>/nix/store/...-nixos-system</code>. You can explore the contents using:</p>
+<p>Once the build completes, you get a store path like
+<code>/nix/store/...-nixos-system</code>. You can explore the contents using:</p>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> path-info</span><span style="color:#ffcc66;"> -r</span><span> .#nixos
 </span><span style="color:#ffd580;">tree</span><span> ./result
 </span><span style="color:#ffd580;">ls</span><span style="color:#ffcc66;"> -lh</span><span> ./result/bin
@@ -374,25 +393,31 @@
 </span><span>nix-repl</span><span style="color:#f29e74;">&gt;</span><span> flake.nixosConfigurations.magic </span><span style="font-style:italic;color:#5c6773;"># Inspect host-specific config
 </span></code></pre>
 <ul>
-<li>You can make a change to your configuration while in the repl and reload with <code>:r</code></li>
+<li>You can make a change to your configuration while in the repl and reload with
+<code>:r</code></li>
 </ul>
 <h3 id="understanding-atomicity">Understanding Atomicity:</h3>
 <ul>
 <li>
-<p>Atomicity means that a system update (e.g. changing <code>configuration.nix</code> or a flake-based <code>toplevel</code> package) either fully succeeds or leaves the system unchanged, preventing partial or inconsistent states.</p>
+<p>Atomicity means that a system update (e.g. changing <code>configuration.nix</code> or a
+flake-based <code>toplevel</code> package) either fully succeeds or leaves the system
+unchanged, preventing partial or inconsistent states.</p>
 </li>
 <li>
-<p>The <code>toplevel</code> package is the entry point for your entire NixOS system, including the kernel, initrd, system services, and <code>home-manager</code> settings.</p>
+<p>The <code>toplevel</code> package is the entry point for your entire NixOS system,
+including the kernel, initrd, system services, and <code>home-manager</code> settings.</p>
 </li>
 <li>
-<p>Building with <code>nix build .#nixos</code> creates the <code>toplevel</code> derivation upfront, allowing you to inspect or copy it before activation:</p>
+<p>Building with <code>nix build .#nixos</code> creates the <code>toplevel</code> derivation upfront,
+allowing you to inspect or copy it before activation:</p>
 </li>
 </ul>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos
 </span><span style="color:#ffcc66;">ls </span><span style="color:#f29e74;">-</span><span style="color:#ffcc66;">l result
 </span></code></pre>
 <ul>
-<li>In contrast, <code>nixos-rebuild switch</code> builds and activates in one step, similar to <code>cargo run</code> although both do involve the same <code>toplevel</code> derivation.</li>
+<li>In contrast, <code>nixos-rebuild switch</code> builds and activates in one step, similar
+to <code>cargo run</code> although both do involve the same <code>toplevel</code> derivation.</li>
 </ul>
 <p>The <code>toplevel</code> package can be copied to another NixOS machine:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos
@@ -406,10 +431,14 @@
 </span></code></pre>
 <ul>
 <li>
-<p>I got the examples for building your configuration as a package and vm from the <a href="https://github.com/richen604/hydenix/tree/main?tab=readme-ov-file">hydenix</a> configuration and adapted them to <a href="https://github.com/saylesss88/flake">my config</a>.</p>
+<p>I got the examples for building your configuration as a package and vm from
+the <a href="https://github.com/richen604/hydenix/tree/main?tab=readme-ov-file">hydenix</a>
+configuration and adapted them to <a href="https://github.com/saylesss88/flake">my config</a>.</p>
 </li>
 <li>
-<p>I got the examples for building your configuration as a package and vm from the <a href="https://github.com/richen604/hydenix/tree/main?tab=readme-ov-file">hydenix</a> configuration and adapted them to <a href="https://github.com/TSawyer87/my-nixos">my config</a>.</p>
+<p>I got the examples for building your configuration as a package and vm from
+the <a href="https://github.com/richen604/hydenix/tree/main?tab=readme-ov-file">hydenix</a>
+configuration and adapted them to <a href="https://github.com/saylesss88/flake">my config</a>.</p>
 </li>
 </ul>
  </div>

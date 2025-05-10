@@ -59,11 +59,12 @@
       <div class="container">
 <h1 class="title">NixOS Modules Explained</h1>
 <p class="subtitle"><strong>2025-05-05</strong></p>
-<h2 id="nixos-modules">NixOS Modules</h2>
-<p>TL;DR: In this post I break down the NixOS module system and explain how to define options. As well as how to test modules with the repl.</p>
-<p>TL;DR: In this post I break down the NixOS module system and explain how to define options. I take notes in markdown so it's written in markdown (sorry old reddit). I write about things to deepen understanding, you think you know until you try to explain it to someone. Anyways, I hope this is useful.</p>
+<h1 id="nixos-modules">NixOS Modules</h1>
+<p>TL;DR: In this post I break down the NixOS module system and explain how to
+define options. As well as how to test modules with the repl.</p>
 <ul>
-<li>Most modules are functions that take an attribute set and return an attribute set.</li>
+<li>Most modules are functions that take an attribute set and return an attribute
+set.</li>
 </ul>
 <p>Refresher:</p>
 <ul>
@@ -86,19 +87,31 @@
 </span><span>{
 </span><span style="color:#ff3333;">}
 </span></code></pre>
-<p>NixOS produces a full system configuration by combining smaller, more isolated and reusable components: <strong>Modules</strong>. In my opinion modules are one of the first things you should understand when learning about NixOS.</p>
+<p>NixOS produces a full system configuration by combining smaller, more isolated
+and reusable components: <strong>Modules</strong>. In my opinion modules are one of the
+first things you should understand when learning about NixOS.</p>
 <ul>
 <li>
-<p>A NixOS module defines configuration options and behaviors for system components, allowing users to extend, customize, and compose configurations declaratively.</p>
+<p>A NixOS module defines configuration options and behaviors for system
+components, allowing users to extend, customize, and compose configurations
+declaratively.</p>
 </li>
 <li>
-<p>A module is a file containing a Nix expression with a specific structure. It <em>declares</em> options for other modules to define (give a value). Modules were introduced to allow extending NixOS without modifying its source code.</p>
+<p>A module is a file containing a Nix expression with a specific structure. It
+<em>declares</em> options for other modules to define (give a value). Modules were
+introduced to allow extending NixOS without modifying its source code.</p>
 </li>
 <li>
-<p>To define any values, the module system first has to know which ones are allowed. This is done by declaring options that specify which attributes can be set and used elsewhere.</p>
+<p>To define any values, the module system first has to know which ones are
+allowed. This is done by declaring options that specify which attributes can
+be set and used elsewhere.</p>
 </li>
 <li>
-<p>If you want to write your own modules, I recommend setting up <a href="https://github.com/nix-community/nixd?tab=readme-ov-file">nixd</a> or <a href="https://github.com/oxalica/nil">nil</a> with your editor of choice. This will allow your editor to warn you about missing arguments and dependencies as well as syntax errors.</p>
+<p>If you want to write your own modules, I recommend setting up
+<a href="https://github.com/nix-community/nixd?tab=readme-ov-file">nixd</a>
+or <a href="https://github.com/oxalica/nil">nil</a> with your editor of choice.
+This will allow your editor to warn you about missing arguments and
+dependencies as well as syntax errors.</p>
 </li>
 </ul>
 <h3 id="declaring-options">Declaring Options</h3>
@@ -136,7 +149,8 @@
 </span><span>}
 </span></code></pre>
 <ul>
-<li>It provides options to enable Vim, set it as the default editor, and specify the Vim package to use.</li>
+<li>It provides options to enable Vim, set it as the default editor, and specify
+the Vim package to use.</li>
 </ul>
 <ol>
 <li>Module Inputs and Structure:</li>
@@ -153,22 +167,32 @@
 <p>Inputs: The module takes the above inputs and <code>...</code> (catch-all for other args)</p>
 <ul>
 <li>
-<p><code>config</code>: Allows the module to read option values (e.g. <code>config.programs.vim.enable</code>). It provides access to the evaluated configuration.</p>
+<p><code>config</code>: Allows the module to read option values (e.g.
+<code>config.programs.vim.enable</code>). It provides access to the evaluated
+configuration.</p>
 </li>
 <li>
-<p><code>lib</code>: The Nixpkgs library, giving us helper functions like <code>mkEnableOption</code>, <code>mkIf</code>, and <code>mkOverride</code>.</p>
+<p><code>lib</code>: The Nixpkgs library, giving us helper functions like <code>mkEnableOption</code>
+, <code>mkIf</code>, and <code>mkOverride</code>.</p>
 </li>
 <li>
 <p><code>pkgs</code>: The Nixpkgs package set, used to access packages like <code>pkgs.vim</code></p>
 </li>
 <li>
-<p><code>...</code>: Allows the module to accept additional arguments, making it flexible for extension in the future.</p>
+<p><code>...</code>: Allows the module to accept additional arguments, making it flexible
+for extension in the future.</p>
 </li>
 </ul>
 </li>
 </ul>
 <blockquote>
-<p>Key Takeaways: A NixOS module is typically a function that can include <code>config</code>, <code>lib</code>, and <code>pkgs</code>, but it doesn’t require them. The <code>...</code> argument ensures flexibility, allowing a module to accept extra inputs without breaking future compatibility. Using <code>lib</code> simplifies handling options (mkEnableOption, mkIf, mkOverride) and helps follow best practices. Modules define options, which users can set in their configuration, and <code>config</code>, which applies changes based on those options.</p>
+<p>Key Takeaways: A NixOS module is typically a function that can include
+<code>config</code>, <code>lib</code>, and <code>pkgs</code>, but it doesn’t require them. The <code>...</code>
+argument ensures flexibility, allowing a module to accept extra inputs
+without breaking future compatibility. Using <code>lib</code> simplifies handling
+options (mkEnableOption, mkIf, mkOverride) and helps follow best practices.
+Modules define options, which users can set in their configuration, and
+<code>config</code>, which applies changes based on those options.</p>
 </blockquote>
 <ol start="2">
 <li>Local Configuration Reference:</li>
@@ -178,7 +202,8 @@
 </span><span style="color:#ffa759;">in
 </span></code></pre>
 <ul>
-<li>This is a local alias. Instead of typing <code>config.programs.vim</code> over and over, the module uses <code>cfg</code>.</li>
+<li>This is a local alias. Instead of typing <code>config.programs.vim</code> over and over,
+the module uses <code>cfg</code>.</li>
 </ul>
 <ol start="3">
 <li>Option Declaration</li>
@@ -202,7 +227,8 @@
 </li>
 </ul>
 <blockquote>
-<p><code>mkPackageOption</code> is a helper that defines a package-typed option with a default (<code>pkgs.vim</code>) and provides docs + example.</p>
+<p><code>mkPackageOption</code> is a helper that defines a package-typed option with a
+default (<code>pkgs.vim</code>) and provides docs + example.</p>
 </blockquote>
 <ol start="4">
 <li>Conditional Configuration</li>
@@ -210,7 +236,8 @@
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">config </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf </span><span>(</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span style="color:#f29e74;">|| </span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor</span><span>) {
 </span></code></pre>
 <ul>
-<li>This block is only activated if <em>either</em> <code>programs.vim.enable</code> or <code>defaultEditor</code> is set.</li>
+<li>This block is only activated if <em>either</em> <code>programs.vim.enable</code> or
+<code>defaultEditor</code> is set.</li>
 </ul>
 <ol start="5">
 <li>Warnings</li>
@@ -220,7 +247,8 @@
 </span><span>]</span><span style="color:#ff3333;">;
 </span></code></pre>
 <ul>
-<li>Gives you a soft warning if you try to set <code>defaultEditor = true</code> without also enabling Vim.</li>
+<li>Gives you a soft warning if you try to set <code>defaultEditor = true</code> without
+also enabling Vim.</li>
 </ul>
 <ol start="6">
 <li>Actual System Config Changes</li>
@@ -232,7 +260,8 @@
 </span><span>}</span><span style="color:#ff3333;">;
 </span></code></pre>
 <ul>
-<li>It adds Vim to your <code>systemPackages</code>, sets <code>$EDITOR</code> if <code>defaultEditor</code> is true, and makes <code>/share/vim-plugins</code> available in the environment.</li>
+<li>It adds Vim to your <code>systemPackages</code>, sets <code>$EDITOR</code> if <code>defaultEditor</code> is
+true, and makes <code>/share/vim-plugins</code> available in the environment.</li>
 </ul>
 <p>The following is a bat home-manager module that I wrote:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># bat.nix
@@ -282,26 +311,39 @@
 </span></code></pre>
 <ul>
 <li>
-<p>If I set this option to true the bat configuration is dropped in place. If it's not set to true, it won't put the bat configuration in the system. Same as with options defined in modules within the Nixpkgs repository.</p>
+<p>If I set this option to true the bat configuration is dropped in place. If
+it's not set to true, it won't put the bat configuration in the system. Same
+as with options defined in modules within the Nixpkgs repository.</p>
 </li>
 <li>
-<p>If I had set the default to <code>true</code>, it would automatically enable the module without requiring an explicit <code>custom.batModule.enable = true;</code> call in my <code>home.nix</code>.</p>
+<p>If I had set the default to <code>true</code>, it would automatically enable the module
+without requiring an explicit <code>custom.batModule.enable = true;</code> call in my
+<code>home.nix</code>.</p>
 </li>
 </ul>
-<h3 id="module-composition">Module Composition</h3>
+<h4 id="module-composition">Module Composition</h4>
 <ul>
 <li>
-<p>NixOS achieves its full system configuration by combining the configurations defined in various modules. This composition is primarily handled through the <code>imports</code> mechanism.</p>
+<p>NixOS achieves its full system configuration by combining the configurations
+defined in various modules. This composition is primarily handled through the
+<code>imports</code> mechanism.</p>
 </li>
 <li>
-<p><code>imports</code>: This is a standard option within a NixOS or Home Manager configuration (often found in your configuration.nix or home.nix). It takes a list of paths to other Nix modules. When you include a module in the imports list, the options and configurations defined in that module become part of your overall system configuration.</p>
+<p><code>imports</code>: This is a standard option within a NixOS or Home Manager
+configuration (often found in your configuration.nix or home.nix). It takes
+a list of paths to other Nix modules. When you include a module in the imports
+list, the options and configurations defined in that module become part of
+your overall system configuration.</p>
 </li>
 <li>
-<p>You declaratively state the desired state of your system by setting options across various modules. The NixOS build system then evaluates and merges these option settings. The culmination of this process, which includes building the entire system closure, is represented by the derivation built by <code>config.system.build.toplevel</code>.</p>
+<p>You declaratively state the desired state of your system by setting options
+across various modules. The NixOS build system then evaluates and merges these
+option settings. The culmination of this process, which includes building the
+entire system closure, is represented by the derivation built by
+<code>config.system.build.toplevel</code>.</p>
 </li>
 </ul>
-<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
-<h3 id="nixos-modules-and-dependency-locking-with-npins">NixOS Modules and Dependency Locking with npins</h3>
+<h4 id="nixos-modules-and-dependency-locking-with-npins">NixOS Modules and Dependency Locking with npins</h4>
 <p>This is the file structure:</p>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">❯</span><span> tree
 </span><span style="color:#f28779;">.
@@ -312,8 +354,8 @@
 </span><span>    </span><span style="color:#ffd580;">├──</span><span> default.nix
 </span><span>    </span><span style="color:#ffd580;">└──</span><span> sources.json
 </span></code></pre>
-<p>This uses <code>npins</code> for dependency locking. Install it and run this in the project
-directory:</p>
+<p>This uses <code>npins</code> for dependency locking. Install it and run this in the project</p>
+<p>directory:</p>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">npins</span><span> init
 </span></code></pre>
 <p>Create a <code>default.nix</code> with the following:</p>
@@ -376,7 +418,9 @@ directory:</p>
 </span><span>  }</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
-<p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and vice-versa.</p>
+<p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can
+uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and
+vice-versa.</p>
 <p>You can test that this works by running:</p>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> -A</span><span> nixosSystem.system
 </span></code></pre>
