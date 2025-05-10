@@ -57,36 +57,46 @@
   <body>
     <section class="section">
       <div class="container">
-<h1 class="title">Top-Level Attributes</h1>
+<h1 class="title">Understanding Top-Level Attributes in NixOS Modules</h1>
 <p class="subtitle"><strong>2025-05-07</strong></p>
-<h2 id="top-level-attributes">Top-Level Attributes</h2>
-<p>The following is a comment by Infinisil (Nix legend) on Reddit:</p>
-<p>A NixOS system is described by a single system derivation. nixos-rebuild builds this derivation with</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ff3333;">$ </span><span style="color:#ffcc66;">nix-build </span><span style="color:#ff3333;">&#39;</span><span style="color:#bae67e;">&lt;nixpkgs/nixos&gt;</span><span style="color:#ff3333;">&#39; </span><span style="color:#f29e74;">-</span><span style="color:#ffcc66;">A system
-</span></code></pre>
-<p>and then switches to that system with</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ff3333;">$ </span><span style="color:#bae67e;">result/bin/switch-to-configuration
-</span></code></pre>
-<p>The entrypoint is the file at <code>'&lt;nixpkgs/nixos&gt;'</code> (<code>./default.nix</code>), which defines the system attribute to be the NixOS option <code>system.build.toplevel</code>. This toplevel option is the topmost level of the NixOS evaluation and it's what almost all options eventually end up influencing through potentially a number of intermediate options.</p>
-<p>As an example:</p>
+<h1 id="understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules</h1>
+<p>This explanation is based on insights from Infinisil, a prominent figure in the
+Nix community, to help clarify the concept of top-level attributes within
+NixOS modules.</p>
+<h2 id="the-core-of-a-nixos-system-system-build-toplevel">The Core of a NixOS System: <code>system.build.toplevel</code></h2>
+<p>In a NixOS system, everything is built from a single "system derivation." The
+command <code>nix-build '&lt;nixpkgs/nixos&gt;' -A system</code> initiates this build process.</p>
+<p>The <code>-A system</code> part tells Nix to focus on the <code>system</code> attribute defined in
+the <code>'&lt;nixpkgs/nixos&gt;'</code> file (which is essentially <code>./default.nix</code> within the
+Nixpkgs repository).</p>
+<p>This <code>system</code> attribute is specifically the NixOS option <code>system.build.toplevel</code>
+. Think of <code>system.build.toplevel</code> as the <strong>very top of the configuration
+hierarchy</strong> for your entire NixOS system. Almost every setting you configure
+eventually influences this top-level derivation, often through a series of
+intermediate steps.</p>
+<p><strong>Key Takeaway:</strong> <code>system.build.toplevel</code> is the ultimate output that defines your entire NixOS system.</p>
+<h2 id="how-options-relate-a-chain-of-influence">How Options Relate: A Chain of Influence</h2>
+<p>Options in NixOS are not isolated; they often build upon each other. Here's an example of how a high-level option can lead down to a low-level system configuration:</p>
 <ul>
-<li>
-<p>The high-level option <code>services.nginx.enable</code> uses the lower-level option <code>systemd.services.nginx</code></p>
-</li>
-<li>
-<p>Which in turn uses the even-lower-level option <code>systemd.units."nginx.service"</code></p>
-</li>
-<li>
-<p>Which in turn uses <code>environment.etc."systemd/system"</code></p>
-</li>
-<li>
-<p>Which then ends up as <code>result/etc/systemd/system/nginx.service</code> in the top-level derivation</p>
-</li>
+<li>You enable Nginx with <code>services.nginx.enable = true;</code>.</li>
+<li>This setting influences the lower-level option <code>systemd.services.nginx</code>.</li>
+<li>Which, in turn, affects the even lower-level option
+<code>systemd.units."nginx.service"</code>.</li>
+<li>Ultimately, this leads to the creation of a systemd unit file within
+<code>environment.etc."systemd/system"</code>.</li>
+<li>Finally, this unit file ends up as <code>result/etc/systemd/system/nginx.service</code>
+within the final <code>system.build.toplevel</code> derivation.</li>
 </ul>
-<p>So high-level options use lower-level ones, eventually ending up at <code>system.build.toplevel</code>.</p>
-<p>How do these options get evaluated though? That's what the NixOS module system does, which lives in the ./lib directory (in modules.nix, options.nix and types.nix). The module system can even be used without NixOS, allowing you to use it for your own option sets. Here's a simple example of this, whose toplevel option you can evaluate with:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> --eval</span><span> file.nix</span><span style="color:#ffcc66;"> -A</span><span> config.toplevel
-</span></code></pre>
+<p><strong>Key Takeaway:</strong> Higher-level, user-friendly options are translated into
+lower-level system configurations that are part of the final system build.</p>
+<h2 id="the-nixos-module-system-evaluating-options">The NixOS Module System: Evaluating Options</h2>
+<p>So, how do these options get processed and turned into the final system
+configuration? That's the job of the <strong>NixOS module system</strong>, located in the
+<code>./lib</code> directory of Nixpkgs (specifically in <code>modules.nix</code>, <code>options.nix</code>,
+and <code>types.nix</code>).</p>
+<p>Interestingly, the module system isn't exclusive to NixOS; you can use it to
+manage option sets in your own Nix projects.</p>
+<p>Here's a simplified example of using the module system outside of NixOS:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffa759;">let
 </span><span>  </span><span style="color:#ffd580;">systemModule </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}: {
 </span><span>    </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">toplevel </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
@@ -111,85 +121,134 @@
 </span><span>  </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">systemModule userModule </span><span>]</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
-<p>The module system itself is rather complex, but here's a short overview. A module evaluation consists of a set of "modules", which can do three things:</p>
+<p><strong>You can evaluate the <code>config.toplevel</code> option from this example using:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> --eval</span><span> file.nix</span><span style="color:#ffcc66;"> -A</span><span> config.toplevel
+</span></code></pre>
+<p><strong>Key Takeaway</strong>: The NixOS module system is responsible for evaluating and
+merging option configurations from different modules.</p>
+<h2 id="how-the-module-system-works-a-simplified-overview">How the Module System Works: A Simplified Overview</h2>
+<p>The module system processes a set of "modules" through these general steps:</p>
+<ol>
+<li>
+<p><strong>Importing Modules</strong>: It recursively finds and includes all modules
+specified in <code>imports = [ ... ];</code> statements.</p>
+</li>
+<li>
+<p><strong>Declaring Options</strong>: It collects all option declarations defined using
+<code>options = { ... };</code> from all the modules and merges them. If the same option
+is declared in multiple modules, the module system handles this
+(details omitted for simplicity).</p>
+</li>
+<li>
+<p><strong>Defining Option Values</strong>: For each declared option, it gathers all the
+value assignments (defined using <code>config = { ... };</code> or directly at the top
+level if no <code>options</code> or <code>config</code> are present) from all modules and merges
+them according to the option's defined type.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>Important Note</strong>: Option evaluation is lazy, meaning an option's value is
+only computed when it's actually needed. It can also depend on the values of
+other options.</p>
+</blockquote>
+<p><strong>Key Takeaway</strong>: The module system imports, declares, and then evaluates
+option values from various modules to build the final configuration.</p>
+<p><strong>Top-Level Attributes in a Module: <code>imports</code>, <code>options</code>, and <code>config</code></strong></p>
+<p>Within a NixOS module (the files that define parts of your system configuration)
+, the attributes defined directly at the top level of the module's function
+have specific meanings:</p>
 <ul>
 <li>
-<p>Import other modules (through <code>imports = [ ./other-module.nix ];</code>)</p>
+<p><code>imports</code>: This attribute is a list of other module files to include. Their
+options and configurations will also be part of the evaluation.</p>
 </li>
 <li>
-<p>Declare options (through <code>options = { ... };</code>)</p>
+<p><code>options</code>: This attribute is where you declare new configuration options. You
+define their type, default value, description, etc., using functions like
+<code>lib.mkOption</code> or <code>lib.mkEnableOption</code>.</p>
 </li>
 <li>
-<p>Define option values (through <code>config = { ... };</code>, or without the config key as a shorthand if you don't have imports or options)</p>
+<p><code>config</code>: This attribute is where you assign values to the options that have
+been declared (either in the current module or in imported modules).</p>
 </li>
 </ul>
-<p>To do the actual evaluation, there's these rough steps:</p>
-<ul>
-<li>
-<p>Recursively collect all modules by looking at all imports statements</p>
-</li>
-<li>
-<p>Collect all option declarations (with options) of all modules and merge them together if necessary</p>
-</li>
-<li>
-<p>For each option, evaluate it by collecting all its definitions (with config) from all modules and merging them together according to the options type.</p>
-</li>
-</ul>
-<p>Note that the last step is lazy (only the options you need are evaluated) and depends on other options itself (all the ones that influence it).</p>
-<p>This is the end of Infinisil's comment.</p>
-<p><code>system.build.toplevel</code> The top-level option that builds the entire NixOS system. Everything else in your configuration is indirectly pulled in by this option. This is what nixos-rebuild builds and what /run/current-system points to afterwards.</p>
-<p>Top-level attributes are those defined directly inside the module's function, they include:</p>
-<ul>
-<li>Imports</li>
-<li>Options</li>
-<li>Config</li>
-</ul>
-<p>In any module that you define a top-level option any non-option attributes need to be moved under the config attribute.</p>
-<p>For example:</p>
+<p><strong>Key Takeaway</strong>: The top-level attributes <code>imports</code>, <code>options</code>, and <code>config</code>
+are the primary ways to structure a NixOS module.</p>
+<p><strong>The Rule: Move Non-Option Attributes Under <code>config</code></strong></p>
+<p>If you define either an <code>options</code> or a <code>config</code> attribute at the top level of
+your module, any other attributes that are not option declarations must be
+moved inside the config attribute.</p>
+<p>Let's look at an example of what not to do:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
 </span><span>{
-</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span style="font-style:italic;color:#5c6773;"># defining this option at top level
+</span><span style="font-style:italic;color:#5c6773;"># Defining an option at the top level
+</span><span>
 </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">mine</span><span>.</span><span style="color:#ffd580;">desktop</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;desktop settings&quot;</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span style="font-style:italic;color:#5c6773;"># will cause this to fail
+</span><span style="font-style:italic;color:#5c6773;"># This will cause an error because &#39;environment&#39; and &#39;appstream&#39;
+</span><span>
+</span><span style="font-style:italic;color:#5c6773;"># are not &#39;options&#39; and &#39;config&#39; is also present at the top level.
+</span><span>
 </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">=
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
 </span><span>
 </span><span style="color:#ffd580;">appstream</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
-<p>error: Module has an unsupported attribute 'appstream' This is caused by introducing a top-level <code>config</code> or <code>options</code> attribute. Add configuration attributes immediately on the top level instead, or move all of them into the explicit <code>config</code> attribute.</p>
-<ul>
-<li>The environment.systemPackages and <code>appstream.enable</code> don't declare any options, they assign values to the options so they need to be moved under the config attribute like so:</li>
-</ul>
+<p>This will result in the error: <code>error: Module has an unsupported attribute 'appstream' This is caused by introducing a top-level 'config' or 'options' attribute. Add configuration attributes immediately on the top level instead, or move all of them into the explicit 'config' attribute</code>.</p>
+<p><strong>Key Takeaway</strong>: When you have <code>options</code> or <code>config</code> at the top level, all
+value assignments need to go inside the config block.</p>
+<p><strong>The Correct Way</strong>): Using the <code>config</code> Attribute</p>
+<p>To fix the previous example, you need to move the value assignments for
+<code>environment.systemPackages</code> and <code>appstream.enable</code> inside the config attribute:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
 </span><span>{
-</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span style="font-style:italic;color:#5c6773;"># defining this option at top level
+</span><span style="font-style:italic;color:#5c6773;"># Defining an option at the top level
+</span><span>
 </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">mine</span><span>.</span><span style="color:#ffd580;">desktop</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;desktop settings&quot;</span><span style="color:#ccc9c2cc;">;
 </span><span>
 </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{
-</span><span> </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">=
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">=
+</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
 </span><span>
-</span><span style="color:#ffd580;">appstream</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">appstream</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>
 </span><span>}</span><span style="color:#ccc9c2cc;">;
 </span><span>}
 </span></code></pre>
-<ul>
-<li>
-<p>This lets Nix know that you're not declaring an option, but rather setting/defining them.</p>
-</li>
-<li>
-<p>Otherwise, if you don't have either <code>config</code> or <code>option</code> you can just have them at the top-level, and it will implicitely put all of them under the config section.</p>
-</li>
-<li>
-<p>If you remove the option, the config = { environment.systemPackages will still work.</p>
-</li>
-</ul>
+<p>Now, Nix knows that you are declaring an option (<code>options.mine.desktop.enable</code>)
+and then setting values for other options (<code>environment.systemPackages</code>,
+<code>appstream.enable</code>) within the <code>config</code> block.</p>
+<p><strong>Key Takeaway</strong>: The <code>config</code> attribute is used to define the values of
+options.</p>
+<p><strong>Implicit <code>config</code>: When <code>options</code> is Absent</strong></p>
+<p>If your module does not define either <code>options</code> or <code>config</code> at the top level,
+then any attributes you define directly at the top level are implicitly
+treated as being part of the config.</p>
+<p>For example, this is valid:</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
+</span><span>{
+</span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">=
+</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">appstream</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span style="color:#ffd580;">appstream</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<p>Nix will implicitly understand that <code>environment.systemPackages</code> and
+<code>appstream.enable</code> are configuration settings.</p>
+<p><strong>Key Takeaway</strong>: If no explicit options or config are present, top-level
+attributes are automatically considered part of the configuration.</p>
+<p><strong>Removing an Option: What Happens to <code>config</code></strong></p>
+<p>Even if you remove the <code>options</code> declaration from a module that has a <code>config</code>
+section, the <code>config = { environment.systemPackages = ... };</code> part will still
+function correctly, assuming the option it's referencing (<code>appstream.enable</code>
+in this case) is defined elsewhere (e.g., in an imported module).</p>
+<p><strong>Key Takeaway</strong>: The <code>config</code> section defines values for options, regardless
+of whether those options are declared in the same module.</p>
  </div>
     </section>
   </body>
