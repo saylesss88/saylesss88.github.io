@@ -57,46 +57,73 @@
   <body>
     <section class="section">
       <div class="container">
-<h1 class="title">Derivations Explained &amp; Resources</h1>
+<h1 class="title">Understanding Nix Derivations: A Beginner&#x27;s Guide &amp; Resources</h1>
 <p class="subtitle"><strong>2025-05-09</strong></p>
-<h2 id="derivations">Derivations</h2>
+<h1 id="introduction-to-nix-derivations">Introduction to Nix Derivations</h1>
 <ul>
 <li>
-<p>A derivation in Nix is a core concept that describes how to build a piece of software or a resource (e.g., a package, library, or configuration file). For beginners, you can think of a derivation as a recipe for cooking a dish. Just as a recipe lists ingredients (dependencies), steps (build instructions), and the final dish (output), a derivation tells Nix what inputs to use, how to build something, and what the result will be.</p>
+<p>A derivation in Nix is a fundamental concept that describes how to build a piece of software or a resource (e.g., a package, library, or configuration file). Think of it as a recipe for creating something within the Nix ecosystem.</p>
 </li>
 <li>
-<p>To create a package definition in Nix, developers typically use mkDerivation, which is the standard approach provided by stdenv. While the built-in derivation function exists for lower-level use cases requiring fine-grained control, mkDerivation streamlines the process by handling dependencies and build environments automatically. This function takes a set of attributes as its main input, defining all the details of how to build your software or resource. At a minimum, this set needs to include the following three essential attributes:</p>
+<p>For beginners, the analogy of a cooking recipe is helpful:</p>
+<ul>
+<li><strong>Ingredients (Dependencies):</strong> What other software or libraries are needed.</li>
+<li><strong>Steps (Build Instructions):</strong> The commands to compile, configure, and install.</li>
+<li><strong>Final Dish (Output):</strong> The resulting package or resource.</li>
+</ul>
+</li>
+<li>
+<p>A Nix derivation encapsulates all this information, telling Nix what inputs to use, how to build it, and what the final output should be.</p>
 </li>
 </ul>
+<h2 id="creating-derivations-in-nix">Creating Derivations in Nix</h2>
+<ul>
+<li>
+<p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function, which is part of the standard environment (<code>stdenv</code>). While a lower-level <code>derivation</code> function exists for advanced use cases, <code>mkDerivation</code> simplifies the process by automatically managing dependencies and the build environment.</p>
+</li>
+<li>
+<p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument. At a minimum, you'll often encounter these essential attributes:</p>
 <ol>
-<li><strong>name:</strong> This is a human-readable name for your derivation, like "foo" in our upcoming example. It helps identify the package you are building.</li>
-<li><strong>system:</strong> This attribute specifies the target system architecture for which you are building (e.g., <code>builtins.currentSystem</code>, which means build for the system Nix is currently running on).</li>
-<li><strong>builder:</strong> This attribute tells Nix <em>how</em> to build the output. It's the program that will execute the build steps, like our <code>bash</code> example.</li>
+<li><strong>name:</strong> A human-readable identifier for the derivation (e.g., "foo", "hello.txt"). This helps you and Nix refer to the package.</li>
+<li><strong>system:</strong> Specifies the target architecture for the build (e.g., <code>builtins.currentSystem</code> for your current machine).</li>
+<li><strong>builder:</strong> Defines the program that will execute the build instructions (e.g., <code>bash</code>).</li>
 </ol>
-<h3 id="the-builder">The Builder</h3>
-<p>So the derivation is like the recipe, the builder is what executes the recipe.</p>
-<ul>
-<li>
-<p>The most simple way to execute a sequence of commands is probably a bash script, so we'll use bash as our builder with the script being the sequence of commands. The problem with Nix is that upfront it has no way of knowing what the path to <code>bash</code> will be until we actually build it preventing us from using hashbang or shebang in our script (i.e. <code>#!/usr/bin/env bash</code>). While you might have bash installed on your current system and could use a hashbang, doing so would tie your build to that specific system's environment, thus losing the cool stateless property of Nix. (stateful = traditional where if you make a change the changes are saved directly to the computer) (stateless = When you "install" a program in Nix, it doesn't directly modify the core system. Instead it creates a unique store path allowing multiple versions of the same program)</p>
-</li>
-<li>
-<p>To further clarify, Traditional package management systems modify a system’s core environment when installing a program (stateful installation). This means changes persist directly within the system, which can lead to dependency conflicts and make rollback difficult.</p>
 </li>
 </ul>
-<p>Nix, on the other hand, ensures stateless installations—instead of modifying the base system, it creates immutable store paths for each package, allowing multiple versions to coexist seamlessly. This approach:</p>
+<h2 id="our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder</h2>
+<ul>
+<li>To understand how derivations work, let's create a very basic example using a bash script as our <code>builder</code>.</li>
+</ul>
+<h3 id="why-a-builder-script">Why a Builder Script?</h3>
+<ul>
+<li>The <code>builder</code> attribute in a derivation tells Nix <em>how</em> to perform the build steps. A simple and common way to define these steps is with a bash script.</li>
+</ul>
+<h3 id="the-challenge-with-shebangs-in-nix">The Challenge with Shebangs in Nix</h3>
 <ul>
 <li>
-<p>Eliminates conflicts (different versions of the same package can exist side by side).</p>
+<p>In typical Unix-like systems, you might start a bash script with a shebang (<code>#!/bin/bash</code> or <code>#!/usr/bin/env bash</code>) to tell the system how to execute it. However, in Nix derivations, we generally avoid this.</p>
 </li>
 <li>
-<p>Enables reliable rollback (switch back to a previous version without affecting system-wide files).</p>
+<p><strong>Reason:</strong> Nix builds happen in an isolated environment where the exact path to common tools like <code>bash</code> isn't known beforehand (it resides within the Nix store). Hardcoding a path or relying on the system's <code>PATH</code> would break Nix's stateless property.</p>
+</li>
+</ul>
+<h3 id="the-importance-of-statelessness-in-nix">The Importance of Statelessness in Nix</h3>
+<ul>
+<li>
+<p><strong>Stateful Systems (Traditional):</strong> When you install software traditionally, it often modifies the core system environment directly. This can lead to dependency conflicts and makes rollbacks difficult.</p>
 </li>
 <li>
-<p>Guarantees reproducibility (builds behave the same way regardless of the machine, if built pure).</p>
+<p><strong>Stateless Systems (Nix):</strong> Nix takes a different approach. When installing a package, it creates a unique, immutable directory in the Nix store. This means:</p>
+<ul>
+<li><strong>No Conflicts:</strong> Different versions of the same package can coexist without interfering with each other.</li>
+<li><strong>Reliable Rollback:</strong> You can easily switch back to previous versions without affecting system-wide files.</li>
+<li><strong>Reproducibility:</strong> Builds are more likely to produce the same result across different machines if they are "pure" (don't rely on external system state).</li>
+</ul>
 </li>
-<li>
-<p>With all of that noted, we'll create our <code>builder.sh</code> in the current directory:</p>
-</li>
+</ul>
+<h3 id="our-builder-sh-script">Our <code>builder.sh</code> Script</h3>
+<ul>
+<li>For our first derivation, we'll create a simple <code>builder.sh</code> file in the current directory:</li>
 </ul>
 <pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="font-style:italic;color:#5c6773;"># builder.sh
 </span><span style="color:#ffa759;">declare </span><span style="color:#ffcc66;">-x</span><span>p
@@ -136,7 +163,7 @@
 <p>Derivations are the primitive that Nix uses to define packages. “Package” is a loosely defined term, but a derivation is simply the result of calling <code>builtins.derivation</code>.</p>
 </li>
 </ul>
-<h2 id="another-more-simple-example">Another More Simple Example</h2>
+<h2 id="our-second-derivation">Our Second Derivation</h2>
 <p>The following is a simple <code>hello-drv</code> derivation:</p>
 <pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ffcc66;">hello-drv </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stdenv</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkDerivation </span><span>{
 </span><span>            </span><span style="color:#ffd580;">name </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hello.txt&quot;</span><span style="color:#ccc9c2cc;">;
