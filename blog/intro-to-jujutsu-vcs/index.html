@@ -133,6 +133,24 @@
         text-decoration: none;
       }
     </style>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://saylesss88.github.io/static/syntax-theme-dark.css"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://saylesss88.github.io/static/syntax-theme-light.css"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="RSS"
+      href="https://saylesss88.github.io/rss.xml"
+    />
   </head>
   <body>
     <div class="container">
@@ -141,9 +159,144 @@
       <a href="https://saylesss88.github.io/rss.xml" id="rss-button"
         >📡 Subscribe via RSS</a
       >
-      <p>This is a sample blog content. Add your posts here.</p>
-    </div>
 
+      
+<h1 class="title">Intro to Jujutsu VCS</h1>
+<p class="subtitle"><strong>2025-05-07</strong></p>
+<h1 id="intro-to-jujutsu-using-jj-in-an-existing-git-repo">Intro to Jujutsu (Using jj in an existing Git Repo)</h1>
+<p><strong>TOC</strong></p>
+<!--toc:start-->
+<ul>
+<li><a href="https://saylesss88.github.io/blog/intro-to-jujutsu-vcs/#intro-to-jujutsu-using-jj-in-an-existing-git-repo">Intro to Jujutsu (Using jj in an existing Git Repo)</a>
+<ul>
+<li><a href="https://saylesss88.github.io/blog/intro-to-jujutsu-vcs/#jj-and-git-side-by-side">JJ and Git Side by Side</a></li>
+<li><a href="https://saylesss88.github.io/blog/intro-to-jujutsu-vcs/#resources">Resources</a></li>
+</ul>
+</li>
+</ul>
+<!--toc:end-->
+<ul>
+<li>
+<p>You can use jujutsu (jj) with existing Git repositories with one command.
+<code>jj git init --colocate</code> or <code>jj git init --git-repo /path/to/git_repository</code>.
+The native repository format for jj is still a work in progress so people
+typically use a <code>git</code> repository for backend.</p>
+</li>
+<li>
+<p>Unlike <code>git</code>, <code>jj</code> has no index "staging area". It treats the working copy
+as an actual commit. When you make changes to files, these changes are
+automatically recorded to the working commit. There's no need to explicitly
+stage changes because they are already part of the commit that represents
+your current working state.</p>
+<ul>
+<li>This means that you don't need to worry about making a change, running
+<code>git add .</code>, running <code>git commit -m "commit message"</code> because it's
+already done for you. This is handy with flakes by preventing a
+"dirty working tree" and can instantly be rebuilt after making a change.</li>
+</ul>
+</li>
+</ul>
+<h2 id="here-s-an-example"><strong>Here's an example:</strong></h2>
+<p>Say I have my configuration flake in the <code>~/flakes/</code> directory that is an
+existing Git repository. To use JJ as the front-end I could do something like:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#f28779;">cd </span><span style="font-style:italic;color:#5ccfe6;">~</span><span>/flakes
+</span><span style="color:#ffd580;">jj</span><span> git init</span><span style="color:#ffcc66;"> --colocate
+</span><span style="color:#ffd580;">jj</span><span> describe</span><span style="color:#ffcc66;"> -m </span><span style="color:#bae67e;">&quot;first jj commit&quot;
+</span><span style="color:#ffd580;">jj</span><span> commit
+</span></code></pre>
+<p><strong>Or</strong> to do this in a directory that isn't already a git repo you can do
+something like:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">cargo</span><span> new hello-world</span><span style="color:#ffcc66;"> --vcs</span><span style="color:#f29e74;">=</span><span>none
+</span><span style="color:#f28779;">cd</span><span> hello-world
+</span><span style="color:#ffd580;">jj</span><span> git init
+</span><span style="color:#ffd580;">Initialized</span><span> repo in </span><span style="color:#bae67e;">&quot;.&quot;
+</span></code></pre>
+<h3 id="jj-and-git-side-by-side">JJ and Git Side by Side</h3>
+<p>Or for example, with Git if you wanted to move to a different branch before
+running <code>nix flake update</code> to see if it introduced errors before merging
+with your main branch, you could do something like:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">git</span><span> checkout</span><span style="color:#ffcc66;"> -b</span><span> update-test
+</span><span>
+</span><span style="color:#ffd580;">nix</span><span> flake update
+</span><span>
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild test</span><span style="color:#ffcc66;"> --flake</span><span> .
+</span></code></pre>
+<p>If you're satisfied you can merge:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">git</span><span> checkout main
+</span><span style="color:#ffd580;">git</span><span> add . </span><span style="font-style:italic;color:#5c6773;"># Stage the change
+</span><span style="color:#ffd580;">git</span><span> commit</span><span style="color:#ffcc66;"> -m </span><span style="color:#bae67e;">&quot;update&quot;
+</span><span style="color:#ffd580;">git</span><span> branch</span><span style="color:#ffcc66;"> -D</span><span> update-test
+</span><span style="color:#ffd580;">git</span><span> merge update-test
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild switch</span><span style="color:#ffcc66;"> --flake</span><span> .
+</span></code></pre>
+<p>With JJ a similar workflow could be:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">jj</span><span> new  </span><span style="font-style:italic;color:#5c6773;"># Create a new child commit/start working on a new change
+</span><span style="color:#ffd580;">nix</span><span> flake update
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild test</span><span style="color:#ffcc66;"> --flake</span><span> .
+</span><span style="color:#ffd580;">jj</span><span> squash </span><span style="font-style:italic;color:#5c6773;">#  equivalent to `git commit -a --amend`
+</span><span style="color:#ffd580;">jj</span><span> describe</span><span style="color:#ffcc66;"> -m </span><span style="color:#bae67e;">&quot;update&quot; </span><span style="font-style:italic;color:#5c6773;"># Similar to git commit -m
+</span><span style="color:#ffd580;">jj</span><span> commit </span><span style="font-style:italic;color:#5c6773;"># Finalize the commit
+</span><span style="color:#ffd580;">sudo</span><span> nixos-rebuild switch</span><span style="color:#ffcc66;"> --flake</span><span> .
+</span></code></pre>
+<ul>
+<li>
+<p>With <code>jj</code> you're creating a new commit rather than a new branch.</p>
+</li>
+<li>
+<p>Amending vs. Squashing: Git's <code>git commit --amend</code> updates the last commit.
+<code>jj squash</code> combines the current commit with its parent, effectively doing
+the same thing in terms of history.</p>
+</li>
+<li>
+<p>Merging: Git's merge command is explicit. In <code>jj</code>, the concept is similar,
+but since there's no branch, you're "merging" by moving your working commit
+to include these changes. The <code>jj squash</code> here acts like merging the changes
+into the main line of development.</p>
+</li>
+<li>
+<p>No need to delete branches: Since there are no branches in <code>jj</code>, there's
+no equivalent to <code>git branch -D</code> to clean up. Instead commits that are no
+longer needed can be "abandoned" with <code>jj abandon</code> if you want to clean up
+your commit graph.</p>
+</li>
+<li>
+<p><code>jj describe</code> without a flag just opens <code>$EDITOR</code> where you can write your
+commit message save and exit.</p>
+</li>
+<li>
+<p>In <code>git</code>, we finish a set of changes to our code by committing, but in
+<code>jj</code> we start new work by creating a change, and <em>then</em> make changes to
+our code. It's more useful to write an initial description of your intended
+changes, and then refine it as you work, than it is creating a commit message
+after the fact.</p>
+</li>
+<li>
+<p>I have heard that jj can struggle with big repositories such as Nixpkgs and
+have noticed some issues here and there when using with NixOS.
+I'm hoping that as the project matures,it gets better on this front.</p>
+</li>
+<li>
+<p>This is just the start of what is possible, here are some resources about
+it if you're interested:</p>
+</li>
+</ul>
+<h3 id="resources">Resources</h3>
+<ul>
+<li>
+<p><a href="https://github.com/jj-vcs/jj">jj_github</a></p>
+</li>
+<li>
+<p><a href="https://jj-vcs.github.io/jj/latest/tutorial/">official_tutorial</a></p>
+</li>
+<li>
+<p><a href="https://v5.chriskrycho.com/essays/jj-init/">jj_init</a> # very good article</p>
+</li>
+<li>
+<p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
+</li>
+</ul>
+ 
+    </div>
     <script>
       // Dark mode toggle script
       document
