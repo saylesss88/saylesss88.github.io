@@ -413,53 +413,36 @@ virtualization tool (like VirtualBox, QEMU, or GNOME Boxes).</p>
     </script>
 
     <!-- Search script -->
-    <script src="https://saylesss88.github.io/search_index.en.js"></script>
+    <!-- <script src="https://saylesss88.github.io/search_index.en.js"></script> -->
+    <script src="/search_index.en.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", async () => {
         const searchBox = document.getElementById("search-box");
         const resultsList = document.getElementById("search-results");
 
-        // Wait for the search index to be loaded
-        function waitForSearchIndex() {
-          return new Promise((resolve) => {
-            if (window.searchIndex) {
-              resolve(window.searchIndex);
-            } else {
-              setTimeout(() => waitForSearchIndex().then(resolve), 50); // Check every 50ms
+        try {
+          const response = await fetch("/search_index.en.js");
+          const searchData = await response.json();
+          const index = elasticlunr.Index.load(searchData.documentStore);
+
+          searchBox.addEventListener("input", () => {
+            const query = searchBox.value.trim();
+            resultsList.innerHTML = "";
+
+            if (query.length > 2) {
+              const results = index.search(query, { expand: true });
+
+              results.forEach((result) => {
+                const post = searchData.documentStore.docs[result.ref];
+                const li = document.createElement("li");
+                li.innerHTML = `<a href="${post.permalink}">${post.title}</a>`;
+                resultsList.appendChild(li);
+              });
             }
           });
+        } catch (error) {
+          console.error("Failed to load search index:", error);
         }
-
-        const searchData = await waitForSearchIndex();
-        const index = elasticlunr.Index.load(searchData);
-
-        // Search function
-        searchBox.addEventListener("input", () => {
-          const query = searchBox.value.trim();
-          resultsList.innerHTML = "";
-
-          if (query.length > 2) {
-            const results = index.search(query, { expand: true });
-
-            results.forEach((result) => {
-              const post = searchData.documentStore.docs[result.ref];
-              const li = document.createElement("li");
-              li.innerHTML = `<a href="${post.permalink}">${post.title}</a>`;
-              resultsList.appendChild(li);
-            });
-          }
-        });
-
-        // Handle Enter key press (no changes needed here, it should work with the loaded index)
-        searchBox.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            const query = searchBox.value.trim();
-            if (query.length > 2 && resultsList.firstChild) {
-              window.location.href =
-                resultsList.firstChild.querySelector("a").href;
-            }
-          }
-        });
       });
     </script>
   </body>
