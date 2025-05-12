@@ -65,18 +65,16 @@
       }
       img:hover {
         transform: scale(1.05);
-
         transition: transform 0.3s ease-in-out;
       }
-      /* Updated dark mode styles using data-theme */
-      [data-theme="dark"] {
-        background-color: #282828;
 
-        color: #ebdbb2; /* Ensures all text is visible in dark mode */
+      /* Dark mode styles */
+      [data-theme="dark"] {
+        background-color: #3c3836;
+        color: #ebdbb2;
       }
       [data-theme="dark"] .container {
         background-color: #3c3836;
-        display: block;
       }
       [data-theme="dark"] body {
         background-color: #3c3836;
@@ -86,81 +84,65 @@
       [data-theme="dark"] p,
       [data-theme="dark"] ul,
       [data-theme="dark"] li {
-        color: #ebdbb2; /* Ensures blog content stays visible */
-        display: block;
+        color: #ebdbb2;
       }
       [data-theme="dark"] pre {
         background-color: #1d2021;
         color: #d4be98;
         border: 1px solid #d65d0e;
-        display: block;
       }
-
       [data-theme="dark"] h1,
       [data-theme="dark"] h2 {
         color: #ebdbb2;
-
         text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
-      }
-
-      [data-theme="dark"] table {
-        color: #ebdbb2; /* Ensure table text is visible */
-      }
-
-      [data-theme="dark"] th {
-        color: #ebdbb2; /* Style table header text if needed */
-      }
-
-      [data-theme="dark"] td {
-        color: #ebdbb2; /* Style table data text */
       }
 
       #dark-mode-toggle {
         position: fixed;
-
         top: 20px;
-
         right: 20px;
-
         padding: 10px 15px;
-
         background-color: #cc6600;
-
         color: #fbf1c7;
-
         border: none;
-
         border-radius: 5px;
-
         cursor: pointer;
-
         font-size: 0.9em;
       }
-
       #dark-mode-toggle:hover {
         background-color: #af3a03;
       }
 
       #rss-button {
         display: inline-block;
-
         padding: 10px 15px;
-
         background-color: #cc6600;
-
         color: #fbf1c7;
-
         border-radius: 5px;
-
         margin: 10px 0;
-
         font-size: 0.9em;
       }
-
       #rss-button:hover {
         background-color: #af3a03;
-
         text-decoration: none;
+      }
+
+      /* Search box styles */
+      #search-box {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #d65d0e;
+        font-size: 0.9em;
+        margin-top: 10px;
+      }
+      #search-results {
+        margin-top: 10px;
+        list-style: none;
+        padding: 0;
+      }
+      #search-results li {
+        margin-bottom: 5px;
       }
     </style>
   </head>
@@ -174,6 +156,10 @@
       <a href="https://saylesss88.github.io/rss.xml" id="rss-button"
         >📡 Subscribe via RSS</a
       >
+
+      <!-- Search Box -->
+      <input type="text" id="search-box" placeholder="Search..." />
+      <ul id="search-results"></ul>
 
       
 <h1 class="title">Understanding Nix Derivations: A Beginner&#x27;s Guide &amp; Resources</h1>
@@ -402,36 +388,55 @@ is a loosely defined term, but a derivation is simply the result of calling
     </div>
 
     <!-- Dark mode script -->
-
     <script>
-      // Function to set theme
-
       function setTheme(theme) {
         localStorage.setItem("theme", theme);
-
         document.documentElement.setAttribute("data-theme", theme);
       }
 
-      // Load saved theme preference on page load
-
       document.addEventListener("DOMContentLoaded", () => {
         const savedTheme = localStorage.getItem("theme") || "light";
-
         setTheme(savedTheme);
       });
 
-      // Toggle theme on button click
-
       document
-
         .getElementById("dark-mode-toggle")
-
         .addEventListener("click", () => {
           const currentTheme =
             localStorage.getItem("theme") === "dark" ? "light" : "dark";
-
           setTheme(currentTheme);
         });
+    </script>
+
+    <!-- Search script -->
+    <script src="https://saylesss88.github.io/search_index.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const searchBox = document.getElementById("search-box");
+        const resultsList = document.getElementById("search-results");
+
+        // Load search index
+        const response = await fetch("search_index.js");
+        const searchData = await response.json();
+        const index = elasticlunr.Index.load(searchData);
+
+        // Search function
+        searchBox.addEventListener("input", () => {
+          const query = searchBox.value.trim();
+          resultsList.innerHTML = "";
+
+          if (query.length > 2) {
+            const results = index.search(query, { expand: true });
+
+            results.forEach((result) => {
+              const post = searchData.documentStore.docs[result.ref];
+              const li = document.createElement("li");
+              li.innerHTML = `<a href="${post.permalink}">${post.title}</a>`;
+              resultsList.appendChild(li);
+            });
+          }
+        });
+      });
     </script>
   </body>
 </html>
