@@ -442,8 +442,17 @@ virtualization tool (like VirtualBox, QEMU, or GNOME Boxes).</p>
         const resultsList = document.getElementById("search-results");
 
         try {
+          <!-- const response = await fetch("/search_index.en.js"); -->
+          <!-- const searchData = await response.json(); -->
           const response = await fetch("/search_index.en.js");
-          const searchData = await response.json();
+          const text = await response.text();
+          try {
+            const searchData = JSON.parse(text);
+            const index = elasticlunr.Index.load(searchData.documentStore);
+          } catch (error) {
+            console.error("Failed to parse search index:", error, text);
+          }
+
           const index = elasticlunr.Index.load(searchData.documentStore);
 
           searchBox.addEventListener("input", () => {
