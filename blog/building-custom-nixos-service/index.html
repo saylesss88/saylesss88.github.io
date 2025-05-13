@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <style>
+      /* General styles */
+      body {
+        background-color: #fbf1c7;
+        color: #3c3836;
+        line-height: 1.6;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        max-width: 95%;
+        margin: auto;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        background-color: #f2e5bc;
+      }
+      ul li {
+        margin-bottom: 0.75em;
+      }
+      a {
+        color: #cc6600;
+        text-decoration: none;
+        transition: color 0.3s ease-in-out;
+      }
+      a:visited {
+        color: #386841;
+      }
+      a:hover {
+        color: #af3a03;
+        text-decoration: underline;
+      }
+      :not(pre) > code {
+        font-family: monospace;
+        font-size: 0.85em;
+        background-color: #a89984;
+        color: #3c3836;
+        padding: 2px 5px;
+        border-radius: 3px;
+        border: 1px solid #d65d0e;
+      }
+      pre {
+        overflow-x: auto;
+        font-size: 1em;
+        padding: 10px;
+        background-color: #f2e5bc;
+        border-radius: 5px;
+      }
+      @media (max-width: 600px) {
+        pre {
+          font-size: 1.1em;
+          padding: 12px;
+        }
+      }
+      h1,
+      h2 {
+        text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+      }
+      img:hover {
+        transform: scale(1.05);
+        transition: transform 0.3s ease-in-out;
+      }
+      table {
+        background-color: #f2e5bc; /* Soft Gruvbox-light background */
+        color: #3c3836; /* Dark readable text */
+        border-collapse: collapse;
+        width: 100%;
+        border: 1px solid #d65d0e; /* Matching Gruvbox accent */
+      }
+
+      th {
+        background-color: #f2e5bc; /* Same light background for headers */
+        color: #3c3836;
+        padding: 10px;
+        border: 1px solid #d65d0e;
+      }
+
+      td {
+        background-color: #fbf1c7; /* Slightly lighter than header */
+        color: #3c3836;
+        padding: 8px;
+        border: 1px solid #d65d0e;
+      }
+
+      /* Dark mode styles */
+      [data-theme="dark"] {
+        background-color: #3c3836;
+        color: #ebdbb2;
+      }
+      [data-theme="dark"] .container {
+        background-color: #3c3836;
+      }
+      [data-theme="dark"] body {
+        background-color: #3c3836;
+      }
+      [data-theme="dark"] table {
+        background-color: #3c3836; /* Dark background */
+        color: #ebdbb2; /* Light text */
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      [data-theme="dark"] th {
+        background-color: #504945; /* Slightly lighter for headers */
+        color: #ebdbb2;
+        padding: 10px;
+        border: 1px solid #d65d0e;
+      }
+
+      [data-theme="dark"] td {
+        background-color: #3c3836;
+        color: #ebdbb2;
+        padding: 8px;
+        border: 1px solid #d65d0e;
+      }
+      [data-theme="dark"] article,
+      [data-theme="dark"] section,
+      [data-theme="dark"] p,
+      [data-theme="dark"] ul,
+      [data-theme="dark"] li {
+        color: #ebdbb2;
+      }
+      [data-theme="dark"] pre {
+        background-color: #1d2021;
+        color: #d4be98;
+        border: 1px solid #d65d0e;
+      }
+      [data-theme="dark"] h1,
+      [data-theme="dark"] h2 {
+        color: #ebdbb2;
+        text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+      }
+
+      #dark-mode-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        background-color: #cc6600;
+        color: #fbf1c7;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9em;
+      }
+      #dark-mode-toggle:hover {
+        background-color: #af3a03;
+      }
+
+      #rss-button {
+        display: inline-block;
+        padding: 10px 15px;
+        background-color: #cc6600;
+        color: #fbf1c7;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-size: 0.9em;
+      }
+      #rss-button:hover {
+        background-color: #af3a03;
+        text-decoration: none;
+      }
+
+      /* Search box styles */
+      #search {
+        width: 60%;
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #d65d0e;
+        font-size: 0.9em;
+        margin-top: 10px;
+        color: #3c3836;
+        background-color: #fbf1c7;
+        box-sizing: border-box;
+      }
+      [data-theme="dark"] #search {
+        color: #ebdbb2; /* Dark mode text color */
+        background-color: #3c3836; /* Dark mode background color */
+        border: 1px solid #d65d0e; /* Keep the border consistent or adjust */
+      }
+
+      .search-results {
+        margin-top: 10px;
+        list-style: none;
+        padding: 0;
+        background-color: #f2e5bc; /* Background for results */
+        border: 1px solid #d65d0e; /* Border for results */
+        border-radius: 5px;
+        padding: 10px;
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 60%;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      [data-theme="dark"] .search-results {
+        background-color: #3c3836; /* Dark mode background for results */
+        color: #ebdbb2; /* Dark mode text color for results */
+        border: 1px solid #d65d0e; /* Keep consistent or adjust */
+      }
+      .search-results__items {
+        margin-top: 10px;
+        list-style: none;
+        padding: 0;
+      }
+      .search-results__items li {
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Welcome to My-Nix-Blog</h1>
+
+      <button id="dark-mode-toggle">Toggle Dark Mode</button>
+
+      <a href="https://saylesss88.github.io/rss.xml" id="rss-button">
+        📡 Subscribe via RSS
+      </a>
+
+      <input type="text" id="search" placeholder="Search..." />
+      <div class="search-results">
+        <ul class="search-results__items"></ul>
+      </div>
+
+      
+<h1 class="title">Building a Custom NixOS Service with Flakes and Overlays</h1>
+<p class="subtitle"><strong>2025-05-09</strong></p>
+<h1 id="building-a-custom-nixos-service-with-flakes-and-overlays">Building a Custom NixOS Service with Flakes and Overlays</h1>
+<p><strong>TOC</strong></p>
+<!--toc:start-->
+<ul>
+<li><a href="https://saylesss88.github.io/blog/building-custom-nixos-service/#building-a-custom-nixos-service-with-flakes-and-overlays">Building a Custom NixOS Service with Flakes and Overlays</a>
+<ul>
+<li><a href="https://saylesss88.github.io/blog/building-custom-nixos-service/#create-project-directory">Create Project Directory</a></li>
+<li><a href="https://saylesss88.github.io/blog/building-custom-nixos-service/#create-flake">Create flake</a></li>
+<li><a href="https://saylesss88.github.io/blog/building-custom-nixos-service/#create-service-module">Create Service Module</a></li>
+<li><a href="https://saylesss88.github.io/blog/building-custom-nixos-service/#add-nixosconfigurations-output">Add nixosConfigurations Output</a> - <a href="https://saylesss88.github.io/blog/building-custom-nixos-service/#build-the-system-configuration">Build the System Configuration</a></li>
+</ul>
+<!--toc:end-->
+</li>
+</ul>
+<img src="/images/gruv12.png" alt="Cyber" width="700">
+<p>TL;DR NixOS's declarative configuration and flakes make it easy to create
+custom services. This post shows how to build a minimal service using flakes
+and overlays for a "meow" command</p>
+<ul>
+<li>This will be a complete minimal configuration for testing purposes.</li>
+</ul>
+<h2 id="create-project-directory">Create Project Directory</h2>
+<p>Start by creating a directory to hold your project, I called mine <code>meow</code>:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">mkdir</span><span> meow </span><span style="color:#f29e74;">&amp;&amp; </span><span style="color:#f28779;">cd</span><span> meow
+</span></code></pre>
+<h2 id="create-flake">Create flake</h2>
+<p>Create a <code>flake.nix</code> with the following:</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">inputs</span><span>.</span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:nixos/nixpkgs/nixos-unstable&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>    </span><span style="color:#ffd580;">overlays</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">final</span><span>: </span><span style="color:#ffcc66;">prev</span><span>: {
+</span><span>      </span><span style="color:#ffd580;">meow </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">final</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">writeShellScriptBin </span><span style="color:#bae67e;">&quot;meow&quot; &#39;&#39;
+</span><span style="color:#bae67e;">        echo meow
+</span><span style="color:#bae67e;">      &#39;&#39;</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>    </span><span style="color:#ffd580;">nixosModules</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>      </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#bae67e;">./nixos-module.nix </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># inject dependencies from flake.nix, and don&#39;t do anything else
+</span><span>      </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">services</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">meow</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>{
+</span><span>        </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">meow</span><span>.</span><span style="color:#ffd580;">package </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkDefault pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">meow</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<h2 id="create-service-module">Create Service Module</h2>
+<p>Next we'll create the <code>nixos-module.nix</code> in the same directory with the
+following content:</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># nixos-module.nix
+</span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}:
+</span><span style="color:#ffa759;">let </span><span style="color:#ffd580;">cfg </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">services</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">meow</span><span style="color:#ccc9c2cc;">; </span><span style="color:#ffa759;">in </span><span>{
+</span><span>  </span><span style="color:#ffd580;">options </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">meow </span><span style="color:#f29e74;">= </span><span>{
+</span><span>      </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;meow&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">package </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
+</span><span>        </span><span style="color:#ffd580;">description </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;meow package to use&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">package</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>{
+</span><span>    </span><span style="color:#ffd580;">systemd</span><span>.</span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">meow </span><span style="color:#f29e74;">= </span><span>{
+</span><span>      </span><span style="color:#ffd580;">description </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;meow at the user on the console&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">serviceConfig </span><span style="color:#f29e74;">= </span><span>{
+</span><span>        </span><span style="color:#ffd580;">Type </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;oneshot&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">ExecStart </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">cfg</span><span style="font-style:italic;color:#f29e74;">.</span><span style="font-style:italic;color:#ffcc66;">package</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/bin/meow&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">StandardOutput </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;journal+console&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">wantedBy </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#bae67e;">&quot;multi-user.target&quot; </span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<h2 id="add-nixosconfigurations-output">Add nixosConfigurations Output</h2>
+<p>Lastly, we will add a <code>nixosConfigurations</code> output to the <code>flake.nix</code></p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span style="color:#ffcc66;">nixosConfigurations</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">test </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
+</span><span>  </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
+</span><span>    </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default
+</span><span>    ({ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
+</span><span>      </span><span style="color:#ffd580;">fileSystems</span><span>.</span><span style="color:#bae67e;">&quot;/&quot; </span><span style="color:#f29e74;">= </span><span>{
+</span><span>        </span><span style="color:#ffd580;">device </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;/dev/sda1&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">loader</span><span>.</span><span style="color:#ffd580;">grub</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">initrd</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">kernel</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">documentation</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>      </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">meow</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>      </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;25.05&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    })
+</span><span>  ]</span><span style="color:#ccc9c2cc;">;
+</span><span>}</span><span style="color:#ff3333;">;
+</span></code></pre>
+<ul>
+<li><code>nixosConfigurations.test</code> is simply the name we chose for this particular
+NixOS system configuration.</li>
+</ul>
+<p>The final product will look like this:</p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">inputs</span><span>.</span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:nixos/nixpkgs/nixos-unstable&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">,
+</span><span>    </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
+</span><span>    </span><span style="color:#f29e74;">...
+</span><span style="color:#f29e74;">  </span><span>}: {
+</span><span>    </span><span style="color:#ffd580;">overlays</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">final</span><span>: </span><span style="color:#ffcc66;">prev</span><span>: {
+</span><span>      </span><span style="color:#ffd580;">meow </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">final</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">writeShellScriptBin </span><span style="color:#bae67e;">&quot;meow&quot; &#39;&#39;
+</span><span style="color:#bae67e;">        echo meow
+</span><span style="color:#bae67e;">      &#39;&#39;</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>    </span><span style="color:#ffd580;">nixosModules</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{
+</span><span>      </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">,
+</span><span>      </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">,
+</span><span>      </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
+</span><span>      </span><span style="color:#f29e74;">...
+</span><span style="color:#f29e74;">    </span><span>}: {
+</span><span>      </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[</span><span style="color:#bae67e;">./nixos-module.nix</span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="font-style:italic;color:#5c6773;"># inject dependencies from flake.nix, and don&#39;t do anything else
+</span><span>      </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">services</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">meow</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>{
+</span><span>        </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[</span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default</span><span>]</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">meow</span><span>.</span><span style="color:#ffd580;">package </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkDefault pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">meow</span><span style="color:#ccc9c2cc;">;
+</span><span>      }</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>    </span><span style="color:#ffd580;">nixosConfigurations</span><span>.</span><span style="color:#ffd580;">test </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
+</span><span>      </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
+</span><span>        </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default
+</span><span>        ({
+</span><span>          </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">,
+</span><span>          </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
+</span><span>          </span><span style="color:#f29e74;">...
+</span><span style="color:#f29e74;">        </span><span>}: {
+</span><span>          </span><span style="color:#ffd580;">fileSystems</span><span>.</span><span style="color:#bae67e;">&quot;/&quot; </span><span style="color:#f29e74;">= </span><span>{
+</span><span>            </span><span style="color:#ffd580;">device </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;/dev/sda1&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>          }</span><span style="color:#ccc9c2cc;">;
+</span><span>          </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">loader</span><span>.</span><span style="color:#ffd580;">grub</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>          </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">initrd</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>          </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">kernel</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>          </span><span style="color:#ffd580;">documentation</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>          </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">meow</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>          </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;25.05&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>        })
+</span><span>      ]</span><span style="color:#ccc9c2cc;">;
+</span><span>    }</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<h3 id="build-the-system-configuration">Build the System Configuration</h3>
+<p>Then build the system configuration:</p>
+<p><code>nix build .#nixosConfigurations.test.config.system.build.toplevel</code></p>
+<ul>
+<li>
+<p>If this builds successfully you'll see a <code>result</code> directory within your <code>meow</code>
+directory.</p>
+</li>
+<li>
+<p>I wouldn't recommend actually switching to this configuration but you could
+build it to gain familiarity with it. If you were to switch to it you would
+run <code>./result/bin/switch-to-configuration</code></p>
+</li>
+<li>
+<p>Test in a NixOS Virtual Machine (Recommended):The safest way to see the "meow"
+output is to build the configuration and then run it in a NixOS virtual
+machine. You can do this using tools like <code>nixos-generate-config</code> and a
+virtualization tool (like VirtualBox, QEMU, or GNOME Boxes).</p>
+</li>
+</ul>
+ 
+    </div>
+
+    <script>
+      function setTheme(theme) {
+        localStorage.setItem("theme", theme);
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const savedTheme = localStorage.getItem("theme") || "light";
+        setTheme(savedTheme);
+      });
+
+      document
+        .getElementById("dark-mode-toggle")
+        .addEventListener("click", () => {
+          const currentTheme =
+            localStorage.getItem("theme") === "dark" ? "light" : "dark";
+          setTheme(currentTheme);
+        });
+    </script>
+
+    <script type="text/javascript" src="https://saylesss88.github.io/elasticlunr.min.js"></script>
+    <script type="text/javascript" src="https://saylesss88.github.io/search.js"></script>
+  </body>
+</html>
