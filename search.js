@@ -1,189 +1,56 @@
-function debounce(func, wait) {
-  var timeout;
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search');
+  const resultsContainer = document.querySelector('.search-results__items');
+  const searchResultsDiv = document.querySelector('.search-results');
 
-  return function () {
-    var context = this;
-    var args = arguments;
-    clearTimeout(timeout);
+  // Load the search index
+  fetch('/search_index.en.js') // Changed path here
+    .then(response => response.json())
+    .then(indexData => {
+      console.log("Search Index Data:", indexData); // Keep this for debugging
+      const index = elasticlunr.Index.load(indexData);
 
-    timeout = setTimeout(function () {
-      timeout = null;
-      func.apply(context, args);
-    }, wait);
-  };
-}
+      searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        resultsContainer.innerHTML = '';
+        searchResultsDiv.style.display = query.length > 0 ? 'block' : 'none';
 
-// Function to create search teasers
-function makeTeaser(body, terms) {
-  var TERM_WEIGHT = 40;
-  var NORMAL_WORD_WEIGHT = 2;
-  var FIRST_WORD_WEIGHT = 8;
-  var TEASER_MAX_WORDS = 30;
+        if (query.length > 0) {
+          const results = index.search(query, { expand: true });
 
-  var stemmedTerms = terms.map(function (w) {
-    return elasticlunr.stemmer(w.toLowerCase());
-  });
-  var termFound = false;
-  var index = 0;
-  var weighted = [];
-
-  var sentences = body.toLowerCase().split(". ");
-
-  for (var i in sentences) {
-    var words = sentences[i].split(" ");
-    var value = FIRST_WORD_WEIGHT;
-
-    for (var j in words) {
-      var word = words[j];
-
-      if (word.length > 0) {
-        for (var k in stemmedTerms) {
-          if (elasticlunr.stemmer(word).startsWith(stemmedTerms[k])) {
-            value = TERM_WEIGHT;
-            termFound = true;
+          if (results.length > 0) {
+            results.forEach(function(result) {
+              const post = indexData.documentStore.docs[result.ref];
+              const listItem = document.createElement('li');
+              const link = document.createElement('a');
+              // link.href = post.permalink;
+              // if (post.extra && post.extra.permalink && post.extra.permalink.startsWith('/')) {
+              //   link.href = window.location.origin + post.extra.permalink;
+              // } else {
+              //   console.error("Missing permalink for search result:", post);
+              // }
+              link.href = window.location.origin + (post.permalink || "/fallback-url/");
+              const title = post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>');
+              link.innerHTML = title;
+              listItem.appendChild(link);
+              resultsContainer.appendChild(listItem);
+            });
+          } else {
+            const listItem = document.createElement('li');
+            listItem.textContent = 'No results found.';
+            resultsContainer.appendChild(listItem);
           }
         }
-        weighted.push([word, value, index]);
-        value = NORMAL_WORD_WEIGHT;
-      }
+      });
+    })
+    .catch(error => {
+      console.error('Failed to load search index:', error);
+    });
 
-      index += word.length + 1;
-    }
-
-    index += 1;
-  }
-
-  if (weighted.length === 0) {
-    return body;
-  }
-
-  var windowWeights = [];
-  var windowSize = Math.min(weighted.length, TEASER_MAX_WORDS);
-  var curSum = 0;
-
-  for (var i = 0; i < windowSize; i++) {
-    curSum += weighted[i][1];
-  }
-  windowWeights.push(curSum);
-
-  for (var i = 0; i < weighted.length - windowSize; i++) {
-    curSum -= weighted[i][1];
-    curSum += weighted[i + windowSize][1];
-    windowWeights.push(curSum);
-  }
-
-  var maxSumIndex = 0;
-  if (termFound) {
-    var maxFound = 0;
-    for (var i = windowWeights.length - 1; i >= 0; i--) {
-      if (windowWeights[i] > maxFound) {
-        maxFound = windowWeights[i];
-        maxSumIndex = i;
-      }
-    }
-  }
-
-  var teaser = [];
-  var startIndex = weighted[maxSumIndex][2];
-
-  for (var i = maxSumIndex; i < maxSumIndex + windowSize && i < weighted.length; i++) {
-    var word = weighted[i];
-    if (startIndex < word[2]) {
-      teaser.push(body.substring(startIndex, word[2]));
-      startIndex = word[2];
-    }
-
-    if (word[1] === TERM_WEIGHT) {
-      teaser.push("<b>");
-    }
-    startIndex = word[2] + word[0].length;
-    teaser.push(body.substring(word[2], startIndex));
-
-    if (word[1] === TERM_WEIGHT) {
-      teaser.push("</b>");
-    }
-  }
-  teaser.push("…");
-  return teaser.join("");
-}
-
-function formatSearchResultItem(item, terms) {
-  console.log("Search Result Item:", item); // Debugging
-  console.log("Permalink:", item.ref); // Debugging
-
-  if (!item.ref || item.ref === "#") {
-    console.error("Invalid permalink detected:", item.ref);
-    return `<div class="search-results__item">Invalid result</div>`;
-  }
-
-  return `
-    <div class="search-results__item">
-      <a href="${item.ref}">${item.doc.title}</a>
-      <div>${makeTeaser(item.doc.body, terms)}</div>
-    </div>`;
-}
-
-function initSearch() {
-  var $searchInput = document.getElementById("search");
-  var $searchResults = document.querySelector(".search-results");
-  var $searchResultsItems = document.querySelector(".search-results__items");
-  var MAX_ITEMS = 10;
-
-  var options = {
-    bool: "AND",
-    fields: {
-      title: { boost: 2 },
-      body: { boost: 1 },
-    }
-  };
-
-  var currentTerm = "";
-  var index;
-
-    var initIndex = async function () {
-    if (index === undefined) {
-      // Ensure we respect the current path, e.g., /blog/
-      const base = window.location.pathname.replace(/\/[^\/]*$/, "/");
-      index = fetch(`${base}search_index.en.json`)
-        .then(async function (response) {
-          return await elasticlunr.Index.load(await response.json());
-        });
-    }
-    return await index;
-  };
-
-  $searchInput.addEventListener("keyup", debounce(async function () {
-    var term = $searchInput.value.trim();
-    if (term === currentTerm) return;
-
-    $searchResults.style.display = term === "" ? "none" : "block";
-    $searchResultsItems.innerHTML = "";
-    currentTerm = term;
-    if (term === "") return;
-
-    var results = (await initIndex()).search(term, options);
-    if (results.length === 0) {
-      $searchResults.style.display = "none";
-      return;
-    }
-
-    for (var i = 0; i < Math.min(results.length, MAX_ITEMS); i++) {
-      var item = document.createElement("li");
-      item.innerHTML = formatSearchResultItem(results[i], term.split(" "));
-      $searchResultsItems.appendChild(item);
-    }
-  }, 150));
-
-  window.addEventListener("click", function (e) {
-    if ($searchResults.style.display === "block" && !$searchResults.contains(e.target)) {
-      $searchResults.style.display = "none";
+  // Hide results when clicking outside the search container
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.search-container')) {
+      searchResultsDiv.style.display = 'none';
     }
   });
-}
-
-// Initialize search on DOM load
-if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
-  initSearch();
-} else {
-  document.addEventListener("DOMContentLoaded", initSearch);
-}
+});
