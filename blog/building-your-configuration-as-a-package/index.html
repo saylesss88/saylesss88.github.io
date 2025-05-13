@@ -169,7 +169,7 @@
       }
 
       /* Search box styles */
-      #search-box {
+      #search {
         width: 60%;
         padding: 8px;
         border-radius: 5px;
@@ -180,13 +180,13 @@
         background-color: #fbf1c7;
         box-sizing: border-box;
       }
-      [data-theme="dark"] #search-box {
+      [data-theme="dark"] #search {
         color: #ebdbb2; /* Dark mode text color */
         background-color: #3c3836; /* Dark mode background color */
         border: 1px solid #d65d0e; /* Keep the border consistent or adjust */
       }
 
-      #search-results {
+      .search-results {
         margin-top: 10px;
         list-style: none;
         padding: 0;
@@ -194,37 +194,46 @@
         border: 1px solid #d65d0e; /* Border for results */
         border-radius: 5px;
         padding: 10px;
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 60%;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       }
 
-      [data-theme="dark"] #search-results {
+      [data-theme="dark"] .search-results {
         background-color: #3c3836; /* Dark mode background for results */
         color: #ebdbb2; /* Dark mode text color for results */
         border: 1px solid #d65d0e; /* Keep consistent or adjust */
       }
-      #search-results {
+      .search-results__items {
         margin-top: 10px;
         list-style: none;
         padding: 0;
       }
-      #search-results li {
+      .search-results__items li {
         margin-bottom: 5px;
       }
     </style>
   </head>
-
   <body>
     <div class="container">
       <h1>Welcome to My-Nix-Blog</h1>
 
       <button id="dark-mode-toggle">Toggle Dark Mode</button>
 
-      <a href="https://saylesss88.github.io/rss.xml" id="rss-button"
-        >📡 Subscribe via RSS</a
-      >
+      <a href="https://saylesss88.github.io/rss.xml" id="rss-button">
+        📡 Subscribe via RSS
+      </a>
 
-      <!-- Search Box -->
-      <input type="text" id="search-box" placeholder="Search..." />
-      <ul id="search-results"></ul>
+      <input type="text" id="search" placeholder="Search..." />
+      <div class="search-results">
+        <ul class="search-results__items"></ul>
+      </div>
 
       
 <h1 class="title">Building your Configuration as a Package</h1>
@@ -626,7 +635,6 @@ configuration and adapted them to <a href="https://github.com/saylesss88/flake">
  
     </div>
 
-    <!-- Dark mode script -->
     <script>
       function setTheme(theme) {
         localStorage.setItem("theme", theme);
@@ -648,55 +656,6 @@ configuration and adapted them to <a href="https://github.com/saylesss88/flake">
     </script>
 
     <script type="text/javascript" src="https://saylesss88.github.io/elasticlunr.min.js"></script>
-
-    <script src="https://saylesss88.github.io/search_index.en.js"></script>
-    <script>
-  document.addEventListener("DOMContentLoaded", async () => {
-    const searchBox = document.getElementById("search-box");
-    const resultsList = document.getElementById("search-results");
-
-    // Wait for the search index to be loaded
-    function waitForSearchIndex() {
-      return new Promise((resolve) => {
-        if (window.searchIndex) {
-          resolve(window.searchIndex);
-        } else {
-          setTimeout(() => waitForSearchIndex().then(resolve), 50); // Check every 50ms
-        }
-      });
-    }
-
-    const searchData = await waitForSearchIndex();
-    const index = elasticlunr.Index.load(searchData);
-
-    // Search function
-    searchBox.addEventListener("input", () => {
-      const query = searchBox.value.trim();
-      resultsList.innerHTML = "";
-
-      if (query.length > 2) {
-        const results = index.search(query, { expand: true });
-
-        results.forEach((result) => {
-          const post = searchData.documentStore.docs[result.ref];
-          const li = document.createElement("li");
-          li.innerHTML = <a href="${post.extra && post.extra.permalink ? post.extra.permalink : '#' }">${post.title}</a>;
-          resultsList.appendChild(li);
-        });
-      }
-    });
-
-    // Handle Enter key press
-    searchBox.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        const query = searchBox.value.trim();
-        if (query.length > 2 && resultsList.firstChild) {
-          window.location.href =
-            resultsList.firstChild.querySelector("a").href;
-        }
-      }
-    });
-  });
-</script>
+    <script type="text/javascript" src="https://saylesss88.github.io/search.js"></script>
   </body>
 </html>
