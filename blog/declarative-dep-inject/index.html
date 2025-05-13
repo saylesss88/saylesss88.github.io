@@ -556,52 +556,52 @@ in Nix Flakes. This example is inspired by and builds upon concepts discussed in
 
     <script src="https://saylesss88.github.io/search_index.en.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", async () => {
-        const searchBox = document.getElementById("search-box");
-        const resultsList = document.getElementById("search-results");
+  document.addEventListener("DOMContentLoaded", async () => {
+    const searchBox = document.getElementById("search-box");
+    const resultsList = document.getElementById("search-results");
 
-        // Wait for the search index to be loaded
-        function waitForSearchIndex() {
-          return new Promise((resolve) => {
-            if (window.searchIndex) {
-              resolve(window.searchIndex);
-            } else {
-              setTimeout(() => waitForSearchIndex().then(resolve), 50); // Check every 50ms
-            }
-          });
+    // Wait for the search index to be loaded
+    function waitForSearchIndex() {
+      return new Promise((resolve) => {
+        if (window.searchIndex) {
+          resolve(window.searchIndex);
+        } else {
+          setTimeout(() => waitForSearchIndex().then(resolve), 50); // Check every 50ms
         }
-
-        const searchData = await waitForSearchIndex();
-        const index = elasticlunr.Index.load(searchData);
-
-        // Search function
-        searchBox.addEventListener("input", () => {
-          const query = searchBox.value.trim();
-          resultsList.innerHTML = "";
-
-          if (query.length > 2) {
-            const results = index.search(query, { expand: true });
-
-            results.forEach((result) => {
-              const post = searchData.documentStore.docs[result.ref];
-              const li = document.createElement("li");
-              li.innerHTML = `<a href="${post.permalink}">${post.title}</a>`;
-              resultsList.appendChild(li);
-            });
-          }
-        });
-
-        // Handle Enter key press
-        searchBox.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            const query = searchBox.value.trim();
-            if (query.length > 2 && resultsList.firstChild) {
-              window.location.href =
-                resultsList.firstChild.querySelector("a").href;
-            }
-          }
-        });
       });
-    </script>
+    }
+
+    const searchData = await waitForSearchIndex();
+    const index = elasticlunr.Index.load(searchData);
+
+    // Search function
+    searchBox.addEventListener("input", () => {
+      const query = searchBox.value.trim();
+      resultsList.innerHTML = "";
+
+      if (query.length > 2) {
+        const results = index.search(query, { expand: true });
+
+        results.forEach((result) => {
+          const post = searchData.documentStore.docs[result.ref];
+          const li = document.createElement("li");
+          li.innerHTML = `<a href="${post.extra && post.extra.permalink ? post.extra.permalink : '#' }">${post.title}</a>`;
+          resultsList.appendChild(li);
+        });
+      }
+    });
+
+    // Handle Enter key press
+    searchBox.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        const query = searchBox.value.trim();
+        if (query.length > 2 && resultsList.firstChild) {
+          window.location.href =
+            resultsList.firstChild.querySelector("a").href;
+        }
+      }
+    });
+  });
+</script>
   </body>
 </html>
