@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const searchResultsDiv = document.querySelector('.search-results');
 
   // Load the search indexs
-  fetch('/blog/search_index.en.js') // Changed path here
+  fetch('/search_index.en.js') // Changed path here
     .then(response => response.json())
     .then(indexData => {
       console.log("Search Index Data:", indexData); // Keep this for debugging
