@@ -13,16 +13,7 @@ function debounce(func, wait) {
   };
 }
 
-// Taken from mdbook
-// The strategy is as follows:
-// First, assign a value to each word in the document:
-//  Words that correspond to search terms (stemmer aware): 40
-//  Normal words: 2
-//  First word in a sentence: 8
-// Then use a sliding window with a constant number of words and count the
-// sum of the values of the words within the window. Then use the window that got the
-// maximum sum. If there are multiple maximas, then get the last one.
-// Enclose the terms in <b>.
+// Function to create search teasers
 function makeTeaser(body, terms) {
   var TERM_WEIGHT = 40;
   var NORMAL_WORD_WEIGHT = 2;
@@ -34,9 +25,8 @@ function makeTeaser(body, terms) {
   });
   var termFound = false;
   var index = 0;
-  var weighted = []; // contains elements of ["word", weight, index_in_document]
+  var weighted = [];
 
-  // split in sentences, then words
   var sentences = body.toLowerCase().split(". ");
 
   for (var i in sentences) {
@@ -57,11 +47,10 @@ function makeTeaser(body, terms) {
         value = NORMAL_WORD_WEIGHT;
       }
 
-      index += word.length;
-      index += 1;  // ' ' or '.' if last word in sentence
+      index += word.length + 1;
     }
 
-    index += 1;  // because we split at a two-char boundary '. '
+    index += 1;
   }
 
   if (weighted.length === 0) {
@@ -70,8 +59,8 @@ function makeTeaser(body, terms) {
 
   var windowWeights = [];
   var windowSize = Math.min(weighted.length, TEASER_MAX_WORDS);
-  // We add a window with all the weights first
   var curSum = 0;
+
   for (var i = 0; i < windowSize; i++) {
     curSum += weighted[i][1];
   }
@@ -83,11 +72,9 @@ function makeTeaser(body, terms) {
     windowWeights.push(curSum);
   }
 
-  // If we didn't find the term, just pick the first window
   var maxSumIndex = 0;
   if (termFound) {
     var maxFound = 0;
-    // backwards
     for (var i = windowWeights.length - 1; i >= 0; i--) {
       if (windowWeights[i] > maxFound) {
         maxFound = windowWeights[i];
@@ -98,15 +85,14 @@ function makeTeaser(body, terms) {
 
   var teaser = [];
   var startIndex = weighted[maxSumIndex][2];
+
   for (var i = maxSumIndex; i < maxSumIndex + windowSize; i++) {
     var word = weighted[i];
     if (startIndex < word[2]) {
-      // missing text from index to start of `word`
       teaser.push(body.substring(startIndex, word[2]));
       startIndex = word[2];
     }
 
-    // add <em/> around search terms
     if (word[1] === TERM_WEIGHT) {
       teaser.push("<b>");
     }
@@ -122,10 +108,21 @@ function makeTeaser(body, terms) {
 }
 
 function formatSearchResultItem(item, terms) {
-  return '<div class="search-results__item">'
-  + `<a href="${item.ref}">${item.doc.title}</a>`
-  + `<div>${makeTeaser(item.doc.body, terms)}</div>`
-  + '</div>';
+  console.log("Search Result Item:", item); // Debugging
+  console.log("Permalink:", item.ref); // Debugging
+
+  if (!item.ref || item.ref === "#") {
+    console.error("Invalid permalink detected:", item.ref);
+    return `<div class="search-results__item">Invalid result</div>`;
+  }
+
+  return `
+    <div class="search-results__item">
+      <a href="${window.location.origin + item.ref}" onclick="event.preventDefault(); window.location.href='${window.location.origin + item.ref}';">
+        ${item.doc.title}
+      </a>
+      <div>${makeTeaser(item.doc.body, terms)}</div>
+    </div>`;
 }
 
 function initSearch() {
@@ -143,19 +140,17 @@ function initSearch() {
   };
   var currentTerm = "";
   var index;
-  
+
   var initIndex = async function () {
     if (index === undefined) {
       index = fetch("/search_index.en.json")
-        .then(
-          async function(response) {
-            return await elasticlunr.Index.load(await response.json());
-        }
-      );
+        .then(async function(response) {
+          return await elasticlunr.Index.load(await response.json());
+        });
     }
     let res = await index;
     return res;
-  }
+  };
 
   $searchInput.addEventListener("keyup", debounce(async function() {
     var term = $searchInput.value.trim();
@@ -182,17 +177,14 @@ function initSearch() {
     }
   }, 150));
 
-  window.addEventListener('click', function(e) {
+  window.addEventListener("click", function(e) {
     if ($searchResults.style.display == "block" && !$searchResults.contains(e.target)) {
       $searchResults.style.display = "none";
     }
   });
 }
 
-
-if (document.readyState === "complete" ||
-    (document.readyState !== "loading" && !document.documentElement.doScroll)
-) {
+if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
   initSearch();
 } else {
   document.addEventListener("DOMContentLoaded", initSearch);
