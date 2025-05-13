@@ -24,11 +24,12 @@ document.addEventListener('DOMContentLoaded', function() {
               const listItem = document.createElement('li');
               const link = document.createElement('a');
               // link.href = post.permalink;
-              if (post.extra && post.extra.permalink && post.extra.permalink.startsWith('/')) {
-                link.href = window.location.origin + post.extra.permalink;
-              } else {
-                console.error("Missing permalink for search result:", post);
-              }
+              // if (post.extra && post.extra.permalink && post.extra.permalink.startsWith('/')) {
+              //   link.href = window.location.origin + post.extra.permalink;
+              // } else {
+              //   console.error("Missing permalink for search result:", post);
+              // }
+              link.href = window.location.origin + (post.permalink || "/fallback-url/");
               const title = post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>');
               link.innerHTML = title;
               listItem.appendChild(link);
