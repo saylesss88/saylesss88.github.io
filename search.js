@@ -140,9 +140,11 @@ function initSearch() {
   var currentTerm = "";
   var index;
 
-  var initIndex = async function () {
+    var initIndex = async function () {
     if (index === undefined) {
-      index = fetch("/search_index.en.json")
+      // Ensure we respect the current path, e.g., /blog/
+      const base = window.location.pathname.replace(/\/[^\/]*$/, "/");
+      index = fetch(`${base}search_index.en.json`)
         .then(async function (response) {
           return await elasticlunr.Index.load(await response.json());
         });
