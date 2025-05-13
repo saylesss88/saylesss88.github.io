@@ -3,8 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const resultsContainer = document.querySelector('.search-results__items');
   const searchResultsDiv = document.querySelector('.search-results');
 
-  // Load the search indexs
-  fetch('/search_index.en.js') // Changed path here
+  // Load the search index
+  fetch(searchIndexURL) // Use the globally defined variable
     .then(response => response.json())
     .then(indexData => {
       console.log("Search Index Data:", indexData); // Keep this for debugging
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
               const post = indexData.documentStore.docs[result.ref];
               const listItem = document.createElement('li');
               const link = document.createElement('a');
-              link.href = post.permalink;
+              link.href = post.permalink; // Assuming 'permalink' is now in your index
               const title = post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>');
               link.innerHTML = title;
               listItem.appendChild(link);
