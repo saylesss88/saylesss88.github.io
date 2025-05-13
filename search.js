@@ -4,10 +4,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const searchResultsDiv = document.querySelector('.search-results');
 
   // Load the search index
-  fetch('/search_index.en.js') // Changed path here
-    .then(response => response.json())
+  fetch('/search_index.en.json') // Changed path to .json
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch search index: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    })
     .then(indexData => {
-      console.log("Search Index Data:", indexData); // Keep this for debugging
+      console.log("Search Index Data:", indexData); // Keep for debugging
       const index = elasticlunr.Index.load(indexData);
 
       searchInput.addEventListener('input', function() {
@@ -20,16 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
           if (results.length > 0) {
             results.forEach(function(result) {
-              const post = indexData.documentStore.docs[result.ref];
+              // The structure of the result is different with elasticlunr_json
+              const post = result.doc; //  Access the document directly from the result
               const listItem = document.createElement('li');
               const link = document.createElement('a');
-              // link.href = post.permalink;
-              // if (post.extra && post.extra.permalink && post.extra.permalink.startsWith('/')) {
-              //   link.href = window.location.origin + post.extra.permalink;
-              // } else {
-              //   console.error("Missing permalink for search result:", post);
-              // }
-              link.href = window.location.origin + (post.permalink || "/fallback-url/");
+              link.href = post.url; // Use the 'url' field from the index
               const title = post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>');
               link.innerHTML = title;
               listItem.appendChild(link);
@@ -45,6 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.error('Failed to load search index:', error);
+      //  Ideally, display a user-friendly message in the UI
+      const listItem = document.createElement('li');
+      listItem.textContent = 'Failed to load search index.';
+      resultsContainer.appendChild(listItem);
     });
 
   // Hide results when clicking outside the search container
