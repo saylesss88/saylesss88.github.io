@@ -86,7 +86,7 @@ function makeTeaser(body, terms) {
   var teaser = [];
   var startIndex = weighted[maxSumIndex][2];
 
-  for (var i = maxSumIndex; i < maxSumIndex + windowSize; i++) {
+  for (var i = maxSumIndex; i < maxSumIndex + windowSize && i < weighted.length; i++) {
     var word = weighted[i];
     if (startIndex < word[2]) {
       teaser.push(body.substring(startIndex, word[2]));
@@ -117,10 +117,10 @@ function formatSearchResultItem(item, terms) {
   }
 
   return `
-  <div class="search-results__item">
-    <a href="${item.ref}">${item.doc.title}</a>
-    <div>${makeTeaser(item.doc.body, terms)}</div>
-  </div>`;
+    <div class="search-results__item">
+      <a href="${item.ref}">${item.doc.title}</a>
+      <div>${makeTeaser(item.doc.body, terms)}</div>
+    </div>`;
 }
 
 function initSearch() {
@@ -132,35 +132,32 @@ function initSearch() {
   var options = {
     bool: "AND",
     fields: {
-      title: {boost: 2},
-      body: {boost: 1},
+      title: { boost: 2 },
+      body: { boost: 1 },
     }
   };
+
   var currentTerm = "";
   var index;
 
   var initIndex = async function () {
     if (index === undefined) {
       index = fetch("/search_index.en.json")
-        .then(async function(response) {
+        .then(async function (response) {
           return await elasticlunr.Index.load(await response.json());
         });
     }
-    let res = await index;
-    return res;
+    return await index;
   };
 
-  $searchInput.addEventListener("keyup", debounce(async function() {
+  $searchInput.addEventListener("keyup", debounce(async function () {
     var term = $searchInput.value.trim();
-    if (term === currentTerm) {
-      return;
-    }
+    if (term === currentTerm) return;
+
     $searchResults.style.display = term === "" ? "none" : "block";
     $searchResultsItems.innerHTML = "";
     currentTerm = term;
-    if (term === "") {
-      return;
-    }
+    if (term === "") return;
 
     var results = (await initIndex()).search(term, options);
     if (results.length === 0) {
@@ -175,13 +172,14 @@ function initSearch() {
     }
   }, 150));
 
-  window.addEventListener("click", function(e) {
-    if ($searchResults.style.display == "block" && !$searchResults.contains(e.target)) {
+  window.addEventListener("click", function (e) {
+    if ($searchResults.style.display === "block" && !$searchResults.contains(e.target)) {
       $searchResults.style.display = "none";
     }
   });
 }
 
+// Initialize search on DOM load
 if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
   initSearch();
 } else {
