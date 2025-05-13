@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const resultsContainer = document.querySelector('.search-results__items');
   const searchResultsDiv = document.querySelector('.search-results');
 
-  // Load the search index
+  // Load the search indexs
   fetch('search_index.en.js') // Changed path here
     .then(response => response.json())
     .then(indexData => {
