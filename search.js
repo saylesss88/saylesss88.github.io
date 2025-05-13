@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const resultsContainer = document.querySelector('.search-results__items');
   const searchResultsDiv = document.querySelector('.search-results');
 
-  const searchIndexURL = "{{ get_url(path='search_index.en.json') }}";
+  const searchIndexURL = "/search_index.en.json";
 
   // Fetch the search index JSON
   fetch(searchIndexURL)
