@@ -117,12 +117,10 @@ function formatSearchResultItem(item, terms) {
   }
 
   return `
-    <div class="search-results__item">
-      <a href="${window.location.origin + item.ref}" onclick="event.preventDefault(); window.location.href='${window.location.origin + item.ref}';">
-        ${item.doc.title}
-      </a>
-      <div>${makeTeaser(item.doc.body, terms)}</div>
-    </div>`;
+  <div class="search-results__item">
+    <a href="${item.ref}">${item.doc.title}</a>
+    <div>${makeTeaser(item.doc.body, terms)}</div>
+  </div>`;
 }
 
 function initSearch() {
