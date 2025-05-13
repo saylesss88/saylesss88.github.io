@@ -1,17 +1,16 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('search');
   const resultsContainer = document.querySelector('.search-results__items');
   const searchResultsDiv = document.querySelector('.search-results');
 
-  const searchIndexURL = "/search_index.en.js";
-
-  // Fetch the search index JSON
-  fetch(searchIndexURL)
+  // Load the search index (adjust the path if needed)
+  fetch('/search_index.js')
     .then(response => response.json())
-    .then(data => {
-      const index = elasticlunr.Index.load(data);
+    .then(indexData => {
+      console.log("Search Index Data:", indexData); // Keep for debugging
+      const index = elasticlunr.Index.load(indexData);
 
-      searchInput.addEventListener('input', function () {
+      searchInput.addEventListener('input', function() {
         const query = this.value.trim();
         resultsContainer.innerHTML = '';
         searchResultsDiv.style.display = query.length > 0 ? 'block' : 'none';
@@ -20,11 +19,11 @@ document.addEventListener('DOMContentLoaded', function () {
           const results = index.search(query, { expand: true });
 
           if (results.length > 0) {
-            results.forEach(function (result) {
-              const post = data.documentStore.docs[result.ref]; // Corrected reference to data
+            results.forEach(function(result) {
+              const post = indexData[result.ref]; // Access data directly by ref
               const listItem = document.createElement('li');
               const link = document.createElement('a');
-              link.href = post.permalink;
+              link.href = post.permalink; // Assuming 'permalink' is a top-level field
               const title = post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>');
               link.innerHTML = title;
               listItem.appendChild(link);
@@ -38,11 +37,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     })
-    .catch(error => console.error("Failed to load search index:", error));
+    .catch(error => {
+      console.error('Failed to load search index:', error);
+    });
 
   // Hide results when clicking outside the search container
-  document.addEventListener('click', function (event) {
-    if (!event.target.closest('#search') && !event.target.closest('.search-results')) {
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.search-container')) {
       searchResultsDiv.style.display = 'none';
     }
   });
