@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
               const listItem = document.createElement('li');
               const link = document.createElement('a');
               // link.href = post.permalink;
-              if (post.permalink && post.permalink.startsWith('/')) {
-                link.href = window.location.origin + post.permalink;
+              if (post.extra && post.extra.permalink && post.extra.permalink.startsWith('/')) {
+                link.href = window.location.origin + post.extra.permalink;
               } else {
                 console.error("Missing permalink for search result:", post);
               }
