@@ -20,29 +20,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (results.length > 0) {
         results.forEach(function(result) {
-          // Correctly access the document data from the loaded index's documentStore
           const post = index.documentStore.docs[result.ref];
 
-          // Check if post data was found before trying to use it
           if (post) {
+            console.log("Retrieved post data:", post); // ADD THIS FOR DEBUGGING
+
             const listItem = document.createElement('li');
             const link = document.createElement('a');
 
-            // Ensure 'permalink' is available and use it
-            // This assumes 'permalink' is a top-level field due to extra_fields = ["permalink"]
-            if (post.permalink) {
+            if (post && post.permalink) {
               link.href = post.permalink;
             } else {
-              // Fallback or error handling if permalink is unexpectedly missing
-              console.error("Permalink missing for post with ref:", result.ref, post);
-              // You might want to set a default href or skip this result
-              link.href = '#'; // Example fallback
+              console.error("Permalink missing for ref:", result.ref, "Post data:", post);
+              link.href = '#'; // Fallback
             }
 
-
-            // Ensure 'title' is available before using it
-            const title = post.title ? post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>') : 'Untitled'; // Fallback title
-
+            const title = post && post.title ? post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>') : 'Untitled';
             link.innerHTML = title;
             listItem.appendChild(link);
             resultsContainer.appendChild(listItem);
@@ -58,7 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Hide results when clicking outside the search container
   document.addEventListener('click', function(event) {
     if (!event.target.closest('.search-container')) {
       searchResultsDiv.style.display = 'none';
