@@ -19,11 +19,18 @@ async function loadSearchIndex() {
     const response = await fetch("/search_index.en.json");
     const data = await response.json();
     window.searchIndex = elasticlunr.Index.load(data);
-    console.log("Search index loaded:", window.searchIndex);
+    console.log("Search index successfully loaded:", window.searchIndex);
   } catch (error) {
     console.error("Failed to load search index:", error);
   }
 }
+
+// Ensure index is fully loaded before calling search functions
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadSearchIndex();  // Wait for search index to load
+  initSearch(); // Start search functionality
+});
+
 
 // Function to extract and highlight search results
 function formatSearchResultItem(item, terms) {
