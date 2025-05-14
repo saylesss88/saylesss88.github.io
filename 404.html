@@ -1,3 +1,107 @@
 <!doctype html>
-<title>404 Not Found</title>
-<h1>404 Not Found</h1>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+    <!-- <link rel="stylesheet" href="https://saylesss88.github.io/style.css" /> -->
+    <script>
+      const baseUrl = "https://saylesss88.github.io";
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Welcome to My-Nix-Blog</h1>
+
+      <button id="dark-mode-toggle">Toggle Dark Mode</button>
+
+      <a href="https://saylesss88.github.io/rss.xml" id="rss-button" role="button">
+        📡 Subscribe via RSS
+      </a>
+
+      <div role="search">
+        <input
+          type="text"
+          id="search"
+          placeholder="Search..."
+          aria-label="Search"
+        />
+        <div class="search-results" aria-live="polite">
+          <ul class="search-results__items"></ul>
+        </div>
+      </div>
+
+      
+<article class="center">
+    <h1>404 - Not Found</h1>
+    <p>The page you're looking for doesn't exist.</p>
+    <a href="/" class="no-style">← Return home</a>
+</article>
+
+    </div>
+
+    <script defer src="https://saylesss88.github.io/elasticlunr.min.js"></script>
+    <script defer>
+      let index;
+
+      fetch(`${baseUrl}/search_index.en.json`)
+        .then((response) => response.json())
+        .then((data) => {
+          index = elasticlunr.Index.load(data);
+
+          const searchInput = document.getElementById("search");
+          const resultsContainer = document.querySelector(".search-results");
+          const resultsList = document.querySelector(".search-results__items");
+
+          searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.trim();
+
+            if (!query || !index) {
+              resultsContainer.style.display = "none";
+              resultsList.innerHTML = "";
+              return;
+            }
+
+            const results = index.search(query, { expand: true });
+
+            if (results.length > 0) {
+              resultsList.innerHTML = results
+                .map((result) => {
+                  const ref = index.documentStore.getDoc(result.ref);
+                  return `<li><a href="${ref.permalink}">${ref.title}</a></li>`;
+                })
+                .join("");
+              resultsContainer.style.display = "block";
+            } else {
+              resultsList.innerHTML = "<li>No results found.</li>";
+              resultsContainer.style.display = "block";
+            }
+          });
+        })
+        .catch((err) => {
+          console.error("Search index failed to load:", err);
+        });
+    </script>
+
+    <script defer>
+      document.addEventListener("DOMContentLoaded", () => {
+        const darkModeToggle = document.getElementById("dark-mode-toggle");
+        const body = document.body;
+
+        const savedTheme = localStorage.getItem("theme") || "light";
+
+        // Apply the saved theme on load
+        if (savedTheme === "dark") {
+          body.classList.add("dark-mode");
+        }
+
+        darkModeToggle.addEventListener("click", () => {
+          body.classList.toggle("dark-mode");
+          const currentTheme = body.classList.contains("dark-mode")
+            ? "dark"
+            : "light";
+          localStorage.setItem("theme", currentTheme);
+        });
+      });
+    </script>
+  </body>
+</html>
