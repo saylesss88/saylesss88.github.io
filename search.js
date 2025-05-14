@@ -13,17 +13,41 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  function search(query) {
-    const index = window.searchIndex.index.body;
-    const results = [];
+  
+    function search(query) {
+      const index = window.searchIndex.index;
+      const results = [];
+      const documents = window.searchIndex.index.body.root.docs; // Assuming body.root.docs holds the document info
 
-    // Log the query to check
-    console.log("Search query:", query);
+      console.log("Search query:", query);
 
-    if (!query) {
-      return results; // Return an empty array if no query is provided
+      if (!query) {
+        return results;
+      }
+
+      // Iterate through the indexed terms
+      for (const term in index) {
+        if (index.hasOwnProperty(term)) {
+          const termData = index[term];
+          if (termData && termData.docs) {
+            // Iterate through the documents associated with this term
+            for (const url in termData.docs) {
+              if (termData.docs.hasOwnProperty(url)) {
+                const docInfo = documents[url]; // Try to get document info by URL
+                if (docInfo && (url.toLowerCase().includes(query) ||
+                                (docInfo.title && docInfo.title.toLowerCase().includes(query)) ||
+                                (docInfo.body && docInfo.body.toLowerCase().includes(query)))) {
+                  results.push({ title: docInfo.title || url, url: url, score: termData.docs[url].tf });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      console.log("Search results:", results);
+      return results;
     }
-
     // Loop through the index to match the query
     for (const [key, value] of Object.entries(index)) {
       const doc = value.docs;
