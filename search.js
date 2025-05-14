@@ -1,13 +1,10 @@
 function debounce(func, wait) {
   var timeout;
-
   return function () {
     var context = this;
     var args = arguments;
     clearTimeout(timeout);
-
     timeout = setTimeout(function () {
-      timeout = null;
       func.apply(context, args);
     }, wait);
   };
@@ -15,8 +12,18 @@ function debounce(func, wait) {
 
 // Fetch search index correctly as JSON
 async function loadSearchIndex() {
+  // Check if already loaded
+  if (window.searchIndex) {
+    console.log("Search index already loaded");
+    return;
+  }
+  
   try {
+    console.log("Loading search index...");
     const response = await fetch("/search_index.en.json");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     const data = await response.json();
     window.searchIndex = elasticlunr.Index.load(data);
     console.log("Search index successfully loaded:", window.searchIndex);
@@ -25,22 +32,19 @@ async function loadSearchIndex() {
   }
 }
 
-// Ensure index is fully loaded before calling search functions
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadSearchIndex();  // Wait for search index to load
-  initSearch(); // Start search functionality
-});
-
 // Function to extract and highlight search results
-function formatSearchResultItem(item, terms) {
-  const post = window.searchIndex.documentStore.docs[item.ref];
-
-  // Ensure path exists before using it
-  const permalink = post.path ? `${baseUrl}${post.path}` : item.ref;
-  if (!post.path) {
-    console.warn(`Missing path for search result ref: ${item.ref}, using ref as fallback.`);
+function formatSearchResultItem(item) {
+  const post = window.searchIndex.documentStore.getDoc(item.ref);
+  
+  // Use safer property access
+  if (!post) {
+    console.error(`Missing document for ref: ${item.ref}`);
+    return `<a href="${item.ref}">${item.ref}</a>`;
   }
-
+  
+  // Ensure path exists and handle properly
+  const permalink = post.path ? `${baseUrl || ''}${post.path}` : item.ref;
+  
   return `<a href="${permalink}">${post.title || "Untitled"}</a>`;
 }
 
@@ -49,51 +53,99 @@ async function initSearch() {
   const $searchInput = document.getElementById("search");
   const $searchResults = document.querySelector(".search-results");
   const $searchResultsItems = document.querySelector(".search-results__items");
-  const MAX_ITEMS = 10;
-  const options = { bool: "OR", expand: true, fields: { title: { boost: 2 }, body: { boost: 1 }, path: { boost: 1 } } };
-
-  await loadSearchIndex(); // Ensure index is loaded first
-
-  $searchInput.addEventListener("keyup", debounce(async function () {
-    console.log("Search triggered!");
-
+  
+  // Exit if search elements don't exist on the page
+  if (!$searchInput || !$searchResults || !$searchResultsItems) {
+    console.log("Search elements not found on page");
+    return;
+  }
+  
+  // Make sure index is loaded
+  await loadSearchIndex();
+  
+  // Search options
+  const options = { 
+    bool: "OR", 
+    expand: true, 
+    fields: { 
+      title: { boost: 2 }, 
+      body: { boost: 1 }, 
+      path: { boost: 1 } 
+    } 
+  };
+  
+  // Handle search input with debouncing
+  $searchInput.addEventListener("input", debounce(function () {
     const term = $searchInput.value.trim();
-    console.log("Search term:", term);
-
+    console.log("Search triggered with term:", term);
+    
+    // Clear previous results
     $searchResultsItems.innerHTML = "";
-    $searchResults.style.display = term ? "block" : "none";
-
-    if (!term) return;
-
+    
+    // Hide results if no search term
+    if (!term) {
+      $searchResults.style.display = "none";
+      return;
+    }
+    
+    // Make sure search index is available
+    if (!window.searchIndex) {
+      console.error("Search index not loaded yet!");
+      return;
+    }
+    
+    // Perform search
     const results = window.searchIndex.search(term, options);
     console.log("Search results:", results);
-
+    
     if (results.length > 0) {
+      // Add results to UI
       results.forEach(result => {
-        const post = window.searchIndex.documentStore.docs[result.ref];
-        console.log("Adding result to UI:", post);
-
         const listItem = document.createElement("li");
-        listItem.innerHTML = formatSearchResultItem(result, term.split(" "));
+        listItem.innerHTML = formatSearchResultItem(result);
         $searchResultsItems.appendChild(listItem);
       });
       $searchResults.style.display = "block";
     } else {
-      console.log("No matching results.");
-      $searchResults.style.display = "none";
+      // Show "no results" message
+      const noResults = document.createElement("li");
+      noResults.classList.add("search-results__no-results");
+      noResults.textContent = "No results found";
+      $searchResultsItems.appendChild(noResults);
+      $searchResults.style.display = "block";
     }
   }, 150));
-
-  window.addEventListener("click", function (e) {
-    if ($searchResults.style.display === "block" && !$searchResults.contains(e.target)) {
+  
+  // Show results when input is focused (if there's a value)
+  $searchInput.addEventListener("focus", function() {
+    if ($searchInput.value.trim() !== "") {
+      // Trigger search to display existing results
+      $searchInput.dispatchEvent(new Event("input"));
+    }
+  });
+  
+  // Hide results when clicking outside
+  document.addEventListener("click", function (e) {
+    if (!$searchInput.contains(e.target) && !$searchResults.contains(e.target)) {
       $searchResults.style.display = "none";
     }
   });
+  
+  // Prevent form submission
+  const $searchForm = $searchInput.closest("form");
+  if ($searchForm) {
+    $searchForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      $searchInput.dispatchEvent(new Event("input"));
+    });
+  }
 }
 
-// Ensure search initializes once DOM is ready
+// Proper initialization sequence
 if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
-  initSearch();
+  loadSearchIndex().then(initSearch);
 } else {
-  document.addEventListener("DOMContentLoaded", initSearch);
+  document.addEventListener("DOMContentLoaded", function() {
+    loadSearchIndex().then(initSearch);
+  });
 }
