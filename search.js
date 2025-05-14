@@ -13,8 +13,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  function search(query) {
+    function search(query) {
     const index = window.searchIndex.index;
+    const documentStore = window.searchIndex.documentStore.store; // Access the document store
     const results = [];
 
     console.log("Search query:", query);
@@ -23,21 +24,16 @@ document.addEventListener("DOMContentLoaded", function () {
       return results;
     }
 
-    // Loop through the index to match the query
     for (const term in index) {
-      if (index.hasOwnProperty(term)) {
-        const termData = index[term];
-        if (termData && termData.docs) {
-          // Iterate through the documents associated with this term
-          for (const url in termData.docs) {
-            if (termData.docs.hasOwnProperty(url)) {
-              // Assuming window.searchIndex also contains the title and body
-              const docInfo = window.searchIndex.index.body.root.docs[url];
-              if (docInfo && (url.toLowerCase().includes(query) ||
-                              (docInfo.title && docInfo.title.toLowerCase().includes(query)) ||
-                              (docInfo.body && docInfo.body.toLowerCase().includes(query)))) {
-                results.push({ title: docInfo.title || url, url: url, score: termData.docs[url].tf });
-              }
+      if (index.hasOwnProperty(term) && index[term].docs) {
+        for (const ref in index[term].docs) { // 'ref' is the document ID
+          if (index[term].docs.hasOwnProperty(ref)) {
+            const tf = index[term].docs[ref].tf;
+            const doc = documentStore[ref]; // Look up the document in the store
+
+            if (doc && (doc.title.toLowerCase().includes(query) ||
+                        doc.body.toLowerCase().includes(query))) {
+              results.push({ title: doc.title, url: doc.path, score: tf }); // Use doc.path for the URL
             }
           }
         }
