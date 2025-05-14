@@ -120,7 +120,8 @@ function formatSearchResultItem(item, terms) {
   const post = window.searchIndex.documentStore.docs[item.ref];
 
   // Ensure path exists before using it
-  const permalink = post.path ? `${baseUrl}${post.path}` : item.ref;
+  // const permalink = post.path ? `${baseUrl}${post.path}` : item.ref;
+  const permalink = `${baseUrl}${post.path}`;
   if (!post.path) {
     console.warn(`Missing path for search result ref: ${item.ref}, using ref as fallback.`);
   }
