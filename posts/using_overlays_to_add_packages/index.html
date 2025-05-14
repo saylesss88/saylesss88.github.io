@@ -1,0 +1,165 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://saylesss88.github.io/favicon.ico><meta property="og:url" content="https://saylesss88.github.io/posts/using_overlays_to_add_packages/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Using_overlays_to_add_packages"><meta property="og:description" content="Using Overlays to add Packages that aren’t in Nixpkgs TOC
+Adding the overlays output to your Flake The Actual Overlay The pokego Package definition Adding the overlay to your configuration Installing Pokego Another Overlay Example It is very common to use overlays in Nix to install packages that aren’t available in the standard Nixpkgs repository.
+Overlays are one of the primary and recommended ways to extend and customize your Nix environment. It’s important to remember that Nix overlays are made to allow you to modify or extend the package set provided by Nixpkgs (or other Nix sources) without directly altering the original package definitions. This is crucial for maintaining reproducibility and avoiding conflicts. Overlays are essentially functions that take the previous package set and allow you to add, modify, or remove packages."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-14T19:28:57-04:00"><meta property="article:modified_time" content="2025-05-14T19:28:57-04:00"><title>NixOS Blog | Using_overlays_to_add_packages</title>
+<link rel=stylesheet href=/css/main.min.9d7861a670d885bddfdca28e2bec973020e2e1f1b049a5849a85a2e0fa249e4c.css integrity="sha256-nXhhpnDYhb3f3KKOK+yXMCDi4fGwSaWEmoWi4Poknkw=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/default.min.cfcbb0f894da76afbc5a46072e5cbec733a983f27395920a3cfdf6977053c351.css integrity="sha256-z8uw+JTadq+8WkYHLly+xzOpg/JzlZIKPP32l3BTw1E=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"></div><div class=post><header class=mb-4><h1 class=text-uppercase>Using_overlays_to_add_packages</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-05-14T19:28:57-04:00>May 14, 2025</time></li><li class="breadcrumb-item small">6 minutes</li></ol></div></header><article><h1 id=using-overlays-to-add-packages-that-arent-in-nixpkgs>Using Overlays to add Packages that aren&rsquo;t in Nixpkgs</h1><p><strong>TOC</strong></p><ul><li><a href=#adding-the-overlays-output-to-your-flake>Adding the overlays output to your Flake</a></li><li><a href=#the-actual-overlay>The Actual Overlay</a></li><li><a href=#the-pokego-package-definition>The pokego Package definition</a></li><li><a href=#adding-the-overlay-to-your-configuration>Adding the overlay to your configuration</a></li><li><a href=#installing-pokego>Installing Pokego</a><ul><li><a href=#another-overlay-example>Another Overlay Example</a></li></ul></li></ul><p>It is very common to use overlays in Nix to install packages that aren&rsquo;t
+available in the standard Nixpkgs repository.</p><ul><li><p>Overlays are one of the primary and recommended ways to extend and customize
+your Nix environment. It&rsquo;s important to remember that Nix overlays are made to
+allow you to modify or extend the package set provided by Nixpkgs (or other
+Nix sources) without directly altering the original package definitions. This
+is crucial for maintaining reproducibility and avoiding conflicts. Overlays
+are essentially functions that take the previous package set and allow you to
+add, modify, or remove packages.</p></li><li><p>It may be helpful to first read my
+<a href=https://saylesss88.github.io/blog/nix-flakes-tips-and-tricks/>NixFlakesTips</a>
+post first to understand the outputs in my flake.</p></li></ul><h2 id=adding-the-overlays-output-to-your-flake>Adding the overlays output to your Flake</h2><p>I&rsquo;ll show the process of adding the <code>pokego</code> package that is not in Nixpkgs:</p><ol><li>In my <code>flake.nix</code> I have a custom inputs variable within my let block of my flake like so just showing the necessary parts for berevity:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
+</span></span><span style=display:flex><span>  outputs <span style=color:#f92672>=</span> my-inputs <span style=color:#f92672>@</span> {
+</span></span><span style=display:flex><span>    self<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>    nixpkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>    treefmt-nix<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>  }: <span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>    system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>;
+</span></span><span style=display:flex><span>    host <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;magic&#34;</span>;
+</span></span><span style=display:flex><span>    userVars <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      username <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;jr&#34;</span>;
+</span></span><span style=display:flex><span>      gitUsername <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;saylesss88&#34;</span>;
+</span></span><span style=display:flex><span>      editor <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;hx&#34;</span>;
+</span></span><span style=display:flex><span>      term <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;ghostty&#34;</span>;
+</span></span><span style=display:flex><span>      keys <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;us&#34;</span>;
+</span></span><span style=display:flex><span>      browser <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;firefox&#34;</span>;
+</span></span><span style=display:flex><span>      flake <span style=color:#f92672>=</span> builtins<span style=color:#f92672>.</span>getEnv <span style=color:#e6db74>&#34;HOME&#34;</span> <span style=color:#f92672>+</span> <span style=color:#e6db74>&#34;/flake&#34;</span>;
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    inputs <span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>      my-inputs
+</span></span><span style=display:flex><span>      <span style=color:#f92672>//</span> {
+</span></span><span style=display:flex><span>        pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> inputs<span style=color:#f92672>.</span>nixpkgs {
+</span></span><span style=display:flex><span>          <span style=color:#66d9ef>inherit</span> system;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        lib <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          overlays <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./lib/overlay.nix</span>;
+</span></span><span style=display:flex><span>          nixOsModules <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./nixos</span>;
+</span></span><span style=display:flex><span>          homeModules <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./home</span>;
+</span></span><span style=display:flex><span>          <span style=color:#66d9ef>inherit</span> system;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>      <span style=color:#75715e># ... snip ...</span>
+</span></span></code></pre></div><h2 id=the-actual-overlay>The Actual Overlay</h2><ol start=2><li>In the <code>overlay.nix</code> I have this helper function and the defined package:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># overlay.nix</span>
+</span></span><span style=display:flex><span>_final: prev: <span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Helper function to import a package</span>
+</span></span><span style=display:flex><span>  callPackage <span style=color:#f92672>=</span> prev<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>callPackageWith (prev <span style=color:#f92672>//</span> packages);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Define all packages</span>
+</span></span><span style=display:flex><span>  packages <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Additional packages</span>
+</span></span><span style=display:flex><span>    pokego <span style=color:#f92672>=</span> callPackage <span style=color:#e6db74>./pac_defs/pokego.nix</span> {};
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  packages
+</span></span></code></pre></div><ol><li><code>_final: prev:</code>: This is the function definition of the overlay.</li></ol><ul><li><p><code>_final</code>: This argument represents the final, merged package set after all
+overlays have been applied. It&rsquo;s often unused within a single overlay, hence
+the <code>_</code> prefix (a Nix convention for unused variables).</p></li><li><p><code>prev</code>: This is the crucial argument. It represents the package set before
+this overlay is applied. This allows you to refer to existing packages and
+functions from Nixpkgs.</p></li></ul><ol start=2><li><p><code>let ... in packages</code>: This introduces a <code>let</code> expression, which defines
+local variables within the scope of this overlay function. The <code>in packages</code>
+part means that the overlay function will ultimately return the <code>packages</code>
+attribute set defined within the <code>let</code> block.</p></li><li><p><code>callPackage = prev.lib.callPackageWith (prev // packages)</code>: This line
+defines a helper function called <code>callPackage</code>.</p></li></ol><ul><li><p><code>prev.lib.callPackageWith</code> Is a function provided by Nixpkgs&rsquo; <code>lib</code>.
+<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing
+of additional arguments that will then be passed to the package definition.</p></li><li><p><code>(prev // packages)</code>: This is an attribute set merge operation. It takes the
+<code>prev</code> package set (Nixpkgs before this overlay) and merges it with the
+<code>packages</code> attribute set defined later in this overlay.</p></li><li><p>By using <code>callPackageWith</code> with this merged attribute set, the <code>callPackage</code>
+function defined here is set up to correctly import package definitions,
+ensuring they have access to both the original Nixpkgs and any other packages
+defined within this overlay.</p></li></ul><ol start=4><li><p><code>packages = { ... };</code>: This defines an attribute set named <code>packages</code>. This
+set will contain all the new or modified packages introduced by this overlay.</p></li><li><p><code>pokego = callPackages ./pac_defs/pokego.nix { };</code>: This is the core of how
+the <code>pokego</code> package is added.</p></li></ol><ul><li><p><code>pokego =</code>: This defines a new attribute named <code>pokego</code> within the packages
+attribute set. This name will be used to refer to the pokego package later.</p></li><li><p><code>callPackage ./pac_defs/pokego.nix {}</code>: This calls the callPackage helper
+function defined earlier.</p></li><li><p><code>./pac_defs/pokego.nix</code>: This is the path to another Nix file(<code>pokego.nix</code>)
+that contains the actual package definition for pokego. This file would
+define how to fetch, build, and install the pokego software</p></li><li><p><code>{}</code>: This is an empty attribute set passed as additional arguments to the
+<code>pokego.nix</code> package definition. If <code>pokego.nix</code> expected any specific
+parameters (like versions or dependencies), you would provide them here.
+Since it&rsquo;s empty, it implies pokego.nix either has no required arguments or
+uses default values.</p></li></ul><ol start=6><li><code>in packages</code>: As mentioned earlier, the overlay function returns the
+packages attribute set. When this overlay is applied, the packages defined
+within this packages set (including pokego) will be added to the overall Nix
+package set.</li></ol><h2 id=the-pokego-package-definition>The pokego Package definition</h2><p>The following is the <code>./pac_defs/pokego.nix</code>, it may be helpful to first read my
+<a href=https://saylesss88.github.io/blog/understanding-package-definitions/>PackageDefinition</a>
+post to better understand the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># pokego.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  buildGoModule<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  fetchFromGitHub<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>}:
+</span></span><span style=display:flex><span>buildGoModule <span style=color:#66d9ef>rec</span> {
+</span></span><span style=display:flex><span>  pname <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;pokego&#34;</span>;
+</span></span><span style=display:flex><span>  version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;0.3.0&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  src <span style=color:#f92672>=</span> fetchFromGitHub {
+</span></span><span style=display:flex><span>    owner <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;rubiin&#34;</span>;
+</span></span><span style=display:flex><span>    repo <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;pokego&#34;</span>;
+</span></span><span style=display:flex><span>    rev <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;v</span><span style=color:#e6db74>${</span>version<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>;
+</span></span><span style=display:flex><span>    hash <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;sha256-cFpEi8wBdCzAl9dputoCwy8LeGyK3UF2vyylft7/1wY=&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  vendorHash <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;sha256-7SoKHH+tDJKhUQDoVwAzVZXoPuKNJEHDEyQ77BPEDQ0=&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Install shell completions</span>
+</span></span><span style=display:flex><span>  postInstall <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    install -Dm644 completions/pokego.bash &#34;$out/share/bash-completion/completions/pokego&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    install -Dm644 completions/pokego.fish &#34;$out/share/fish/vendor_completions.d/pokego.fish&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    install -Dm644 completions/pokego.zsh &#34;$out/share/zsh/site-functions/_pokego&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  meta <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> lib; {
+</span></span><span style=display:flex><span>    description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Command-line tool that lets you display Pokémon sprites in color directly in your terminal&#34;</span>;
+</span></span><span style=display:flex><span>    homepage <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;https://github.com/rubiin/pokego&#34;</span>;
+</span></span><span style=display:flex><span>    license <span style=color:#f92672>=</span> licenses<span style=color:#f92672>.</span>gpl3Only;
+</span></span><span style=display:flex><span>    maintainers <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> maintainers; [
+</span></span><span style=display:flex><span>      rubiin
+</span></span><span style=display:flex><span>      jameskim0987
+</span></span><span style=display:flex><span>      vinibispo
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>    mainProgram <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;pokego&#34;</span>;
+</span></span><span style=display:flex><span>    platforms <span style=color:#f92672>=</span> platforms<span style=color:#f92672>.</span>all;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=adding-the-overlay-to-your-configuration>Adding the overlay to your configuration</h2><p>There are a few places you could choose to put the following, I choose to use
+my <code>configuration.nix</code> because of my setup:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># configuration.nix</span>
+</span></span><span style=display:flex><span>nixpkgs<span style=color:#f92672>.</span>overlays <span style=color:#f92672>=</span> [inputs<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>overlays]
+</span></span></code></pre></div><h2 id=installing-pokego>Installing Pokego</h2><ul><li>If you are managing your entire system configuration with NixOS, you would
+typically add <code>pokego</code> to your <code>environment.systemPackages</code>.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># configuration.nix</span>
+</span></span><span style=display:flex><span>environment<span style=color:#f92672>.</span>systemPackages <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> pkgs; [
+</span></span><span style=display:flex><span>  pokego
+</span></span><span style=display:flex><span>]
+</span></span></code></pre></div><ul><li>If you prefer home-manager you can install <code>pokego</code> with home-manager also:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># home.nix</span>
+</span></span><span style=display:flex><span>home<span style=color:#f92672>.</span>packages <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>.</span>pokego
+</span></span><span style=display:flex><span>]
+</span></span></code></pre></div><h3 id=another-overlay-example>Another Overlay Example</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  inputs <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    nixpkgs<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;https://flakehub.com/NixOS/nixpkgs/*.tar.gz&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    nix<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  outputs <span style=color:#f92672>=</span> { self<span style=color:#f92672>,</span> nixpkgs<span style=color:#f92672>,</span> nix }:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>      system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;aarch64-darwin&#34;</span>;
+</span></span><span style=display:flex><span>      pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> nixpkgs {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>inherit</span> system;
+</span></span><span style=display:flex><span>        overlays <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>          nix<span style=color:#f92672>.</span>overlays<span style=color:#f92672>.</span>default
+</span></span><span style=display:flex><span>        ];
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>     <span style=color:#75715e># `pkgs` is nixpkgs for the system, with nix&#39;s overlay applied</span>
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><p>Normally, <code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings. However, the example above customizes this import by passing arguments: </code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}<code>. This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin` system, with the overlay from the nix flake applied.</p></li><li><p>Consequently, any packages built using this customized <code>pkgs</code> will now depend
+on or use the specific nix version (2.17.0) provided by the nix flake, instead
+of the version that comes with the fetched nixpkgs. This technique can be
+useful for ensuring a consistent environment or testing specific package
+versions.</p></li></ul></article><div class=row><div class=col-md><a href=https://saylesss88.github.io/posts/nix_lang_basics/><span>previous: </span><span>Nix_lang_basics</span></a></div><div class="col-md text-md-end"></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75"></p></div></footer></main><script src=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js integrity=sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz crossorigin=anonymous></script></body></html>

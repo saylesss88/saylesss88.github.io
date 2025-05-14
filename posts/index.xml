@@ -1,26 +1,584 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Posts on NixOS Blog</title>
-    <link>http://localhost:1313/posts/</link>
-    <description>Recent content in Posts on NixOS Blog</description>
-    <generator>Hugo</generator>
-    <language>en-us</language>
-    <lastBuildDate>Wed, 14 May 2025 19:07:59 -0400</lastBuildDate>
-    <atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Intro_to_jujutsu</title>
-      <link>http://localhost:1313/posts/intro_to_jujutsu/</link>
-      <pubDate>Wed, 14 May 2025 19:07:59 -0400</pubDate>
-      <guid>http://localhost:1313/posts/intro_to_jujutsu/</guid>
-      <description>&lt;h1 id=&#34;intro-to-jujutsu-using-jj-in-an-existing-git-repo&#34;&gt;Intro to Jujutsu (Using jj in an existing Git Repo)&lt;/h1&gt;&#xA;&lt;p&gt;&lt;strong&gt;TOC&lt;/strong&gt;&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#intro-to-jujutsu-using-jj-in-an-existing-git-repo&#34;&gt;Intro to Jujutsu (Using jj in an existing Git Repo)&lt;/a&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#jj-and-git-side-by-side&#34;&gt;JJ and Git Side by Side&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#resources&#34;&gt;Resources&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;&lt;img src=&#34;http://localhost:1313/images/jujutsu.png&#34; alt=&#34;Jujutsu Logo&#34;&gt;&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;You can use jujutsu (jj) with existing Git repositories with one command.&#xA;&lt;code&gt;jj git init --colocate&lt;/code&gt; or &lt;code&gt;jj git init --git-repo /path/to/git_repository&lt;/code&gt;.&#xA;The native repository format for jj is still a work in progress so people&#xA;typically use a &lt;code&gt;git&lt;/code&gt; repository for backend.&lt;/p&gt;</description>
-    </item>
-    <item>
-      <title>Nix_modules_explained</title>
-      <link>http://localhost:1313/posts/nix_modules_explained/</link>
-      <pubDate>Wed, 14 May 2025 19:03:40 -0400</pubDate>
-      <guid>http://localhost:1313/posts/nix_modules_explained/</guid>
-      <description>&lt;h1 id=&#34;nixos-modules&#34;&gt;NixOS Modules&lt;/h1&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#nixos-modules&#34;&gt;NixOS Modules&lt;/a&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#declaring-options&#34;&gt;Declaring Options&lt;/a&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#module-composition&#34;&gt;Module Composition&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#nixos-modules-and-dependency-locking-with-npins&#34;&gt;NixOS Modules and Dependency Locking with npins&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#resources-on-modules&#34;&gt;Resources on Modules&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#videos&#34;&gt;Videos&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;[&lt;a href=&#34;https://www.youtube.com/watch?v=cZjOzOHb2ow&#34;&gt;tweagModuleSystemRecursion&lt;/a&gt;](#tweagmodulesystemrecursionhttpswwwyoutubecomwatchvczjozohb2ow)&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;!-- raw HTML omitted --&gt;&#xA;&lt;p&gt;TL;DR: In this post I break down the NixOS module system and explain how to&#xA;define options. As well as how to test modules with the repl.&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Most modules are functions that take an attribute set and return an attribute&#xA;set.&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;&lt;strong&gt;Refresher&lt;/strong&gt;:&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;An &lt;strong&gt;attribute set&lt;/strong&gt; is a collection of name-value pairs wrapped in curly&#xA;braces:&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-nix&#34; data-lang=&#34;nix&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  string &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;hello&amp;#34;&lt;/span&gt;;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  int &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;&#xA;&lt;li&gt;A &lt;strong&gt;function&lt;/strong&gt; with an attribute set argument:&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-nix&#34; data-lang=&#34;nix&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{ a&lt;span style=&#34;color:#f92672&#34;&gt;,&lt;/span&gt; b }: a &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; b&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;&#xA;&lt;li&gt;The simplest possible &lt;strong&gt;NixOS Module&lt;/strong&gt;:&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-nix&#34; data-lang=&#34;nix&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{ &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt; }:&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;NixOS produces a full system configuration by combining smaller, more isolated&#xA;and reusable components: &lt;strong&gt;Modules&lt;/strong&gt;. In my opinion modules are one of the&#xA;first things you should understand when learning about NixOS.&lt;/p&gt;</description>
-    </item>
-  </channel>
-</rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on NixOS Blog</title><link>https://saylesss88.github.io/posts/</link><description>Recent content in Posts on NixOS Blog</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 14 May 2025 19:28:57 -0400</lastBuildDate><atom:link href="https://saylesss88.github.io/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Using_overlays_to_add_packages</title><link>https://saylesss88.github.io/posts/using_overlays_to_add_packages/</link><pubDate>Wed, 14 May 2025 19:28:57 -0400</pubDate><guid>https://saylesss88.github.io/posts/using_overlays_to_add_packages/</guid><description>&lt;h1 id="using-overlays-to-add-packages-that-arent-in-nixpkgs">Using Overlays to add Packages that aren&amp;rsquo;t in Nixpkgs&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#adding-the-overlays-output-to-your-flake">Adding the overlays output to your Flake&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#the-actual-overlay">The Actual Overlay&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#the-pokego-package-definition">The pokego Package definition&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#adding-the-overlay-to-your-configuration">Adding the overlay to your configuration&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#installing-pokego">Installing Pokego&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#another-overlay-example">Another Overlay Example&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>It is very common to use overlays in Nix to install packages that aren&amp;rsquo;t
+available in the standard Nixpkgs repository.&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>Overlays are one of the primary and recommended ways to extend and customize
+your Nix environment. It&amp;rsquo;s important to remember that Nix overlays are made to
+allow you to modify or extend the package set provided by Nixpkgs (or other
+Nix sources) without directly altering the original package definitions. This
+is crucial for maintaining reproducibility and avoiding conflicts. Overlays
+are essentially functions that take the previous package set and allow you to
+add, modify, or remove packages.&lt;/p></description></item><item><title>Nix_lang_basics</title><link>https://saylesss88.github.io/posts/nix_lang_basics/</link><pubDate>Wed, 14 May 2025 19:28:12 -0400</pubDate><guid>https://saylesss88.github.io/posts/nix_lang_basics/</guid><description>&lt;h1 id="the-nix-language">The Nix Language&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#the-nix-language">The Nix Language&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#how-does-nix-work">How does Nix work&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#syntax-basics">Syntax Basics&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#derivations">Derivations&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#evaluating-nix-files">Evaluating Nix Files&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#resources">Resources&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>Nix as a programming language can be thought of as a kind of &amp;ldquo;JSON, but with
+functions&amp;rdquo;.&lt;/p>
+&lt;p>All statements are declarative, meaning that there&amp;rsquo;s no sequential flow of
+instructions that makes up a Nix package. Instead, functions are called that
+assign values to fields in attribute sets, which in turn may get assigned to
+other values.&lt;/p></description></item><item><title>Comparing_flakes_to_traditional_nix</title><link>https://saylesss88.github.io/posts/comparing_flakes_to_traditional_nix/</link><pubDate>Wed, 14 May 2025 19:27:18 -0400</pubDate><guid>https://saylesss88.github.io/posts/comparing_flakes_to_traditional_nix/</guid><description>&lt;h1 id="introduction-flakes-and-traditional-nix">Introduction: Flakes and Traditional Nix&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;a href="#introduction-flakes-and-traditional-nix">Introduction: Flakes and Traditional Nix&lt;/a>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#what-is-purity-in-nix">What is Purity in Nix?&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#building-a-simple-hello-package-flakes-vs-traditional-nix">Building a Simple &amp;ldquo;hello&amp;rdquo; Package: Flakes vs. Traditional Nix&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#using-nix-flakes">Using Nix Flakes&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#using-traditional-nix">Using Traditional Nix&lt;/a> - &lt;a href="#updating-nixpkgs">Updating Nixpkgs&lt;/a> - &lt;a href="#updating-traditional-nix-using-niv">Updating Traditional Nix (using &lt;code>niv&lt;/code>)&lt;/a> - &lt;a href="#adding-home-manager-with-flakes">Adding Home-Manager with Flakes&lt;/a> - &lt;a href="#adding-home-manager-with-traditional-nix">Adding Home-Manager with Traditional Nix&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;ul>
+&lt;li>This post is based on notes from Nix-Hour #4, comparing Traditional Nix and Flakes, focusing on achieving pure build results. See the &lt;a href="https://www.youtube.com/watch?v=atmoYyBAhF4">YouTube video&lt;/a> for the original content. This guide adapts the information for clarity and ease of understanding.&lt;/li>
+&lt;/ul>
+&lt;h2 id="what-is-purity-in-nix">What is Purity in Nix?&lt;/h2>
+&lt;ul>
+&lt;li>
+&lt;p>A key benefit of Nix Flakes is their &lt;em>default&lt;/em> enforcement of &lt;strong>pure evaluation&lt;/strong>.&lt;/p></description></item><item><title>Declarative_depinject</title><link>https://saylesss88.github.io/posts/declarative_depinject/</link><pubDate>Wed, 14 May 2025 19:26:36 -0400</pubDate><guid>https://saylesss88.github.io/posts/declarative_depinject/</guid><description>&lt;h1 id="declarative-dependency-injection-in-nix-flakes">Declarative Dependency Injection in Nix Flakes&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#declarative-dependency-injection-in-nix-flakes">Declarative Dependency Injection in Nix Flakes&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#the-problem-with-specialargs">The Problem with specialArgs&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#a-declarative-solution-injecting-via-a-custom-option">A Declarative Solution: Injecting via a Custom Option&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#benefits-of-this-approach">Benefits of this Approach&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#example-usage">Example Usage&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#applying-dep-inject-to-home-manager-modules">Applying dep-inject to Home Manager Modules&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#conclusion">Conclusion&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>This post explores a method for injecting dependencies into NixOS modules from
+a flake in a more declarative way, offering an alternative to &lt;code>specialArgs&lt;/code>.&lt;/p>
+&lt;h2 id="the-problem-with-specialargs">The Problem with specialArgs&lt;/h2>
+&lt;ul>
+&lt;li>
+&lt;p>As mentioned in &lt;a href="https://saylesss88.github.io/blog/nix-flakes-tips-and-tricks/">post&lt;/a>,
+&lt;code>specialArgs&lt;/code> and &lt;code>extraSpecialArgs&lt;/code> can be used to pass dependencies and
+variables from flakes to modules.&lt;/p></description></item><item><title>Derivations_explained</title><link>https://saylesss88.github.io/posts/derivations_explained/</link><pubDate>Wed, 14 May 2025 19:25:48 -0400</pubDate><guid>https://saylesss88.github.io/posts/derivations_explained/</guid><description>&lt;h1 id="introduction-to-nix-derivations">Introduction to Nix Derivations&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#introduction-to-nix-derivations">Introduction to Nix Derivations&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#creating-derivations-in-nix">Creating Derivations in Nix&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#why-a-builder-script">Why a Builder Script?&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#the-challenge-with-shebangs-in-nix">The Challenge with Shebangs in Nix&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#the-importance-of-statelessness-in-nix">The Importance of Statelessness in Nix&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#our-builder-script">Our builder Script&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#our-second-derivation">Our Second Derivation&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#links-to-articles-about-derivations">Links To Articles about Derivations&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;ul>
+&lt;li>
+&lt;p>A derivation in Nix is a fundamental concept that describes how to build a piece of software or a resource (e.g., a package, library, or configuration file). Think of it as a recipe for creating something within the Nix ecosystem.&lt;/p></description></item><item><title>Simple_nix_service</title><link>https://saylesss88.github.io/posts/simple_nix_service/</link><pubDate>Wed, 14 May 2025 19:25:11 -0400</pubDate><guid>https://saylesss88.github.io/posts/simple_nix_service/</guid><description>&lt;h1 id="building-a-custom-nixos-service-with-flakes-and-overlays">Building a Custom NixOS Service with Flakes and Overlays&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#building-a-custom-nixos-service-with-flakes-and-overlays">Building a Custom NixOS Service with Flakes and Overlays&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#create-project-directory">Create Project Directory&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#create-flake">Create flake&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#create-service-module">Create Service Module&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#add-nixosconfigurations-output">Add nixosConfigurations Output&lt;/a> - &lt;a href="#build-the-system-configuration">Build the System Configuration&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>TL;DR NixOS&amp;rsquo;s declarative configuration and flakes make it easy to create
+custom services. This post shows how to build a minimal service using flakes
+and overlays for a &amp;ldquo;meow&amp;rdquo; command&lt;/p>
+&lt;ul>
+&lt;li>This will be a complete minimal configuration for testing purposes.&lt;/li>
+&lt;/ul>
+&lt;h2 id="create-project-directory">Create Project Directory&lt;/h2>
+&lt;p>Start by creating a directory to hold your project, I called mine &lt;code>meow&lt;/code>:&lt;/p></description></item><item><title>Nix_flakes_tips</title><link>https://saylesss88.github.io/posts/nix_flakes_tips/</link><pubDate>Wed, 14 May 2025 19:24:27 -0400</pubDate><guid>https://saylesss88.github.io/posts/nix_flakes_tips/</guid><description>&lt;h1 id="shallow-clone-nixpkgs">Shallow Clone Nixpkgs&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#shallow-clone-nixpkgs">Shallow Clone Nixpkgs&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#import-your-non-flake-wallpaper-repo">Import your Non-Flake Wallpaper Repo&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#understanding-patterns">Understanding @-patterns&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#understanding-specialargs">Understanding &lt;code>specialArgs&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#set-up-flake-check-and-formatter-outputs">Set up Flake Check and Formatter Outputs&lt;/a> - &lt;a href="#add-a-devshell-output">Add a devShell Output&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;ol>
+&lt;li>Shallow clone nixpkgs, the full Git history isn&amp;rsquo;t always necessary and this
+can speed up build times.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>The only issue I&amp;rsquo;ve had is &lt;code>nix-index-database&lt;/code> not working well with the
+shallow clone&amp;hellip; Other than that no issues after running for a few months.&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># flake.nix&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>inputs &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nixpkgs&lt;span style="color:#f92672">.&lt;/span>url &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;git+https://github.com/NixOS/nixpkgs?shallow=1&amp;amp;ref=nixos-unstable&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>};
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>Some times when you might need a full clone are debugging and working with
+repository history but those are rare.&lt;/li>
+&lt;/ul>
+&lt;h2 id="import-your-non-flake-wallpaper-repo">Import your Non-Flake Wallpaper Repo&lt;/h2>
+&lt;ol start="2">
+&lt;li>Importing your non-flake wallpapers repo:&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># flake.nix&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>inputs &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> wallpapers &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> url &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;github:saylesss88/wallpapers&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> flake &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">false&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> };
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>After adding the input I can access individual wallpapers by adding the &lt;code>inputs&lt;/code> argument and
+something like &lt;code>path = &amp;quot;${inputs.wallpapers}/Aesthetic Scenery.jpg&amp;quot;;&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h2 id="understanding--patterns">Understanding @-patterns&lt;/h2>
+&lt;ol start="3">
+&lt;li>Understanding &lt;code>@-patterns&lt;/code>, being able to reference your outputs argument set as a whole. An
+&lt;code>@-pattern&lt;/code> is a way for a function can access variadic attributes (i.e. varying number of
+arguments).&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># flake.nix&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>inputs &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> home-manager&lt;span style="color:#f92672">.&lt;/span>url &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;github:nix-community/home-manager/master&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> home-manager&lt;span style="color:#f92672">.&lt;/span>inputs&lt;span style="color:#f92672">.&lt;/span>nixpkgs&lt;span style="color:#f92672">.&lt;/span>follows &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;nixpkgs&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> stylix&lt;span style="color:#f92672">.&lt;/span>url &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;github:danth/stylix&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>};
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>outputs &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nixpkgs&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> home-manager&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>} &lt;span style="color:#f92672">@&lt;/span> inputs:
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>With the above example to add the modules to your nixosConfigurations you would add something
+like this:&lt;/p></description></item><item><title>Working_with_nixpkgs_locally</title><link>https://saylesss88.github.io/posts/working_with_nixpkgs_locally/</link><pubDate>Wed, 14 May 2025 19:23:32 -0400</pubDate><guid>https://saylesss88.github.io/posts/working_with_nixpkgs_locally/</guid><description>&lt;h1 id="working-with-nixpkgs-locally-benefits-and-best-practices">Working with Nixpkgs Locally: Benefits and Best Practices&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#working-with-nixpkgs-locally-benefits-and-best-practices">Working with Nixpkgs Locally: Benefits and Best Practices&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#i-why-work-with-nixpkgs-locally">I. Why Work with Nixpkgs Locally?&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#a-faster-development-cycle">A. Faster Development Cycle&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#b-enhanced-version-control">B. Enhanced Version Control&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#c-flexible-debugging-capabilities">C. Flexible Debugging Capabilities&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#d-streamlined-contribution-workflow">D. Streamlined Contribution Workflow&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#e-up-to-date-documentation-source">E. Up-to-Date Documentation Source&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#f-optimized-storage-and-performance">F. Optimized Storage and Performance&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#ii-flake-vs-non-flake-syntax-for-local-nixpkgs">II. Flake vs. Non-Flake Syntax for Local Nixpkgs&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#a-flake-syntax-nix-build-package">A. Flake Syntax (&lt;code>nix build .#&amp;lt;package&amp;gt;&lt;/code>)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#b-non-flake-syntax-nix-build-f-package-or-nix-build-f-package">B. Non-Flake Syntax (&lt;code>nix-build -f . &amp;lt;package&amp;gt;&lt;/code> or &lt;code>nix build -f . &amp;lt;package&amp;gt;&lt;/code>)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#iii-setting-up-a-local-nixpkgs-repository-efficiently">III. Setting Up a Local Nixpkgs Repository Efficiently&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#a-initial-clone-shallow-cloning">A. Initial Clone: Shallow Cloning&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#b-managing-branches-with-worktrees">B. Managing Branches with Worktrees&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#iv-debugging-missing-dependencies-a-practical-example">IV. Debugging Missing Dependencies: A Practical Example&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#b-local-source-code-search-with-rg-ripgrep">B. Local Source Code Search with &lt;code>rg&lt;/code> (ripgrep)&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#v-local-derivation-search-with-nix-locate">V. Local Derivation Search with &lt;code>nix-locate&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#vi-key-benefits-of-working-with-nixpkgs-locally-recap">VI. Key Benefits of Working with Nixpkgs Locally (Recap)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#vii-best-practices-and-tips-from-the-community">VII. Best Practices and Tips from the Community&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;ul>
+&lt;li>Nixpkgs, the package repository for NixOS, is a powerful resource for building and customizing software.&lt;/li>
+&lt;li>Working with a local copy enhances development, debugging, and contribution workflows.&lt;/li>
+&lt;li>This post covers setting up a local Nixpkgs repository, searching for dependencies, and leveraging its advantages, incorporating tips from the Nix community.&lt;/li>
+&lt;/ul>
+&lt;h1 id="i-why-work-with-nixpkgs-locally">I. Why Work with Nixpkgs Locally?&lt;/h1>
+&lt;ul>
+&lt;li>
+&lt;p>A local Nixpkgs repository offers significant advantages for Nix developers:&lt;/p></description></item><item><title>Building_your_config_as_a_package</title><link>https://saylesss88.github.io/posts/building_your_config_as_a_package/</link><pubDate>Wed, 14 May 2025 19:21:54 -0400</pubDate><guid>https://saylesss88.github.io/posts/building_your_config_as_a_package/</guid><description>&lt;h1 id="building-your-configuration-as-a-package">Building your configuration as a Package&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#building-your-configuration-as-a-package">Building your configuration as a Package&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#benefits-of-nixosconfiguration-as-a-package">Benefits of nixosConfiguration as a Package&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#usage-and-deployment">Usage and Deployment&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#adding-a-configuration-vm-output">Adding a Configuration VM Output&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#debugging">Debugging&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#understanding-atomicity">Understanding Atomicity&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;ul>
+&lt;li>This allows you to build your configuration as a package allowing you to
+separate the process of creating a configuration artifact and applying it to
+the live system giving you a reusable artifact that can be used to deploy to
+different systems. This can make it easier to isolate it from other parts of
+your system making debugging easier.&lt;/li>
+&lt;/ul>
+&lt;p>The following is a snip of my &lt;code>flake.nix&lt;/code>:&lt;/p></description></item><item><title>Conditional_configuration</title><link>https://saylesss88.github.io/posts/conditional_configuration/</link><pubDate>Wed, 14 May 2025 19:21:09 -0400</pubDate><guid>https://saylesss88.github.io/posts/conditional_configuration/</guid><description>&lt;h1 id="conditional-configuration">Conditional Configuration&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#conditional-configuration">Conditional Configuration&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#hyprland-module">Hyprland Module&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#wlogout-module">Wlogout Module&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#benefits-of-this-approach">Benefits of this Approach&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>With options it&amp;rsquo;s easy to conditionally install something based on if another
+program is enabled in your configuration.&lt;/p>
+&lt;h2 id="hyprland-module">Hyprland Module&lt;/h2>
+&lt;p>For example, if I have an option to enable or disable hyprland like this:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># hyprland.nix&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pkgs&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lib&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> config&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> inputs&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">...&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}: &lt;span style="color:#66d9ef">let&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cfg &lt;span style="color:#f92672">=&lt;/span> config&lt;span style="color:#f92672">.&lt;/span>custom&lt;span style="color:#f92672">.&lt;/span>hyprland;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">in&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> options&lt;span style="color:#f92672">.&lt;/span>custom&lt;span style="color:#f92672">.&lt;/span>hyprland &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> enable &lt;span style="color:#f92672">=&lt;/span> lib&lt;span style="color:#f92672">.&lt;/span>mkOption {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> type &lt;span style="color:#f92672">=&lt;/span> lib&lt;span style="color:#f92672">.&lt;/span>types&lt;span style="color:#f92672">.&lt;/span>bool;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> default &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">false&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> description &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;Enable hyprland module&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> };
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> };
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> config &lt;span style="color:#f92672">=&lt;/span> lib&lt;span style="color:#f92672">.&lt;/span>mkIf cfg&lt;span style="color:#f92672">.&lt;/span>enable {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> home&lt;span style="color:#f92672">.&lt;/span>packages &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">with&lt;/span> pkgs; [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># swww&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> grim
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> slurp
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> wl-clipboard-rs
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cliphist
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> swappy
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ydotool
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> wpaperd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> wofi
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> hyprpicker
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pavucontrol
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> blueman
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># lxqt.lxqt-policykit&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> brightnessctl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> polkit_gnome
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> wlr-randr
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> wtype
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> rose-pine-cursor
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># nwg-look&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># yad&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># gtk-engine-murrine&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ];
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># .. snip ..&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>
+&lt;p>Since the above module is set to false, it is necessary to add
+&lt;code>custom.hyprland.enable = true&lt;/code> to my &lt;code>home.nix&lt;/code> to have Nix add it
+to my configuration. And since &lt;code>home.packages&lt;/code> is wrapped in
+&lt;code>config = lib.mkIf cfg.enable&lt;/code> Those packages will only be installed
+if the module is enabled.&lt;/p></description></item><item><title>Top_level_attributes_explained</title><link>https://saylesss88.github.io/posts/top_level_attributes_explained/</link><pubDate>Wed, 14 May 2025 19:20:34 -0400</pubDate><guid>https://saylesss88.github.io/posts/top_level_attributes_explained/</guid><description>&lt;h1 id="understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#how-options-relate-a-chain-of-influence">How Options Relate: A Chain of Influence&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#the-nixos-module-system-evaluating-options">The NixOS Module System: Evaluating Options&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#how-the-module-system-works-a-simplified-overview">How the Module System Works: A Simplified Overview&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>This explanation is based on insights from Infinisil, a prominent figure in the
+Nix community, to help clarify the concept of top-level attributes within
+NixOS modules.&lt;/p>
+&lt;h2 id="the-core-of-a-nixos-system-systembuildtoplevel">The Core of a NixOS System: &lt;code>system.build.toplevel&lt;/code>&lt;/h2>
+&lt;p>In a NixOS system, everything is built from a single &amp;ldquo;system derivation.&amp;rdquo; The
+command &lt;code>nix-build '&amp;lt;nixpkgs/nixos&amp;gt;' -A system&lt;/code> initiates this build process.&lt;/p></description></item><item><title>Nix_flakes_explained</title><link>https://saylesss88.github.io/posts/nix_flakes_explained/</link><pubDate>Wed, 14 May 2025 19:19:51 -0400</pubDate><guid>https://saylesss88.github.io/posts/nix_flakes_explained/</guid><description>&lt;h1 id="nix-repl-list-available-commands">Nix Repl List available commands&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#nix-repl-list-available-commands">Nix Repl List available commands&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#load-nix-expressions-directly">Load Nix expressions Directly&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#load-flakes">Load Flakes&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#debugging-with-a-flake-repl-output">Debugging with a Flake REPL output&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#usage">Usage&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#debugging">Debugging&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>List available commands with &lt;code>:?&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>nix repl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Nix &lt;span style="color:#ae81ff">2&lt;/span>&lt;span style="color:#ae81ff">.24.11&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Type :&lt;span style="color:#f92672">?&lt;/span> for help&lt;span style="color:#f92672">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>nix-repl&lt;span style="color:#f92672">&amp;gt;&lt;/span> :&lt;span style="color:#f92672">?&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>The following commands are available:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Evaluate and print expression
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;lt;x&amp;gt;&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Bind expression to variable
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :a&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :add &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Add attributes from resulting set to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :b &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build a derivation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :bl &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build a derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> creating GC roots in the
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> working directory
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :e&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :edit &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Open package or function in &lt;span style="color:#960050;background-color:#1e0010">$&lt;/span>EDITOR
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :i &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> install result into
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> current profile
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :l&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :load &lt;span style="color:#e6db74">&amp;lt;path&amp;gt;&lt;/span> Load Nix expression and add it to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :lf&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :load-flake &lt;span style="color:#e6db74">&amp;lt;ref&amp;gt;&lt;/span> Load Nix flake and add it to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :p&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :print &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Evaluate and print expression recursively
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> Strings are printed directly&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> without escaping&lt;span style="color:#f92672">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :q&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :quit Exit nix-repl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :r&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :reload Reload all files
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :sh &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build dependencies of derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> start
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nix-shell
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :t &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Describe result of evaluation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :u &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> start nix-shell
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :doc &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Show documentation of a builtin function
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :log &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Show logs for a derivation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :te&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :trace-enable [bool] Enable&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> disable or toggle showing traces for
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> errors
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :&lt;span style="color:#f92672">?&lt;/span>&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :help Brings up this help menu
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="load-nix-expressions-directly">Load Nix expressions Directly&lt;/h2>
+&lt;p>You can quickly evaluate a random Nix expression:&lt;/p></description></item><item><title>Understanding_package_definitions</title><link>https://saylesss88.github.io/posts/understanding_package_definitions/</link><pubDate>Wed, 14 May 2025 19:19:10 -0400</pubDate><guid>https://saylesss88.github.io/posts/understanding_package_definitions/</guid><description>&lt;h1 id="nix-repl-list-available-commands">Nix Repl List available commands&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#nix-repl-list-available-commands">Nix Repl List available commands&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#load-nix-expressions-directly">Load Nix expressions Directly&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#load-flakes">Load Flakes&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#debugging-with-a-flake-repl-output">Debugging with a Flake REPL output&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#usage">Usage&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#debugging">Debugging&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>List available commands with &lt;code>:?&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>nix repl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Nix &lt;span style="color:#ae81ff">2&lt;/span>&lt;span style="color:#ae81ff">.24.11&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Type :&lt;span style="color:#f92672">?&lt;/span> for help&lt;span style="color:#f92672">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>nix-repl&lt;span style="color:#f92672">&amp;gt;&lt;/span> :&lt;span style="color:#f92672">?&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>The following commands are available:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Evaluate and print expression
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;lt;x&amp;gt;&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Bind expression to variable
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :a&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :add &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Add attributes from resulting set to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :b &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build a derivation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :bl &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build a derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> creating GC roots in the
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> working directory
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :e&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :edit &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Open package or function in &lt;span style="color:#960050;background-color:#1e0010">$&lt;/span>EDITOR
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :i &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> install result into
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> current profile
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :l&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :load &lt;span style="color:#e6db74">&amp;lt;path&amp;gt;&lt;/span> Load Nix expression and add it to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :lf&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :load-flake &lt;span style="color:#e6db74">&amp;lt;ref&amp;gt;&lt;/span> Load Nix flake and add it to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :p&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :print &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Evaluate and print expression recursively
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> Strings are printed directly&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> without escaping&lt;span style="color:#f92672">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :q&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :quit Exit nix-repl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :r&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :reload Reload all files
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :sh &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build dependencies of derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> start
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nix-shell
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :t &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Describe result of evaluation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :u &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> start nix-shell
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :doc &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Show documentation of a builtin function
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :log &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Show logs for a derivation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :te&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :trace-enable [bool] Enable&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> disable or toggle showing traces for
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> errors
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :&lt;span style="color:#f92672">?&lt;/span>&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :help Brings up this help menu
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="load-nix-expressions-directly">Load Nix expressions Directly&lt;/h2>
+&lt;p>You can quickly evaluate a random Nix expression:&lt;/p></description></item><item><title>Nix_repl_tips</title><link>https://saylesss88.github.io/posts/nix_repl_tips/</link><pubDate>Wed, 14 May 2025 19:18:13 -0400</pubDate><guid>https://saylesss88.github.io/posts/nix_repl_tips/</guid><description>&lt;h1 id="nix-repl-list-available-commands">Nix Repl List available commands&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#nix-repl-list-available-commands">Nix Repl List available commands&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#load-nix-expressions-directly">Load Nix expressions Directly&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#load-flakes">Load Flakes&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#debugging-with-a-flake-repl-output">Debugging with a Flake REPL output&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#usage">Usage&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#debugging">Debugging&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>List available commands with &lt;code>:?&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>nix repl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Nix &lt;span style="color:#ae81ff">2&lt;/span>&lt;span style="color:#ae81ff">.24.11&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Type :&lt;span style="color:#f92672">?&lt;/span> for help&lt;span style="color:#f92672">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>nix-repl&lt;span style="color:#f92672">&amp;gt;&lt;/span> :&lt;span style="color:#f92672">?&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>The following commands are available:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Evaluate and print expression
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;lt;x&amp;gt;&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Bind expression to variable
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :a&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :add &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Add attributes from resulting set to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :b &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build a derivation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :bl &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build a derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> creating GC roots in the
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> working directory
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :e&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :edit &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Open package or function in &lt;span style="color:#960050;background-color:#1e0010">$&lt;/span>EDITOR
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :i &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> install result into
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> current profile
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :l&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :load &lt;span style="color:#e6db74">&amp;lt;path&amp;gt;&lt;/span> Load Nix expression and add it to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :lf&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :load-flake &lt;span style="color:#e6db74">&amp;lt;ref&amp;gt;&lt;/span> Load Nix flake and add it to scope
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :p&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :print &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Evaluate and print expression recursively
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> Strings are printed directly&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> without escaping&lt;span style="color:#f92672">.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :q&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :quit Exit nix-repl
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :r&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :reload Reload all files
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :sh &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build dependencies of derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> start
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nix-shell
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :t &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Describe result of evaluation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :u &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Build derivation&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> &lt;span style="color:#66d9ef">then&lt;/span> start nix-shell
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :doc &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Show documentation of a builtin function
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :log &lt;span style="color:#e6db74">&amp;lt;expr&amp;gt;&lt;/span> Show logs for a derivation
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :te&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :trace-enable [bool] Enable&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> disable or toggle showing traces for
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> errors
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> :&lt;span style="color:#f92672">?&lt;/span>&lt;span style="color:#960050;background-color:#1e0010">,&lt;/span> :help Brings up this help menu
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="load-nix-expressions-directly">Load Nix expressions Directly&lt;/h2>
+&lt;p>You can quickly evaluate a random Nix expression:&lt;/p></description></item><item><title>Understanding_nix_functions</title><link>https://saylesss88.github.io/posts/understanding_nix_functions/</link><pubDate>Wed, 14 May 2025 19:17:32 -0400</pubDate><guid>https://saylesss88.github.io/posts/understanding_nix_functions/</guid><description>&lt;h1 id="understanding-nix-functions">Understanding Nix Functions&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#understanding-nix-functions">Understanding Nix Functions&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#the-single-argument-nature-of-nix-functions">The Single-Argument Nature of Nix Functions&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#identifying-function-structure-the-colon">Identifying Function Structure The Colon&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#function-declarations-single-and-multiple-arguments">Function Declarations Single and &amp;ldquo;Multiple&amp;rdquo; Arguments&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#resources">Resources&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>Functions are a fundamental concept in Nix and are prevalent throughout Nix code. Grasping how they work is crucial for understanding and writing Nix expressions.&lt;/p>
+&lt;h2 id="the-single-argument-nature-of-nix-functions">The Single-Argument Nature of Nix Functions&lt;/h2>
+&lt;p>A key concept to understand is that in Nix, every function conceptually takes &lt;strong>exactly one argument&lt;/strong>. What might appear as multi-argument functions are actually achieved through a technique called &lt;strong>currying&lt;/strong>, where a series of nested single-argument functions are used.&lt;/p></description></item><item><title>Intro_to_jujutsu</title><link>https://saylesss88.github.io/posts/intro_to_jujutsu/</link><pubDate>Wed, 14 May 2025 19:07:59 -0400</pubDate><guid>https://saylesss88.github.io/posts/intro_to_jujutsu/</guid><description>&lt;h1 id="intro-to-jujutsu-using-jj-in-an-existing-git-repo">Intro to Jujutsu (Using jj in an existing Git Repo)&lt;/h1>
+&lt;p>&lt;strong>TOC&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#intro-to-jujutsu-using-jj-in-an-existing-git-repo">Intro to Jujutsu (Using jj in an existing Git Repo)&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#jj-and-git-side-by-side">JJ and Git Side by Side&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#resources">Resources&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://saylesss88.github.io/images/jujutsu.png" alt="Jujutsu Logo">&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>You can use jujutsu (jj) with existing Git repositories with one command.
+&lt;code>jj git init --colocate&lt;/code> or &lt;code>jj git init --git-repo /path/to/git_repository&lt;/code>.
+The native repository format for jj is still a work in progress so people
+typically use a &lt;code>git&lt;/code> repository for backend.&lt;/p></description></item><item><title>Nix_modules_explained</title><link>https://saylesss88.github.io/posts/nix_modules_explained/</link><pubDate>Wed, 14 May 2025 19:03:40 -0400</pubDate><guid>https://saylesss88.github.io/posts/nix_modules_explained/</guid><description>&lt;h1 id="nixos-modules">NixOS Modules&lt;/h1>
+&lt;ul>
+&lt;li>&lt;a href="#nixos-modules">NixOS Modules&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#declaring-options">Declaring Options&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#module-composition">Module Composition&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#nixos-modules-and-dependency-locking-with-npins">NixOS Modules and Dependency Locking with npins&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#resources-on-modules">Resources on Modules&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#videos">Videos&lt;/a>&lt;/li>
+&lt;li>[&lt;a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion&lt;/a>](#tweagmodulesystemrecursionhttpswwwyoutubecomwatchvczjozohb2ow)&lt;/li>
+&lt;/ul>
+&lt;!-- raw HTML omitted -->
+&lt;p>TL;DR: In this post I break down the NixOS module system and explain how to
+define options. As well as how to test modules with the repl.&lt;/p>
+&lt;ul>
+&lt;li>Most modules are functions that take an attribute set and return an attribute
+set.&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>Refresher&lt;/strong>:&lt;/p>
+&lt;ul>
+&lt;li>An &lt;strong>attribute set&lt;/strong> is a collection of name-value pairs wrapped in curly
+braces:&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> string &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;hello&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> int &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">3&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>A &lt;strong>function&lt;/strong> with an attribute set argument:&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>{ a&lt;span style="color:#f92672">,&lt;/span> b }: a &lt;span style="color:#f92672">+&lt;/span> b
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>The simplest possible &lt;strong>NixOS Module&lt;/strong>:&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>{ &lt;span style="color:#f92672">...&lt;/span> }:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>NixOS produces a full system configuration by combining smaller, more isolated
+and reusable components: &lt;strong>Modules&lt;/strong>. In my opinion modules are one of the
+first things you should understand when learning about NixOS.&lt;/p></description></item></channel></rss>

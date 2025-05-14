@@ -1,0 +1,86 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://saylesss88.github.io/favicon.ico><meta property="og:url" content="https://saylesss88.github.io/posts/conditional_configuration/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Conditional_configuration"><meta property="og:description" content='Conditional Configuration TOC
+Conditional Configuration Hyprland Module Wlogout Module Benefits of this Approach With options it’s easy to conditionally install something based on if another program is enabled in your configuration.
+Hyprland Module For example, if I have an option to enable or disable hyprland like this:
+# hyprland.nix { pkgs, lib, config, inputs, ... }: let cfg = config.custom.hyprland; in { options.custom.hyprland = { enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable hyprland module"; }; }; config = lib.mkIf cfg.enable { home.packages = with pkgs; [ # swww grim slurp wl-clipboard-rs cliphist swappy ydotool wpaperd wofi hyprpicker pavucontrol blueman # lxqt.lxqt-policykit brightnessctl polkit_gnome wlr-randr wtype rose-pine-cursor # nwg-look # yad # gtk-engine-murrine ]; # .. snip .. Since the above module is set to false, it is necessary to add custom.hyprland.enable = true to my home.nix to have Nix add it to my configuration. And since home.packages is wrapped in config = lib.mkIf cfg.enable Those packages will only be installed if the module is enabled.'><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-14T19:21:09-04:00"><meta property="article:modified_time" content="2025-05-14T19:21:09-04:00"><title>NixOS Blog | Conditional_configuration</title>
+<link rel=stylesheet href=/css/main.min.9d7861a670d885bddfdca28e2bec973020e2e1f1b049a5849a85a2e0fa249e4c.css integrity="sha256-nXhhpnDYhb3f3KKOK+yXMCDi4fGwSaWEmoWi4Poknkw=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/default.min.cfcbb0f894da76afbc5a46072e5cbec733a983f27395920a3cfdf6977053c351.css integrity="sha256-z8uw+JTadq+8WkYHLly+xzOpg/JzlZIKPP32l3BTw1E=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"></div><div class=post><header class=mb-4><h1 class=text-uppercase>Conditional_configuration</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-05-14T19:21:09-04:00>May 14, 2025</time></li><li class="breadcrumb-item small">2 minutes</li></ol></div></header><article><h1 id=conditional-configuration>Conditional Configuration</h1><p><strong>TOC</strong></p><ul><li><a href=#conditional-configuration>Conditional Configuration</a><ul><li><a href=#hyprland-module>Hyprland Module</a></li><li><a href=#wlogout-module>Wlogout Module</a></li><li><a href=#benefits-of-this-approach>Benefits of this Approach</a></li></ul></li></ul><p>With options it&rsquo;s easy to conditionally install something based on if another
+program is enabled in your configuration.</p><h2 id=hyprland-module>Hyprland Module</h2><p>For example, if I have an option to enable or disable hyprland like this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># hyprland.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  inputs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: <span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  cfg <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>hyprland;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span> {
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>hyprland <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>      type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>bool;
+</span></span><span style=display:flex><span>      default <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>      description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Enable hyprland module&#34;</span>;
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>   config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf cfg<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>    home<span style=color:#f92672>.</span>packages <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> pkgs; [
+</span></span><span style=display:flex><span>      <span style=color:#75715e># swww</span>
+</span></span><span style=display:flex><span>      grim
+</span></span><span style=display:flex><span>      slurp
+</span></span><span style=display:flex><span>      wl-clipboard-rs
+</span></span><span style=display:flex><span>      cliphist
+</span></span><span style=display:flex><span>      swappy
+</span></span><span style=display:flex><span>      ydotool
+</span></span><span style=display:flex><span>      wpaperd
+</span></span><span style=display:flex><span>      wofi
+</span></span><span style=display:flex><span>      hyprpicker
+</span></span><span style=display:flex><span>      pavucontrol
+</span></span><span style=display:flex><span>      blueman
+</span></span><span style=display:flex><span>      <span style=color:#75715e># lxqt.lxqt-policykit</span>
+</span></span><span style=display:flex><span>      brightnessctl
+</span></span><span style=display:flex><span>      polkit_gnome
+</span></span><span style=display:flex><span>      wlr-randr
+</span></span><span style=display:flex><span>      wtype
+</span></span><span style=display:flex><span>      rose-pine-cursor
+</span></span><span style=display:flex><span>      <span style=color:#75715e># nwg-look</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e># yad</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e># gtk-engine-murrine</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># .. snip ..</span>
+</span></span></code></pre></div><ul><li><p>Since the above module is set to false, it is necessary to add
+<code>custom.hyprland.enable = true</code> to my <code>home.nix</code> to have Nix add it
+to my configuration. And since <code>home.packages</code> is wrapped in
+<code>config = lib.mkIf cfg.enable</code> Those packages will only be installed
+if the module is enabled.</p></li><li><p>if I used <code>programs.hyprland.enable</code> and added
+<code>home.packages = [ pkgs.waybar ];</code> without conditionals, waybar would install
+even if hyprland was disabled.</p></li></ul><h2 id=wlogout-module>Wlogout Module</h2><p>I can then have my default for something like wlogout be to install only if
+the <code>custom.hyprland</code> module is enabled:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># wlogout.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: <span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  cfg <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>wlogout;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span> {
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>wlogout <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>      type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>bool;
+</span></span><span style=display:flex><span>      default <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>hyprland<span style=color:#f92672>.</span>enable;
+</span></span><span style=display:flex><span>      description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Enable wlogout module&#34;</span>;
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>    config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf cfg<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>    programs<span style=color:#f92672>.</span>wlogout <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span><span style=color:#75715e># .. snip ..</span>
+</span></span></code></pre></div><ul><li>The default value of <code>config.custom.wlogout.enable</code> is set to
+<code>config.custom.hyprland.enable</code>. Therefore, if <code>config.custom.hyprland.enable</code>
+evaluates to true, the wlogout module will be enabled by default.</li></ul><h2 id=benefits-of-this-approach>Benefits of this Approach</h2><p>The <code>lib.mkIf cfg.enable</code> ensures that wlogout’s configuration
+(e.g., enabling <code>programs.wlogout</code>) is only applied when
+<code>custom.wlogout.enable = true</code>, which defaults to <code>custom.hyprland.enable</code>.
+This means wlogout is enabled by default only if Hyprland is enabled, but
+I can override this (e.g., <code>custom.wlogout.enable = true</code> without Hyprland).
+This conditional logic prevents wlogout from being installed unnecessarily
+when Hyprland is disabled, unlike a simpler approach like <code>programs.wlogout. enable = config.programs.hyprland.enable</code>, which hardcodes the dependency and
+offers less flexibility.</p></article><div class=row><div class=col-md><a href=https://saylesss88.github.io/posts/top_level_attributes_explained/><span>previous: </span><span>Top_level_attributes_explained</span></a></div><div class="col-md text-md-end"><a href=https://saylesss88.github.io/posts/building_your_config_as_a_package/><span>next: </span><span>Building_your_config_as_a_package</span></a></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75"></p></div></footer></main><script src=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js integrity=sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz crossorigin=anonymous></script></body></html>

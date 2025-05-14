@@ -1,0 +1,134 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://saylesss88.github.io/favicon.ico><meta property="og:url" content="https://saylesss88.github.io/posts/simple_nix_service/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Simple_nix_service"><meta property="og:description" content="Building a Custom NixOS Service with Flakes and Overlays TOC
+Building a Custom NixOS Service with Flakes and Overlays Create Project Directory Create flake Create Service Module Add nixosConfigurations Output - Build the System Configuration TL;DR NixOS’s declarative configuration and flakes make it easy to create custom services. This post shows how to build a minimal service using flakes and overlays for a “meow” command
+This will be a complete minimal configuration for testing purposes. Create Project Directory Start by creating a directory to hold your project, I called mine meow:"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-14T19:25:11-04:00"><meta property="article:modified_time" content="2025-05-14T19:25:11-04:00"><title>NixOS Blog | Simple_nix_service</title>
+<link rel=stylesheet href=/css/main.min.9d7861a670d885bddfdca28e2bec973020e2e1f1b049a5849a85a2e0fa249e4c.css integrity="sha256-nXhhpnDYhb3f3KKOK+yXMCDi4fGwSaWEmoWi4Poknkw=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/default.min.cfcbb0f894da76afbc5a46072e5cbec733a983f27395920a3cfdf6977053c351.css integrity="sha256-z8uw+JTadq+8WkYHLly+xzOpg/JzlZIKPP32l3BTw1E=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"></div><div class=post><header class=mb-4><h1 class=text-uppercase>Simple_nix_service</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-05-14T19:25:11-04:00>May 14, 2025</time></li><li class="breadcrumb-item small">3 minutes</li></ol></div></header><article><h1 id=building-a-custom-nixos-service-with-flakes-and-overlays>Building a Custom NixOS Service with Flakes and Overlays</h1><p><strong>TOC</strong></p><ul><li><a href=#building-a-custom-nixos-service-with-flakes-and-overlays>Building a Custom NixOS Service with Flakes and Overlays</a><ul><li><a href=#create-project-directory>Create Project Directory</a></li><li><a href=#create-flake>Create flake</a></li><li><a href=#create-service-module>Create Service Module</a></li><li><a href=#add-nixosconfigurations-output>Add nixosConfigurations Output</a> - <a href=#build-the-system-configuration>Build the System Configuration</a></li></ul></li></ul><p>TL;DR NixOS&rsquo;s declarative configuration and flakes make it easy to create
+custom services. This post shows how to build a minimal service using flakes
+and overlays for a &ldquo;meow&rdquo; command</p><ul><li>This will be a complete minimal configuration for testing purposes.</li></ul><h2 id=create-project-directory>Create Project Directory</h2><p>Start by creating a directory to hold your project, I called mine <code>meow</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mkdir meow <span style=color:#f92672>&amp;&amp;</span> cd meow
+</span></span></code></pre></div><h2 id=create-flake>Create flake</h2><p>Create a <code>flake.nix</code> with the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  inputs<span style=color:#f92672>.</span>nixpkgs<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style=display:flex><span>  outputs <span style=color:#f92672>=</span> { self<span style=color:#f92672>,</span> nixpkgs<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: {
+</span></span><span style=display:flex><span>    overlays<span style=color:#f92672>.</span>default <span style=color:#f92672>=</span> final: prev: {
+</span></span><span style=display:flex><span>      meow <span style=color:#f92672>=</span> final<span style=color:#f92672>.</span>writeShellScriptBin <span style=color:#e6db74>&#34;meow&#34;</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        echo meow
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#39;&#39;</span>;
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    nixosModules<span style=color:#f92672>.</span>default <span style=color:#f92672>=</span> { pkgs<span style=color:#f92672>,</span> config<span style=color:#f92672>,</span> lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: {
+</span></span><span style=display:flex><span>      imports <span style=color:#f92672>=</span> [ <span style=color:#e6db74>./nixos-module.nix</span> ];
+</span></span><span style=display:flex><span>      <span style=color:#75715e># inject dependencies from flake.nix, and don&#39;t do anything else</span>
+</span></span><span style=display:flex><span>      config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf config<span style=color:#f92672>.</span>services<span style=color:#f92672>.</span>meow<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>        nixpkgs<span style=color:#f92672>.</span>overlays <span style=color:#f92672>=</span> [ self<span style=color:#f92672>.</span>overlays<span style=color:#f92672>.</span>default ];
+</span></span><span style=display:flex><span>        services<span style=color:#f92672>.</span>meow<span style=color:#f92672>.</span>package <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkDefault pkgs<span style=color:#f92672>.</span>meow;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=create-service-module>Create Service Module</h2><p>Next we&rsquo;ll create the <code>nixos-module.nix</code> in the same directory with the
+following content:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># nixos-module.nix</span>
+</span></span><span style=display:flex><span>{ pkgs<span style=color:#f92672>,</span> config<span style=color:#f92672>,</span> lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }:
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span> cfg <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>services<span style=color:#f92672>.</span>meow; <span style=color:#66d9ef>in</span> {
+</span></span><span style=display:flex><span>  options <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    services<span style=color:#f92672>.</span>meow <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption <span style=color:#e6db74>&#34;meow&#34;</span>;
+</span></span><span style=display:flex><span>      package <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>        description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;meow package to use&#34;</span>;
+</span></span><span style=display:flex><span>        type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>package;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>  config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf cfg<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>    systemd<span style=color:#f92672>.</span>services<span style=color:#f92672>.</span>meow <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;meow at the user on the console&#34;</span>;
+</span></span><span style=display:flex><span>      serviceConfig <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        Type <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;oneshot&#34;</span>;
+</span></span><span style=display:flex><span>        ExecStart <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;</span><span style=color:#e6db74>${</span>cfg<span style=color:#f92672>.</span>package<span style=color:#e6db74>}</span><span style=color:#e6db74>/bin/meow&#34;</span>;
+</span></span><span style=display:flex><span>        StandardOutput <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;journal+console&#34;</span>;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>      wantedBy <span style=color:#f92672>=</span> [ <span style=color:#e6db74>&#34;multi-user.target&#34;</span> ];
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=add-nixosconfigurations-output>Add nixosConfigurations Output</h2><p>Lastly, we will add a <code>nixosConfigurations</code> output to the <code>flake.nix</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
+</span></span><span style=display:flex><span>nixosConfigurations<span style=color:#f92672>.</span>test <span style=color:#f92672>=</span> nixpkgs<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>nixosSystem {
+</span></span><span style=display:flex><span>  system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>;
+</span></span><span style=display:flex><span>  modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    self<span style=color:#f92672>.</span>nixosModules<span style=color:#f92672>.</span>default
+</span></span><span style=display:flex><span>    ({ pkgs<span style=color:#f92672>,</span> lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: {
+</span></span><span style=display:flex><span>      fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/dev/sda1&#34;</span>;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>      boot<span style=color:#f92672>.</span>loader<span style=color:#f92672>.</span>grub<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>      boot<span style=color:#f92672>.</span>initrd<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>      boot<span style=color:#f92672>.</span>kernel<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>      documentation<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      services<span style=color:#f92672>.</span>meow<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      system<span style=color:#f92672>.</span>stateVersion <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;25.05&#34;</span>;
+</span></span><span style=display:flex><span>    })
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><ul><li><code>nixosConfigurations.test</code> is simply the name we chose for this particular
+NixOS system configuration.</li></ul><p>The final product will look like this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  inputs<span style=color:#f92672>.</span>nixpkgs<span style=color:#f92672>.</span>url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;github:nixos/nixpkgs/nixos-unstable&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  outputs <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    self<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>    nixpkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>  }: {
+</span></span><span style=display:flex><span>    overlays<span style=color:#f92672>.</span>default <span style=color:#f92672>=</span> final: prev: {
+</span></span><span style=display:flex><span>      meow <span style=color:#f92672>=</span> final<span style=color:#f92672>.</span>writeShellScriptBin <span style=color:#e6db74>&#34;meow&#34;</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        echo meow
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#39;&#39;</span>;
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    nixosModules<span style=color:#f92672>.</span>default <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>      config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>      lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>    }: {
+</span></span><span style=display:flex><span>      imports <span style=color:#f92672>=</span> [<span style=color:#e6db74>./nixos-module.nix</span>];
+</span></span><span style=display:flex><span>      <span style=color:#75715e># inject dependencies from flake.nix, and don&#39;t do anything else</span>
+</span></span><span style=display:flex><span>      config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf config<span style=color:#f92672>.</span>services<span style=color:#f92672>.</span>meow<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>        nixpkgs<span style=color:#f92672>.</span>overlays <span style=color:#f92672>=</span> [self<span style=color:#f92672>.</span>overlays<span style=color:#f92672>.</span>default];
+</span></span><span style=display:flex><span>        services<span style=color:#f92672>.</span>meow<span style=color:#f92672>.</span>package <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkDefault pkgs<span style=color:#f92672>.</span>meow;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    nixosConfigurations<span style=color:#f92672>.</span>test <span style=color:#f92672>=</span> nixpkgs<span style=color:#f92672>.</span>lib<span style=color:#f92672>.</span>nixosSystem {
+</span></span><span style=display:flex><span>      system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>;
+</span></span><span style=display:flex><span>      modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>        self<span style=color:#f92672>.</span>nixosModules<span style=color:#f92672>.</span>default
+</span></span><span style=display:flex><span>        ({
+</span></span><span style=display:flex><span>          pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>          lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>        }: {
+</span></span><span style=display:flex><span>          fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/&#34;</span> <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>            device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/dev/sda1&#34;</span>;
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>          boot<span style=color:#f92672>.</span>loader<span style=color:#f92672>.</span>grub<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>          boot<span style=color:#f92672>.</span>initrd<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>          boot<span style=color:#f92672>.</span>kernel<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>          documentation<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          services<span style=color:#f92672>.</span>meow<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          system<span style=color:#f92672>.</span>stateVersion <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;25.05&#34;</span>;
+</span></span><span style=display:flex><span>        })
+</span></span><span style=display:flex><span>      ];
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=build-the-system-configuration>Build the System Configuration</h3><p>Then build the system configuration:</p><p><code>nix build .#nixosConfigurations.test.config.system.build.toplevel</code></p><ul><li><p>If this builds successfully you&rsquo;ll see a <code>result</code> directory within your <code>meow</code>
+directory.</p></li><li><p>I wouldn&rsquo;t recommend actually switching to this configuration but you could
+build it to gain familiarity with it. If you were to switch to it you would
+run <code>./result/bin/switch-to-configuration</code></p></li><li><p>Test in a NixOS Virtual Machine (Recommended):The safest way to see the &ldquo;meow&rdquo;
+output is to build the configuration and then run it in a NixOS virtual
+machine. You can do this using tools like <code>nixos-generate-config</code> and a
+virtualization tool (like VirtualBox, QEMU, or GNOME Boxes).</p></li></ul></article><div class=row><div class=col-md><a href=https://saylesss88.github.io/posts/nix_flakes_tips/><span>previous: </span><span>Nix_flakes_tips</span></a></div><div class="col-md text-md-end"><a href=https://saylesss88.github.io/posts/derivations_explained/><span>next: </span><span>Derivations_explained</span></a></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75"></p></div></footer></main><script src=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js integrity=sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz crossorigin=anonymous></script></body></html>
