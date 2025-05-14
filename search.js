@@ -31,26 +31,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   initSearch(); // Start search functionality
 });
 
-
 // Function to extract and highlight search results
 function formatSearchResultItem(item, terms) {
   const post = window.searchIndex.documentStore.docs[item.ref];
 
-  // Ensure permalink exists before using it
-  const permalink = post.permalink || item.ref;
-  if (!post.permalink) {
-      console.warn(`Missing permalink for search result ref: ${item.ref}`);
-  }
-  
-  return `<a href="${permalink}">${post.title || "Untitled"}</a>`;
-
-  if (!post || !post.permalink) {
-    console.warn(`Missing permalink for search result ref: ${item.ref}`);
-    return `<div class="search-results__item">No valid link found.</div>`;
+  // Ensure path exists before using it
+  const permalink = post.path ? `${baseUrl}${post.path}` : item.ref;
+  if (!post.path) {
+    console.warn(`Missing path for search result ref: ${item.ref}, using ref as fallback.`);
   }
 
   return `<div class="search-results__item">
-            <a href="${post.permalink}">${post.title}</a>
+            <a href="${permalink}">${post.title || "Untitled"}</a>
             <div>${makeTeaser(post.body, terms)}</div>
           </div>`;
 }
@@ -61,11 +53,11 @@ async function initSearch() {
   const $searchResults = document.querySelector(".search-results");
   const $searchResultsItems = document.querySelector(".search-results__items");
   const MAX_ITEMS = 10;
-  const options = { bool: "AND", fields: { title: { boost: 2 }, body: { boost: 1 } } };
+  const options = { bool: "AND", fields: { title: { boost: 2 }, body: { boost: 1 }, path: { boost: 1 } } };
 
   await loadSearchIndex(); // Ensure index is loaded first
 
-  $searchInput.addEventListener("keyup", debounce(async function() {
+  $searchInput.addEventListener("keyup", debounce(async function () {
     const term = $searchInput.value.trim();
     $searchResults.style.display = term ? "block" : "none";
     $searchResultsItems.innerHTML = "";
@@ -85,7 +77,7 @@ async function initSearch() {
     }
   }, 150));
 
-  window.addEventListener("click", function(e) {
+  window.addEventListener("click", function (e) {
     if ($searchResults.style.display === "block" && !$searchResults.contains(e.target)) {
       $searchResults.style.display = "none";
     }
