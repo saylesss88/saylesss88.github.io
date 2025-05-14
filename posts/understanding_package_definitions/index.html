@@ -1,134 +1,118 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://saylesss88.github.io/favicon.ico><meta property="og:url" content="https://saylesss88.github.io/posts/understanding_package_definitions/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Understanding_package_definitions"><meta property="og:description" content="Nix Repl List available commands TOC
-Nix Repl List available commands Load Nix expressions Directly Load Flakes Debugging with a Flake REPL output Usage Debugging List available commands with :?:
-nix repl Nix 2.24.11 Type :? for help. nix-repl> :? The following commands are available: <expr> Evaluate and print expression <x> = <expr> Bind expression to variable :a, :add <expr> Add attributes from resulting set to scope :b <expr> Build a derivation :bl <expr> Build a derivation, creating GC roots in the working directory :e, :edit <expr> Open package or function in $EDITOR :i <expr> Build derivation, then install result into current profile :l, :load <path> Load Nix expression and add it to scope :lf, :load-flake <ref> Load Nix flake and add it to scope :p, :print <expr> Evaluate and print expression recursively Strings are printed directly, without escaping. :q, :quit Exit nix-repl :r, :reload Reload all files :sh <expr> Build dependencies of derivation, then start nix-shell :t <expr> Describe result of evaluation :u <expr> Build derivation, then start nix-shell :doc <expr> Show documentation of a builtin function :log <expr> Show logs for a derivation :te, :trace-enable [bool] Enable, disable or toggle showing traces for errors :?, :help Brings up this help menu Load Nix expressions Directly You can quickly evaluate a random Nix expression:"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-14T19:19:10-04:00"><meta property="article:modified_time" content="2025-05-14T19:19:10-04:00"><title>NixOS Blog | Understanding_package_definitions</title>
-<link rel=stylesheet href=/css/main.min.9d7861a670d885bddfdca28e2bec973020e2e1f1b049a5849a85a2e0fa249e4c.css integrity="sha256-nXhhpnDYhb3f3KKOK+yXMCDi4fGwSaWEmoWi4Poknkw=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/default.min.cfcbb0f894da76afbc5a46072e5cbec733a983f27395920a3cfdf6977053c351.css integrity="sha256-z8uw+JTadq+8WkYHLly+xzOpg/JzlZIKPP32l3BTw1E=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"></div><div class=post><header class=mb-4><h1 class=text-uppercase>Understanding_package_definitions</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-05-14T19:19:10-04:00>May 14, 2025</time></li><li class="breadcrumb-item small">4 minutes</li></ol></div></header><article><h1 id=nix-repl-list-available-commands>Nix Repl List available commands</h1><p><strong>TOC</strong></p><ul><li><a href=#nix-repl-list-available-commands>Nix Repl List available commands</a><ul><li><a href=#load-nix-expressions-directly>Load Nix expressions Directly</a><ul><li><a href=#load-flakes>Load Flakes</a></li></ul></li><li><a href=#debugging-with-a-flake-repl-output>Debugging with a Flake REPL output</a><ul><li><a href=#usage>Usage</a></li><li><a href=#debugging>Debugging</a></li></ul></li></ul></li></ul><p>List available commands with <code>:?</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix repl
-</span></span><span style=display:flex><span>Nix <span style=color:#ae81ff>2</span><span style=color:#ae81ff>.24.11</span>
-</span></span><span style=display:flex><span>Type :<span style=color:#f92672>?</span> for help<span style=color:#f92672>.</span>
-</span></span><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> :<span style=color:#f92672>?</span>
-</span></span><span style=display:flex><span>The following commands are available:
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://saylesss88.github.io/favicon.ico><meta property="og:url" content="https://saylesss88.github.io/posts/understanding_package_definitions/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Understanding_package_definitions"><meta property="og:description" content="Understanding Package Definitions in Nix TOC
+Understanding Package Definitions in Nix The Journey from Definition to Package Skeleton of a Derivation Example: A Simple “Hello” Package Definition Swaytools Package Definition Resources In Nix, the concept of a package can refer to two things:
+A collection of files and data that constitute a piece of software or an artifact.
+A Nix expression that describes how to create such a collection. This expression acts as a blueprint before the package exists in a tangible form."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-14T19:19:10-04:00"><meta property="article:modified_time" content="2025-05-14T19:19:10-04:00"><title>NixOS Blog | Understanding_package_definitions</title>
+<link rel=stylesheet href=/css/main.min.9d7861a670d885bddfdca28e2bec973020e2e1f1b049a5849a85a2e0fa249e4c.css integrity="sha256-nXhhpnDYhb3f3KKOK+yXMCDi4fGwSaWEmoWi4Poknkw=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/default.min.cfcbb0f894da76afbc5a46072e5cbec733a983f27395920a3cfdf6977053c351.css integrity="sha256-z8uw+JTadq+8WkYHLly+xzOpg/JzlZIKPP32l3BTw1E=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"></div><div class=post><header class=mb-4><h1 class=text-uppercase>Understanding_package_definitions</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-05-14T19:19:10-04:00>May 14, 2025</time></li><li class="breadcrumb-item small">5 minutes</li></ol></div></header><article><h1 id=understanding-package-definitions-in-nix>Understanding Package Definitions in Nix</h1><p><strong>TOC</strong></p><ul><li><a href=#understanding-package-definitions-in-nix>Understanding Package Definitions in Nix</a><ul><li><a href=#the-journey-from-definition-to-package>The Journey from Definition to Package</a></li><li><a href=#skeleton-of-a-derivation>Skeleton of a Derivation</a></li><li><a href=#example-a-simple-hello-package-definition>Example: A Simple &ldquo;Hello&rdquo; Package Definition</a><ul><li><a href=#swaytools-package-definition>Swaytools Package Definition</a></li><li><a href=#resources>Resources</a></li></ul></li></ul></li></ul><figure><img src=/images/gruv1.png alt=gruvvy-bedroom width=700></figure><p>In Nix, the concept of a <strong>package</strong> can refer to two things:</p><ul><li><p>A collection of files and data that constitute a piece of software or an
+artifact.</p></li><li><p>A Nix <strong>expression</strong> that describes how to create such a collection. This
+expression acts as a blueprint before the package exists in a tangible form.</p></li></ul><p>The process begins with writing a <strong>package definition</strong> using the Nix language.
+This definition contains the necessary instructions and metadata about the
+software you intend to &ldquo;package.&rdquo;</p><h2 id=the-journey-from-definition-to-package>The Journey from Definition to Package</h2><ol><li><p><strong>Package Definition:</strong></p><ul><li><p>This is essentially a function written in the Nix language.</p></li><li><p>Nix language shares similarities with JSON but includes the crucial
+addition of functions.</p></li><li><p>It acts as the blueprint for creating a package.</p></li></ul></li><li><p><strong>Derivation:</strong></p><ul><li><p>When the package definition is evaluated by Nix, it results in
+a <strong>derivation</strong>.</p></li><li><p>A derivation is a concrete and detailed build plan.</p></li><li><p>It outlines the exact steps Nix needs to take: fetching source code,
+building dependencies, compiling code, and ultimately producing the
+desired output (the package).</p></li></ul></li><li><p><strong>Realization (Building the Package):</strong></p><ul><li><p>You don&rsquo;t get a pre-built &ldquo;package&rdquo; directly from the definition or the
+derivation.</p></li><li><p>The package comes into being when Nix <strong>executes</strong> the derivation. This
+process is often referred to as &ldquo;realizing&rdquo; the derivation.</p></li></ul></li></ol><p><strong>Analogy:</strong> Think of a package definition as an architectural blueprint, the
+derivation as the detailed construction plan, and the realized package as the
+finished building.</p><h2 id=skeleton-of-a-derivation>Skeleton of a Derivation</h2><p>The most basic derivation structure in Nix looks like this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{ stdenv }:
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&lt;expr&gt;</span>                       Evaluate and print expression
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&lt;x&gt;</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>&lt;expr&gt;</span>                 Bind expression to variable
-</span></span><span style=display:flex><span>  :a<span style=color:#960050;background-color:#1e0010>,</span> :add <span style=color:#e6db74>&lt;expr&gt;</span>              Add attributes from resulting set to scope
-</span></span><span style=display:flex><span>  :b <span style=color:#e6db74>&lt;expr&gt;</span>                    Build a derivation
-</span></span><span style=display:flex><span>  :bl <span style=color:#e6db74>&lt;expr&gt;</span>                   Build a derivation<span style=color:#960050;background-color:#1e0010>,</span> creating GC roots in the
-</span></span><span style=display:flex><span>                               working directory
-</span></span><span style=display:flex><span>  :e<span style=color:#960050;background-color:#1e0010>,</span> :edit <span style=color:#e6db74>&lt;expr&gt;</span>             Open package or function in <span style=color:#960050;background-color:#1e0010>$</span>EDITOR
-</span></span><span style=display:flex><span>  :i <span style=color:#e6db74>&lt;expr&gt;</span>                    Build derivation<span style=color:#960050;background-color:#1e0010>,</span> <span style=color:#66d9ef>then</span> install result into
-</span></span><span style=display:flex><span>                               current profile
-</span></span><span style=display:flex><span>  :l<span style=color:#960050;background-color:#1e0010>,</span> :load <span style=color:#e6db74>&lt;path&gt;</span>             Load Nix expression and add it to scope
-</span></span><span style=display:flex><span>  :lf<span style=color:#960050;background-color:#1e0010>,</span> :load-flake <span style=color:#e6db74>&lt;ref&gt;</span>       Load Nix flake and add it to scope
-</span></span><span style=display:flex><span>  :p<span style=color:#960050;background-color:#1e0010>,</span> :print <span style=color:#e6db74>&lt;expr&gt;</span>            Evaluate and print expression recursively
-</span></span><span style=display:flex><span>                               Strings are printed directly<span style=color:#960050;background-color:#1e0010>,</span> without escaping<span style=color:#f92672>.</span>
-</span></span><span style=display:flex><span>  :q<span style=color:#960050;background-color:#1e0010>,</span> :quit                    Exit nix-repl
-</span></span><span style=display:flex><span>  :r<span style=color:#960050;background-color:#1e0010>,</span> :reload                  Reload all files
-</span></span><span style=display:flex><span>  :sh <span style=color:#e6db74>&lt;expr&gt;</span>                   Build dependencies of derivation<span style=color:#960050;background-color:#1e0010>,</span> <span style=color:#66d9ef>then</span> start
-</span></span><span style=display:flex><span>                               nix-shell
-</span></span><span style=display:flex><span>  :t <span style=color:#e6db74>&lt;expr&gt;</span>                    Describe result of evaluation
-</span></span><span style=display:flex><span>  :u <span style=color:#e6db74>&lt;expr&gt;</span>                    Build derivation<span style=color:#960050;background-color:#1e0010>,</span> <span style=color:#66d9ef>then</span> start nix-shell
-</span></span><span style=display:flex><span>  :doc <span style=color:#e6db74>&lt;expr&gt;</span>                  Show documentation of a builtin function
-</span></span><span style=display:flex><span>  :log <span style=color:#e6db74>&lt;expr&gt;</span>                  Show logs for a derivation
-</span></span><span style=display:flex><span>  :te<span style=color:#960050;background-color:#1e0010>,</span> :trace-enable [bool]    Enable<span style=color:#960050;background-color:#1e0010>,</span> disable or toggle showing traces for
-</span></span><span style=display:flex><span>                               errors
-</span></span><span style=display:flex><span>  :<span style=color:#f92672>?</span><span style=color:#960050;background-color:#1e0010>,</span> :help                    Brings up this help menu
-</span></span></code></pre></div><h2 id=load-nix-expressions-directly>Load Nix expressions Directly</h2><p>You can quickly evaluate a random Nix expression:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix repl <span style=color:#960050;background-color:#1e0010>--</span>expr <span style=color:#960050;background-color:#1e0010>&#39;</span>{a <span style=color:#f92672>=</span> { b <span style=color:#f92672>=</span> <span style=color:#ae81ff>3</span>; c <span style=color:#f92672>=</span> <span style=color:#ae81ff>4</span>; }; }<span style=color:#960050;background-color:#1e0010>&#39;</span>
+</span></span><span style=display:flex><span>stdenv<span style=color:#f92672>.</span>mkDerivation { }
+</span></span></code></pre></div><ul><li><p>This is a function that expects an attribute set containing <code>stdenv</code> as its
+argument.</p></li><li><p>It then calls <code>stdenv.mkDerivation</code> (a function provided by <code>stdenv</code>) to
+produce a derivation.</p></li><li><p>Currently, this derivation doesn&rsquo;t specify any build steps or outputs.</p></li><li><p>Further Reading:</p></li><li><p><a href=https://ryantm.github.io/nixpkgs/stdenv/stdenv/>The Standard Environment</a></p></li><li><p><a href=https://nixos.org/guides/nix-pills/19-fundamentals-of-stdenv.html>Fundamentals of Stdenv</a></p></li></ul><h2 id=example-a-simple-hello-package-definition>Example: A Simple &ldquo;Hello&rdquo; Package Definition</h2><p>Here&rsquo;s a package definition for the classic &ldquo;hello&rdquo; program:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># hello.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  stdenv<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  fetchzip<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>}:
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>Welcome to Nix <span style=color:#ae81ff>2</span><span style=color:#ae81ff>.11.0</span><span style=color:#f92672>.</span> Type :<span style=color:#f92672>?</span> for help<span style=color:#f92672>.</span>
+</span></span><span style=display:flex><span>stdenv<span style=color:#f92672>.</span>mkDerivation {
+</span></span><span style=display:flex><span>  pname <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;hello&#34;</span>;
+</span></span><span style=display:flex><span>  version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;2.12.1&#34;</span>;
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>Loading installable <span style=color:#e6db74>&#39;&#39;...
-</span></span></span><span style=display:flex><span><span style=color:#e6db74>Added 1 variables.
-</span></span></span><span style=display:flex><span><span style=color:#e6db74>nix-repl&gt; a
-</span></span></span><span style=display:flex><span><span style=color:#e6db74>{ b = 3; c = 4; }
-</span></span></span></code></pre></div><ul><li>The <code>--expr</code> flag is helpful to prime directly the Nix REPL with valuable data
-or values.</li></ul><h3 id=load-flakes>Load Flakes</h3><p>We can use the <code>--expr</code> flag to load a random Nix Flake directly:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix repl <span style=color:#960050;background-color:#1e0010>--</span>expr <span style=color:#960050;background-color:#1e0010>&#39;</span>builtins<span style=color:#f92672>.</span>getFlake <span style=color:#e6db74>&#34;github:nix-community/ethereum.nix&#34;</span><span style=color:#960050;background-color:#1e0010>&#39;</span>
-</span></span></code></pre></div><p>Also, you can load a flake directly inside the REPL with <code>:load-flake</code> or <code>:lf</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix repl
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> :lf <span style=color:#e6db74>github:nix-community/home-manager</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># or</span>
-</span></span><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> :lf <span style=color:#e6db74>/path/to/your/flake</span>
-</span></span></code></pre></div><h2 id=debugging-with-a-flake-repl-output>Debugging with a Flake REPL output</h2><ul><li>One way to do this is to launch the repl with <code>nix repl</code> and inside the repl type <code>:lf /path/to/flake</code>. Or <code>nixos-rebuild repl --flake /path/to/flake</code> the latter provides a helpful welcome script showing what is loaded into your repl&rsquo;s scope.</li></ul><p>I like to create a simple repl output to load your flake into the environment with <code>nix repl .#repl</code>.</p><p>First, we&rsquo;ll create a REPL environment to inspect and debug our flake&rsquo;s outputs,packages, and configurations. Define a <code>repl</code> output in <code>flake.nix</code> for easy access with <code>nix repl .#repl</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># flake.nix</span>
-</span></span><span style=display:flex><span>outputs <span style=color:#f92672>=</span> { self<span style=color:#f92672>,</span> nixpkgs<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: <span style=color:#66d9ef>let</span>
-</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> nixpkgs { system <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>; };
-</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span> {
-</span></span><span style=display:flex><span>  repl <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./repl.nix</span> {
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>inherit</span> (pkgs) lib;
-</span></span><span style=display:flex><span>    flake <span style=color:#f92672>=</span> self;
-</span></span><span style=display:flex><span>    pkgs <span style=color:#f92672>=</span> pkgs;
+</span></span><span style=display:flex><span>  src <span style=color:#f92672>=</span> fetchzip {
+</span></span><span style=display:flex><span>    url <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;[https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz](https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz)&#34;</span>;
+</span></span><span style=display:flex><span>    sha256 <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;&#34;</span>;
 </span></span><span style=display:flex><span>  };
-</span></span><span style=display:flex><span>};
-</span></span></code></pre></div><p>And in <code>repl.nix</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># repl.nix</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><p>This is a Nix function that takes stdenv and fetchzip as arguments.</p></li><li><p>It uses <code>stdenv.mkDerivation</code> to define the build process for the &ldquo;hello&rdquo;
+package.</p><ul><li><p><code>pname</code>: The package name.</p></li><li><p><code>version</code>: The package version.</p></li><li><p><code>src</code>: Specifies how to fetch the source code using <code>fetchzip</code>.</p></li></ul></li></ul><p><strong>Handling Dependencies: Importing Nixpkgs</strong></p><ul><li><p>If you try to build <code>hello.nix</code> directly with <code>nix-build hello.nix</code>, it will
+fail because <code>stdenv</code> and <code>fetchzip</code> are part of Nixpkgs, which isn&rsquo;t included
+in this isolated file.</p></li><li><p>To make this package definition work, you need to pass the correct arguments
+(<code>stdenv</code>, <code>fetchzip</code>) to the function.</p></li></ul><p>The recommended approach is to create a <code>default.nix</code> file in the same
+directory:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  nixpkgs <span style=color:#f92672>=</span> fetchTarball <span style=color:#e6db74>&#34;[https://github.com/NixOS/nixpkgs/tarball/nixos-24.05](https://github.com/NixOS/nixpkgs/tarball/nixos-24.05)&#34;</span>;
+</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> nixpkgs { config <span style=color:#f92672>=</span> {}; overlays <span style=color:#f92672>=</span> []; };
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  hello <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>callPackage <span style=color:#e6db74>./hello.nix</span> { };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><p>This <code>default.nix</code> imports Nixpkgs.</p></li><li><p>It then uses <code>pkgs.callPackage</code> to call the function in <code>hello.nix</code>, passing
+the necessary dependencies from Nixpkgs.</p></li><li><p>You can now build the &ldquo;hello&rdquo; package using: <code>nix-build -A hello</code>. The
+<code>-A</code> flag tells Nix to build the attribute named hello from the top-level
+expression in default.nix.</p></li></ul><p><strong>Realizing the Derivation and Handling sha256</strong></p><ul><li><p><strong>Evaluation vs. Realization</strong>: While &ldquo;evaluate&rdquo; refers to Nix processing an
+expression, &ldquo;realize&rdquo; often specifically means building a derivation and
+producing its output in the Nix store.</p></li><li><p>When you first run <code>nix-build -A hello</code>, it will likely fail due to a missing
+sha256 hash for the source file. Nix needs this hash for security and
+reproducibility. The error message will provide the correct sha256 value.</p></li><li><p><strong>Example Error</strong>):</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>  nix-build -A hello
+</span></span><span style=display:flex><span>  error: hash mismatch in fixed-output derivation <span style=color:#e6db74>&#39;/nix/store/pd2kiyfa0c06giparlhd1k31bvllypbb-source.drv&#39;</span>:
+</span></span><span style=display:flex><span>  specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA<span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>  got: sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc<span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>  error: <span style=color:#ae81ff>1</span> dependencies of derivation <span style=color:#e6db74>&#39;/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv&#39;</span> failed to build
+</span></span></code></pre></div><ul><li>Replace the empty <code>sha256 = "";</code> in <code>hello.nix</code> with the provided correct
+value: <code>sha256 = "1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=";</code>.</li></ul><p><strong>Building and Running the Result</strong></p><p>After updating the <code>sha256</code>, you can successfully build the package:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build -A hello
+</span></span></code></pre></div><p>The output will be a result symlink pointing to the built package in the Nix
+store. You can then run the &ldquo;hello&rdquo; program:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>./result/bin/hello
+</span></span><span style=display:flex><span>Hello, world!
+</span></span></code></pre></div><h3 id=swaytools-package-definition>Swaytools Package Definition</h3><p><strong>Example: The swaytools Package Definition</strong></p><p>Let&rsquo;s examine a more complex, real-world package definition from Nixpkgs:
+<code>nixpkgs/pkgs/tools/wayland/swaytools/default.nix</code>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
 </span></span><span style=display:flex><span>{
 </span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>  flake<span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>}: {
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>inherit</span> flake pkgs lib;
-</span></span><span style=display:flex><span>  configs <span style=color:#f92672>=</span> flake<span style=color:#f92672>.</span>nixosConfigurations;
-</span></span><span style=display:flex><span>  <span style=color:#75715e># inherit (flake.outputs) userVars;</span>
+</span></span><span style=display:flex><span>  setuptools<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  buildPythonApplication<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  fetchFromGitHub<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  slurp<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>}:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>buildPythonApplication <span style=color:#66d9ef>rec</span> {
+</span></span><span style=display:flex><span>  pname <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;swaytools&#34;</span>;
+</span></span><span style=display:flex><span>  version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;0.1.2&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  format <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;pyproject&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  src <span style=color:#f92672>=</span> fetchFromGitHub {
+</span></span><span style=display:flex><span>    owner <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;tmccombs&#34;</span>;
+</span></span><span style=display:flex><span>    repo <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;swaytools&#34;</span>;
+</span></span><span style=display:flex><span>    rev <span style=color:#f92672>=</span> version;
+</span></span><span style=display:flex><span>    sha256 <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;sha256-UoWK53B1DNmKwNLFwJW1ZEm9dwMOvQeO03+RoMl6M0Q=&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  nativeBuildInputs <span style=color:#f92672>=</span> [ setuptools ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  propagatedBuildInputs <span style=color:#f92672>=</span> [ slurp ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  meta <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> lib; {
+</span></span><span style=display:flex><span>    homepage <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;https://github.com/tmccombs/swaytools&#34;</span>;
+</span></span><span style=display:flex><span>    description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Collection of simple tools for sway (and i3)&#34;</span>;
+</span></span><span style=display:flex><span>    license <span style=color:#f92672>=</span> licenses<span style=color:#f92672>.</span>gpl3Only;
+</span></span><span style=display:flex><span>    maintainers <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> maintainers; [ atila ];
+</span></span><span style=display:flex><span>    platforms <span style=color:#f92672>=</span> platforms<span style=color:#f92672>.</span>linux;
+</span></span><span style=display:flex><span>  };
 </span></span><span style=display:flex><span>}
-</span></span><span style=display:flex><span><span style=color:#75715e># Accepts `lib`, `flake`, `pkgs` from `flake.nix` as arguments</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># Attributes: flake: all flake outputs (flake.outputs, flake.inputs)</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># run `nix repl .#repl` to load the REPL environment</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :l &lt;nixpkgs&gt;  # load additional Nixpkgs if needed</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p flake.inputs.nixpkgs.rev # nixpkgs revision</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p flake.inputs.home-manager.rev</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># flake.outputs.packages.x86_64-linux.default # inspect default package</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># pkgs.helix # access helix package</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># lib.version # check lib version</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># configs.magic.config.environment.systemPackages # list packages</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># configs.magic.config.home-manager.users.jr.home.packages # home packages</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p configs.magic.config.home-manager.users.jr.programs.git.userName</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># Debugging</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p builtins.typeOf configs.magic (should be `set`)</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p builtins.attrNames configs.magic</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p configs.magic.config # errors indicate issues</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p configs.magic.config.environment # isolate the module or issue</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p builtins.attrNames configs.magic.config.home-manager.users.jr # home attrs</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p configs.magic.config.home-manager.users.jr.programs.git.enable # true/false</span>
-</span></span><span style=display:flex><span><span style=color:#75715e>#  :p lib.filterAttrs (n: v: lib.hasPrefix &#34;firefox&#34; n) pkgs</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p configs.magic.config.stylix # check theming</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p configs.magic.config.home-manager.users.jr.stylix</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># :p lib.mapAttrsToList (name: cfg: name) configs</span>
-</span></span></code></pre></div><blockquote><p>❗: Replace <code>magic</code> with your host name</p></blockquote><h3 id=usage>Usage</h3><p>Load REPL environment with:
-<code>nix repl .#repl</code></p><p>Attributes:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> builtins<span style=color:#f92672>.</span>attrNames flake<span style=color:#f92672>.</span>inputs
-</span></span><span style=display:flex><span>[
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;dont-track-me&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;helix&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;home-manager&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;hyprland&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;neovim-nightly-overlay&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;nixpkgs&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;nvf&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;rose-pine-hyprcursor&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;stylix&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;treefmt-nix&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;wallpapers&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;wezterm&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;yazi&#34;</span>
-</span></span><span style=display:flex><span>]
-</span></span><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> builtins<span style=color:#f92672>.</span>attrNames flake<span style=color:#f92672>.</span>outputs
-</span></span><span style=display:flex><span>[
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;checks&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;devShells&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;formatter&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;nixosConfigurations&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;packages&#34;</span>
-</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;repl&#34;</span>
-</span></span><span style=display:flex><span>]
-</span></span><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> flake<span style=color:#f92672>.</span>outputs<span style=color:#f92672>.</span>formatter
-</span></span><span style=display:flex><span>{
-</span></span><span style=display:flex><span>  x86_64-linux <span style=color:#f92672>=</span> <span style=color:#960050;background-color:#1e0010>«</span>derivation <span style=color:#e6db74>/nix/store/q71q00wmh1gnjzdrw5nrvwbr6k414036-treefmt.drv</span><span style=color:#960050;background-color:#1e0010>»</span>;
-</span></span><span style=display:flex><span>}
-</span></span></code></pre></div><ul><li>Inspect the default package output:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> flake<span style=color:#f92672>.</span>outputs<span style=color:#f92672>.</span>packages<span style=color:#f92672>.</span>x86_64-linux<span style=color:#f92672>.</span>default
-</span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>«</span>derivation <span style=color:#e6db74>/nix/store/6kp660mm62saryskpa1f2p6zwfalcx2w-default-tools.drv</span><span style=color:#960050;background-color:#1e0010>»</span>
-</span></span></code></pre></div><ul><li><p>From here out I&rsquo;ll leave out the <code>nix-repl></code> prefix just know that it&rsquo;s there.</p></li><li><p>Check lib version(Nixpkgs <code>lib</code> attribute):</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>lib<span style=color:#f92672>.</span>version
-</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;25.05pre-git&#34;</span>
-</span></span></code></pre></div><ul><li>List systemPackages and home.packages, my hostname is <code>magic</code> list yours in its place:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>configs<span style=color:#f92672>.</span>magic<span style=color:#f92672>.</span>config<span style=color:#f92672>.</span>environment<span style=color:#f92672>.</span>systemPackages
-</span></span><span style=display:flex><span><span style=color:#75715e># list home.packages</span>
-</span></span><span style=display:flex><span>configs<span style=color:#f92672>.</span>magic<span style=color:#f92672>.</span>config<span style=color:#f92672>.</span>home-manager<span style=color:#f92672>.</span>users<span style=color:#f92672>.</span>jr<span style=color:#f92672>.</span>home<span style=color:#f92672>.</span>packages
-</span></span></code></pre></div><ul><li>Or an individual value:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>:p configs<span style=color:#f92672>.</span>magic<span style=color:#f92672>.</span>config<span style=color:#f92672>.</span>home-manager<span style=color:#f92672>.</span>users<span style=color:#f92672>.</span>jr<span style=color:#f92672>.</span>programs<span style=color:#f92672>.</span>git<span style=color:#f92672>.</span>userName
-</span></span><span style=display:flex><span>TSawyer87
-</span></span></code></pre></div><h3 id=debugging>Debugging</h3><ul><li>Check if the module system is fully evaluating, anything other than a &ldquo;set&rdquo; the configuration isn&rsquo;t fully evaluated (e.g. &ldquo;lambda&rdquo; might indicate an unevaluated thunk):</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>:p builtins<span style=color:#f92672>.</span>typeOf configs<span style=color:#f92672>.</span>magic
-</span></span><span style=display:flex><span>set
-</span></span></code></pre></div><ul><li><p>Debugging Module System:</p></li><li><p>Check if <code>configs.magic</code> is a valid configuration:</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>:p builtins<span style=color:#f92672>.</span>attrNames configs<span style=color:#f92672>.</span>magic
-</span></span></code></pre></div></article><div class=row><div class=col-md><a href=https://saylesss88.github.io/posts/nix_repl_tips/><span>previous: </span><span>Nix_repl_tips</span></a></div><div class="col-md text-md-end"><a href=https://saylesss88.github.io/posts/nix_flakes_explained/><span>next: </span><span>Nix_flakes_explained</span></a></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75"></p></div></footer></main><script src=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js integrity=sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz crossorigin=anonymous></script></body></html>
+</span></span></code></pre></div><h3 id=breakdown-of-the-above-defaultnix>Breakdown of the Above default.nix</h3><p>1 <strong>Function Structure</strong>:</p><ul><li>The file starts with a function taking an attribute set of dependencies from
+Nixpkgs: <code>{ lib, setuptools, buildPythonApplication, fetchFromGitHub, slurp }</code>
+:.</li></ul><ol start=2><li><strong>Derivation Creation</strong>:</li></ol><ul><li>It calls <code>buildPythonApplication</code>, a specialized helper for Python packages
+(similar to <code>stdenv.mkDerivation</code> but pre-configured for Python). The <code>rec</code>
+keyword allows attributes within the derivation to refer to each other.</li></ul><ol start=3><li><strong>Package Metadata</strong>:</li></ol><ul><li><p><code>pname</code> and <code>version</code> define the package&rsquo;s name and version.</p></li><li><p>The <code>meta</code> attribute provides standard package information like the homepage,
+description, license, maintainers, and supported platforms.</p></li></ul><ol start=4><li><strong>Source Specification</strong>:</li></ol><ul><li>The <code>src</code> attribute uses <code>fetchFromGitHub</code> to download the source code from
+the specified repository and revision, along with its <code>sha256</code> hash for
+verification.</li></ul><ol start=5><li><strong>Build and Runtime Dependencies</strong>:</li></ol><ul><li><p><code>nativeBuildInputs</code>: Lists tools required during the build process (e.g.,
+<code>setuptools</code> for Python).</p></li><li><p><code>propagatedBuildInputs</code>: Lists dependencies needed at runtime (e.g., <code>slurp</code>).</p></li></ul><ol start=6><li><strong>Build Format</strong>:</li></ol><ul><li><code>format = "pyproject";</code> indicates that the package uses a <code>pyproject.toml</code>
+file for its Python build configuration.</li></ul><p><strong>Integration within Nixpkgs</strong></p><ul><li><p><strong>Location</strong>: The swaytools definition resides in
+<code>pkgs/tools/wayland/swaytools/default.nix</code>.</p></li><li><p><strong>Top-Level Inclusion</strong>: It&rsquo;s made available as a top-level package in
+<code>pkgs/top-level/all-packages.nix</code> like this:</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># all-packages.nix</span>
+</span></span><span style=display:flex><span>swaytools <span style=color:#f92672>=</span> python3Packages<span style=color:#f92672>.</span>callPackage <span style=color:#e6db74>../tools/wayland/swaytools</span> { };
+</span></span></code></pre></div><ul><li><code>python3Packages.callPackage</code> is used here because <code>swaytools</code> is a Python
+package, and it ensures the necessary Python-related dependencies are
+correctly passed to the <code>swaytools</code> definition.</li></ul><h3 id=resources>Resources</h3><ul><li><a href=https://nix.dev/tutorials/packaging-existing-software.html>Packaging Existing Software</a></li></ul></article><div class=row><div class=col-md><a href=https://saylesss88.github.io/posts/nix_repl_tips/><span>previous: </span><span>Nix_repl_tips</span></a></div><div class="col-md text-md-end"><a href=https://saylesss88.github.io/posts/nix_flakes_explained/><span>next: </span><span>Nix_flakes_explained</span></a></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75"></p></div></footer></main><script src=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js integrity=sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz crossorigin=anonymous></script></body></html>
