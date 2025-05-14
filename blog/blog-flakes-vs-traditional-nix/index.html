@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My-Nix-Blog</title>
+
+    <link rel="stylesheet" href="https://saylesss88.github.io/style.css" />
+
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      })();
+      const baseUrl = "https://saylesss88.github.io";
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Welcome to My-Nix-Blog</h1>
+
+      <button id="dark-mode-toggle">Toggle Dark Mode</button>
+
+      <a href="https://saylesss88.github.io/rss.xml" id="rss-button" role="button">
+        📡 Subscribe via RSS
+      </a>
+
+      <div role="search">
+        <input
+          type="text"
+          id="search"
+          placeholder="Search..."
+          aria-label="Search"
+        />
+        <div class="search-results" aria-live="polite">
+          <ul class="search-results__items"></ul>
+        </div>
+      </div>
+
+      
+<h1 class="title">Nix Flakes vs. Traditional Nix: A Comparison</h1>
+<p class="subtitle"><strong>2025-05-05</strong></p>
+<h1 id="introduction-flakes-and-traditional-nix">Introduction: Flakes and Traditional Nix</h1>
+<p><strong>TOC</strong></p>
+<!--toc:start-->
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#introduction-flakes-and-traditional-nix">Introduction: Flakes and Traditional Nix</a></p>
+<ul>
+<li><a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#what-is-purity-in-nix">What is Purity in Nix?</a></li>
+<li><a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#building-a-simple-hello-package-flakes-vs-traditional-nix">Building a Simple "hello" Package: Flakes vs. Traditional Nix</a></li>
+<li><a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#using-nix-flakes">Using Nix Flakes</a></li>
+<li><a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#using-traditional-nix">Using Traditional Nix</a> - <a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#updating-nixpkgs">Updating Nixpkgs</a> - <a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#updating-traditional-nix-using-niv">Updating Traditional Nix (using <code>niv</code>)</a> - <a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#adding-home-manager-with-flakes">Adding Home-Manager with Flakes</a> - <a href="https://saylesss88.github.io/blog/blog-flakes-vs-traditional-nix/#adding-home-manager-with-traditional-nix">Adding Home-Manager with Traditional Nix</a></li>
+</ul>
+<!--toc:end-->
+</li>
+</ul>
+<img src="/images/nixWinter.png" alt="Nix Winter" width="700">
+<ul>
+<li>This post is based on notes from Nix-Hour #4, comparing Traditional Nix and Flakes, focusing on achieving pure build results. See the <a href="https://www.youtube.com/watch?v=atmoYyBAhF4">YouTube video</a> for the original content. This guide adapts the information for clarity and ease of understanding.</li>
+</ul>
+<h2 id="what-is-purity-in-nix">What is Purity in Nix?</h2>
+<ul>
+<li>
+<p>A key benefit of Nix Flakes is their <em>default</em> enforcement of <strong>pure evaluation</strong>.</p>
+</li>
+<li>
+<p>In Nix, an <strong>impure operation</strong> depends on something <em>outside</em> its explicit inputs. Examples include:</p>
+<ul>
+<li>User's system configuration</li>
+<li>Environment variables</li>
+<li>Current time</li>
+</ul>
+</li>
+<li>
+<p>Impurity leads to unpredictable builds that may differ across systems or time.</p>
+</li>
+</ul>
+<h2 id="building-a-simple-hello-package-flakes-vs-traditional-nix">Building a Simple "hello" Package: Flakes vs. Traditional Nix</h2>
+<ul>
+<li>We'll demonstrate building a basic "hello" package using both Flakes and Traditional Nix to highlight the differences in handling purity.</li>
+</ul>
+<h2 id="using-nix-flakes">Using Nix Flakes</h2>
+<ol>
+<li>
+<p><strong>Setup:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">mkdir</span><span> hello </span><span style="color:#f29e74;">&amp;&amp; </span><span style="color:#f28779;">cd</span><span> hello/
+</span></code></pre>
+</li>
+<li>
+<p><strong>Create <code>flake.nix</code> (Initial Impure Example):</strong></p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs </span><span>}: {
+</span><span>    </span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span>(</span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{})</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>Note: Flakes don't have access to <code>builtins.currentSystem</code> directly.</li>
+</ul>
+</li>
+<li>
+<p><strong>Impure Build (Fails):</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> build .#myHello
+</span></code></pre>
+<ul>
+<li>This fails because Flakes enforce purity by default.</li>
+</ul>
+</li>
+<li>
+<p><strong>Force Impure Build:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> build .#myHello</span><span style="color:#ffcc66;"> --impure
+</span></code></pre>
+</li>
+<li>
+<p><strong>Making the Flake Pure:</strong></p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:NixOS/nixpkgs&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">flake-utils</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:numtide/flake-utils&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">flake-utils </span><span>}:
+</span><span>    </span><span style="color:#ffcc66;">flake-utils</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">eachDefaultSystem </span><span>(</span><span style="color:#ffcc66;">system</span><span>:
+</span><span>      </span><span style="color:#ffa759;">let
+</span><span>        </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffa759;">in </span><span>{
+</span><span>        </span><span style="color:#ffd580;">packages</span><span>.</span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>      }
+</span><span>    )</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li><code>flake-utils</code> simplifies making flakes system-agnostic and provides the <code>system</code> attribute.</li>
+</ul>
+</li>
+<li>
+<p><strong>Pure Build (Success):</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> build .#myHello
+</span></code></pre>
+</li>
+</ol>
+<h2 id="using-traditional-nix">Using Traditional Nix</h2>
+<ol>
+<li>
+<p><strong>Setup:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">mkdir</span><span> hello2 </span><span style="color:#f29e74;">&amp;&amp; </span><span style="color:#f28779;">cd</span><span> hello2/
+</span></code></pre>
+</li>
+<li>
+<p><strong>Create <code>default.nix</code> (Initial Impure Example):</strong></p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
+</span><span>{ </span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span>(</span><span style="color:#f28779;">import </span><span style="color:#bae67e;">&lt;nixpkgs&gt; </span><span>{ })</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">; </span><span>}
+</span></code></pre>
+</li>
+<li>
+<p><strong>Build (Impure):</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> myHello
+</span></code></pre>
+</li>
+<li>
+<p><strong>Impurity Explained:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> repl
+</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt; &lt;</span><span>nixpkgs</span><span style="color:#f29e74;">&gt;
+</span><span style="color:#ffd580;">/nix/var/nix/profiles/per-user/root/channels/nixos
+</span></code></pre>
+<ul>
+<li><code>&lt;nixpkgs&gt;</code> depends on the user's environment (Nixpkgs channel), making it impure. Even with channels disabled, it relies on a specific Nixpkgs version in the store.</li>
+</ul>
+</li>
+<li>
+<p><strong>Achieving Purity: Using <code>fetchTarball</code></strong></p>
+<ul>
+<li>
+<p>GitHub allows downloading repository snapshots at specific commits, crucial for reproducibility.</p>
+</li>
+<li>
+<p><strong>Get Nixpkgs Revision from <code>flake.lock</code> (from the Flake example):</strong></p>
+</li>
+</ul>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.lock
+</span><span style="color:#bae67e;">&quot;nixpkgs&quot;</span><span style="color:#ff3333;">: </span><span>{
+</span><span>  </span><span style="color:#bae67e;">&quot;locked&quot;</span><span style="color:#ff3333;">: {
+</span><span>    </span><span style="color:#bae67e;">&quot;lastModified&quot;</span><span style="color:#ff3333;">: 1746372124,
+</span><span>    </span><span style="color:#bae67e;">&quot;narHash&quot;</span><span style="color:#ff3333;">: </span><span style="color:#bae67e;">&quot;sha256-n7W8Y6bL7mgHYW1vkXKi9zi/sV4UZqcBovICQu0rdNU=&quot;</span><span style="color:#ff3333;">,
+</span><span>    </span><span style="color:#bae67e;">&quot;owner&quot;</span><span style="color:#ff3333;">: </span><span style="color:#bae67e;">&quot;NixOS&quot;</span><span style="color:#ff3333;">,
+</span><span>    </span><span style="color:#bae67e;">&quot;repo&quot;</span><span style="color:#ff3333;">: </span><span style="color:#bae67e;">&quot;nixpkgs&quot;</span><span style="color:#ff3333;">,
+</span><span>    </span><span style="color:#bae67e;">&quot;rev&quot;</span><span style="color:#ff3333;">: </span><span style="color:#bae67e;">&quot;f5cbfa4dbbe026c155cf5a9204f3e9121d3a5fe0&quot;</span><span style="color:#ff3333;">,
+</span><span>    </span><span style="color:#bae67e;">&quot;type&quot;</span><span style="color:#ff3333;">: </span><span style="color:#bae67e;">&quot;github&quot;
+</span><span>  }</span><span style="color:#ff3333;">,
+</span></code></pre>
+</li>
+<li>
+<p><strong>Modify <code>default.nix</code> for Purity:</strong></p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
+</span><span style="color:#ffa759;">let
+</span><span>  </span><span style="color:#ffd580;">nixpkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">fetchTarball </span><span>{
+</span><span>    </span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;[https://github.com/NixOS/nixpkgs/archive/f5cbfa4dbbe026c155cf5a9204f3e9121d3a5fe0.tar.gz](https://github.com/NixOS/nixpkgs/archive/f5cbfa4dbbe026c155cf5a9204f3e9121d3a5fe0.tar.gz)&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">sha256 </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;0000000000000000000000000000000000000000000000000000&quot;</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># Placeholder
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffa759;">in </span><span>{
+</span><span>  </span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span>(</span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{})</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>Replace <code>&lt;nixpkgs&gt;</code> with <code>fetchTarball</code> and a specific revision. A placeholder <code>sha256</code> is used initially.</li>
+</ul>
+</li>
+<li>
+<p><strong>Build (Nix provides the correct <code>sha256</code>):</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> myHello
+</span></code></pre>
+</li>
+<li>
+<p><strong>Verification:</strong> Both Flake and Traditional Nix builds now produce the same output path.</p>
+</li>
+<li>
+<p><strong>Remaining Impurities in Traditional Nix:</strong></p>
+<ul>
+<li>Default arguments to <code>import &lt;nixpkgs&gt; {}</code> can introduce impurity:
+<ul>
+<li><code>overlays</code>: <code>~/.config/nixpkgs/overlays</code> (user-specific)</li>
+<li><code>config</code>: <code>~/.config/nixpkgs/config.nix</code> (user-specific)</li>
+<li><code>system</code>: <code>builtins.currentSystem</code> (machine-specific)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Making Traditional Nix Fully Pure:</strong></p>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
+</span><span>{</span><span style="color:#ffcc66;">system </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">currentSystem</span><span>}:
+</span><span style="color:#ffa759;">let
+</span><span>  </span><span style="color:#ffd580;">nixpkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">fetchTarball </span><span>{
+</span><span>    </span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">=
+</span><span>      </span><span style="color:#bae67e;">&quot;[https://github.com/NixOS/nixpkgs/archive/0243fb86a6f43e506b24b4c0533bd0b0de211c19.tar.gz](https://github.com/NixOS/nixpkgs/archive/0243fb86a6f43e506b24b4c0533bd0b0de211c19.tar.gz)&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">sha256 </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;1qvdbvdza7hsqhra0yg7xs252pr1q70nyrsdj6570qv66vq0fjnh&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span style="color:#ffa759;">in </span><span>{
+</span><span>  </span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span>(</span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
+</span><span>    </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{}</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>  })</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<ul>
+<li>Override impure defaults for <code>overlays</code>, <code>config</code>, and make <code>system</code> an argument.</li>
+</ul>
+</li>
+<li>
+<p><strong>Building with a Specific System:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> myHello</span><span style="color:#ffcc66;"> --argstr</span><span> system x86_64-linux
+</span></code></pre>
+</li>
+<li>
+<p><strong>Pure Evaluation Mode in Traditional Nix:</strong></p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> --eval --pure-eval --expr </span><span style="color:#bae67e;">&#39;fetchGit { url = ./.; rev = &quot;b4fe677e255c6f89c9a6fdd3ddd9319b0982b1ad&quot;; }&#39;
+</span></code></pre>
+<ul>
+<li>Example of using <code>--pure-eval</code>.</li>
+</ul>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> --pure-eval --expr </span><span style="color:#bae67e;">&#39;(import (fetchGit { url = ./.; rev = &quot;b4fe677e255c6f89c9a6fdd3ddd9319b0982b1ad&quot;; }) { system = &quot;x86_64-linux&quot;; }).myHello&#39;
+</span></code></pre>
+<ul>
+<li>Building with a specific revision and system.</li>
+</ul>
+</li>
+</ol>
+<h3 id="updating-nixpkgs">Updating Nixpkgs</h3>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> flake update
+</span></code></pre>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#myHello --override-input nixpkgs github:NixOS/nixpkgs/nixos-24.11
+</span></code></pre>
+<h3 id="updating-traditional-nix-using-niv">Updating Traditional Nix (using <code>niv</code>)</h3>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix-shell </span><span style="color:#f29e74;">-</span><span style="color:#ffcc66;">p niv
+</span><span style="color:#ffcc66;">niv init
+</span></code></pre>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
+</span><span>{ </span><span style="color:#ffcc66;">system </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">currentSystem</span><span style="color:#f29e74;">,
+</span><span>  </span><span style="color:#ffcc66;">sources </span><span style="color:#f29e74;">? </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">nix/sources.nix</span><span style="color:#f29e74;">,
+</span><span>  </span><span style="color:#ffcc66;">nixpkgs </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
+</span><span>  </span><span style="color:#ffcc66;">pkgs </span><span style="color:#f29e74;">? </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
+</span><span>    </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[ ]</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ff3333;">, </span><span>}</span><span style="color:#ff3333;">: </span><span>{
+</span><span>  </span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<p>And build it with:</p>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> myHello
+</span></code></pre>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">niv</span><span> update nixpkgs</span><span style="color:#ffcc66;"> --branch</span><span style="color:#f29e74;">=</span><span>nixos-unstable
+</span><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> myHello
+</span></code></pre>
+<h4 id="adding-home-manager-with-flakes">Adding Home-Manager with Flakes</h4>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
+</span><span>{
+</span><span>  </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">= </span><span>{
+</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:NixOS/nixpkgs&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">flake-utils</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:numtide/flake-utils&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:nix-community/home-manager&quot;</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">flake-utils</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">, ... </span><span>}:
+</span><span>    </span><span style="color:#ffcc66;">flake-utils</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">eachDefaultSystem </span><span>(</span><span style="color:#ffcc66;">system</span><span>:
+</span><span>      </span><span style="color:#ffa759;">let </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#ccc9c2cc;">;
+</span><span>      </span><span style="color:#ffa759;">in </span><span>{
+</span><span>        </span><span style="color:#ffd580;">packages</span><span>.</span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>        </span><span style="color:#ffd580;">packages</span><span>.</span><span style="color:#ffd580;">x86_64-linux</span><span>.</span><span style="color:#ffd580;">homeManagerDocs </span><span style="color:#f29e74;">=
+</span><span>          </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">packages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">x86_64-linux</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">docs-html</span><span style="color:#ccc9c2cc;">;
+</span><span>      })</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> flake update
+</span><span style="color:#ffd580;">nix</span><span> flake show github:nix-community/home-manager
+</span></code></pre>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">follows </span><span style="color:#ff3333;">= </span><span style="color:#bae67e;">&quot;nixpkgs&quot;</span><span style="color:#ff3333;">;
+</span></code></pre>
+<h4 id="adding-home-manager-with-traditional-nix">Adding Home-Manager with Traditional Nix</h4>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">niv add </span><span style="color:#bae67e;">nix-community/home-manager
+</span></code></pre>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix repl
+</span><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ffcc66;">s </span><span style="color:#ff3333;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./nix/sources.nix
+</span><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ffcc66;">s</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
+</span></code></pre>
+<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">system </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">currentSystem</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">sources </span><span style="color:#f29e74;">? </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">nix/sources.nix
+</span><span>  </span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">pkgs </span><span style="color:#f29e74;">? </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
+</span><span>    </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[ ]</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
+</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
+</span><span>  }</span><span style="color:#ff3333;">, </span><span>}</span><span style="color:#ff3333;">: </span><span>{
+</span><span>  </span><span style="color:#ffd580;">homeManagerDocs </span><span style="color:#f29e74;">= </span><span>(</span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager </span><span>{ </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#ccc9c2cc;">; </span><span>})</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">docs</span><span style="color:#ccc9c2cc;">;
+</span><span>
+</span><span>  </span><span style="color:#ffd580;">myHello </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">hello</span><span style="color:#ccc9c2cc;">;
+</span><span>}
+</span></code></pre>
+<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> homeManagerDocs
+</span></code></pre>
+ 
+    </div>
+
+    <script defer>
+      function setTheme(theme) {
+        localStorage.setItem("theme", theme);
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme);
+
+        document
+          .getElementById("dark-mode-toggle")
+          .addEventListener("click", () => {
+            const newTheme = savedTheme === "dark" ? "light" : "dark";
+            setTheme(newTheme);
+          });
+      });
+    </script>
+
+    <script defer src="https://saylesss88.github.io/elasticlunr.min.js"></script>
+    <script defer>
+      let index;
+
+      fetch(`${baseUrl}/search_index.en.json`)
+        .then((response) => response.json())
+        .then((data) => {
+          index = elasticlunr.Index.load(data);
+
+          const searchInput = document.getElementById("search");
+          const resultsContainer = document.querySelector(".search-results");
+          const resultsList = document.querySelector(".search-results__items");
+
+          searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.trim();
+
+            if (!query || !index) {
+              resultsContainer.style.display = "none";
+              resultsList.innerHTML = "";
+              return;
+            }
+
+            const results = index.search(query, { expand: true });
+
+            if (results.length > 0) {
+              resultsList.innerHTML = results
+                .map((result) => {
+                  const ref = index.documentStore.getDoc(result.ref);
+                  return `<li><a href="${ref.permalink}">${ref.title}</a></li>`;
+                })
+                .join("");
+              resultsContainer.style.display = "block";
+            } else {
+              resultsList.innerHTML = "<li>No results found.</li>";
+              resultsContainer.style.display = "block";
+            }
+          });
+        })
+        .catch((err) => {
+          console.error("Search index failed to load:", err);
+        });
+    </script>
+
+    <script defer src="https://saylesss88.github.io/search.js"></script>
+  </body>
+</html>
