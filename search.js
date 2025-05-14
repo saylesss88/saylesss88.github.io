@@ -36,6 +36,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 function formatSearchResultItem(item, terms) {
   const post = window.searchIndex.documentStore.docs[item.ref];
 
+  // Ensure permalink exists before using it
+  const permalink = post.permalink || item.ref;
+  if (!post.permalink) {
+      console.warn(`Missing permalink for search result ref: ${item.ref}`);
+  }
+  
+  return `<a href="${permalink}">${post.title || "Untitled"}</a>`;
+
   if (!post || !post.permalink) {
     console.warn(`Missing permalink for search result ref: ${item.ref}`);
     return `<div class="search-results__item">No valid link found.</div>`;
