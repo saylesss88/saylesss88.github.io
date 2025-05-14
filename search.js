@@ -18,26 +18,21 @@ async function loadSearchIndex() {
   try {
     const response = await fetch("/search_index.en.json");
     const data = await response.json();
-    // window.searchIndex = elasticlunr.Index.load(data); //original
-    window.searchIndex = elasticlunr(function () { //simplified
-        this.addField('title');
-        this.addField('body');
-        this.ref('id');
-        data.forEach(function (doc) {
-            this.add(doc)
-        }, this);
+    window.searchIndex = elasticlunr(function () {
+      this.addField('title');
+      this.addField('body');
+      this.ref('id');
+      data.forEach(function (doc) {
+        this.add(doc);
+      }, this);
     });
     console.log("Search index successfully loaded:", window.searchIndex);
+    // Call initSearch here, after the index is loaded
+    initSearch();
   } catch (error) {
     console.error("Failed to load search index:", error);
   }
 }
-
-// Ensure index is fully loaded before calling search functions
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadSearchIndex();  // Wait for search index to load
-  initSearch(); // Start search functionality
-});
 
 // Function to extract and highlight search results
 function formatSearchResultItem(item, terms) {
@@ -60,7 +55,11 @@ async function initSearch() {
   const MAX_ITEMS = 10;
   const options = { bool: "OR", expand: true, fields: { title: { boost: 2 }, body: { boost: 1 }, path: { boost: 1 } } };
 
-  await loadSearchIndex(); // Ensure index is loaded first
+  // Check if searchIndex is loaded
+  if (!window.searchIndex) {
+    console.error("Search index not loaded yet!");
+    return; // IMPORTANT: Stop if the index isn't ready
+  }
 
   $searchInput.addEventListener("keyup", debounce(async function () {
     console.log("Search triggered!");
@@ -77,17 +76,15 @@ async function initSearch() {
     console.log("Search results:", results);
 
     if (results.length > 0) {
-      setTimeout(() => { // Add a small delay here
-        results.forEach(result => {
-          const post = window.searchIndex.documentStore.docs[result.ref];
-          console.log("Adding result to UI:", post);
+      results.forEach(result => {
+        const post = window.searchIndex.documentStore.docs[result.ref];
+        console.log("Adding result to UI:", post);
 
-          const listItem = document.createElement("li");
-          listItem.innerHTML = formatSearchResultItem(result, term.split(" "));
-          $searchResultsItems.appendChild(listItem);
-        });
-        $searchResults.style.display = "block";
-      }, 10); // 10ms delay
+        const listItem = document.createElement("li");
+        listItem.innerHTML = formatSearchResultItem(result, term.split(" "));
+        $searchResultsItems.appendChild(listItem);
+      });
+      $searchResults.style.display = "block";
     } else {
       console.log("No matching results.");
       $searchResults.style.display = "none";
@@ -103,7 +100,9 @@ async function initSearch() {
 
 // Ensure search initializes once DOM is ready
 if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
-  initSearch();
+  loadSearchIndex(); // Start loading the index
 } else {
-  document.addEventListener("DOMContentLoaded", initSearch);
+  document.addEventListener("DOMContentLoaded", () => {
+    loadSearchIndex(); // Start loading the index
+  });
 }
