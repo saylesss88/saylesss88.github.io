@@ -18,7 +18,15 @@ async function loadSearchIndex() {
   try {
     const response = await fetch("/search_index.en.json");
     const data = await response.json();
-    window.searchIndex = elasticlunr.Index.load(data);
+    // window.searchIndex = elasticlunr.Index.load(data); //original
+    window.searchIndex = elasticlunr(function () { //simplified
+        this.addField('title');
+        this.addField('body');
+        this.ref('id');
+        data.forEach(function (doc) {
+            this.add(doc)
+        }, this);
+    });
     console.log("Search index successfully loaded:", window.searchIndex);
   } catch (error) {
     console.error("Failed to load search index:", error);
@@ -69,15 +77,17 @@ async function initSearch() {
     console.log("Search results:", results);
 
     if (results.length > 0) {
-      results.forEach(result => {
-        const post = window.searchIndex.documentStore.docs[result.ref];
-        console.log("Adding result to UI:", post);
+      setTimeout(() => { // Add a small delay here
+        results.forEach(result => {
+          const post = window.searchIndex.documentStore.docs[result.ref];
+          console.log("Adding result to UI:", post);
 
-        const listItem = document.createElement("li");
-        listItem.innerHTML = formatSearchResultItem(result, term.split(" "));
-        $searchResultsItems.appendChild(listItem);
-      });
-      $searchResults.style.display = "block";
+          const listItem = document.createElement("li");
+          listItem.innerHTML = formatSearchResultItem(result, term.split(" "));
+          $searchResultsItems.appendChild(listItem);
+        });
+        $searchResults.style.display = "block";
+      }, 10); // 10ms delay
     } else {
       console.log("No matching results.");
       $searchResults.style.display = "none";
