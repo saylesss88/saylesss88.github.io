@@ -35,10 +35,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Function to extract and highlight search results
 function formatSearchResultItem(item, terms) {
   const post = window.searchIndex.documentStore.docs[item.ref];
-  const permalink = post.path; // Use the 'path' from the index
-  console.log("post object:", post); // Debugging
-  console.log("permalink:", permalink);
+
+  // Ensure permalink exists before using it
+  const permalink = post.permalink || item.ref;
+  if (!post.permalink) {
+      console.warn(`Missing permalink for search result ref: ${item.ref}`);
+  }
+  
   return `<a href="${permalink}">${post.title || "Untitled"}</a>`;
+
+  if (!post || !post.permalink) {
+    console.warn(`Missing permalink for search result ref: ${item.ref}`);
+    return `<div class="search-results__item">No valid link found.</div>`;
+  }
+
+  return `<div class="search-results__item">
+            <a href="${post.permalink}">${post.title}</a>
+            <div>${makeTeaser(post.body, terms)}</div>
+          </div>`;
 }
 
 // Initialize search functionality
