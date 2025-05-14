@@ -1,11 +1,11 @@
+let searchIndexLoaded = false; // Flag to track index loading
+
 function debounce(func, wait) {
   var timeout;
-
   return function () {
     var context = this;
     var args = arguments;
     clearTimeout(timeout);
-
     timeout = setTimeout(function () {
       timeout = null;
       func.apply(context, args);
@@ -13,7 +13,7 @@ function debounce(func, wait) {
   };
 }
 
-// Fetch search index correctly as JSON
+// Fetch search index and initialize Elasticlunr
 async function loadSearchIndex() {
   try {
     const response = await fetch("/search_index.en.json");
@@ -27,59 +27,63 @@ async function loadSearchIndex() {
       }, this);
     });
     console.log("Search index successfully loaded:", window.searchIndex);
-    // Call initSearch here, after the index is loaded
-    initSearch();
+    searchIndexLoaded = true; // Set the flag when loaded
+    //initSearch(); // REMOVE THIS LINE
+    //checkAndInitSearch();
   } catch (error) {
     console.error("Failed to load search index:", error);
+    searchIndexLoaded = false;
   }
 }
 
 // Function to extract and highlight search results
 function formatSearchResultItem(item, terms) {
   const post = window.searchIndex.documentStore.docs[item.ref];
-
-  // Ensure path exists before using it
   const permalink = post.path ? `${baseUrl}${post.path}` : item.ref;
   if (!post.path) {
     console.warn(`Missing path for search result ref: ${item.ref}, using ref as fallback.`);
   }
-
   return `<a href="${permalink}">${post.title || "Untitled"}</a>`;
 }
 
 // Initialize search functionality
-async function initSearch() {
+function initSearch() {
+  if (!searchIndexLoaded) {
+    console.warn("Search index not loaded yet.  Search initialization deferred.");
+    return; // IMPORTANT: Stop if the index isn't ready
+  }
+
   const $searchInput = document.getElementById("search");
   const $searchResults = document.querySelector(".search-results");
   const $searchResultsItems = document.querySelector(".search-results__items");
   const MAX_ITEMS = 10;
-  const options = { bool: "OR", expand: true, fields: { title: { boost: 2 }, body: { boost: 1 }, path: { boost: 1 } } };
+  const options = {
+    bool: "OR",
+    expand: true,
+    fields: {
+      title: { boost: 2 },
+      body: { boost: 1 },
+      path: { boost: 1 }
+    }
+  };
 
-  // Check if searchIndex is loaded
-  if (!window.searchIndex) {
-    console.error("Search index not loaded yet!");
-    return; // IMPORTANT: Stop if the index isn't ready
-  }
-
-  $searchInput.addEventListener("keyup", debounce(async function () {
+  $searchInput.addEventListener("keyup", debounce(function () {
     console.log("Search triggered!");
-
     const term = $searchInput.value.trim();
     console.log("Search term:", term);
-
     $searchResultsItems.innerHTML = "";
     $searchResults.style.display = term ? "block" : "none";
-
     if (!term) return;
-
+    if (!searchIndexLoaded) {
+      console.warn("Search index not loaded yet.  Performing empty search.");
+      return;
+    }
     const results = window.searchIndex.search(term, options);
     console.log("Search results:", results);
-
     if (results.length > 0) {
       results.forEach(result => {
         const post = window.searchIndex.documentStore.docs[result.ref];
         console.log("Adding result to UI:", post);
-
         const listItem = document.createElement("li");
         listItem.innerHTML = formatSearchResultItem(result, term.split(" "));
         $searchResultsItems.appendChild(listItem);
@@ -97,6 +101,15 @@ async function initSearch() {
     }
   });
 }
+
+function checkAndInitSearch() {
+  if (searchIndexLoaded) {
+    initSearch();
+  } else {
+    setTimeout(checkAndInitSearch, 50);
+  }
+}
+
 
 // Ensure search initializes once DOM is ready
 if (document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll)) {
