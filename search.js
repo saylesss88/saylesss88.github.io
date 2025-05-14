@@ -28,14 +28,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const listItem = document.createElement('li');
             const link = document.createElement('a');
 
-            if (post && post.permalink) {
-              link.href = post.permalink;
+            if (post && post.id) {
+              link.href = post.id; // use `id` which is the full URL
+            } else if (post && post.path) {
+              link.href = post.path; // fallback to path
             } else {
               console.error("Permalink missing for ref:", result.ref, "Post data:", post);
-              link.href = '#'; // Fallback
+              link.href = '#';
             }
 
-            const title = post && post.title ? post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>') : 'Untitled';
+
+            const title = post?.title
+              ? post.title.replace(new RegExp(query, 'gi'), '<mark>$&</mark>')
+              : 'Untitled';
+
             link.innerHTML = title;
             listItem.appendChild(link);
             resultsContainer.appendChild(listItem);
