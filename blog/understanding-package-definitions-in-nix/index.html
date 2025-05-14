@@ -31,361 +31,344 @@
       </div>
 
       
-<article class="post">
-  <header class="post-header">
-    
-    <time datetime="2025-05-08"
-      >Published on:
-      <span class="accent-data">2025-05-08</span>
-    </time>
-     
-
-    <h1>Understanding Package Definitions in Nix</h1>
-  </header>
-
-  
-
-  <div class="post-content"><h1 id="understanding-package-definitions-in-nix">Understanding Package Definitions in Nix</h1>
-<p><strong>TOC</strong></p>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/understanding-package-definitions-in-nix/#understanding-package-definitions-in-nix">Understanding Package Definitions in Nix</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/understanding-package-definitions-in-nix/#the-journey-from-definition-to-package">The Journey from Definition to Package</a></li>
-<li><a href="https://saylesss88.github.io/blog/understanding-package-definitions-in-nix/#skeleton-of-a-derivation">Skeleton of a Derivation</a></li>
-<li><a href="https://saylesss88.github.io/blog/understanding-package-definitions-in-nix/#example-a-simple-hello-package-definition">Example: A Simple "Hello" Package Definition</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/understanding-package-definitions-in-nix/#swaytools-package-definition">Swaytools Package Definition</a></li>
-<li><a href="https://saylesss88.github.io/blog/understanding-package-definitions-in-nix/#resources">Resources</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<img src="/images/gruv1.png" alt="gruvvy-bedroom" width="500">
-<p>In Nix, the concept of a <strong>package</strong> can refer to two things:</p>
-<ul>
-<li>
-<p>A collection of files and data that constitute a piece of software or an
-artifact.</p>
-</li>
-<li>
-<p>A Nix <strong>expression</strong> that describes how to create such a collection. This
-expression acts as a blueprint before the package exists in a tangible form.</p>
-</li>
-</ul>
-<p>The process begins with writing a <strong>package definition</strong> using the Nix language.
+  &lt;h1 id=&quot;understanding-package-definitions-in-nix&quot;&gt;Understanding Package Definitions in Nix&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;strong&gt;TOC&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions-in-nix&#x2F;#understanding-package-definitions-in-nix&quot;&gt;Understanding Package Definitions in Nix&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions-in-nix&#x2F;#the-journey-from-definition-to-package&quot;&gt;The Journey from Definition to Package&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions-in-nix&#x2F;#skeleton-of-a-derivation&quot;&gt;Skeleton of a Derivation&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions-in-nix&#x2F;#example-a-simple-hello-package-definition&quot;&gt;Example: A Simple &quot;Hello&quot; Package Definition&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions-in-nix&#x2F;#swaytools-package-definition&quot;&gt;Swaytools Package Definition&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions-in-nix&#x2F;#resources&quot;&gt;Resources&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;img src=&quot;&#x2F;images&#x2F;gruv1.png&quot; alt=&quot;gruvvy-bedroom&quot; width=&quot;500&quot;&gt;
+&lt;p&gt;In Nix, the concept of a &lt;strong&gt;package&lt;&#x2F;strong&gt; can refer to two things:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;A collection of files and data that constitute a piece of software or an
+artifact.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;A Nix &lt;strong&gt;expression&lt;&#x2F;strong&gt; that describes how to create such a collection. This
+expression acts as a blueprint before the package exists in a tangible form.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The process begins with writing a &lt;strong&gt;package definition&lt;&#x2F;strong&gt; using the Nix language.
 This definition contains the necessary instructions and metadata about the
-software you intend to "package."</p>
-<h2 id="the-journey-from-definition-to-package">The Journey from Definition to Package</h2>
-<ol>
-<li>
-<p><strong>Package Definition:</strong></p>
-<ul>
-<li>
-<p>This is essentially a function written in the Nix language.</p>
-</li>
-<li>
-<p>Nix language shares similarities with JSON but includes the crucial
-addition of functions.</p>
-</li>
-<li>
-<p>It acts as the blueprint for creating a package.</p>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Derivation:</strong></p>
-<ul>
-<li>
-<p>When the package definition is evaluated by Nix, it results in
-a <strong>derivation</strong>.</p>
-</li>
-<li>
-<p>A derivation is a concrete and detailed build plan.</p>
-</li>
-<li>
-<p>It outlines the exact steps Nix needs to take: fetching source code,
+software you intend to &quot;package.&quot;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-journey-from-definition-to-package&quot;&gt;The Journey from Definition to Package&lt;&#x2F;h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Package Definition:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;This is essentially a function written in the Nix language.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Nix language shares similarities with JSON but includes the crucial
+addition of functions.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;It acts as the blueprint for creating a package.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Derivation:&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;When the package definition is evaluated by Nix, it results in
+a &lt;strong&gt;derivation&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;A derivation is a concrete and detailed build plan.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;It outlines the exact steps Nix needs to take: fetching source code,
 building dependencies, compiling code, and ultimately producing the
-desired output (the package).</p>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Realization (Building the Package):</strong></p>
-<ul>
-<li>
-<p>You don't get a pre-built "package" directly from the definition or the
-derivation.</p>
-</li>
-<li>
-<p>The package comes into being when Nix <strong>executes</strong> the derivation. This
-process is often referred to as "realizing" the derivation.</p>
-</li>
-</ul>
-</li>
-</ol>
-<p><strong>Analogy:</strong> Think of a package definition as an architectural blueprint, the
+desired output (the package).&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Realization (Building the Package):&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;You don&#x27;t get a pre-built &quot;package&quot; directly from the definition or the
+derivation.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;The package comes into being when Nix &lt;strong&gt;executes&lt;&#x2F;strong&gt; the derivation. This
+process is often referred to as &quot;realizing&quot; the derivation.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;&lt;strong&gt;Analogy:&lt;&#x2F;strong&gt; Think of a package definition as an architectural blueprint, the
 derivation as the detailed construction plan, and the realized package as the
-finished building.</p>
-<h2 id="skeleton-of-a-derivation">Skeleton of a Derivation</h2>
-<p>The most basic derivation structure in Nix looks like this:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">stdenv </span><span>}:
-</span><span>
-</span><span style="color:#ffcc66;">stdenv</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkDerivation </span><span>{ }
-</span></code></pre>
-<ul>
-<li>
-<p>This is a function that expects an attribute set containing <code>stdenv</code> as its
-argument.</p>
-</li>
-<li>
-<p>It then calls <code>stdenv.mkDerivation</code> (a function provided by <code>stdenv</code>) to
-produce a derivation.</p>
-</li>
-<li>
-<p>Currently, this derivation doesn't specify any build steps or outputs.</p>
-</li>
-<li>
-<p>Further Reading:</p>
-</li>
-<li>
-<p><a href="https://ryantm.github.io/nixpkgs/stdenv/stdenv/">The Standard Environment</a></p>
-</li>
-<li>
-<p><a href="https://nixos.org/guides/nix-pills/19-fundamentals-of-stdenv.html">Fundamentals of Stdenv</a></p>
-</li>
-</ul>
-<h2 id="example-a-simple-hello-package-definition">Example: A Simple "Hello" Package Definition</h2>
-<p>Here's a package definition for the classic "hello" program:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># hello.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">stdenv</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">fetchzip</span><span style="color:#f29e74;">,
-</span><span>}:
-</span><span>
-</span><span style="color:#ffcc66;">stdenv</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkDerivation </span><span>{
-</span><span>  </span><span style="color:#ffd580;">pname </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hello&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">version </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;2.12.1&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">src </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">fetchzip </span><span>{
-</span><span>    </span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;[https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz](https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz)&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">sha256 </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>This is a Nix function that takes stdenv and fetchzip as arguments.</p>
-</li>
-<li>
-<p>It uses <code>stdenv.mkDerivation</code> to define the build process for the "hello"
-package.</p>
-<ul>
-<li>
-<p><code>pname</code>: The package name.</p>
-</li>
-<li>
-<p><code>version</code>: The package version.</p>
-</li>
-<li>
-<p><code>src</code>: Specifies how to fetch the source code using <code>fetchzip</code>.</p>
-</li>
-</ul>
-</li>
-</ul>
-<p><strong>Handling Dependencies: Importing Nixpkgs</strong></p>
-<ul>
-<li>
-<p>If you try to build <code>hello.nix</code> directly with <code>nix-build hello.nix</code>, it will
-fail because <code>stdenv</code> and <code>fetchzip</code> are part of Nixpkgs, which isn't included
-in this isolated file.</p>
-</li>
-<li>
-<p>To make this package definition work, you need to pass the correct arguments
-(<code>stdenv</code>, <code>fetchzip</code>) to the function.</p>
-</li>
-</ul>
-<p>The recommended approach is to create a <code>default.nix</code> file in the same
-directory:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
-</span><span>
-</span><span style="color:#ffa759;">let
-</span><span>  </span><span style="color:#ffd580;">nixpkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">fetchTarball </span><span style="color:#bae67e;">&quot;[https://github.com/NixOS/nixpkgs/tarball/nixos-24.05](https://github.com/NixOS/nixpkgs/tarball/nixos-24.05)&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{ </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{}</span><span style="color:#ccc9c2cc;">; </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in
-</span><span>{
-</span><span>  </span><span style="color:#ffd580;">hello </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">callPackage </span><span style="color:#bae67e;">./hello.nix </span><span>{ }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>This <code>default.nix</code> imports Nixpkgs.</p>
-</li>
-<li>
-<p>It then uses <code>pkgs.callPackage</code> to call the function in <code>hello.nix</code>, passing
-the necessary dependencies from Nixpkgs.</p>
-</li>
-<li>
-<p>You can now build the "hello" package using: <code>nix-build -A hello</code>. The
-<code>-A</code> flag tells Nix to build the attribute named hello from the top-level
-expression in default.nix.</p>
-</li>
-</ul>
-<p><strong>Realizing the Derivation and Handling sha256</strong></p>
-<ul>
-<li>
-<p><strong>Evaluation vs. Realization</strong>: While "evaluate" refers to Nix processing an
-expression, "realize" often specifically means building a derivation and
-producing its output in the Nix store.</p>
-</li>
-<li>
-<p>When you first run <code>nix-build -A hello</code>, it will likely fail due to a missing
+finished building.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;skeleton-of-a-derivation&quot;&gt;Skeleton of a Derivation&lt;&#x2F;h2&gt;
+&lt;p&gt;The most basic derivation structure in Nix looks like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stdenv &lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stdenv&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkDerivation &lt;&#x2F;span&gt;&lt;span&gt;{ }
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;This is a function that expects an attribute set containing &lt;code&gt;stdenv&lt;&#x2F;code&gt; as its
+argument.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;It then calls &lt;code&gt;stdenv.mkDerivation&lt;&#x2F;code&gt; (a function provided by &lt;code&gt;stdenv&lt;&#x2F;code&gt;) to
+produce a derivation.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Currently, this derivation doesn&#x27;t specify any build steps or outputs.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Further Reading:&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;ryantm.github.io&#x2F;nixpkgs&#x2F;stdenv&#x2F;stdenv&#x2F;&quot;&gt;The Standard Environment&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;guides&#x2F;nix-pills&#x2F;19-fundamentals-of-stdenv.html&quot;&gt;Fundamentals of Stdenv&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;example-a-simple-hello-package-definition&quot;&gt;Example: A Simple &quot;Hello&quot; Package Definition&lt;&#x2F;h2&gt;
+&lt;p&gt;Here&#x27;s a package definition for the classic &quot;hello&quot; program:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# hello.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stdenv&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchzip&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stdenv&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkDerivation &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pname &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hello&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;version &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;2.12.1&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;src &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchzip &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;[https:&#x2F;&#x2F;ftp.gnu.org&#x2F;gnu&#x2F;hello&#x2F;hello-2.12.1.tar.gz](https:&#x2F;&#x2F;ftp.gnu.org&#x2F;gnu&#x2F;hello&#x2F;hello-2.12.1.tar.gz)&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;sha256 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;This is a Nix function that takes stdenv and fetchzip as arguments.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;It uses &lt;code&gt;stdenv.mkDerivation&lt;&#x2F;code&gt; to define the build process for the &quot;hello&quot;
+package.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;pname&lt;&#x2F;code&gt;: The package name.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;version&lt;&#x2F;code&gt;: The package version.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;src&lt;&#x2F;code&gt;: Specifies how to fetch the source code using &lt;code&gt;fetchzip&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Handling Dependencies: Importing Nixpkgs&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;If you try to build &lt;code&gt;hello.nix&lt;&#x2F;code&gt; directly with &lt;code&gt;nix-build hello.nix&lt;&#x2F;code&gt;, it will
+fail because &lt;code&gt;stdenv&lt;&#x2F;code&gt; and &lt;code&gt;fetchzip&lt;&#x2F;code&gt; are part of Nixpkgs, which isn&#x27;t included
+in this isolated file.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;To make this package definition work, you need to pass the correct arguments
+(&lt;code&gt;stdenv&lt;&#x2F;code&gt;, &lt;code&gt;fetchzip&lt;&#x2F;code&gt;) to the function.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The recommended approach is to create a &lt;code&gt;default.nix&lt;&#x2F;code&gt; file in the same
+directory:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# default.nix
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchTarball &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;[https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;tarball&#x2F;nixos-24.05](https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;tarball&#x2F;nixos-24.05)&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;hello &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;callPackage &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hello.nix &lt;&#x2F;span&gt;&lt;span&gt;{ }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;This &lt;code&gt;default.nix&lt;&#x2F;code&gt; imports Nixpkgs.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;It then uses &lt;code&gt;pkgs.callPackage&lt;&#x2F;code&gt; to call the function in &lt;code&gt;hello.nix&lt;&#x2F;code&gt;, passing
+the necessary dependencies from Nixpkgs.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;You can now build the &quot;hello&quot; package using: &lt;code&gt;nix-build -A hello&lt;&#x2F;code&gt;. The
+&lt;code&gt;-A&lt;&#x2F;code&gt; flag tells Nix to build the attribute named hello from the top-level
+expression in default.nix.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Realizing the Derivation and Handling sha256&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Evaluation vs. Realization&lt;&#x2F;strong&gt;: While &quot;evaluate&quot; refers to Nix processing an
+expression, &quot;realize&quot; often specifically means building a derivation and
+producing its output in the Nix store.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;When you first run &lt;code&gt;nix-build -A hello&lt;&#x2F;code&gt;, it will likely fail due to a missing
 sha256 hash for the source file. Nix needs this hash for security and
-reproducibility. The error message will provide the correct sha256 value.</p>
-</li>
-<li>
-<p><strong>Example Error</strong>):</p>
-</li>
-</ul>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span>  </span><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> hello
-</span><span>  </span><span style="color:#ffd580;">error:</span><span> hash mismatch in fixed-output derivation </span><span style="color:#bae67e;">&#39;/nix/store/pd2kiyfa0c06giparlhd1k31bvllypbb-source.drv&#39;</span><span>:
-</span><span>  </span><span style="color:#ffd580;">specified:</span><span> sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-</span><span>  </span><span style="color:#ffd580;">got:</span><span> sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=
-</span><span>  </span><span style="color:#ffd580;">error:</span><span> 1 dependencies of derivation </span><span style="color:#bae67e;">&#39;/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv&#39;</span><span> failed to build
-</span></code></pre>
-<ul>
-<li>Replace the empty <code>sha256 = "";</code> in <code>hello.nix</code> with the provided correct
-value: <code>sha256 = "1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=";</code>.</li>
-</ul>
-<p><strong>Building and Running the Result</strong></p>
-<p>After updating the <code>sha256</code>, you can successfully build the package:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-build</span><span style="color:#ffcc66;"> -A</span><span> hello
-</span></code></pre>
-<p>The output will be a result symlink pointing to the built package in the Nix
-store. You can then run the "hello" program:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">./result/bin/hello
-</span><span style="color:#ffd580;">Hello,</span><span> world!
-</span></code></pre>
-<h3 id="swaytools-package-definition">Swaytools Package Definition</h3>
-<p><strong>Example: The swaytools Package Definition</strong></p>
-<p>Let's examine a more complex, real-world package definition from Nixpkgs:
-<code>nixpkgs/pkgs/tools/wayland/swaytools/default.nix</code>.</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">setuptools</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">buildPythonApplication</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">fetchFromGitHub</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">slurp</span><span style="color:#f29e74;">,
-</span><span>}:
-</span><span>
-</span><span style="color:#ffcc66;">buildPythonApplication </span><span style="color:#ffa759;">rec </span><span>{
-</span><span>  </span><span style="color:#ffd580;">pname </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;swaytools&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">version </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;0.1.2&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">format </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;pyproject&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">src </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">fetchFromGitHub </span><span>{
-</span><span>    </span><span style="color:#ffd580;">owner </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;tmccombs&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">repo </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;swaytools&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">rev </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">version</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">sha256 </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;sha256-UoWK53B1DNmKwNLFwJW1ZEm9dwMOvQeO03+RoMl6M0Q=&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">nativeBuildInputs </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">setuptools </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">propagatedBuildInputs </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">slurp </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">meta </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">lib</span><span>; {
-</span><span>    </span><span style="color:#ffd580;">homepage </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;https://github.com/tmccombs/swaytools&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">description </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;Collection of simple tools for sway (and i3)&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">license </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">licenses</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gpl3Only</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">maintainers </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">maintainers</span><span>; [ </span><span style="color:#ffcc66;">atila </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">platforms </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">platforms</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">linux</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<h3 id="breakdown-of-the-above-default-nix">Breakdown of the Above default.nix</h3>
-<p>1 <strong>Function Structure</strong>:</p>
-<ul>
-<li>The file starts with a function taking an attribute set of dependencies from
-Nixpkgs: <code>{ lib, setuptools, buildPythonApplication, fetchFromGitHub, slurp }</code>
-:.</li>
-</ul>
-<ol start="2">
-<li><strong>Derivation Creation</strong>:</li>
-</ol>
-<ul>
-<li>It calls <code>buildPythonApplication</code>, a specialized helper for Python packages
-(similar to <code>stdenv.mkDerivation</code> but pre-configured for Python). The <code>rec</code>
-keyword allows attributes within the derivation to refer to each other.</li>
-</ul>
-<ol start="3">
-<li><strong>Package Metadata</strong>:</li>
-</ol>
-<ul>
-<li>
-<p><code>pname</code> and <code>version</code> define the package's name and version.</p>
-</li>
-<li>
-<p>The <code>meta</code> attribute provides standard package information like the homepage,
-description, license, maintainers, and supported platforms.</p>
-</li>
-</ul>
-<ol start="4">
-<li><strong>Source Specification</strong>:</li>
-</ol>
-<ul>
-<li>The <code>src</code> attribute uses <code>fetchFromGitHub</code> to download the source code from
-the specified repository and revision, along with its <code>sha256</code> hash for
-verification.</li>
-</ul>
-<ol start="5">
-<li><strong>Build and Runtime Dependencies</strong>:</li>
-</ol>
-<ul>
-<li>
-<p><code>nativeBuildInputs</code>: Lists tools required during the build process (e.g.,
-<code>setuptools</code> for Python).</p>
-</li>
-<li>
-<p><code>propagatedBuildInputs</code>: Lists dependencies needed at runtime (e.g., <code>slurp</code>).</p>
-</li>
-</ul>
-<ol start="6">
-<li><strong>Build Format</strong>:</li>
-</ol>
-<ul>
-<li><code>format = "pyproject";</code> indicates that the package uses a <code>pyproject.toml</code>
-file for its Python build configuration.</li>
-</ul>
-<p><strong>Integration within Nixpkgs</strong></p>
-<ul>
-<li>
-<p><strong>Location</strong>: The swaytools definition resides in
-<code>pkgs/tools/wayland/swaytools/default.nix</code>.</p>
-</li>
-<li>
-<p><strong>Top-Level Inclusion</strong>: It's made available as a top-level package in
-<code>pkgs/top-level/all-packages.nix</code> like this:</p>
-</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># all-packages.nix
-</span><span style="color:#ffcc66;">swaytools </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">python3Packages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">callPackage </span><span style="color:#bae67e;">../tools/wayland/swaytools </span><span>{ }</span><span style="color:#ff3333;">;
-</span></code></pre>
-<ul>
-<li><code>python3Packages.callPackage</code> is used here because <code>swaytools</code> is a Python
+reproducibility. The error message will provide the correct sha256 value.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Example Error&lt;&#x2F;strong&gt;):&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; -A&lt;&#x2F;span&gt;&lt;span&gt; hello
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;error:&lt;&#x2F;span&gt;&lt;span&gt; hash mismatch in fixed-output derivation &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;#39;&#x2F;nix&#x2F;store&#x2F;pd2kiyfa0c06giparlhd1k31bvllypbb-source.drv&amp;#39;&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;specified:&lt;&#x2F;span&gt;&lt;span&gt; sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;got:&lt;&#x2F;span&gt;&lt;span&gt; sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;error:&lt;&#x2F;span&gt;&lt;span&gt; 1 dependencies of derivation &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;#39;&#x2F;nix&#x2F;store&#x2F;b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv&amp;#39;&lt;&#x2F;span&gt;&lt;span&gt; failed to build
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Replace the empty &lt;code&gt;sha256 = &quot;&quot;;&lt;&#x2F;code&gt; in &lt;code&gt;hello.nix&lt;&#x2F;code&gt; with the provided correct
+value: &lt;code&gt;sha256 = &quot;1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=&quot;;&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Building and Running the Result&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;After updating the &lt;code&gt;sha256&lt;&#x2F;code&gt;, you can successfully build the package:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; -A&lt;&#x2F;span&gt;&lt;span&gt; hello
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The output will be a result symlink pointing to the built package in the Nix
+store. You can then run the &quot;hello&quot; program:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;.&#x2F;result&#x2F;bin&#x2F;hello
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;Hello,&lt;&#x2F;span&gt;&lt;span&gt; world!
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;swaytools-package-definition&quot;&gt;Swaytools Package Definition&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;strong&gt;Example: The swaytools Package Definition&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Let&#x27;s examine a more complex, real-world package definition from Nixpkgs:
+&lt;code&gt;nixpkgs&#x2F;pkgs&#x2F;tools&#x2F;wayland&#x2F;swaytools&#x2F;default.nix&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# default.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;setuptools&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;buildPythonApplication&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchFromGitHub&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;slurp&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;buildPythonApplication &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;rec &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pname &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;swaytools&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;version &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;0.1.2&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;format &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;pyproject&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;src &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchFromGitHub &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;owner &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;tmccombs&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;repo &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;swaytools&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;rev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;version&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;sha256 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;sha256-UoWK53B1DNmKwNLFwJW1ZEm9dwMOvQeO03+RoMl6M0Q=&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nativeBuildInputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;setuptools &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;propagatedBuildInputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;slurp &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;meta &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span&gt;; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;homepage &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;tmccombs&#x2F;swaytools&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;description &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Collection of simple tools for sway (and i3)&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;license &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;licenses&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gpl3Only&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;maintainers &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;maintainers&lt;&#x2F;span&gt;&lt;span&gt;; [ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;atila &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;platforms &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;platforms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;linux&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;breakdown-of-the-above-default-nix&quot;&gt;Breakdown of the Above default.nix&lt;&#x2F;h3&gt;
+&lt;p&gt;1 &lt;strong&gt;Function Structure&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;The file starts with a function taking an attribute set of dependencies from
+Nixpkgs: &lt;code&gt;{ lib, setuptools, buildPythonApplication, fetchFromGitHub, slurp }&lt;&#x2F;code&gt;
+:.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Derivation Creation&lt;&#x2F;strong&gt;:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;It calls &lt;code&gt;buildPythonApplication&lt;&#x2F;code&gt;, a specialized helper for Python packages
+(similar to &lt;code&gt;stdenv.mkDerivation&lt;&#x2F;code&gt; but pre-configured for Python). The &lt;code&gt;rec&lt;&#x2F;code&gt;
+keyword allows attributes within the derivation to refer to each other.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Package Metadata&lt;&#x2F;strong&gt;:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;pname&lt;&#x2F;code&gt; and &lt;code&gt;version&lt;&#x2F;code&gt; define the package&#x27;s name and version.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;The &lt;code&gt;meta&lt;&#x2F;code&gt; attribute provides standard package information like the homepage,
+description, license, maintainers, and supported platforms.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Source Specification&lt;&#x2F;strong&gt;:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;src&lt;&#x2F;code&gt; attribute uses &lt;code&gt;fetchFromGitHub&lt;&#x2F;code&gt; to download the source code from
+the specified repository and revision, along with its &lt;code&gt;sha256&lt;&#x2F;code&gt; hash for
+verification.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Build and Runtime Dependencies&lt;&#x2F;strong&gt;:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nativeBuildInputs&lt;&#x2F;code&gt;: Lists tools required during the build process (e.g.,
+&lt;code&gt;setuptools&lt;&#x2F;code&gt; for Python).&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;propagatedBuildInputs&lt;&#x2F;code&gt;: Lists dependencies needed at runtime (e.g., &lt;code&gt;slurp&lt;&#x2F;code&gt;).&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Build Format&lt;&#x2F;strong&gt;:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;format = &quot;pyproject&quot;;&lt;&#x2F;code&gt; indicates that the package uses a &lt;code&gt;pyproject.toml&lt;&#x2F;code&gt;
+file for its Python build configuration.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Integration within Nixpkgs&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Location&lt;&#x2F;strong&gt;: The swaytools definition resides in
+&lt;code&gt;pkgs&#x2F;tools&#x2F;wayland&#x2F;swaytools&#x2F;default.nix&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Top-Level Inclusion&lt;&#x2F;strong&gt;: It&#x27;s made available as a top-level package in
+&lt;code&gt;pkgs&#x2F;top-level&#x2F;all-packages.nix&lt;&#x2F;code&gt; like this:&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# all-packages.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;swaytools &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;python3Packages&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;callPackage &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;..&#x2F;tools&#x2F;wayland&#x2F;swaytools &lt;&#x2F;span&gt;&lt;span&gt;{ }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;python3Packages.callPackage&lt;&#x2F;code&gt; is used here because &lt;code&gt;swaytools&lt;&#x2F;code&gt; is a Python
 package, and it ensures the necessary Python-related dependencies are
-correctly passed to the <code>swaytools</code> definition.</li>
-</ul>
-<h3 id="resources">Resources</h3>
-<ul>
-<li><a href="https://nix.dev/tutorials/packaging-existing-software.html">Packaging Existing Software</a></li>
-</ul>
-</div>
+correctly passed to the &lt;code&gt;swaytools&lt;&#x2F;code&gt; definition.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;resources&quot;&gt;Resources&lt;&#x2F;h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nix.dev&#x2F;tutorials&#x2F;packaging-existing-software.html&quot;&gt;Packaging Existing Software&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
 
-  
-</article>
 
     </div>
 

@@ -31,300 +31,283 @@
       </div>
 
       
-<article class="post">
-  <header class="post-header">
-    
-    <time datetime="2025-05-08"
-      >Published on:
-      <span class="accent-data">2025-05-08</span>
-    </time>
-     
-
-    <h1>Using Overlays to add Packages that aren&#x27;t in Nixpkgs</h1>
-  </header>
-
-  
-
-  <div class="post-content"><h1 id="using-overlays-to-add-packages-that-aren-t-in-nixpkgs">Using Overlays to add Packages that aren't in Nixpkgs</h1>
-<p><strong>TOC</strong></p>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/using-overlays/#adding-the-overlays-output-to-your-flake">Adding the overlays output to your Flake</a></li>
-<li><a href="https://saylesss88.github.io/blog/using-overlays/#the-actual-overlay">The Actual Overlay</a></li>
-<li><a href="https://saylesss88.github.io/blog/using-overlays/#the-pokego-package-definition">The pokego Package definition</a></li>
-<li><a href="https://saylesss88.github.io/blog/using-overlays/#adding-the-overlay-to-your-configuration">Adding the overlay to your configuration</a></li>
-<li><a href="https://saylesss88.github.io/blog/using-overlays/#installing-pokego">Installing Pokego</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/using-overlays/#another-overlay-example">Another Overlay Example</a></li>
-</ul>
-</li>
-</ul>
-<img src="/images/pokego.png" alt="Cyber" width="700">
-<p>It is very common to use overlays in Nix to install packages that aren't
-available in the standard Nixpkgs repository.</p>
-<ul>
-<li>
-<p>Overlays are one of the primary and recommended ways to extend and customize
-your Nix environment. It's important to remember that Nix overlays are made to
+  &lt;h1 id=&quot;using-overlays-to-add-packages-that-aren-t-in-nixpkgs&quot;&gt;Using Overlays to add Packages that aren&#x27;t in Nixpkgs&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;strong&gt;TOC&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;using-overlays&#x2F;#adding-the-overlays-output-to-your-flake&quot;&gt;Adding the overlays output to your Flake&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;using-overlays&#x2F;#the-actual-overlay&quot;&gt;The Actual Overlay&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;using-overlays&#x2F;#the-pokego-package-definition&quot;&gt;The pokego Package definition&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;using-overlays&#x2F;#adding-the-overlay-to-your-configuration&quot;&gt;Adding the overlay to your configuration&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;using-overlays&#x2F;#installing-pokego&quot;&gt;Installing Pokego&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;using-overlays&#x2F;#another-overlay-example&quot;&gt;Another Overlay Example&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;img src=&quot;&#x2F;images&#x2F;pokego.png&quot; alt=&quot;Cyber&quot; width=&quot;700&quot;&gt;
+&lt;p&gt;It is very common to use overlays in Nix to install packages that aren&#x27;t
+available in the standard Nixpkgs repository.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Overlays are one of the primary and recommended ways to extend and customize
+your Nix environment. It&#x27;s important to remember that Nix overlays are made to
 allow you to modify or extend the package set provided by Nixpkgs (or other
 Nix sources) without directly altering the original package definitions. This
 is crucial for maintaining reproducibility and avoiding conflicts. Overlays
 are essentially functions that take the previous package set and allow you to
-add, modify, or remove packages.</p>
-</li>
-<li>
-<p>It may be helpful to first read my
-<a href="https://saylesss88.github.io/blog/nix-flakes-tips-and-tricks/">NixFlakesTips</a>
-post first to understand the outputs in my flake.</p>
-</li>
-</ul>
-<h2 id="adding-the-overlays-output-to-your-flake">Adding the overlays output to your Flake</h2>
-<p>I'll show the process of adding the <code>pokego</code> package that is not in Nixpkgs:</p>
-<ol>
-<li>In my <code>flake.nix</code> I have a custom inputs variable within my let block of my flake like so just showing the necessary parts for berevity:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span>  </span><span style="color:#ffcc66;">outputs </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">my-inputs</span><span> @ {
-</span><span>    </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#f29e74;">...
-</span><span style="color:#f29e74;">  </span><span>}: </span><span style="color:#ffa759;">let
-</span><span>    </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;magic&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;jr&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">gitUsername </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;saylesss88&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">editor </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hx&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">term </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;ghostty&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">keys </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;us&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">browser </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;firefox&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">flake </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">getEnv </span><span style="color:#bae67e;">&quot;HOME&quot; </span><span style="color:#f29e74;">+ </span><span style="color:#bae67e;">&quot;/flake&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">=
-</span><span>      </span><span style="color:#ffcc66;">my-inputs
-</span><span>      </span><span style="color:#f29e74;">// </span><span>{
-</span><span>        </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>          </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">lib </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./lib/overlay.nix</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">nixOsModules </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./nixos</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">homeModules </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./home</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># ... snip ...
-</span><span>
-</span></code></pre>
-<h2 id="the-actual-overlay">The Actual Overlay</h2>
-<ol start="2">
-<li>In the <code>overlay.nix</code> I have this helper function and the defined package:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># overlay.nix
-</span><span style="color:#ffcc66;">_final</span><span>: </span><span style="color:#ffcc66;">prev</span><span>: </span><span style="color:#ffa759;">let
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Helper function to import a package
-</span><span>  </span><span style="color:#ffd580;">callPackage </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">prev</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">callPackageWith </span><span>(</span><span style="color:#ffcc66;">prev </span><span style="color:#f29e74;">// </span><span style="color:#ffcc66;">packages</span><span>)</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Define all packages
-</span><span>  </span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Additional packages
-</span><span>    </span><span style="color:#ffd580;">pokego </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">callPackage </span><span style="color:#bae67e;">./pac_defs/pokego.nix </span><span>{}</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in
-</span><span>  </span><span style="color:#ffcc66;">packages
-</span></code></pre>
-<ol>
-<li><code>_final: prev:</code>: This is the function definition of the overlay.</li>
-</ol>
-<ul>
-<li>
-<p><code>_final</code>: This argument represents the final, merged package set after all
-overlays have been applied. It's often unused within a single overlay, hence
-the <code>_</code> prefix (a Nix convention for unused variables).</p>
-</li>
-<li>
-<p><code>prev</code>: This is the crucial argument. It represents the package set before
+add, modify, or remove packages.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;It may be helpful to first read my
+&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-and-tricks&#x2F;&quot;&gt;NixFlakesTips&lt;&#x2F;a&gt;
+post first to understand the outputs in my flake.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;adding-the-overlays-output-to-your-flake&quot;&gt;Adding the overlays output to your Flake&lt;&#x2F;h2&gt;
+&lt;p&gt;I&#x27;ll show the process of adding the &lt;code&gt;pokego&lt;&#x2F;code&gt; package that is not in Nixpkgs:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;In my &lt;code&gt;flake.nix&lt;&#x2F;code&gt; I have a custom inputs variable within my let block of my flake like so just showing the necessary parts for berevity:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;outputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;my-inputs&lt;&#x2F;span&gt;&lt;span&gt; @ {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmt-nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span&gt;}: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;x86_64-linux&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;magic&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;jr&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;gitUsername &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;saylesss88&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;editor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hx&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;term &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;ghostty&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;keys &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;us&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;browser &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;firefox&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;flake &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;getEnv &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;HOME&amp;quot; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;flake&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;=
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;my-inputs
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&#x2F; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;lib &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;lib&#x2F;overlay.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixOsModules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;nixos&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;homeModules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;home&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# ... snip ...
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;the-actual-overlay&quot;&gt;The Actual Overlay&lt;&#x2F;h2&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;In the &lt;code&gt;overlay.nix&lt;&#x2F;code&gt; I have this helper function and the defined package:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# overlay.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;_final&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;prev&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Helper function to import a package
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;callPackage &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;prev&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;callPackageWith &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;prev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&#x2F; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;packages&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Define all packages
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Additional packages
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pokego &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;callPackage &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;pac_defs&#x2F;pokego.nix &lt;&#x2F;span&gt;&lt;span&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;packages
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;_final: prev:&lt;&#x2F;code&gt;: This is the function definition of the overlay.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;_final&lt;&#x2F;code&gt;: This argument represents the final, merged package set after all
+overlays have been applied. It&#x27;s often unused within a single overlay, hence
+the &lt;code&gt;_&lt;&#x2F;code&gt; prefix (a Nix convention for unused variables).&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;prev&lt;&#x2F;code&gt;: This is the crucial argument. It represents the package set before
 this overlay is applied. This allows you to refer to existing packages and
-functions from Nixpkgs.</p>
-</li>
-</ul>
-<ol start="2">
-<li>
-<p><code>let ... in packages</code>: This introduces a <code>let</code> expression, which defines
-local variables within the scope of this overlay function. The <code>in packages</code>
-part means that the overlay function will ultimately return the <code>packages</code>
-attribute set defined within the <code>let</code> block.</p>
-</li>
-<li>
-<p><code>callPackage = prev.lib.callPackageWith (prev // packages)</code>: This line
-defines a helper function called <code>callPackage</code>.</p>
-</li>
-</ol>
-<ul>
-<li>
-<p><code>prev.lib.callPackageWith</code> Is a function provided by Nixpkgs' <code>lib</code>.
-<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing
-of additional arguments that will then be passed to the package definition.</p>
-</li>
-<li>
-<p><code>(prev // packages)</code>: This is an attribute set merge operation. It takes the
-<code>prev</code> package set (Nixpkgs before this overlay) and merges it with the
-<code>packages</code> attribute set defined later in this overlay.</p>
-</li>
-<li>
-<p>By using <code>callPackageWith</code> with this merged attribute set, the <code>callPackage</code>
+functions from Nixpkgs.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;let ... in packages&lt;&#x2F;code&gt;: This introduces a &lt;code&gt;let&lt;&#x2F;code&gt; expression, which defines
+local variables within the scope of this overlay function. The &lt;code&gt;in packages&lt;&#x2F;code&gt;
+part means that the overlay function will ultimately return the &lt;code&gt;packages&lt;&#x2F;code&gt;
+attribute set defined within the &lt;code&gt;let&lt;&#x2F;code&gt; block.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;callPackage = prev.lib.callPackageWith (prev &#x2F;&#x2F; packages)&lt;&#x2F;code&gt;: This line
+defines a helper function called &lt;code&gt;callPackage&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;prev.lib.callPackageWith&lt;&#x2F;code&gt; Is a function provided by Nixpkgs&#x27; &lt;code&gt;lib&lt;&#x2F;code&gt;.
+&lt;code&gt;callPackageWith&lt;&#x2F;code&gt; is like &lt;code&gt;prev.lib.callPackage&lt;&#x2F;code&gt;, but allows the passing
+of additional arguments that will then be passed to the package definition.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;(prev &#x2F;&#x2F; packages)&lt;&#x2F;code&gt;: This is an attribute set merge operation. It takes the
+&lt;code&gt;prev&lt;&#x2F;code&gt; package set (Nixpkgs before this overlay) and merges it with the
+&lt;code&gt;packages&lt;&#x2F;code&gt; attribute set defined later in this overlay.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;By using &lt;code&gt;callPackageWith&lt;&#x2F;code&gt; with this merged attribute set, the &lt;code&gt;callPackage&lt;&#x2F;code&gt;
 function defined here is set up to correctly import package definitions,
 ensuring they have access to both the original Nixpkgs and any other packages
-defined within this overlay.</p>
-</li>
-</ul>
-<ol start="4">
-<li>
-<p><code>packages = { ... };</code>: This defines an attribute set named <code>packages</code>. This
-set will contain all the new or modified packages introduced by this overlay.</p>
-</li>
-<li>
-<p><code>pokego = callPackages ./pac_defs/pokego.nix { };</code>: This is the core of how
-the <code>pokego</code> package is added.</p>
-</li>
-</ol>
-<ul>
-<li>
-<p><code>pokego =</code>: This defines a new attribute named <code>pokego</code> within the packages
-attribute set. This name will be used to refer to the pokego package later.</p>
-</li>
-<li>
-<p><code>callPackage ./pac_defs/pokego.nix {}</code>: This calls the callPackage helper
-function defined earlier.</p>
-</li>
-<li>
-<p><code>./pac_defs/pokego.nix</code>: This is the path to another Nix file(<code>pokego.nix</code>)
+defined within this overlay.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;packages = { ... };&lt;&#x2F;code&gt;: This defines an attribute set named &lt;code&gt;packages&lt;&#x2F;code&gt;. This
+set will contain all the new or modified packages introduced by this overlay.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;pokego = callPackages .&#x2F;pac_defs&#x2F;pokego.nix { };&lt;&#x2F;code&gt;: This is the core of how
+the &lt;code&gt;pokego&lt;&#x2F;code&gt; package is added.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;pokego =&lt;&#x2F;code&gt;: This defines a new attribute named &lt;code&gt;pokego&lt;&#x2F;code&gt; within the packages
+attribute set. This name will be used to refer to the pokego package later.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;callPackage .&#x2F;pac_defs&#x2F;pokego.nix {}&lt;&#x2F;code&gt;: This calls the callPackage helper
+function defined earlier.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;.&#x2F;pac_defs&#x2F;pokego.nix&lt;&#x2F;code&gt;: This is the path to another Nix file(&lt;code&gt;pokego.nix&lt;&#x2F;code&gt;)
 that contains the actual package definition for pokego. This file would
-define how to fetch, build, and install the pokego software</p>
-</li>
-<li>
-<p><code>{}</code>: This is an empty attribute set passed as additional arguments to the
-<code>pokego.nix</code> package definition. If <code>pokego.nix</code> expected any specific
+define how to fetch, build, and install the pokego software&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;{}&lt;&#x2F;code&gt;: This is an empty attribute set passed as additional arguments to the
+&lt;code&gt;pokego.nix&lt;&#x2F;code&gt; package definition. If &lt;code&gt;pokego.nix&lt;&#x2F;code&gt; expected any specific
 parameters (like versions or dependencies), you would provide them here.
-Since it's empty, it implies pokego.nix either has no required arguments or
-uses default values.</p>
-</li>
-</ul>
-<ol start="6">
-<li><code>in packages</code>: As mentioned earlier, the overlay function returns the
+Since it&#x27;s empty, it implies pokego.nix either has no required arguments or
+uses default values.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;&lt;code&gt;in packages&lt;&#x2F;code&gt;: As mentioned earlier, the overlay function returns the
 packages attribute set. When this overlay is applied, the packages defined
 within this packages set (including pokego) will be added to the overall Nix
-package set.</li>
-</ol>
-<h2 id="the-pokego-package-definition">The pokego Package definition</h2>
-<p>The following is the <code>./pac_defs/pokego.nix</code>, it may be helpful to first read my
-<a href="https://saylesss88.github.io/blog/understanding-package-definitions/">PackageDefinition</a>
-post to better understand the following:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># pokego.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">buildGoModule</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">fetchFromGitHub</span><span style="color:#f29e74;">,
-</span><span>}:
-</span><span style="color:#ffcc66;">buildGoModule </span><span style="color:#ffa759;">rec </span><span>{
-</span><span>  </span><span style="color:#ffd580;">pname </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;pokego&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">version </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;0.3.0&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">src </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">fetchFromGitHub </span><span>{
-</span><span>    </span><span style="color:#ffd580;">owner </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;rubiin&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">repo </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;pokego&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">rev </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;v</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">version</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">hash </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;sha256-cFpEi8wBdCzAl9dputoCwy8LeGyK3UF2vyylft7/1wY=&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">vendorHash </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;sha256-7SoKHH+tDJKhUQDoVwAzVZXoPuKNJEHDEyQ77BPEDQ0=&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Install shell completions
-</span><span>  </span><span style="color:#ffd580;">postInstall </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&#39;&#39;
-</span><span style="color:#bae67e;">    install -Dm644 completions/pokego.bash &quot;$out/share/bash-completion/completions/pokego&quot;
-</span><span style="color:#bae67e;">    install -Dm644 completions/pokego.fish &quot;$out/share/fish/vendor_completions.d/pokego.fish&quot;
-</span><span style="color:#bae67e;">    install -Dm644 completions/pokego.zsh &quot;$out/share/zsh/site-functions/_pokego&quot;
-</span><span style="color:#bae67e;">  &#39;&#39;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">meta </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">lib</span><span>; {
-</span><span>    </span><span style="color:#ffd580;">description </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;Command-line tool that lets you display Pokémon sprites in color directly in your terminal&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">homepage </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;https://github.com/rubiin/pokego&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">license </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">licenses</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gpl3Only</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">maintainers </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">maintainers</span><span>; [
-</span><span>      </span><span style="color:#ffcc66;">rubiin
-</span><span>      </span><span style="color:#ffcc66;">jameskim0987
-</span><span>      </span><span style="color:#ffcc66;">vinibispo
-</span><span>    ]</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">mainProgram </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;pokego&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">platforms </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">platforms</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">all</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<h2 id="adding-the-overlay-to-your-configuration">Adding the overlay to your configuration</h2>
-<p>There are a few places you could choose to put the following, I choose to use
-my <code>configuration.nix</code> because of my setup:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
-</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays </span><span style="color:#ff3333;">= </span><span>[</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span>]
-</span></code></pre>
-<h2 id="installing-pokego">Installing Pokego</h2>
-<ul>
-<li>If you are managing your entire system configuration with NixOS, you would
-typically add <code>pokego</code> to your <code>environment.systemPackages</code>.</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
-</span><span style="color:#ffcc66;">environment</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">systemPackages </span><span style="color:#ff3333;">= with </span><span style="color:#ffcc66;">pkgs</span><span style="color:#ff3333;">; </span><span>[
-</span><span>  </span><span style="color:#ffcc66;">pokego
-</span><span>]
-</span></code></pre>
-<ul>
-<li>If you prefer home-manager you can install <code>pokego</code> with home-manager also:</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># home.nix
-</span><span style="color:#ffcc66;">home</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">packages </span><span style="color:#ff3333;">= </span><span>[
-</span><span>  </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">pokego
-</span><span>]
-</span></code></pre>
-<h3 id="another-overlay-example">Another Overlay Example</h3>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
-</span><span>  </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;https://flakehub.com/NixOS/nixpkgs/*.tar.gz&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffd580;">nix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nix </span><span>}:
-</span><span>
-</span><span>    </span><span style="color:#ffa759;">let
-</span><span>      </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;aarch64-darwin&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>        </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[
-</span><span>          </span><span style="color:#ffcc66;">nix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default
-</span><span>        ]</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffa759;">in
-</span><span>    {
-</span><span>     </span><span style="font-style:italic;color:#5c6773;"># `pkgs` is nixpkgs for the system, with nix&#39;s overlay applied
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>Normally, <code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments: </code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}<code>.  This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin` system, with the overlay from the nix flake applied.</p>
-</li>
-<li>
-<p>Consequently, any packages built using this customized <code>pkgs</code> will now depend
+package set.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;the-pokego-package-definition&quot;&gt;The pokego Package definition&lt;&#x2F;h2&gt;
+&lt;p&gt;The following is the &lt;code&gt;.&#x2F;pac_defs&#x2F;pokego.nix&lt;&#x2F;code&gt;, it may be helpful to first read my
+&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;understanding-package-definitions&#x2F;&quot;&gt;PackageDefinition&lt;&#x2F;a&gt;
+post to better understand the following:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# pokego.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;buildGoModule&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchFromGitHub&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;buildGoModule &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;rec &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pname &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;pokego&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;version &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;0.3.0&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;src &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchFromGitHub &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;owner &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;rubiin&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;repo &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;pokego&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;rev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;v&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;version&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;hash &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;sha256-cFpEi8wBdCzAl9dputoCwy8LeGyK3UF2vyylft7&#x2F;1wY=&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;vendorHash &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;sha256-7SoKHH+tDJKhUQDoVwAzVZXoPuKNJEHDEyQ77BPEDQ0=&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Install shell completions
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;postInstall &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;#39;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;    install -Dm644 completions&#x2F;pokego.bash &amp;quot;$out&#x2F;share&#x2F;bash-completion&#x2F;completions&#x2F;pokego&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;    install -Dm644 completions&#x2F;pokego.fish &amp;quot;$out&#x2F;share&#x2F;fish&#x2F;vendor_completions.d&#x2F;pokego.fish&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;    install -Dm644 completions&#x2F;pokego.zsh &amp;quot;$out&#x2F;share&#x2F;zsh&#x2F;site-functions&#x2F;_pokego&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;  &amp;#39;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;meta &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span&gt;; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;description &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Command-line tool that lets you display Pokémon sprites in color directly in your terminal&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;homepage &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;github.com&#x2F;rubiin&#x2F;pokego&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;license &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;licenses&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gpl3Only&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;maintainers &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;maintainers&lt;&#x2F;span&gt;&lt;span&gt;; [
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;rubiin
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;jameskim0987
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vinibispo
+&lt;&#x2F;span&gt;&lt;span&gt;    ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;mainProgram &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;pokego&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;platforms &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;platforms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;all&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;adding-the-overlay-to-your-configuration&quot;&gt;Adding the overlay to your configuration&lt;&#x2F;h2&gt;
+&lt;p&gt;There are a few places you could choose to put the following, I choose to use
+my &lt;code&gt;configuration.nix&lt;&#x2F;code&gt; because of my setup:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# configuration.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;overlays&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;installing-pokego&quot;&gt;Installing Pokego&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;If you are managing your entire system configuration with NixOS, you would
+typically add &lt;code&gt;pokego&lt;&#x2F;code&gt; to your &lt;code&gt;environment.systemPackages&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# configuration.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;environment&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;systemPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pokego
+&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;If you prefer home-manager you can install &lt;code&gt;pokego&lt;&#x2F;code&gt; with home-manager also:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# home.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pokego
+&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;another-overlay-example&quot;&gt;Another Overlay Example&lt;&#x2F;h3&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;flakehub.com&#x2F;NixOS&#x2F;nixpkgs&#x2F;*.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;flakehub.com&#x2F;f&#x2F;NixOS&#x2F;nix&#x2F;2.17.0.tar.gz&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;outputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix &lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;aarch64-darwin&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;overlays&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;default
+&lt;&#x2F;span&gt;&lt;span&gt;        ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span&gt;    {
+&lt;&#x2F;span&gt;&lt;span&gt;     &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# `pkgs` is nixpkgs for the system, with nix&amp;#39;s overlay applied
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Normally, &lt;code&gt;pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments: &lt;&#x2F;code&gt;pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}&lt;code&gt;.  This makes the pkgs variable represent nixpkgs specifically for the &lt;&#x2F;code&gt;aarch64-darwin` system, with the overlay from the nix flake applied.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Consequently, any packages built using this customized &lt;code&gt;pkgs&lt;&#x2F;code&gt; will now depend
 on or use the specific nix version (2.17.0) provided by the nix flake, instead
 of the version that comes with the fetched nixpkgs. This technique can be
 useful for ensuring a consistent environment or testing specific package
-versions.</p>
-</li>
-</ul>
-</div>
+versions.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
 
-  
-</article>
 
     </div>
 

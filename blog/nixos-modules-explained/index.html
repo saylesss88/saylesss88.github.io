@@ -31,441 +31,424 @@
       </div>
 
       
-<article class="post">
-  <header class="post-header">
-    
-    <time datetime="2025-05-09"
-      >Published on:
-      <span class="accent-data">2025-05-09</span>
-    </time>
-     
-
-    <h1>NixOS Modules Explained</h1>
-  </header>
-
-  
-
-  <div class="post-content"><h1 id="nixos-modules">NixOS Modules</h1>
-<img src="/images/gruv3.png" alt="Cyber" width="700">
-<p>TL;DR: In this post I break down the NixOS module system and explain how to
-define options. As well as how to test modules with the repl.</p>
-<ul>
-<li>Most modules are functions that take an attribute set and return an attribute
-set.</li>
-</ul>
-<p><strong>Refresher</strong>:</p>
-<ul>
-<li>An <strong>attribute set</strong> is a collection of name-value pairs wrapped in curly
-braces:</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
-</span><span>  </span><span style="color:#ffd580;">string </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hello&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">int </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">3</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>A <strong>function</strong> with an attribute set argument:</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#ffcc66;">a</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">b </span><span>}: </span><span style="color:#ffcc66;">a </span><span style="color:#f29e74;">+ </span><span style="color:#ffcc66;">b
-</span></code></pre>
-<ul>
-<li>The simplest possible <strong>NixOS Module</strong>:</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{ </span><span style="color:#f29e74;">... </span><span>}:
-</span><span>{
-</span><span style="color:#ff3333;">}
-</span></code></pre>
-<p>NixOS produces a full system configuration by combining smaller, more isolated
-and reusable components: <strong>Modules</strong>. In my opinion modules are one of the
-first things you should understand when learning about NixOS.</p>
-<ul>
-<li>
-<p>A NixOS module defines configuration options and behaviors for system
+  &lt;h1 id=&quot;nixos-modules&quot;&gt;NixOS Modules&lt;&#x2F;h1&gt;
+&lt;img src=&quot;&#x2F;images&#x2F;gruv3.png&quot; alt=&quot;Cyber&quot; width=&quot;700&quot;&gt;
+&lt;p&gt;TL;DR: In this post I break down the NixOS module system and explain how to
+define options. As well as how to test modules with the repl.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Most modules are functions that take an attribute set and return an attribute
+set.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;&lt;strong&gt;Refresher&lt;&#x2F;strong&gt;:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;An &lt;strong&gt;attribute set&lt;&#x2F;strong&gt; is a collection of name-value pairs wrapped in curly
+braces:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;string &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hello&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;int &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;A &lt;strong&gt;function&lt;&#x2F;strong&gt; with an attribute set argument:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;a&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;b &lt;&#x2F;span&gt;&lt;span&gt;}: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;a &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;b
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;The simplest possible &lt;strong&gt;NixOS Module&lt;&#x2F;strong&gt;:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;... &lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;NixOS produces a full system configuration by combining smaller, more isolated
+and reusable components: &lt;strong&gt;Modules&lt;&#x2F;strong&gt;. In my opinion modules are one of the
+first things you should understand when learning about NixOS.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;A NixOS module defines configuration options and behaviors for system
 components, allowing users to extend, customize, and compose configurations
-declaratively.</p>
-</li>
-<li>
-<p>A <strong>module</strong> is a file containing a Nix expression with a specific structure.
-It <em>declares</em> options for other modules to define (give a value). Modules were
-introduced to allow extending NixOS without modifying its source code.</p>
-</li>
-<li>
-<p>To define any values, the module system first has to know which ones are
+declaratively.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;A &lt;strong&gt;module&lt;&#x2F;strong&gt; is a file containing a Nix expression with a specific structure.
+It &lt;em&gt;declares&lt;&#x2F;em&gt; options for other modules to define (give a value). Modules were
+introduced to allow extending NixOS without modifying its source code.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;To define any values, the module system first has to know which ones are
 allowed. This is done by declaring options that specify which attributes can
-be set and used elsewhere.</p>
-</li>
-<li>
-<p>If you want to write your own modules, I recommend setting up
-<a href="https://github.com/nix-community/nixd?tab=readme-ov-file">nixd</a>
-or <a href="https://github.com/oxalica/nil">nil</a> with your editor of choice.
+be set and used elsewhere.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;If you want to write your own modules, I recommend setting up
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nix-community&#x2F;nixd?tab=readme-ov-file&quot;&gt;nixd&lt;&#x2F;a&gt;
+or &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;oxalica&#x2F;nil&quot;&gt;nil&lt;&#x2F;a&gt; with your editor of choice.
 This will allow your editor to warn you about missing arguments and
-dependencies as well as syntax errors.</p>
-</li>
-</ul>
-<h2 id="declaring-options">Declaring Options</h2>
-<p>The following is <code>nixpkgs/nixos/modules/programs/vim.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
-</span><span>  </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#f29e74;">...
-</span><span>}:
-</span><span>
-</span><span style="color:#ffa759;">let
-</span><span>  </span><span style="color:#ffd580;">cfg </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">programs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">vim</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in
-</span><span>{
-</span><span>  </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">programs</span><span>.</span><span style="color:#ffd580;">vim </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;Vi IMproved, an advanced text&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffd580;">defaultEditor </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;vim as the default editor&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffd580;">package </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkPackageOption pkgs </span><span style="color:#bae67e;">&quot;vim&quot; </span><span>{ </span><span style="color:#ffd580;">example </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;vim-full&quot;</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># </span><span style="font-weight:bold;color:#f28779;">TODO</span><span style="font-style:italic;color:#5c6773;">: convert it into assert after 24.11 release
-</span><span>  </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf </span><span>(</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span style="color:#f29e74;">|| </span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor</span><span>) {
-</span><span>    </span><span style="color:#ffd580;">warnings </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf </span><span>(</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor </span><span style="color:#f29e74;">&amp;&amp; !</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable</span><span>) [
-</span><span>      </span><span style="color:#bae67e;">&quot;programs.vim.defaultEditor will only work if programs.vim.enable is enabled, which will be enforced after the 24.11 release&quot;
-</span><span>    ]</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">environment </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">package </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">variables</span><span>.</span><span style="color:#ffd580;">EDITOR </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor </span><span>(</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOverride 900 </span><span style="color:#bae67e;">&quot;vim&quot;</span><span>)</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">pathsToLink </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#bae67e;">&quot;/share/vim-plugins&quot; </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>It provides options to enable Vim, set it as the default editor, and specify
-the Vim package to use.</li>
-</ul>
-<ol>
-<li>Module Inputs and Structure:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
-</span><span>  </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#f29e74;">...
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>Inputs: The module takes the above inputs and <code>...</code> (catch-all for other args)</p>
-<ul>
-<li>
-<p><code>config</code>: Allows the module to read option values (e.g.
-<code>config.programs.vim.enable</code>). It provides access to the evaluated
-configuration.</p>
-</li>
-<li>
-<p><code>lib</code>: The Nixpkgs library, giving us helper functions like <code>mkEnableOption</code>
-, <code>mkIf</code>, and <code>mkOverride</code>.</p>
-</li>
-<li>
-<p><code>pkgs</code>: The Nixpkgs package set, used to access packages like <code>pkgs.vim</code></p>
-</li>
-<li>
-<p><code>...</code>: Allows the module to accept additional arguments, making it flexible
-for extension in the future.</p>
-</li>
-</ul>
-</li>
-</ul>
-<blockquote>
-<p>Key Takeaways: A NixOS module is typically a function that can include
-<code>config</code>, <code>lib</code>, and <code>pkgs</code>, but it doesn’t require them. The <code>...</code>
+dependencies as well as syntax errors.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;declaring-options&quot;&gt;Declaring Options&lt;&#x2F;h2&gt;
+&lt;p&gt;The following is &lt;code&gt;nixpkgs&#x2F;nixos&#x2F;modules&#x2F;programs&#x2F;vim.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;cfg &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vim&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;options&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;vim &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkEnableOption &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Vi IMproved, an advanced text&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;defaultEditor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkEnableOption &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim as the default editor&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;package &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkPackageOption pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim&amp;quot; &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;example &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim-full&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# &lt;&#x2F;span&gt;&lt;span style=&quot;font-weight:bold;color:#f28779;&quot;&gt;TODO&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;: convert it into assert after 24.11 release
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;|| &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultEditor&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;warnings &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultEditor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;amp;&amp;amp; !&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable&lt;&#x2F;span&gt;&lt;span&gt;) [
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;programs.vim.defaultEditor will only work if programs.vim.enable is enabled, which will be enforced after the 24.11 release&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;environment &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;systemPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;package &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;variables&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;EDITOR &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultEditor &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkOverride 900 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pathsToLink &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;share&#x2F;vim-plugins&amp;quot; &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;It provides options to enable Vim, set it as the default editor, and specify
+the Vim package to use.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol&gt;
+&lt;li&gt;Module Inputs and Structure:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Inputs: The module takes the above inputs and &lt;code&gt;...&lt;&#x2F;code&gt; (catch-all for other args)&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;config&lt;&#x2F;code&gt;: Allows the module to read option values (e.g.
+&lt;code&gt;config.programs.vim.enable&lt;&#x2F;code&gt;). It provides access to the evaluated
+configuration.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;lib&lt;&#x2F;code&gt;: The Nixpkgs library, giving us helper functions like &lt;code&gt;mkEnableOption&lt;&#x2F;code&gt;
+, &lt;code&gt;mkIf&lt;&#x2F;code&gt;, and &lt;code&gt;mkOverride&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;pkgs&lt;&#x2F;code&gt;: The Nixpkgs package set, used to access packages like &lt;code&gt;pkgs.vim&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;...&lt;&#x2F;code&gt;: Allows the module to accept additional arguments, making it flexible
+for extension in the future.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Key Takeaways: A NixOS module is typically a function that can include
+&lt;code&gt;config&lt;&#x2F;code&gt;, &lt;code&gt;lib&lt;&#x2F;code&gt;, and &lt;code&gt;pkgs&lt;&#x2F;code&gt;, but it doesn’t require them. The &lt;code&gt;...&lt;&#x2F;code&gt;
 argument ensures flexibility, allowing a module to accept extra inputs
-without breaking future compatibility. Using <code>lib</code> simplifies handling
+without breaking future compatibility. Using &lt;code&gt;lib&lt;&#x2F;code&gt; simplifies handling
 options (mkEnableOption, mkIf, mkOverride) and helps follow best practices.
 Modules define options, which users can set in their configuration, and
-<code>config</code>, which applies changes based on those options.</p>
-</blockquote>
-<ol start="2">
-<li>Local Configuration Reference:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffa759;">let
-</span><span>  </span><span style="color:#ffd580;">cfg </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">programs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">vim</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in
-</span></code></pre>
-<ul>
-<li>This is a local alias. Instead of typing <code>config.programs.vim</code> over and over,
-the module uses <code>cfg</code>.</li>
-</ul>
-<ol start="3">
-<li>Option Declaration</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">options</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">programs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">vim </span><span style="color:#ff3333;">= </span><span>{
-</span><span>  </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;Vi IMproved, an advanced text&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">defaultEditor </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;vim as the default editor&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">package </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkPackageOption pkgs </span><span style="color:#bae67e;">&quot;vim&quot; </span><span>{ </span><span style="color:#ffd580;">example </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;vim-full&quot;</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ff3333;">;
-</span></code></pre>
-<p>This defines three user-configurable options:</p>
-<ul>
-<li>
-<p><code>enable</code>: Turns on Vim support system-wide.</p>
-</li>
-<li>
-<p><code>defaultEditor</code>: Sets Vim as the system's default <code>$EDITOR</code>.</p>
-</li>
-<li>
-<p><code>package</code>: lets the user override which Vim package is used.</p>
-</li>
-</ul>
-<blockquote>
-<p><code>mkPackageOption</code> is a helper that defines a package-typed option with a
-default (<code>pkgs.vim</code>) and provides docs + example.</p>
-</blockquote>
-<ol start="4">
-<li>Conditional Configuration</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">config </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf </span><span>(</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span style="color:#f29e74;">|| </span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor</span><span>) {
-</span></code></pre>
-<ul>
-<li>This block is only activated if <em>either</em> <code>programs.vim.enable</code> or
-<code>defaultEditor</code> is set.</li>
-</ul>
-<ol start="5">
-<li>Warnings</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">warnings </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf </span><span>(</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor </span><span style="color:#f29e74;">&amp;&amp; !</span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable</span><span>) [
-</span><span>  </span><span style="color:#bae67e;">&quot;programs.vim.defaultEditor will only work if programs.vim.enable is enabled, which will be enforced after the 24.11 release&quot;
-</span><span>]</span><span style="color:#ff3333;">;
-</span></code></pre>
-<ul>
-<li>Gives you a soft warning if you try to set <code>defaultEditor = true</code> without
-also enabling Vim.</li>
-</ul>
-<ol start="6">
-<li>Actual System Config Changes</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">environment </span><span style="color:#ff3333;">= </span><span>{
-</span><span>  </span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">package </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">variables</span><span>.</span><span style="color:#ffd580;">EDITOR </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">defaultEditor </span><span>(</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOverride 900 </span><span style="color:#bae67e;">&quot;vim&quot;</span><span>)</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">pathsToLink </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#bae67e;">&quot;/share/vim-plugins&quot; </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ff3333;">;
-</span></code></pre>
-<ul>
-<li>It adds Vim to your <code>systemPackages</code>, sets <code>$EDITOR</code> if <code>defaultEditor</code> is
-true, and makes <code>/share/vim-plugins</code> available in the environment.</li>
-</ul>
-<p>The following is a bat home-manager module that I wrote:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># bat.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#f29e74;">...
-</span><span>}: </span><span style="color:#ffa759;">let
-</span><span>  </span><span style="color:#ffd580;">cfg </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">custom</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">batModule</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in </span><span>{
-</span><span>  </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">custom</span><span>.</span><span style="color:#ffd580;">batModule</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
-</span><span>    </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">bool</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">description </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;Enable bat module&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf cfg</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>{
-</span><span>    </span><span style="color:#ffd580;">programs</span><span>.</span><span style="color:#ffd580;">bat </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">themes </span><span style="color:#f29e74;">= </span><span>{
-</span><span>        </span><span style="color:#ffd580;">dracula </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">src </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">fetchFromGitHub </span><span>{
-</span><span>            </span><span style="color:#ffd580;">owner </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;dracula&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">repo </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;sublime&quot;</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># Bat uses sublime syntax for its themes
-</span><span>            </span><span style="color:#ffd580;">rev </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;26c57ec282abcaa76e57e055f38432bd827ac34e&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">sha256 </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;019hfl4zbn4vm4154hh3bwk6hm7bdxbr1hdww83nabxwjn99ndhv&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>          }</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">file </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;Dracula.tmTheme&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">extraPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">bat-extras</span><span>; [
-</span><span>        </span><span style="color:#ffcc66;">batdiff
-</span><span>        </span><span style="color:#ffcc66;">batman
-</span><span>        </span><span style="color:#ffcc66;">prettybat
-</span><span>        </span><span style="color:#ffcc66;">batgrep
-</span><span>      ]</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<p>Now I could add this to my <code>home.nix</code> to enable it:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># home.nix
-</span><span style="color:#ffcc66;">custom </span><span style="color:#ff3333;">= </span><span>{
-</span><span>  </span><span style="color:#ffd580;">batModule</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>If I set this option to true the bat configuration is dropped in place. If
-it's not set to true, it won't put the bat configuration in the system. Same
-as with options defined in modules within the Nixpkgs repository.</p>
-</li>
-<li>
-<p>If I had set the default to <code>true</code>, it would automatically enable the module
-without requiring an explicit <code>custom.batModule.enable = true;</code> call in my
-<code>home.nix</code>.</p>
-</li>
-</ul>
-<h3 id="module-composition">Module Composition</h3>
-<ul>
-<li>
-<p>NixOS achieves its full system configuration by combining the configurations
+&lt;code&gt;config&lt;&#x2F;code&gt;, which applies changes based on those options.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Local Configuration Reference:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;cfg &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vim&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This is a local alias. Instead of typing &lt;code&gt;config.programs.vim&lt;&#x2F;code&gt; over and over,
+the module uses &lt;code&gt;cfg&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Option Declaration&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;options&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vim &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkEnableOption &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Vi IMproved, an advanced text&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;defaultEditor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkEnableOption &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim as the default editor&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;package &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkPackageOption pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim&amp;quot; &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;example &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim-full&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This defines three user-configurable options:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;enable&lt;&#x2F;code&gt;: Turns on Vim support system-wide.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;defaultEditor&lt;&#x2F;code&gt;: Sets Vim as the system&#x27;s default &lt;code&gt;$EDITOR&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;package&lt;&#x2F;code&gt;: lets the user override which Vim package is used.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;mkPackageOption&lt;&#x2F;code&gt; is a helper that defines a package-typed option with a
+default (&lt;code&gt;pkgs.vim&lt;&#x2F;code&gt;) and provides docs + example.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Conditional Configuration&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;|| &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultEditor&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This block is only activated if &lt;em&gt;either&lt;&#x2F;em&gt; &lt;code&gt;programs.vim.enable&lt;&#x2F;code&gt; or
+&lt;code&gt;defaultEditor&lt;&#x2F;code&gt; is set.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Warnings&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;warnings &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultEditor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;amp;&amp;amp; !&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable&lt;&#x2F;span&gt;&lt;span&gt;) [
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;programs.vim.defaultEditor will only work if programs.vim.enable is enabled, which will be enforced after the 24.11 release&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Gives you a soft warning if you try to set &lt;code&gt;defaultEditor = true&lt;&#x2F;code&gt; without
+also enabling Vim.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;Actual System Config Changes&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;environment &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;systemPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;package &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;variables&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;EDITOR &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultEditor &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkOverride 900 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;vim&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pathsToLink &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;share&#x2F;vim-plugins&amp;quot; &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;It adds Vim to your &lt;code&gt;systemPackages&lt;&#x2F;code&gt;, sets &lt;code&gt;$EDITOR&lt;&#x2F;code&gt; if &lt;code&gt;defaultEditor&lt;&#x2F;code&gt; is
+true, and makes &lt;code&gt;&#x2F;share&#x2F;vim-plugins&lt;&#x2F;code&gt; available in the environment.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The following is a bat home-manager module that I wrote:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# bat.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;}: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;cfg &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;custom&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;batModule&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;options&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;custom&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;batModule&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkOption &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;types&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;bool&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;false&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;description &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Enable bat module&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf cfg&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;bat &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;themes &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dracula &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;src &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;fetchFromGitHub &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;owner &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;dracula&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;repo &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;sublime&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Bat uses sublime syntax for its themes
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;rev &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;26c57ec282abcaa76e57e055f38432bd827ac34e&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;sha256 &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;019hfl4zbn4vm4154hh3bwk6hm7bdxbr1hdww83nabxwjn99ndhv&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;file &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Dracula.tmTheme&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;extraPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;bat-extras&lt;&#x2F;span&gt;&lt;span&gt;; [
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;batdiff
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;batman
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;prettybat
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;batgrep
+&lt;&#x2F;span&gt;&lt;span&gt;      ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Now I could add this to my &lt;code&gt;home.nix&lt;&#x2F;code&gt; to enable it:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# home.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;custom &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;batModule&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;If I set this option to true the bat configuration is dropped in place. If
+it&#x27;s not set to true, it won&#x27;t put the bat configuration in the system. Same
+as with options defined in modules within the Nixpkgs repository.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;If I had set the default to &lt;code&gt;true&lt;&#x2F;code&gt;, it would automatically enable the module
+without requiring an explicit &lt;code&gt;custom.batModule.enable = true;&lt;&#x2F;code&gt; call in my
+&lt;code&gt;home.nix&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;module-composition&quot;&gt;Module Composition&lt;&#x2F;h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;NixOS achieves its full system configuration by combining the configurations
 defined in various modules. This composition is primarily handled through the
-<code>imports</code> mechanism.</p>
-</li>
-<li>
-<p><code>imports</code>: This is a standard option within a NixOS or Home Manager
+&lt;code&gt;imports&lt;&#x2F;code&gt; mechanism.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;imports&lt;&#x2F;code&gt;: This is a standard option within a NixOS or Home Manager
 configuration (often found in your configuration.nix or home.nix). It takes
 a list of paths to other Nix modules. When you include a module in the imports
 list, the options and configurations defined in that module become part of
-your overall system configuration.</p>
-</li>
-<li>
-<p>You declaratively state the desired state of your system by setting options
+your overall system configuration.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;You declaratively state the desired state of your system by setting options
 across various modules. The NixOS build system then evaluates and merges these
 option settings. The culmination of this process, which includes building the
 entire system closure, is represented by the derivation built by
-<code>config.system.build.toplevel</code>.</p>
-</li>
-</ul>
-<h3 id="nixos-modules-and-dependency-locking-with-npins">NixOS Modules and Dependency Locking with npins</h3>
-<p>This is the file structure:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">❯</span><span> tree
-</span><span style="color:#f28779;">.
-</span><span style="color:#ffd580;">├──</span><span> configuration.nix
-</span><span style="color:#ffd580;">├──</span><span> default.nix
-</span><span style="color:#ffd580;">├──</span><span> desktop.nix
-</span><span style="color:#ffd580;">└──</span><span> npins
-</span><span>    </span><span style="color:#ffd580;">├──</span><span> default.nix
-</span><span>    </span><span style="color:#ffd580;">└──</span><span> sources.json
-</span></code></pre>
-<p>This uses <code>npins</code> for dependency locking. Install it and run this in the project</p>
-<p>directory:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">npins</span><span> init
-</span></code></pre>
-<p>Create a <code>default.nix</code> with the following:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
-</span><span>{ </span><span style="color:#ffcc66;">system </span><span style="color:#f29e74;">? </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">currentSystem</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">sources </span><span style="color:#f29e74;">? </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./npins</span><span style="color:#f29e74;">, </span><span>}:
-</span><span style="color:#ffa759;">let
-</span><span>  </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>    </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[ ]</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffa759;">inherit </span><span>(</span><span style="color:#ffcc66;">pkgs</span><span>) </span><span style="color:#ffd580;">lib</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">makeScope pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">newScope </span><span>(</span><span style="color:#ffcc66;">self</span><span>: {
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">shell </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkShell </span><span>{ </span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">npins self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">myPackage </span><span>]</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># inherit lib;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">nixosSystem </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span>(</span><span style="color:#ffcc66;">sources</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span style="color:#f29e74;">+ </span><span style="color:#bae67e;">&quot;/nixos&quot;</span><span>) {
-</span><span>    </span><span style="color:#ffd580;">configuration </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">./configuration.nix</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">moduleEvale </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">evalModules </span><span>{
-</span><span>    </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># ...
-</span><span>    ]</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>})
-</span></code></pre>
-<p>A <code>configuration.nix</code> with the following:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffd580;">boot</span><span>.</span><span style="color:#ffd580;">loader</span><span>.</span><span style="color:#ffd580;">grub</span><span>.</span><span style="color:#ffd580;">device </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;nodev&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">fileSystems</span><span>.</span><span style="color:#bae67e;">&quot;/&quot;</span><span>.</span><span style="color:#ffd580;">device </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;/devst&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;25.05&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># declaring options means to declare a new option
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># defining options means to define a value of an option
-</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># ./main.nix
-</span><span>     </span><span style="color:#bae67e;">./desktop.nix </span><span style="font-style:italic;color:#5c6773;"># Files
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># ./minimal.nix
-</span><span>  ]</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># mine.desktop.enable = true;
-</span><span>}
-</span></code></pre>
-<p>And a <code>desktop.nix</code> with the following:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># desktop.nix
-</span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, ... </span><span>}:
-</span><span>
-</span><span>{
-</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[]</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Define an option to enable or disable desktop configuration
-</span><span>  </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">mine</span><span>.</span><span style="color:#ffd580;">desktop</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkEnableOption </span><span style="color:#bae67e;">&quot;desktop settings&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Configuration that applies when the option is enabled
-</span><span>  </span><span style="color:#ffd580;">config </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkIf config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mine</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">desktop</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable </span><span>{
-</span><span>    </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">git </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can
-uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and
-vice-versa.</p>
-<p>You can test that this works by running:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix-instantiate</span><span style="color:#ffcc66;"> -A</span><span> nixosSystem.system
-</span></code></pre>
-<ul>
-<li><code>nix-instantiate</code> performs only the evaluation phase of Nix expressions.
+&lt;code&gt;config.system.build.toplevel&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;nixos-modules-and-dependency-locking-with-npins&quot;&gt;NixOS Modules and Dependency Locking with npins&lt;&#x2F;h3&gt;
+&lt;p&gt;This is the file structure:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;❯&lt;&#x2F;span&gt;&lt;span&gt; tree
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;.
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;├──&lt;&#x2F;span&gt;&lt;span&gt; configuration.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;├──&lt;&#x2F;span&gt;&lt;span&gt; default.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;├──&lt;&#x2F;span&gt;&lt;span&gt; desktop.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;└──&lt;&#x2F;span&gt;&lt;span&gt; npins
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;├──&lt;&#x2F;span&gt;&lt;span&gt; default.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;└──&lt;&#x2F;span&gt;&lt;span&gt; sources.json
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This uses &lt;code&gt;npins&lt;&#x2F;code&gt; for dependency locking. Install it and run this in the project&lt;&#x2F;p&gt;
+&lt;p&gt;directory:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;npins&lt;&#x2F;span&gt;&lt;span&gt; init
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Create a &lt;code&gt;default.nix&lt;&#x2F;code&gt; with the following:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# default.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;? &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;currentSystem&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;sources &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;? &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;npins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;sources&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;makeScope pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;newScope &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;shell &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkShell &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;npins self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;myPackage &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# inherit lib;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;sources&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;nixos&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;) {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;configuration &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;configuration.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;moduleEvale &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;evalModules &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# ...
+&lt;&#x2F;span&gt;&lt;span&gt;    ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;})
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;A &lt;code&gt;configuration.nix&lt;&#x2F;code&gt; with the following:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;boot&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;loader&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;grub&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;device &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;nodev&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;fileSystems&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;device &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;devst&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;stateVersion &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;25.05&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# declaring options means to declare a new option
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# defining options means to define a value of an option
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# .&#x2F;main.nix
+&lt;&#x2F;span&gt;&lt;span&gt;     &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;desktop.nix &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Files
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# .&#x2F;minimal.nix
+&lt;&#x2F;span&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# mine.desktop.enable = true;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And a &lt;code&gt;desktop.nix&lt;&#x2F;code&gt; with the following:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# desktop.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Define an option to enable or disable desktop configuration
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;options&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;mine&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;desktop&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkEnableOption &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;desktop settings&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Configuration that applies when the option is enabled
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkIf config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mine&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;desktop&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;environment&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;systemPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;git &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;mkEnableOption&lt;&#x2F;code&gt; defaults to false. Now in your &lt;code&gt;configuration.nix&lt;&#x2F;code&gt; you can
+uncomment &lt;code&gt;mine.desktop.enable = true;&lt;&#x2F;code&gt; to enable the desktop config and
+vice-versa.&lt;&#x2F;p&gt;
+&lt;p&gt;You can test that this works by running:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-instantiate&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; -A&lt;&#x2F;span&gt;&lt;span&gt; nixosSystem.system
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nix-instantiate&lt;&#x2F;code&gt; performs only the evaluation phase of Nix expressions.
 During this phase, Nix interprets the Nix code, resolves all dependencies, and
 constructs derivations but does not execute any build actions. Useful for
-testing.</li>
-</ul>
-<p>To check if this worked and <code>git</code> is installed in systemPackages you can
-load it into <code>nix repl</code> but first you'll want <code>lib</code> to be available so uncomment
-this in your <code>default.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
-</span><span style="color:#ff3333;">inherit </span><span style="color:#ffcc66;">lib</span><span style="color:#ff3333;">;
-</span></code></pre>
-<p>Rerun <code>nix-instantiate -A nixosSystem.system</code></p>
-<p>Then load the repl and check that <code>git</code> is in <code>systemPackages</code>:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> repl</span><span style="color:#ffcc66;"> -f</span><span> .
-</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> builtins.filter (pkg: lib.hasPrefix </span><span style="color:#bae67e;">&quot;git&quot;</span><span> pkg.name) </span><span style="color:#ffd580;">nixosSystem.config.environment.systemPackages
-</span></code></pre>
-<p>This shows the path to the derivation</p>
-<p>Check that mine.desktop.enable is true</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix-repl</span><span style="color:#f29e74;">&gt; </span><span style="color:#ffcc66;">nixosSystem</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mine</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">desktop</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">enable
-</span><span style="color:#ffcc66;">true
-</span></code></pre>
-<h3 id="resources-on-modules">Resources on Modules</h3>
-<ul>
-<li>
-<p><a href="https://nixos.org/manual/nixos/stable/#sec-writing-modules">WritingNixOsModules</a></p>
-</li>
-<li>
-<p><a href="https://nixos.wiki/wiki/NixOS_modules">NixWikiNixOSModules</a></p>
-</li>
-<li>
-<p><a href="https://nix.dev/tutorials/module-system/a-basic-module/index.html">nix.dev A basic module</a></p>
-</li>
-<li>
-<p><a href="https://nix.dev/tutorials/module-system/deep-dive#module-system-deep-dive">ModuleSystemDeepDive</a></p>
-</li>
-<li>
-<p><a href="https://xeiaso.net/talks/asg-2023-nixos/">MakingNixOSModulesForFun</a></p>
-</li>
-<li>
-<p><a href="https://xeiaso.net/talks/asg-2023-nixos/">xeiaso Nixos Modules for fun &amp; profit</a></p>
-</li>
-<li>
-<p><a href="https://nixos-and-flakes.thiscute.world/other-usage-of-flakes/module-system">NixOS Flakes Book Module System</a></p>
-</li>
-</ul>
-<h1 id="videos">Videos</h1>
-<p><a href="https://www.youtube.com/watch?v=N7hFP_40DJo&amp;t=17s">NixHour Writing NixOS modules</a> -- This example is from this video
-<a href="https://infinisil.com/modules.mp4">infinisilModules</a></p>
-<h1 id="tweagmodulesystemrecursion"><a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion</a></h1>
-</div>
+testing.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;To check if this worked and &lt;code&gt;git&lt;&#x2F;code&gt; is installed in systemPackages you can
+load it into &lt;code&gt;nix repl&lt;&#x2F;code&gt; but first you&#x27;ll want &lt;code&gt;lib&lt;&#x2F;code&gt; to be available so uncomment
+this in your &lt;code&gt;default.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# default.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Rerun &lt;code&gt;nix-instantiate -A nixosSystem.system&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Then load the repl and check that &lt;code&gt;git&lt;&#x2F;code&gt; is in &lt;code&gt;systemPackages&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; -f&lt;&#x2F;span&gt;&lt;span&gt; .
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; builtins.filter (pkg: lib.hasPrefix &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;git&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt; pkg.name) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosSystem.config.environment.systemPackages
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This shows the path to the derivation&lt;&#x2F;p&gt;
+&lt;p&gt;Check that mine.desktop.enable is true&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mine&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;desktop&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;enable
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;resources-on-modules&quot;&gt;Resources on Modules&lt;&#x2F;h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nixos.org&#x2F;manual&#x2F;nixos&#x2F;stable&#x2F;#sec-writing-modules&quot;&gt;WritingNixOsModules&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nixos.wiki&#x2F;wiki&#x2F;NixOS_modules&quot;&gt;NixWikiNixOSModules&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nix.dev&#x2F;tutorials&#x2F;module-system&#x2F;a-basic-module&#x2F;index.html&quot;&gt;nix.dev A basic module&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nix.dev&#x2F;tutorials&#x2F;module-system&#x2F;deep-dive#module-system-deep-dive&quot;&gt;ModuleSystemDeepDive&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;xeiaso.net&#x2F;talks&#x2F;asg-2023-nixos&#x2F;&quot;&gt;MakingNixOSModulesForFun&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;xeiaso.net&#x2F;talks&#x2F;asg-2023-nixos&#x2F;&quot;&gt;xeiaso Nixos Modules for fun &amp;amp; profit&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;nixos-and-flakes.thiscute.world&#x2F;other-usage-of-flakes&#x2F;module-system&quot;&gt;NixOS Flakes Book Module System&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;videos&quot;&gt;Videos&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=N7hFP_40DJo&amp;amp;t=17s&quot;&gt;NixHour Writing NixOS modules&lt;&#x2F;a&gt; -- This example is from this video
+&lt;a href=&quot;https:&#x2F;&#x2F;infinisil.com&#x2F;modules.mp4&quot;&gt;infinisilModules&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;tweagmodulesystemrecursion&quot;&gt;&lt;a href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=cZjOzOHb2ow&quot;&gt;tweagModuleSystemRecursion&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
 
-  
-</article>
 
     </div>
 

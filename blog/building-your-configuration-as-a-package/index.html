@@ -31,418 +31,401 @@
       </div>
 
       
-<article class="post">
-  <header class="post-header">
-    
-    <time datetime="2025-05-05"
-      >Published on:
-      <span class="accent-data">2025-05-05</span>
-    </time>
-     
-
-    <h1>Building your Configuration as a Package</h1>
-  </header>
-
-  
-
-  <div class="post-content"><h1 id="building-your-configuration-as-a-package">Building your configuration as a Package</h1>
-<p><strong>TOC</strong></p>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/building-your-configuration-as-a-package/#building-your-configuration-as-a-package">Building your configuration as a Package</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/building-your-configuration-as-a-package/#benefits-of-nixosconfiguration-as-a-package">Benefits of nixosConfiguration as a Package</a></li>
-<li><a href="https://saylesss88.github.io/blog/building-your-configuration-as-a-package/#usage-and-deployment">Usage and Deployment</a></li>
-<li><a href="https://saylesss88.github.io/blog/building-your-configuration-as-a-package/#adding-a-configuration-vm-output">Adding a Configuration VM Output</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/building-your-configuration-as-a-package/#debugging">Debugging</a></li>
-<li><a href="https://saylesss88.github.io/blog/building-your-configuration-as-a-package/#understanding-atomicity">Understanding Atomicity</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<img src="/images/gruv4.png" alt="Cyber" width="700">
+  &lt;h1 id=&quot;building-your-configuration-as-a-package&quot;&gt;Building your configuration as a Package&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;strong&gt;TOC&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;building-your-configuration-as-a-package&#x2F;#building-your-configuration-as-a-package&quot;&gt;Building your configuration as a Package&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;building-your-configuration-as-a-package&#x2F;#benefits-of-nixosconfiguration-as-a-package&quot;&gt;Benefits of nixosConfiguration as a Package&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;building-your-configuration-as-a-package&#x2F;#usage-and-deployment&quot;&gt;Usage and Deployment&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;building-your-configuration-as-a-package&#x2F;#adding-a-configuration-vm-output&quot;&gt;Adding a Configuration VM Output&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;building-your-configuration-as-a-package&#x2F;#debugging&quot;&gt;Debugging&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;building-your-configuration-as-a-package&#x2F;#understanding-atomicity&quot;&gt;Understanding Atomicity&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;img src=&quot;&#x2F;images&#x2F;gruv4.png&quot; alt=&quot;Cyber&quot; width=&quot;700&quot;&gt;
 - TL;DR This post demonstrates other ways to modularize your config as well as
   going into more advanced outputs.
-<ul>
-<li>This allows you to build your configuration as a package allowing you to
+&lt;ul&gt;
+&lt;li&gt;This allows you to build your configuration as a package allowing you to
 separate the process of creating a configuration artifact and applying it to
 the live system giving you a reusable artifact that can be used to deploy to
 different systems. This can make it easier to isolate it from other parts of
-your system making debugging easier.</li>
-</ul>
-<p>The following is a snip of my <code>flake.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span>  </span><span style="color:#ffcc66;">outputs </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">my-inputs</span><span> @ {
-</span><span>    </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#f29e74;">...
-</span><span style="color:#f29e74;">  </span><span>}: </span><span style="color:#ffa759;">let
-</span><span>    </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;magic&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;jr&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">gitUsername </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;TSawyer87&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">editor </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hx&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">term </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;ghostty&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">keys </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;us&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">browser </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;firefox&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">flake </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">builtins</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">getEnv </span><span style="color:#bae67e;">&quot;HOME&quot; </span><span style="color:#f29e74;">+ </span><span style="color:#bae67e;">&quot;/my-nixos&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">=
-</span><span>      </span><span style="color:#ffcc66;">my-inputs
-</span><span>      </span><span style="color:#f29e74;">// </span><span>{
-</span><span>        </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>          </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">lib </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./lib/overlay.nix</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">nixOsModules </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./nixos</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">homeModules </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./home</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffd580;">defaultConfig </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./hosts/magic </span><span>{
-</span><span>      </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="color:#ffa759;">in </span><span>{
-</span><span>      </span><span style="color:#ffd580;">packages</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span>{
-</span><span>        </span><span style="color:#ffd580;">nixos </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">defaultConfig</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">system</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">toplevel</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># NixOS configuration
-</span><span>    </span><span style="color:#ffd580;">nixosConfigurations</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
-</span><span>      </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">specialArgs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>        </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs system host userVars</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>        </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/configuration.nix
-</span><span>      ]</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ff3333;">;
-</span><span>    </span><span style="color:#ff3333;">}
-</span></code></pre>
-<ul>
-<li>
-<p>I didn't want to change the name of <code>inputs</code> and effect other areas of my
-config so I first renamed <code>@ inputs</code> to <code>@ my-inputs</code> to make the merged
-attribute set use the original <code>inputs</code> name.</p>
-</li>
-<li>
-<p>Note, I'm still using home-manager as a module I just had to move it for all
-modules to be available inside the artifact built with <code>nix build .#nixos</code></p>
-</li>
-</ul>
-<h2 id="benefits-of-nixosconfiguration-as-a-package">Benefits of nixosConfiguration as a Package</h2>
-<p><code>packages.x86_64-linux.nixos = self.nixosConfigurations.magic.config.system.build.toplevel;</code></p>
-<ul>
-<li>The above expression exposes the <code>toplevel</code> derivation of
-<code>nixosConfiguration.magic</code> as a package, which is the complete system closure
-of your NixOS configuration.</li>
-</ul>
-<p>Here is the <code>/hosts/magic/default.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
-</span><span>{</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">, ...</span><span>}:
-</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
-</span><span>  </span><span style="color:#ffa759;">inherit </span><span>(</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span>) </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">specialArgs </span><span style="color:#f29e74;">= </span><span>{</span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">;</span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[</span><span style="color:#bae67e;">./configuration.nix</span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>Because we want all modules, not just NixOS modules this requires changing
-your <code>configuration.nix</code> to include your home-manager configuration. The core
-reason for this is that the <code>packages.nixos</code> output builds a NixOS system, and
-home-manager needs to be a part of that system's definition to be included in
-the build.</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">host</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">system</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#f29e74;">...
-</span><span>}: {
-</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[
-</span><span>    </span><span style="color:#bae67e;">./hardware.nix
-</span><span>    </span><span style="color:#bae67e;">./security.nix
-</span><span>    </span><span style="color:#bae67e;">./users.nix
-</span><span>    </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixOsModules
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># inputs.nixos-hardware.nixosModules.common-gpu-amd
-</span><span>    </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixos-hardware</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">common-cpu-amd
-</span><span>    </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
-</span><span>    </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
-</span><span>  ]</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Home-Manager Configuration needs to be here for home.packages to be available in the Configuration Package and VM i.e. `nix build .#nixos`
-</span><span>  </span><span style="color:#ffd580;">home-manager </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">useGlobalPkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">useUserPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">extraSpecialArgs </span><span style="color:#f29e74;">= </span><span>{</span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">pkgs inputs host system userVars</span><span style="color:#ccc9c2cc;">;</span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">users</span><span>.</span><span style="color:#ffd580;">jr </span><span style="color:#f29e74;">= </span><span>{</span><span style="color:#f29e74;">...</span><span>}: {
-</span><span>      </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[
-</span><span>        </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">homeModules
-</span><span>        </span><span style="color:#bae67e;">./home.nix
-</span><span>      ]</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="font-style:italic;color:#5c6773;">############################################################################
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[</span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">overlays</span><span>]</span><span style="color:#ccc9c2cc;">;
-</span></code></pre>
-<blockquote>
-<p>[!NOTE]: <code>inputs.lib.nixOsModules</code> is equivalent to <code>../../home</code> in my case
-and imports all of my nixOS modules. This comes from the <code>flake.nix</code> where I
-have <code>nixOsModules = import ./nixos</code> Which looks for a <code>default.nix</code> in the
-<code>nixos</code> directory.</p>
-</blockquote>
-<p>My <code>~/my-nixos/nixos/default.nix</code> looks like this:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># default.nix
-</span><span>{</span><span style="color:#f29e74;">...</span><span>}: {
-</span><span>  </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[
-</span><span>    </span><span style="color:#bae67e;">./drivers
-</span><span>    </span><span style="color:#bae67e;">./boot.nix
-</span><span>    </span><span style="color:#bae67e;">./utils.nix
-</span><span>    </span><span style="font-style:italic;color:#5c6773;">#..snip..
-</span><span>  ]</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<h2 id="usage-and-deployment">Usage and Deployment</h2>
-<p>To build the package configuration run:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos
-</span><span style="color:#ffcc66;">sudo </span><span style="color:#bae67e;">./result/bin/switch-to-configuration </span><span style="color:#ffcc66;">switch
-</span></code></pre>
-<h2 id="adding-a-configuration-vm-output">Adding a Configuration VM Output</h2>
-<p>Building on what we already have, add this under <code>defaultConfig</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>    </span><span style="color:#ffcc66;">defaultConfig </span><span style="color:#ff3333;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./hosts/magic </span><span>{
-</span><span>      </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ff3333;">;
-</span><span>
-</span><span>    </span><span style="color:#ffcc66;">vmConfig </span><span style="color:#ff3333;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./lib/vms/nixos-vm.nix </span><span>{
-</span><span>      </span><span style="color:#ffd580;">nixosConfiguration </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">defaultConfig</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ff3333;">;
-</span></code></pre>
-<p>and under the line <code>nixos = defaultConfig.config.system.build.toplevel</code> add:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">packages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#ff3333;">= </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># build and deploy with `nix build .#nixos`
-</span><span>    </span><span style="color:#ffd580;">nixos </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">defaultConfig</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">system</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">toplevel</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Explicitly named Vm Configuration `nix build .#nixos-vm`
-</span><span>    </span><span style="color:#ffd580;">nixos-vm </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">vmConfig</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">system</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">vm</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<p>And in <code>lib/vms/nixos-vm.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># nixos-vm.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">nixosConfiguration</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#f29e74;">...
-</span><span>}:
-</span><span style="color:#ffcc66;">nixosConfiguration</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">extendModules </span><span>{
-</span><span>  </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>    (
-</span><span>      {</span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, ...</span><span>}: {
-</span><span>        </span><span style="color:#ffd580;">virtualisation</span><span>.</span><span style="color:#ffd580;">vmVariant </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">virtualisation</span><span>.</span><span style="color:#ffd580;">forwardPorts </span><span style="color:#f29e74;">= </span><span>[
-</span><span>            {
-</span><span>              </span><span style="color:#ffd580;">from </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;host&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>              </span><span style="color:#ffd580;">host</span><span>.</span><span style="color:#ffd580;">port </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">2222</span><span style="color:#ccc9c2cc;">;
-</span><span>              </span><span style="color:#ffd580;">guest</span><span>.</span><span style="color:#ffd580;">port </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">22</span><span style="color:#ccc9c2cc;">;
-</span><span>            }
-</span><span>          ]</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[
-</span><span>            </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixos-hardware</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">common-gpu-amd
-</span><span>            </span><span style="font-style:italic;color:#5c6773;"># hydenix-inputs.nixos-hardware.nixosModules.common-cpu-intel
-</span><span>          ]</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">virtualisation </span><span style="color:#f29e74;">= </span><span>{
-</span><span>            </span><span style="color:#ffd580;">memorySize </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">8192</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">cores </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">6</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">diskSize </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">20480</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">qemu </span><span style="color:#f29e74;">= </span><span>{
-</span><span>              </span><span style="color:#ffd580;">options </span><span style="color:#f29e74;">= </span><span>[
-</span><span>                </span><span style="color:#bae67e;">&quot;-device virtio-vga-gl&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-display gtk,gl=on,grab-on-hover=on&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-usb -device usb-tablet&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-cpu host&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-enable-kvm&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-machine q35,accel=kvm&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-device intel-iommu&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-device ich9-intel-hda&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-device hda-output&quot;
-</span><span>                </span><span style="color:#bae67e;">&quot;-vga none&quot;
-</span><span>              ]</span><span style="color:#ccc9c2cc;">;
-</span><span>            }</span><span style="color:#ccc9c2cc;">;
-</span><span>          }</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="font-style:italic;color:#5c6773;">#! you can set this to skip login for sddm
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># services.displayManager.autoLogin = {
-</span><span>          </span><span style="font-style:italic;color:#5c6773;">#   enable = true;
-</span><span>          </span><span style="font-style:italic;color:#5c6773;">#   user = &quot;jr&quot;;
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># };
-</span><span>          </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">xserver </span><span style="color:#f29e74;">= </span><span>{
-</span><span>            </span><span style="color:#ffd580;">videoDrivers </span><span style="color:#f29e74;">= </span><span>[
-</span><span>              </span><span style="color:#bae67e;">&quot;virtio&quot;
-</span><span>            ]</span><span style="color:#ccc9c2cc;">;
-</span><span>          }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>          </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;24.11&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>        </span><span style="font-style:italic;color:#5c6773;"># Enable SSH server
-</span><span>        </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">openssh </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">settings </span><span style="color:#f29e74;">= </span><span>{
-</span><span>            </span><span style="color:#ffd580;">PermitRootLogin </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;no&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">PasswordAuthentication </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>          }</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>        </span><span style="color:#ffd580;">virtualisation</span><span>.</span><span style="color:#ffd580;">libvirtd</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">pkgs</span><span>; [
-</span><span>          </span><span style="color:#ffcc66;">open-vm-tools
-</span><span>          </span><span style="color:#ffcc66;">spice-gtk
-</span><span>          </span><span style="color:#ffcc66;">spice-vdagent
-</span><span>          </span><span style="color:#ffcc66;">spice
-</span><span>        ]</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">qemuGuest</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">services</span><span>.</span><span style="color:#ffd580;">spice-vdagentd </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">hardware</span><span>.</span><span style="color:#ffd580;">graphics</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>        </span><span style="font-style:italic;color:#5c6773;"># Enable verbose logging for home-manager
-</span><span>        </span><span style="font-style:italic;color:#5c6773;"># home-manager.verbose = true;
-</span><span>      }
-</span><span>    )
-</span><span>  ]</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>Uncomment and add your username to auto login.</li>
-</ul>
-<p>And an <code>apps</code> output that will build and deploy in one step with
-<code>nix build .#deploy-nixos</code> I'll show <code>packages</code> and <code>apps</code> outputs for
-context:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>   </span><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Default package for tools
-</span><span>    </span><span style="color:#ffcc66;">packages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#ff3333;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">buildEnv </span><span>{
-</span><span>        </span><span style="color:#ffd580;">name </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;default-tools&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">paths </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">pkgs</span><span>; [</span><span style="color:#ffcc66;">helix git ripgrep nh</span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># build and deploy with `nix build .#nixos`
-</span><span>      </span><span style="color:#ffd580;">nixos </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">defaultConfig</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">system</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">toplevel</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># Explicitly named Vm Configuration `nix build .#nixos-vm`
-</span><span>      </span><span style="color:#ffd580;">nixos-vm </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">vmConfig</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">system</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">vm</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ff3333;">;
-</span><span>
-</span><span>    </span><span style="color:#ffcc66;">apps</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">deploy-nixos </span><span style="color:#ff3333;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;app&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">program </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">toString </span><span>(</span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">writeScript </span><span style="color:#bae67e;">&quot;deploy-nixos&quot; &#39;&#39;
-</span><span style="color:#bae67e;">        #!/bin/sh
-</span><span style="color:#bae67e;">        nix build .#nixos
-</span><span style="color:#bae67e;">        sudo ./result/bin/switch-to-configuration switch
-</span><span style="color:#bae67e;">      &#39;&#39;</span><span>)</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">meta </span><span style="color:#f29e74;">= </span><span>{
-</span><span>        </span><span style="color:#ffd580;">description </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;Build and deploy NixOS configuration using nix build&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">license </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">licenses</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mit</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">maintainers </span><span style="color:#f29e74;">= </span><span>[
-</span><span>          {
-</span><span>            </span><span style="color:#ffd580;">name </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitUsername</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">email </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitEmail</span><span style="color:#ccc9c2cc;">;
-</span><span>          }
-</span><span>        ]</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ff3333;">;
-</span></code></pre>
-<h3 id="debugging">Debugging</h3>
-<ul>
-<li>Before switching configurations, verify what's inside your built package:</li>
-</ul>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> build .#nixos</span><span style="color:#ffcc66;"> --dry-run
-</span><span style="color:#ffd580;">nix</span><span> build .#nixos-vm</span><span style="color:#ffcc66;"> --dry-run
-</span><span style="color:#ffd580;">nix</span><span> show-derivation .#nixos
-</span></code></pre>
-<ul>
-<li>Explore the Package Contents</li>
-</ul>
-<p>Once the build completes, you get a store path like
-<code>/nix/store/...-nixos-system</code>. You can explore the contents using:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> path-info</span><span style="color:#ffcc66;"> -r</span><span> .#nixos
-</span><span style="color:#ffd580;">tree</span><span> ./result
-</span><span style="color:#ffd580;">ls</span><span style="color:#ffcc66;"> -lh</span><span> ./result/bin
-</span></code></pre>
-<p>Instead of switching, test components:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nix</span><span> run .#nixos</span><span style="color:#ffcc66;"> --help
-</span><span style="color:#ffd580;">nix</span><span> run .#nixos</span><span style="color:#ffcc66;"> --version
-</span></code></pre>
-<p>Load the flake into the repl:</p>
-<pre data-lang="bash" style="background-color:#212733;color:#ccc9c2;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#ffd580;">nixos-rebuild</span><span> repl</span><span style="color:#ffcc66;"> --flake</span><span> .
-</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> flake.inputs
-</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> config.fonts.packages
-</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> config.system.build.toplevel
-</span><span style="color:#ffd580;">nix-repl</span><span style="color:#f29e74;">&gt;</span><span> config.services.smartd.enable </span><span style="font-style:italic;color:#5c6773;"># true/false
-</span><span>nix-repl</span><span style="color:#f29e74;">&gt;</span><span> flake.nixosConfigurations.nixos </span><span style="font-style:italic;color:#5c6773;"># confirm the built package
-</span><span>nix-repl</span><span style="color:#f29e74;">&gt;</span><span> flake.nixosConfigurations.magic </span><span style="font-style:italic;color:#5c6773;"># Inspect host-specific config
-</span></code></pre>
-<ul>
-<li>You can make a change to your configuration while in the repl and reload with
-<code>:r</code></li>
-</ul>
-<h3 id="understanding-atomicity">Understanding Atomicity</h3>
-<ul>
-<li>
-<p>Atomicity means that a system update (e.g. changing <code>configuration.nix</code> or a
-flake-based <code>toplevel</code> package) either fully succeeds or leaves the system
-unchanged, preventing partial or inconsistent states.</p>
-</li>
-<li>
-<p>The <code>toplevel</code> package is the entry point for your entire NixOS system,
-including the kernel, initrd, system services, and <code>home-manager</code> settings.</p>
-</li>
-<li>
-<p>Building with <code>nix build .#nixos</code> creates the <code>toplevel</code> derivation upfront,
-allowing you to inspect or copy it before activation:</p>
-</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos
-</span><span style="color:#ffcc66;">ls </span><span style="color:#f29e74;">-</span><span style="color:#ffcc66;">l result
-</span></code></pre>
-<ul>
-<li>In contrast, <code>nixos-rebuild switch</code> builds and activates in one step, similar
-to <code>cargo run</code> although both do involve the same <code>toplevel</code> derivation.</li>
-</ul>
-<p>The <code>toplevel</code> package can be copied to another NixOS machine:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos
-</span><span style="color:#ffcc66;">nix copy </span><span style="color:#bae67e;">./result </span><span style="color:#f29e74;">--</span><span style="color:#ffcc66;">to </span><span style="color:#bae67e;">ssh://jr@server
-</span><span style="font-style:italic;color:#5c6773;"># or for the vm
-</span><span style="color:#ffcc66;">nix build </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos-vm
-</span><span style="color:#ffcc66;">nix copy </span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#5c6773;">#nixos-vm --to ssh://jr@server
-</span><span style="font-style:italic;color:#5c6773;"># activate the server
-</span><span style="color:#ffcc66;">ssh jr</span><span>@</span><span style="color:#ff3333;">server
-</span><span style="color:#ff3333;">sudo /nix/store/...-nixos-system-magic/bin/switch-to-configuration switch
-</span></code></pre>
-<ul>
-<li>
-<p>I got the examples for building your configuration as a package and vm from
-the <a href="https://github.com/richen604/hydenix/tree/main?tab=readme-ov-file">hydenix</a>
-configuration and adapted them to <a href="https://github.com/saylesss88/flake">my config</a>.</p>
-</li>
-<li>
-<p>I got the examples for building your configuration as a package and vm from
-the <a href="https://github.com/richen604/hydenix/tree/main?tab=readme-ov-file">hydenix</a>
-configuration and adapted them to <a href="https://github.com/saylesss88/flake">my config</a>.</p>
-</li>
-</ul>
-</div>
+your system making debugging easier.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The following is a snip of my &lt;code&gt;flake.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;outputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;my-inputs&lt;&#x2F;span&gt;&lt;span&gt; @ {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmt-nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;  &lt;&#x2F;span&gt;&lt;span&gt;}: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;x86_64-linux&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;magic&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;jr&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;gitUsername &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;TSawyer87&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;editor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hx&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;term &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;ghostty&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;keys &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;us&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;browser &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;firefox&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;flake &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;builtins&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;getEnv &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;HOME&amp;quot; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;+ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;&#x2F;my-nixos&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;=
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;my-inputs
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&#x2F; &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;lib &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;lib&#x2F;overlay.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixOsModules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;nixos&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;homeModules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;home&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;defaultConfig &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&#x2F;magic &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;packages&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixos &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultConfig&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;toplevel&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# NixOS configuration
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosConfigurations&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;specialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs system host userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;      ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;I didn&#x27;t want to change the name of &lt;code&gt;inputs&lt;&#x2F;code&gt; and effect other areas of my
+config so I first renamed &lt;code&gt;@ inputs&lt;&#x2F;code&gt; to &lt;code&gt;@ my-inputs&lt;&#x2F;code&gt; to make the merged
+attribute set use the original &lt;code&gt;inputs&lt;&#x2F;code&gt; name.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Note, I&#x27;m still using home-manager as a module I just had to move it for all
+modules to be available inside the artifact built with &lt;code&gt;nix build .#nixos&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;benefits-of-nixosconfiguration-as-a-package&quot;&gt;Benefits of nixosConfiguration as a Package&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;packages.x86_64-linux.nixos = self.nixosConfigurations.magic.config.system.build.toplevel;&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;The above expression exposes the &lt;code&gt;toplevel&lt;&#x2F;code&gt; derivation of
+&lt;code&gt;nixosConfiguration.magic&lt;&#x2F;code&gt; as a package, which is the complete system closure
+of your NixOS configuration.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Here is the &lt;code&gt;&#x2F;hosts&#x2F;magic&#x2F;default.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# default.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ...&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;specialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;configuration.nix&lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Because we want all modules, not just NixOS modules this requires changing
+your &lt;code&gt;configuration.nix&lt;&#x2F;code&gt; to include your home-manager configuration. The core
+reason for this is that the &lt;code&gt;packages.nixos&lt;&#x2F;code&gt; output builds a NixOS system, and
+home-manager needs to be a part of that system&#x27;s definition to be included in
+the build.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hardware.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;security.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;users.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixOsModules
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# inputs.nixos-hardware.nixosModules.common-gpu-amd
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixos-hardware&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;common-cpu-amd
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager
+&lt;&#x2F;span&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Home-Manager Configuration needs to be here for home.packages to be available in the Configuration Package and VM i.e. `nix build .#nixos`
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useGlobalPkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useUserPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;extraSpecialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs inputs host system userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;jr &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...&lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;homeModules
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;home.nix
+&lt;&#x2F;span&gt;&lt;span&gt;      ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;############################################################################
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;overlays&lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[!NOTE]: &lt;code&gt;inputs.lib.nixOsModules&lt;&#x2F;code&gt; is equivalent to &lt;code&gt;..&#x2F;..&#x2F;home&lt;&#x2F;code&gt; in my case
+and imports all of my nixOS modules. This comes from the &lt;code&gt;flake.nix&lt;&#x2F;code&gt; where I
+have &lt;code&gt;nixOsModules = import .&#x2F;nixos&lt;&#x2F;code&gt; Which looks for a &lt;code&gt;default.nix&lt;&#x2F;code&gt; in the
+&lt;code&gt;nixos&lt;&#x2F;code&gt; directory.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;My &lt;code&gt;~&#x2F;my-nixos&#x2F;nixos&#x2F;default.nix&lt;&#x2F;code&gt; looks like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# default.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...&lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;drivers
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;boot.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;utils.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#..snip..
+&lt;&#x2F;span&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;usage-and-deployment&quot;&gt;Usage and Deployment&lt;&#x2F;h2&gt;
+&lt;p&gt;To build the package configuration run:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix build &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#nixos
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;sudo &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;result&#x2F;bin&#x2F;switch-to-configuration &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;switch
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;adding-a-configuration-vm-output&quot;&gt;Adding a Configuration VM Output&lt;&#x2F;h2&gt;
+&lt;p&gt;Building on what we already have, add this under &lt;code&gt;defaultConfig&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultConfig &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&#x2F;magic &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vmConfig &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;lib&#x2F;vms&#x2F;nixos-vm.nix &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosConfiguration &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultConfig&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;and under the line &lt;code&gt;nixos = defaultConfig.config.system.build.toplevel&lt;&#x2F;code&gt; add:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;packages&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# build and deploy with `nix build .#nixos`
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixos &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultConfig&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;toplevel&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Explicitly named Vm Configuration `nix build .#nixos-vm`
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixos-vm &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vmConfig&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vm&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And in &lt;code&gt;lib&#x2F;vms&#x2F;nixos-vm.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# nixos-vm.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosConfiguration&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosConfiguration&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;extendModules &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;    (
+&lt;&#x2F;span&gt;&lt;span&gt;      {&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ...&lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;virtualisation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;vmVariant &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;virtualisation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;forwardPorts &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;            {
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;from &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;host&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;port &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;2222&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;guest&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;port &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;22&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            }
+&lt;&#x2F;span&gt;&lt;span&gt;          ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixos-hardware&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;common-gpu-amd
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# hydenix-inputs.nixos-hardware.nixosModules.common-cpu-intel
+&lt;&#x2F;span&gt;&lt;span&gt;          ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;virtualisation &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;memorySize &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;8192&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;cores &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;6&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;diskSize &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;20480&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;qemu &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;options &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-device virtio-vga-gl&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-display gtk,gl=on,grab-on-hover=on&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-usb -device usb-tablet&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-cpu host&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-enable-kvm&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-machine q35,accel=kvm&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-device intel-iommu&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-device ich9-intel-hda&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-device hda-output&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;-vga none&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;              ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#! you can set this to skip login for sddm
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# services.displayManager.autoLogin = {
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#   enable = true;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#   user = &amp;quot;jr&amp;quot;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# };
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;services&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;xserver &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;videoDrivers &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;virtio&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;            ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;stateVersion &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;24.11&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Enable SSH server
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;services&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;openssh &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;settings &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;PermitRootLogin &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;no&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;PasswordAuthentication &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;virtualisation&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;libvirtd&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;environment&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;systemPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span&gt;; [
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;open-vm-tools
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;spice-gtk
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;spice-vdagent
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;spice
+&lt;&#x2F;span&gt;&lt;span&gt;        ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;services&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;qemuGuest&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;services&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;spice-vdagentd &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;hardware&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;graphics&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Enable verbose logging for home-manager
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# home-manager.verbose = true;
+&lt;&#x2F;span&gt;&lt;span&gt;      }
+&lt;&#x2F;span&gt;&lt;span&gt;    )
+&lt;&#x2F;span&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Uncomment and add your username to auto login.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;And an &lt;code&gt;apps&lt;&#x2F;code&gt; output that will build and deploy in one step with
+&lt;code&gt;nix build .#deploy-nixos&lt;&#x2F;code&gt; I&#x27;ll show &lt;code&gt;packages&lt;&#x2F;code&gt; and &lt;code&gt;apps&lt;&#x2F;code&gt; outputs for
+context:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;   &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Default package for tools
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;packages&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;buildEnv &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;name &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;default-tools&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;paths &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span&gt;; [&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;helix git ripgrep nh&lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# build and deploy with `nix build .#nixos`
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixos &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;defaultConfig&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;toplevel&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Explicitly named Vm Configuration `nix build .#nixos-vm`
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixos-vm &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vmConfig&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;vm&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;apps&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;deploy-nixos &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;app&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;program &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;toString &lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;writeScript &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;deploy-nixos&amp;quot; &amp;#39;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;        #!&#x2F;bin&#x2F;sh
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;        nix build .#nixos
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;        sudo .&#x2F;result&#x2F;bin&#x2F;switch-to-configuration switch
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;      &amp;#39;&amp;#39;&lt;&#x2F;span&gt;&lt;span&gt;)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;meta &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;description &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;Build and deploy NixOS configuration using nix build&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;license &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;licenses&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mit&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;maintainers &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;          {
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;name &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gitUsername&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;email &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gitEmail&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }
+&lt;&#x2F;span&gt;&lt;span&gt;        ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;debugging&quot;&gt;Debugging&lt;&#x2F;h3&gt;
+&lt;ul&gt;
+&lt;li&gt;Before switching configurations, verify what&#x27;s inside your built package:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; build .#nixos&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; --dry-run
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; build .#nixos-vm&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; --dry-run
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; show-derivation .#nixos
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Explore the Package Contents&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Once the build completes, you get a store path like
+&lt;code&gt;&#x2F;nix&#x2F;store&#x2F;...-nixos-system&lt;&#x2F;code&gt;. You can explore the contents using:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; path-info&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; -r&lt;&#x2F;span&gt;&lt;span&gt; .#nixos
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;tree&lt;&#x2F;span&gt;&lt;span&gt; .&#x2F;result
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;ls&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; -lh&lt;&#x2F;span&gt;&lt;span&gt; .&#x2F;result&#x2F;bin
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Instead of switching, test components:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; run .#nixos&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; --help
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix&lt;&#x2F;span&gt;&lt;span&gt; run .#nixos&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; --version
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Load the flake into the repl:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixos-rebuild&lt;&#x2F;span&gt;&lt;span&gt; repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt; --flake&lt;&#x2F;span&gt;&lt;span&gt; .
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; flake.inputs
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; config.fonts.packages
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; config.system.build.toplevel
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; config.services.smartd.enable &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# true&#x2F;false
+&lt;&#x2F;span&gt;&lt;span&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; flake.nixosConfigurations.nixos &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# confirm the built package
+&lt;&#x2F;span&gt;&lt;span&gt;nix-repl&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; flake.nixosConfigurations.magic &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Inspect host-specific config
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You can make a change to your configuration while in the repl and reload with
+&lt;code&gt;:r&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;understanding-atomicity&quot;&gt;Understanding Atomicity&lt;&#x2F;h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Atomicity means that a system update (e.g. changing &lt;code&gt;configuration.nix&lt;&#x2F;code&gt; or a
+flake-based &lt;code&gt;toplevel&lt;&#x2F;code&gt; package) either fully succeeds or leaves the system
+unchanged, preventing partial or inconsistent states.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;The &lt;code&gt;toplevel&lt;&#x2F;code&gt; package is the entry point for your entire NixOS system,
+including the kernel, initrd, system services, and &lt;code&gt;home-manager&lt;&#x2F;code&gt; settings.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Building with &lt;code&gt;nix build .#nixos&lt;&#x2F;code&gt; creates the &lt;code&gt;toplevel&lt;&#x2F;code&gt; derivation upfront,
+allowing you to inspect or copy it before activation:&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix build &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#nixos
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;ls &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;-&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;l result
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;In contrast, &lt;code&gt;nixos-rebuild switch&lt;&#x2F;code&gt; builds and activates in one step, similar
+to &lt;code&gt;cargo run&lt;&#x2F;code&gt; although both do involve the same &lt;code&gt;toplevel&lt;&#x2F;code&gt; derivation.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The &lt;code&gt;toplevel&lt;&#x2F;code&gt; package can be copied to another NixOS machine:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix build &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#nixos
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix copy &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;result &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;--&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;to &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;ssh:&#x2F;&#x2F;jr@server
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# or for the vm
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix build &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#nixos-vm
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix copy &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;#nixos-vm --to ssh:&#x2F;&#x2F;jr@server
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# activate the server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;ssh jr&lt;&#x2F;span&gt;&lt;span&gt;@&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;server
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;sudo &#x2F;nix&#x2F;store&#x2F;...-nixos-system-magic&#x2F;bin&#x2F;switch-to-configuration switch
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;I got the examples for building your configuration as a package and vm from
+the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;richen604&#x2F;hydenix&#x2F;tree&#x2F;main?tab=readme-ov-file&quot;&gt;hydenix&lt;&#x2F;a&gt;
+configuration and adapted them to &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;saylesss88&#x2F;flake&quot;&gt;my config&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;I got the examples for building your configuration as a package and vm from
+the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;richen604&#x2F;hydenix&#x2F;tree&#x2F;main?tab=readme-ov-file&quot;&gt;hydenix&lt;&#x2F;a&gt;
+configuration and adapted them to &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;saylesss88&#x2F;flake&quot;&gt;my config&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
 
-  
-</article>
 
     </div>
 

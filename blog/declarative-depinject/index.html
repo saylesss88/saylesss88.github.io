@@ -31,323 +31,306 @@
       </div>
 
       
-<article class="post">
-  <header class="post-header">
-    
-    <time datetime="2025-05-06"
-      >Published on:
-      <span class="accent-data">2025-05-06</span>
-    </time>
-     
-
-    <h1>Declarative Dependency Injection in Nix Flakes</h1>
-  </header>
-
-  
-
-  <div class="post-content"><h1 id="declarative-dependency-injection-in-nix-flakes">Declarative Dependency Injection in Nix Flakes</h1>
-<p><strong>TOC</strong></p>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#declarative-dependency-injection-in-nix-flakes">Declarative Dependency Injection in Nix Flakes</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#the-problem-with-specialargs">The Problem with specialArgs</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#a-declarative-solution-injecting-via-a-custom-option">A Declarative Solution: Injecting via a Custom Option</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#benefits-of-this-approach">Benefits of this Approach</a></li>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#example-usage">Example Usage</a></li>
-</ul>
-</li>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#applying-dep-inject-to-home-manager-modules">Applying dep-inject to Home Manager Modules</a></li>
-<li><a href="https://saylesss88.github.io/blog/declarative-depinject/#conclusion">Conclusion</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<img src="/images/gruv6.png" alt="Cyber" width="700">
-<p>This post explores a method for injecting dependencies into NixOS modules from
-a flake in a more declarative way, offering an alternative to <code>specialArgs</code>.</p>
-<h2 id="the-problem-with-specialargs">The Problem with specialArgs</h2>
-<ul>
-<li>
-<p>As mentioned in <a href="https://saylesss88.github.io/blog/nix-flakes-tips-and-tricks/">post</a>,
-<code>specialArgs</code> and <code>extraSpecialArgs</code> can be used to pass dependencies and
-variables from flakes to modules.</p>
-</li>
-<li>
-<p>However, <code>specialArgs</code> injects values directly into every module's argument
-list.</p>
-</li>
-<li>
-<p>This approach deviates from NixOS's typical declarative data flow model.
+  &lt;h1 id=&quot;declarative-dependency-injection-in-nix-flakes&quot;&gt;Declarative Dependency Injection in Nix Flakes&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;strong&gt;TOC&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#declarative-dependency-injection-in-nix-flakes&quot;&gt;Declarative Dependency Injection in Nix Flakes&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#the-problem-with-specialargs&quot;&gt;The Problem with specialArgs&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#a-declarative-solution-injecting-via-a-custom-option&quot;&gt;A Declarative Solution: Injecting via a Custom Option&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#benefits-of-this-approach&quot;&gt;Benefits of this Approach&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#example-usage&quot;&gt;Example Usage&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#applying-dep-inject-to-home-manager-modules&quot;&gt;Applying dep-inject to Home Manager Modules&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;declarative-depinject&#x2F;#conclusion&quot;&gt;Conclusion&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;img src=&quot;&#x2F;images&#x2F;gruv6.png&quot; alt=&quot;Cyber&quot; width=&quot;700&quot;&gt;
+&lt;p&gt;This post explores a method for injecting dependencies into NixOS modules from
+a flake in a more declarative way, offering an alternative to &lt;code&gt;specialArgs&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-problem-with-specialargs&quot;&gt;The Problem with specialArgs&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;As mentioned in &lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-and-tricks&#x2F;&quot;&gt;post&lt;&#x2F;a&gt;,
+&lt;code&gt;specialArgs&lt;&#x2F;code&gt; and &lt;code&gt;extraSpecialArgs&lt;&#x2F;code&gt; can be used to pass dependencies and
+variables from flakes to modules.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;However, &lt;code&gt;specialArgs&lt;&#x2F;code&gt; injects values directly into every module&#x27;s argument
+list.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;This approach deviates from NixOS&#x27;s typical declarative data flow model.
 Instead of explicit dependency passing, modules receive extra, unstructured
-variables that aren't part of the standard module options.</p>
-</li>
-</ul>
-<h3 id="a-declarative-solution-injecting-via-a-custom-option">A Declarative Solution: Injecting via a Custom Option</h3>
-<p>This post introduces a more declarative and centralized technique to share
-dependencies across modules by defining a custom option within your <code>flake.nix</code>
+variables that aren&#x27;t part of the standard module options.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;a-declarative-solution-injecting-via-a-custom-option&quot;&gt;A Declarative Solution: Injecting via a Custom Option&lt;&#x2F;h3&gt;
+&lt;p&gt;This post introduces a more declarative and centralized technique to share
+dependencies across modules by defining a custom option within your &lt;code&gt;flake.nix&lt;&#x2F;code&gt;
 . This method makes dependencies accessible to all importing modules without
-relying on explicit <code>specialArgs</code> in your flake's <code>outputs</code>.</p>
-<h4 id="defining-the-dep-inject-module-in-flake-nix">Defining the dep-inject Module in flake.nix</h4>
-<p>Within the <code>outputs</code> function's <code>let</code> block in your <code>flake.nix</code>, define the
-following module:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffa759;">let
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Module to inject dependencies
-</span><span>  </span><span style="color:#ffd580;">depInject </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>    </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># dep-inject is an attribute set of unspecified values
-</span><span>      </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span>; </span><span style="color:#ffcc66;">attrsOf unspecified</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># &#39;inputs&#39; comes from the outer environment of flake.nix
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># usually contains flake inputs, user-defined vars, system metadata
-</span><span>      </span><span style="color:#bae67e;">&quot;flake-inputs&quot; </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">inputs</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">host</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">username</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in </span><span>{
-</span><span>  </span><span style="color:#ffd580;">nixosModules</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>    </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">depInject </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>This code defines a reusable NixOS module (<code>nixosModules.default</code>).</p>
-</li>
-<li>
-<p>This module creates a <code>dep-inject</code> option, which is an attribute set
-containing your flake's inputs and other relevant variables.</p>
-</li>
-<li>
-<p>By importing depInject, configurations automatically gain access to these
-dependencies.</p>
-</li>
-</ul>
-<h4 id="benefits-of-this-approach">Benefits of this Approach</h4>
-<ul>
-<li>
-<p><strong>Declarative Dependency Flow</strong>: Encourages a more declarative style by
-accessing dependencies through a well-defined option (<code>config.dep-inject</code>)
-rather than implicit arguments.</p>
-</li>
-<li>
-<p><strong>Centralized Dependency Management</strong>: Defines dependencies in one place
-(<code>flake.nix</code>), making it easier to manage and update them.</p>
-</li>
-<li>
-<p><strong>Automatic Availability</strong>: Modules importing the configuration automatically
-have access to the injected dependencies.</p>
-</li>
-<li>
-<p><strong>Reduced Boilerplate</strong>: Avoids the need to explicitly include dependency
-arguments (<code>{ inputs, userVars, ... }</code>) in every module.</p>
-</li>
-</ul>
-<h4 id="example-usage">Example Usage</h4>
-<p>Here's a practical example of how this <code>dep-inject</code> module is defined and used
-within a <code>flake.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span>{
-</span><span>  </span><span style="color:#ffd580;">inputs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:NixOS/nixpkgs/nixos-unstable&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:nix-community/home-manager/master&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">inputs</span><span>.</span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">follows </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;nixpkgs&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">stylix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:danth/stylix&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">treefmt-nix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:numtide/treefmt-nix&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">outputs </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">, ... </span><span>} @ </span><span style="color:#ffcc66;">inputs</span><span>: </span><span style="color:#ffa759;">let
-</span><span>    </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;magic&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;jr&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">timezone </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;America/New_York&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">gitUsername </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;TSawyer87&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">locale </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;en_US.UTF-8&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">dotfilesDir </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;~/.dotfiles&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">wm </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hyprland&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">browser </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;firefox&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">term </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;ghostty&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">editor </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hx&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">keyboardLayout </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;us&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>      </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">allowUnfree </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">treefmtEval </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">evalModule pkgs </span><span style="color:#bae67e;">./treefmt.nix</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Define dep-inject module
-</span><span>    </span><span style="color:#ffd580;">depInject </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>      </span><span style="color:#ffd580;">options</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkOption </span><span>{
-</span><span>        </span><span style="color:#ffd580;">type </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">types</span><span>; </span><span style="color:#ffcc66;">attrsOf unspecified</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ }</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">dep-inject </span><span style="color:#f29e74;">= </span><span>{
-</span><span>        </span><span style="color:#ffd580;">flake-inputs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">inputs</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># Add userVars for convenience
-</span><span>        </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">username</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">host</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffa759;">in </span><span>{
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Export dep-inject module
-</span><span>    </span><span style="color:#ffd580;">nixosModules</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span>{ </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>          </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">depInject </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># here we don&#39;t need imports = [ depInject { inherit inputs;}]
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># because the vars are captured from the surrounding let block
-</span><span>
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># NixOS configuration
-</span><span>    </span><span style="color:#ffd580;">nixosConfigurations </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
-</span><span>        </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># enable dep-inject
-</span><span>          </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default
-</span><span>          </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/configuration.nix
-</span><span>          </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
-</span><span>          </span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
-</span><span>          {
-</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useGlobalPkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useUserPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">users</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">username</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/home.nix</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">backupFileExtension </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;backup&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="font-style:italic;color:#5c6773;"># Still need extraSpecialArgs for Home Manager (see below)
-</span><span>            </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">extraSpecialArgs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>              </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">username system host userVars</span><span style="color:#ccc9c2cc;">;
-</span><span>            }</span><span style="color:#ccc9c2cc;">;
-</span><span>          }
-</span><span>        ]</span><span style="color:#ccc9c2cc;">;
-</span><span>      }</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Other outputs
-</span><span>    </span><span style="color:#ffd580;">checks</span><span>.</span><span style="color:#ffd580;">x86_64-linux</span><span>.</span><span style="color:#ffd580;">style </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">check self</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">formatter</span><span>.</span><span style="color:#ffd580;">x86_64-linux </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">wrapper</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">devShells</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./lib/dev-shell.nix </span><span>{ </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<p><strong>Using <code>dep-inject</code> in Modules</strong></p>
-<p>Once the <code>dep-inject</code> module is imported, you can access the injected
-dependencies within any module via <code>config.dep-inject</code>.</p>
-<p><strong>Example: System Configuration Module (<code>configuration.nix</code>)</strong></p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># configuration.nix
-</span><span>{ </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">, </span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>  </span><span style="color:#ffd580;">environment</span><span>.</span><span style="color:#ffd580;">systemPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">pkgs</span><span style="font-style:italic;color:#f29e74;">.</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span>; [
-</span><span>    </span><span style="color:#ffcc66;">firefox
-</span><span>    </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">editor </span><span style="font-style:italic;color:#5c6773;"># e.g., helix
-</span><span>  ]</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">time</span><span>.</span><span style="color:#ffd580;">timeZone </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">timezone</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">system</span><span>.</span><span style="color:#ffd580;">stateVersion </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;24.05&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p><code>config.dep-inject.flake-inputs.nixpkgs</code>: Accesses the <code>nixpkgs</code> input.</p>
-</li>
-<li>
-<p><code>config.dep-inject.userVars</code>: Accesses your <code>userVars</code>.</p>
-</li>
-<li>
-<p>You no longer need to explicitly declare <code>{ inputs, userVars, ... }</code> in the
-module's arguments.</p>
-</li>
-</ul>
-<h3 id="applying-dep-inject-to-home-manager-modules">Applying dep-inject to Home Manager Modules</h3>
-<p>By default, the <code>dep-inject</code> module is available to NixOS modules but not
+relying on explicit &lt;code&gt;specialArgs&lt;&#x2F;code&gt; in your flake&#x27;s &lt;code&gt;outputs&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;defining-the-dep-inject-module-in-flake-nix&quot;&gt;Defining the dep-inject Module in flake.nix&lt;&#x2F;h4&gt;
+&lt;p&gt;Within the &lt;code&gt;outputs&lt;&#x2F;code&gt; function&#x27;s &lt;code&gt;let&lt;&#x2F;code&gt; block in your &lt;code&gt;flake.nix&lt;&#x2F;code&gt;, define the
+following module:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Module to inject dependencies
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;depInject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;options&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dep-inject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkOption &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# dep-inject is an attribute set of unspecified values
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;types&lt;&#x2F;span&gt;&lt;span&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;attrsOf unspecified&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dep-inject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# &amp;#39;inputs&amp;#39; comes from the outer environment of flake.nix
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# usually contains flake inputs, user-defined vars, system metadata
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;flake-inputs&amp;quot; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;username&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;depInject &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;This code defines a reusable NixOS module (&lt;code&gt;nixosModules.default&lt;&#x2F;code&gt;).&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;This module creates a &lt;code&gt;dep-inject&lt;&#x2F;code&gt; option, which is an attribute set
+containing your flake&#x27;s inputs and other relevant variables.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;By importing depInject, configurations automatically gain access to these
+dependencies.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h4 id=&quot;benefits-of-this-approach&quot;&gt;Benefits of this Approach&lt;&#x2F;h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Declarative Dependency Flow&lt;&#x2F;strong&gt;: Encourages a more declarative style by
+accessing dependencies through a well-defined option (&lt;code&gt;config.dep-inject&lt;&#x2F;code&gt;)
+rather than implicit arguments.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Centralized Dependency Management&lt;&#x2F;strong&gt;: Defines dependencies in one place
+(&lt;code&gt;flake.nix&lt;&#x2F;code&gt;), making it easier to manage and update them.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Automatic Availability&lt;&#x2F;strong&gt;: Modules importing the configuration automatically
+have access to the injected dependencies.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Reduced Boilerplate&lt;&#x2F;strong&gt;: Avoids the need to explicitly include dependency
+arguments (&lt;code&gt;{ inputs, userVars, ... }&lt;&#x2F;code&gt;) in every module.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h4 id=&quot;example-usage&quot;&gt;Example Usage&lt;&#x2F;h4&gt;
+&lt;p&gt;Here&#x27;s a practical example of how this &lt;code&gt;dep-inject&lt;&#x2F;code&gt; module is defined and used
+within a &lt;code&gt;flake.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:NixOS&#x2F;nixpkgs&#x2F;nixos-unstable&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:nix-community&#x2F;home-manager&#x2F;master&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;follows &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;nixpkgs&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:danth&#x2F;stylix&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;treefmt-nix&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:numtide&#x2F;treefmt-nix&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;outputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmt-nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;} @ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;x86_64-linux&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;magic&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;jr&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;timezone &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;America&#x2F;New_York&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;gitUsername &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;TSawyer87&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;locale &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;en_US.UTF-8&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dotfilesDir &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;~&#x2F;.dotfiles&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;wm &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hyprland&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;browser &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;firefox&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;term &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;ghostty&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;editor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hx&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;keyboardLayout &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;us&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;allowUnfree &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;treefmtEval &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmt-nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;evalModule pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;treefmt.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Define dep-inject module
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;depInject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;options&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dep-inject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkOption &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;type &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;types&lt;&#x2F;span&gt;&lt;span&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;attrsOf unspecified&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dep-inject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;flake-inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Add userVars for convenience
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;username&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Export dep-inject module
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;depInject &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# here we don&amp;#39;t need imports = [ depInject { inherit inputs;}]
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# because the vars are captured from the surrounding let block
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# NixOS configuration
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixosConfigurations &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# enable dep-inject
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;default
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix
+&lt;&#x2F;span&gt;&lt;span&gt;          {
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useGlobalPkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useUserPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;username&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;home.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;backupFileExtension &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;backup&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Still need extraSpecialArgs for Home Manager (see below)
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;extraSpecialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username system host userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }
+&lt;&#x2F;span&gt;&lt;span&gt;        ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Other outputs
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;checks&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;x86_64-linux&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;style &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmtEval&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;check self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;formatter&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;x86_64-linux &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmtEval&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;wrapper&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;devShells&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;lib&#x2F;dev-shell.nix &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;strong&gt;Using &lt;code&gt;dep-inject&lt;&#x2F;code&gt; in Modules&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Once the &lt;code&gt;dep-inject&lt;&#x2F;code&gt; module is imported, you can access the injected
+dependencies within any module via &lt;code&gt;config.dep-inject&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Example: System Configuration Module (&lt;code&gt;configuration.nix&lt;&#x2F;code&gt;)&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;environment&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;systemPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;dep-inject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;flake-inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;legacyPackages&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span&gt;; [
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;firefox
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;dep-inject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;editor &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# e.g., helix
+&lt;&#x2F;span&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;time&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;timeZone &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;dep-inject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;timezone&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;stateVersion &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;24.05&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;config.dep-inject.flake-inputs.nixpkgs&lt;&#x2F;code&gt;: Accesses the &lt;code&gt;nixpkgs&lt;&#x2F;code&gt; input.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;config.dep-inject.userVars&lt;&#x2F;code&gt;: Accesses your &lt;code&gt;userVars&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;You no longer need to explicitly declare &lt;code&gt;{ inputs, userVars, ... }&lt;&#x2F;code&gt; in the
+module&#x27;s arguments.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;applying-dep-inject-to-home-manager-modules&quot;&gt;Applying dep-inject to Home Manager Modules&lt;&#x2F;h3&gt;
+&lt;p&gt;By default, the &lt;code&gt;dep-inject&lt;&#x2F;code&gt; module is available to NixOS modules but not
 automatically to Home Manager modules. There are two main ways to make it
-accessible:</p>
-<ol>
-<li>Using <code>extraSpecialArgs</code> (Less Ideal)</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">extraSpecialArgs </span><span style="color:#ff3333;">= </span><span>{
-</span><span>  </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">username system host userVars</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">depInject </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># Pass dep-inject
-</span><span>}</span><span style="color:#ff3333;">;
-</span></code></pre>
-<p>Then, in your Home Manager configuration (<code>./hosts/${host}/home.nix</code>):</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># home.nix
-</span><span>{ </span><span style="color:#ffcc66;">depInject</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>  </span><span style="color:#ffd580;">programs</span><span>.</span><span style="color:#ffd580;">git </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">userName </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">depInject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitUsername</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">home</span><span>.</span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">depInject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">x86_64-linux</span><span>; [ </span><span style="color:#ffcc66;">firefox </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ol start="2">
-<li>Importing <code>depInject</code> into Home Manager Configuration (More Idiomatic)</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">nixosConfigurations </span><span style="color:#ff3333;">= </span><span>{
-</span><span>  </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
-</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>      </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default </span><span style="font-style:italic;color:#5c6773;"># dep-inject for NixOS
-</span><span>      </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/configuration.nix
-</span><span>      </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
-</span><span>      </span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
-</span><span>      {
-</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useGlobalPkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useUserPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">backupFileExtension </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;backup&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">users</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">username</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffd580;">imports </span><span style="color:#f29e74;">= </span><span>[ </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">default </span><span>]</span><span style="color:#ccc9c2cc;">; </span><span style="font-style:italic;color:#5c6773;"># dep-inject for Home Manager
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># Your Home Manager config
-</span><span>          </span><span style="color:#ffd580;">programs</span><span>.</span><span style="color:#ffd580;">git </span><span style="color:#f29e74;">= </span><span>{
-</span><span>            </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>            </span><span style="color:#ffd580;">userName </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitUsername</span><span style="color:#ccc9c2cc;">;
-</span><span>          }</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># note: depending on your setup you may need to tweak this
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># `legacyPackages.${pkgs.system}` might be needed
-</span><span>          </span><span style="font-style:italic;color:#5c6773;"># due to how home-manager handles `pkgs`
-</span><span>          </span><span style="color:#ffd580;">home</span><span>.</span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">dep-inject</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">flake-inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">legacyPackages</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">x86_64-linux</span><span>; [ </span><span style="color:#ffcc66;">firefox </span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>      }
-</span><span>    ]</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ff3333;">;
-</span></code></pre>
-<ul>
-<li>
-<p>By adding <code>imports = [ self.nixosModules.default ];</code> within the Home Manager
-user configuration, the <code>dep-inject</code> option becomes available under <code>config</code>.</p>
-</li>
-<li>
-<p>This approach is generally considered more idiomatic and avoids the issues
-associated with <code>specialArgs</code>, as highlighted in resources like
-"flakes-arent-real"</p>
-</li>
-</ul>
-<h3 id="conclusion">Conclusion</h3>
-<p>While <code>specialArgs</code> offers a seemingly straightforward way to inject
-dependencies, this declarative approach using a custom <code>dep-inject</code> option
+accessible:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Using &lt;code&gt;extraSpecialArgs&lt;&#x2F;code&gt; (Less Ideal)&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;extraSpecialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username system host userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;depInject &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;dep-inject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Pass dep-inject
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Then, in your Home Manager configuration (&lt;code&gt;.&#x2F;hosts&#x2F;${host}&#x2F;home.nix&lt;&#x2F;code&gt;):&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# home.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;depInject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;git &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userName &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;depInject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gitUsername&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;depInject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;flake-inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;legacyPackages&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;x86_64-linux&lt;&#x2F;span&gt;&lt;span&gt;; [ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;firefox &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Importing &lt;code&gt;depInject&lt;&#x2F;code&gt; into Home Manager Configuration (More Idiomatic)&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosConfigurations &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# dep-inject for NixOS
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix
+&lt;&#x2F;span&gt;&lt;span&gt;      {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useGlobalPkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useUserPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;backupFileExtension &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;backup&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;username&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;imports &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# dep-inject for Home Manager
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Your Home Manager config
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;programs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;git &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userName &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;dep-inject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gitUsername&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# note: depending on your setup you may need to tweak this
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# `legacyPackages.${pkgs.system}` might be needed
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# due to how home-manager handles `pkgs`
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;dep-inject&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;flake-inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;legacyPackages&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;x86_64-linux&lt;&#x2F;span&gt;&lt;span&gt;; [ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;firefox &lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      }
+&lt;&#x2F;span&gt;&lt;span&gt;    ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;By adding &lt;code&gt;imports = [ self.nixosModules.default ];&lt;&#x2F;code&gt; within the Home Manager
+user configuration, the &lt;code&gt;dep-inject&lt;&#x2F;code&gt; option becomes available under &lt;code&gt;config&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;This approach is generally considered more idiomatic and avoids the issues
+associated with &lt;code&gt;specialArgs&lt;&#x2F;code&gt;, as highlighted in resources like
+&quot;flakes-arent-real&quot;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h3&gt;
+&lt;p&gt;While &lt;code&gt;specialArgs&lt;&#x2F;code&gt; offers a seemingly straightforward way to inject
+dependencies, this declarative approach using a custom &lt;code&gt;dep-inject&lt;&#x2F;code&gt; option
 promotes a cleaner, more structured, and potentially more robust method for
-managing dependencies across your NixOS modules. It aligns better with NixOS's
+managing dependencies across your NixOS modules. It aligns better with NixOS&#x27;s
 declarative principles and can enhance the maintainability and
-understandability of your configuration.</p>
-<p><strong>Disclaimer</strong></p>
-<ul>
-<li>I don't currently personally use this technique in my configuration, it adds
-complexity that <code>specialArgs</code> aimed to solve. However, presenting this
+understandability of your configuration.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Disclaimer&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;I don&#x27;t currently personally use this technique in my configuration, it adds
+complexity that &lt;code&gt;specialArgs&lt;&#x2F;code&gt; aimed to solve. However, presenting this
 alternative enhances understanding of different dependency injection methods
 in Nix Flakes. This example is inspired by and builds upon concepts discussed in
-<a href="https://jade.fyi/blog/flakes-arent-real/">flakes-arent-real</a></li>
-</ul>
-</div>
+&lt;a href=&quot;https:&#x2F;&#x2F;jade.fyi&#x2F;blog&#x2F;flakes-arent-real&#x2F;&quot;&gt;flakes-arent-real&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
 
-  
-</article>
 
     </div>
 

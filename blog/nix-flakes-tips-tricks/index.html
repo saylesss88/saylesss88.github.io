@@ -31,325 +31,308 @@
       </div>
 
       
-<article class="post">
-  <header class="post-header">
-    
-    <time datetime="2025-05-06"
-      >Published on:
-      <span class="accent-data">2025-05-06</span>
-    </time>
-     
-
-    <h1>Nix Flakes Tips and Tricks</h1>
-  </header>
-
-  
-
-  <div class="post-content"><h1 id="shallow-clone-nixpkgs">Shallow Clone Nixpkgs</h1>
-<p><strong>TOC</strong></p>
-<!--toc:start-->
-<ul>
-<li><a href="https://saylesss88.github.io/blog/nix-flakes-tips-tricks/#shallow-clone-nixpkgs">Shallow Clone Nixpkgs</a>
-<ul>
-<li><a href="https://saylesss88.github.io/blog/nix-flakes-tips-tricks/#import-your-non-flake-wallpaper-repo">Import your Non-Flake Wallpaper Repo</a></li>
-<li><a href="https://saylesss88.github.io/blog/nix-flakes-tips-tricks/#understanding-patterns">Understanding @-patterns</a></li>
-<li><a href="https://saylesss88.github.io/blog/nix-flakes-tips-tricks/#understanding-specialargs">Understanding <code>specialArgs</code></a></li>
-<li><a href="https://saylesss88.github.io/blog/nix-flakes-tips-tricks/#set-up-flake-check-and-formatter-outputs">Set up Flake Check and Formatter Outputs</a> - <a href="https://saylesss88.github.io/blog/nix-flakes-tips-tricks/#add-a-devshell-output">Add a devShell Output</a></li>
-</ul>
-<!--toc:end-->
-</li>
-</ul>
-<img src="/images/gruv8.png" alt="Cyber" width="700">
-<ol>
-<li>Shallow clone nixpkgs, the full Git history isn't always necessary and this
-can speed up build times.</li>
-</ol>
-<ul>
-<li>The only issue I've had is <code>nix-index-database</code> not working well with the
-shallow clone... Other than that no issues after running for a few months.</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">inputs </span><span style="color:#ff3333;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;git+https://github.com/NixOS/nixpkgs?shallow=1&amp;ref=nixos-unstable&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ff3333;">;
-</span></code></pre>
-<ul>
-<li>Some times when you might need a full clone are debugging and working with
-repository history but those are rare.</li>
-</ul>
-<h2 id="import-your-non-flake-wallpaper-repo">Import your Non-Flake Wallpaper Repo</h2>
-<ol start="2">
-<li>Importing your non-flake wallpapers repo:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">inputs </span><span style="color:#ff3333;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">wallpapers </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:saylesss88/wallpapers&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">flake </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">false</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>After adding the input I can access individual wallpapers by adding the <code>inputs</code> argument and
-something like <code>path = "${inputs.wallpapers}/Aesthetic Scenery.jpg";</code></li>
-</ul>
-<h2 id="understanding-patterns">Understanding @-patterns</h2>
-<ol start="3">
-<li>Understanding <code>@-patterns</code>, being able to reference your outputs argument set as a whole. An
-<code>@-pattern</code> is a way for a function can access variadic attributes (i.e. varying number of
-arguments).</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">inputs </span><span style="color:#ff3333;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:nix-community/home-manager/master&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">inputs</span><span>.</span><span style="color:#ffd580;">nixpkgs</span><span>.</span><span style="color:#ffd580;">follows </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;nixpkgs&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">stylix</span><span>.</span><span style="color:#ffd580;">url </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;github:danth/stylix&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ff3333;">;
-</span><span style="color:#ffcc66;">outputs </span><span style="color:#ff3333;">= </span><span>{
-</span><span>    </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
-</span><span>    </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">,
-</span><span>} @ </span><span style="color:#ffcc66;">inputs</span><span>:
-</span></code></pre>
-<p>With the above example to add the modules to your nixosConfigurations you would add something
-like this:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">nixosConfigurations</span><span style="color:#f29e74;">.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#ff3333;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
-</span><span>  </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">specialArgs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs username host email systemSettings</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>  </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/config.nix
-</span><span>  </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
-</span><span>  </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># .. snip ..
-</span><span>]</span><span style="color:#ccc9c2cc;">;
-</span></code></pre>
-<ul>
-<li>Notice that since home-manager was explicitly listed in the outputs arguments:
-<code>outputs = { self, nixpkgs, home-manager, }; </code> the <code>inputs</code> prefix is unnecessary.
-If home-manager was removed from the outputs arguments: <code>outputs = { self, ... }</code>
-then you would need <code>modules = [ inputs.home-manager.nixosModules.home-manager];</code> This can be confusing
+  &lt;h1 id=&quot;shallow-clone-nixpkgs&quot;&gt;Shallow Clone Nixpkgs&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;strong&gt;TOC&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;!--toc:start--&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-tricks&#x2F;#shallow-clone-nixpkgs&quot;&gt;Shallow Clone Nixpkgs&lt;&#x2F;a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-tricks&#x2F;#import-your-non-flake-wallpaper-repo&quot;&gt;Import your Non-Flake Wallpaper Repo&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-tricks&#x2F;#understanding-patterns&quot;&gt;Understanding @-patterns&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-tricks&#x2F;#understanding-specialargs&quot;&gt;Understanding &lt;code&gt;specialArgs&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-tricks&#x2F;#set-up-flake-check-and-formatter-outputs&quot;&gt;Set up Flake Check and Formatter Outputs&lt;&#x2F;a&gt; - &lt;a href=&quot;https:&#x2F;&#x2F;saylesss88.github.io&#x2F;blog&#x2F;nix-flakes-tips-tricks&#x2F;#add-a-devshell-output&quot;&gt;Add a devShell Output&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;!--toc:end--&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;img src=&quot;&#x2F;images&#x2F;gruv8.png&quot; alt=&quot;Cyber&quot; width=&quot;700&quot;&gt;
+&lt;ol&gt;
+&lt;li&gt;Shallow clone nixpkgs, the full Git history isn&#x27;t always necessary and this
+can speed up build times.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;ul&gt;
+&lt;li&gt;The only issue I&#x27;ve had is &lt;code&gt;nix-index-database&lt;&#x2F;code&gt; not working well with the
+shallow clone... Other than that no issues after running for a few months.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;git+https:&#x2F;&#x2F;github.com&#x2F;NixOS&#x2F;nixpkgs?shallow=1&amp;amp;ref=nixos-unstable&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Some times when you might need a full clone are debugging and working with
+repository history but those are rare.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;import-your-non-flake-wallpaper-repo&quot;&gt;Import your Non-Flake Wallpaper Repo&lt;&#x2F;h2&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Importing your non-flake wallpapers repo:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;wallpapers &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:saylesss88&#x2F;wallpapers&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;flake &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;false&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;After adding the input I can access individual wallpapers by adding the &lt;code&gt;inputs&lt;&#x2F;code&gt; argument and
+something like &lt;code&gt;path = &quot;${inputs.wallpapers}&#x2F;Aesthetic Scenery.jpg&quot;;&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;understanding-patterns&quot;&gt;Understanding @-patterns&lt;&#x2F;h2&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Understanding &lt;code&gt;@-patterns&lt;&#x2F;code&gt;, being able to reference your outputs argument set as a whole. An
+&lt;code&gt;@-pattern&lt;&#x2F;code&gt; is a way for a function can access variadic attributes (i.e. varying number of
+arguments).&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:nix-community&#x2F;home-manager&#x2F;master&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;follows &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;nixpkgs&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;url &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;github:danth&#x2F;stylix&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;outputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;} @ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;With the above example to add the modules to your nixosConfigurations you would add something
+like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosConfigurations&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;specialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs username host email systemSettings&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;config.nix
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# .. snip ..
+&lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Notice that since home-manager was explicitly listed in the outputs arguments:
+&lt;code&gt;outputs = { self, nixpkgs, home-manager, }; &lt;&#x2F;code&gt; the &lt;code&gt;inputs&lt;&#x2F;code&gt; prefix is unnecessary.
+If home-manager was removed from the outputs arguments: &lt;code&gt;outputs = { self, ... }&lt;&#x2F;code&gt;
+then you would need &lt;code&gt;modules = [ inputs.home-manager.nixosModules.home-manager];&lt;&#x2F;code&gt; This can be confusing
 because many docs assume your not using an @-pattern so if you have one in your flake you need to prefix
-with <code>inputs</code>. I use this to reference my personal wallpapers repo mentioned earlier.</li>
-</ul>
-<h2 id="understanding-specialargs">Understanding <code>specialArgs</code></h2>
-<ol start="4">
-<li>Understanding <code>specialArgs</code> (nixos) and <code>extraSpecialArgs</code> (home-manager). Building on the @-patterns, using
-<code>specialArgs</code> and <code>extraSpecialArgs</code> is a way to pass arguments from your flake to your NixOS and home-manager
-modules.</li>
-</ol>
-<p>For example, here is a snippet of some variables I set:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">outputs </span><span style="color:#ff3333;">= </span><span>{
-</span><span>  </span><span style="color:#ffcc66;">self</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#f29e74;">...
-</span><span>} @ </span><span style="color:#ffcc66;">inputs</span><span>: </span><span style="color:#ffa759;">let
-</span><span>  </span><span style="color:#ffd580;">system </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">host </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;magic&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">username </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;jr&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">userVars </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">timezone </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;America/New_York&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">locale </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;en_US.UTF-8&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">gitUsername </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;TSawyer87&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">dotfilesDir </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;~/.dotfiles&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">wm </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hyprland&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">browser </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;firefox&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">term </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;ghostty&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">editor </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;hx&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">keyboardLayout </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;us&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffa759;">in
-</span></code></pre>
-<p>Now I can pass them as special args like this:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffcc66;">nixosConfigurations </span><span style="color:#ff3333;">= </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">nixpkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosSystem </span><span>{
-</span><span>        </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">specialArgs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>          </span><span style="color:#ffa759;">inherit
-</span><span>            </span><span style="color:#ffd580;">inputs
-</span><span>            </span><span style="color:#ffd580;">username
-</span><span>            </span><span style="color:#ffd580;">system
-</span><span>            </span><span style="color:#ffd580;">host
-</span><span>            </span><span style="color:#ffd580;">userVars
-</span><span>            </span><span style="color:#ccc9c2cc;">;
-</span><span>        }</span><span style="color:#ccc9c2cc;">;
-</span><span>        </span><span style="color:#ffd580;">modules </span><span style="color:#f29e74;">= </span><span>[
-</span><span>        </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/configuration.nix
-</span><span>        </span><span style="color:#ffcc66;">home-manager</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">home-manager
-</span><span>        </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixosModules</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">stylix
-</span><span>        {
-</span><span>          </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useGlobalPkgs </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">useUserPackages </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">users</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">username</span><span style="font-style:italic;color:#ccc9c2;">} </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./hosts</span><span style="color:#f29e74;">/</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">host</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">/home.nix</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">backupFileExtension </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;backup&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>          </span><span style="color:#ffd580;">home-manager</span><span>.</span><span style="color:#ffd580;">extraSpecialArgs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>            </span><span style="color:#ffa759;">inherit
-</span><span>              </span><span style="color:#ffd580;">inputs
-</span><span>              </span><span style="color:#ffd580;">username
-</span><span>              </span><span style="color:#ffd580;">system
-</span><span>              </span><span style="color:#ffd580;">host
-</span><span>              </span><span style="color:#ffd580;">userVars
-</span><span>              </span><span style="color:#ccc9c2cc;">;
-</span><span>          }</span><span style="color:#ccc9c2cc;">;
-</span><span>        }
-</span><span>      ]</span><span style="color:#ccc9c2cc;">;
-</span></code></pre>
-<ul>
-<li>To access values in <code>userVars</code> for example:</li>
-</ul>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># git.nix
-</span><span>{ </span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">, ... </span><span>}: {
-</span><span>  </span><span style="color:#ffd580;">programs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">git </span><span style="color:#f29e74;">= </span><span>{
-</span><span>      </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>      </span><span style="color:#ffd580;">userName </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">userVars</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">gitUsername</span><span style="color:#ccc9c2cc;">;
-</span><span>    }</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<h2 id="set-up-flake-check-and-formatter-outputs">Set up Flake Check and Formatter Outputs</h2>
-<ol start="5">
-<li>Set up <code>checks</code> and <code>formatter</code> outputs with <code>treefmt-nix</code>. Add <code>treefmt-nix</code> to your inputs and outputs arguments.
-Inside the <code>let</code> expression from tip 4 I would add:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># flake.nix
-</span><span style="color:#ffa759;">let
-</span><span style="font-style:italic;color:#5c6773;"># ... snip ...
-</span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>  </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">allowUnfree </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffd580;">treefmtEval </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmt-nix</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">lib</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">evalModule pkgs </span><span style="color:#bae67e;">./treefmt.nix</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in
-</span><span>{
-</span><span>  </span><span style="color:#ffd580;">checks</span><span>.</span><span style="color:#ffd580;">x86_64-linux</span><span>.</span><span style="color:#ffd580;">style </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">check self</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">formatter</span><span>.</span><span style="color:#ffd580;">x86_64-linux </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">wrapper</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># ... snip ...
-</span><span>}
-</span></code></pre>
-<p>And in the <code>treefmt.nix</code>:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># treefmt.nix
-</span><span>{
-</span><span style="color:#ffd580;">projectRootFile </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;flake.nix&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffd580;">programs </span><span style="color:#f29e74;">= </span><span>{
-</span><span>  </span><span style="color:#ffd580;">deadnix</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">statix</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">keep-sorted</span><span>.</span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">nixfmt </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">enable </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">strict </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffd580;">settings</span><span>.</span><span style="color:#ffd580;">excludes </span><span style="color:#f29e74;">= </span><span>[
-</span><span>  </span><span style="color:#bae67e;">&quot;*.age&quot;
-</span><span>  </span><span style="color:#bae67e;">&quot;*.jpg&quot;
-</span><span>  </span><span style="color:#bae67e;">&quot;*.nu&quot;
-</span><span>  </span><span style="color:#bae67e;">&quot;*.png&quot;
-</span><span>  </span><span style="color:#bae67e;">&quot;.jj/*&quot;
-</span><span>  </span><span style="color:#bae67e;">&quot;flake.lock&quot;
-</span><span>  </span><span style="color:#bae67e;">&quot;justfile&quot;
-</span><span>]</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffd580;">settings</span><span>.</span><span style="color:#ffd580;">formatter </span><span style="color:#f29e74;">= </span><span>{
-</span><span>  </span><span style="color:#ffd580;">deadnix </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">priority </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">1</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">statix </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">priority </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">2</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">nixfmt </span><span style="color:#f29e74;">= </span><span>{
-</span><span>    </span><span style="color:#ffd580;">priority </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">3</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span>}</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>
-<p>Use <code>treefmt-nix</code> to manage code formatters and linters as flake outputs. This ensures consistent styling
-and catches issues with tools like <code>deadnix</code>, <code>statix</code>, and <code>nixfmt</code>.</p>
-</li>
-<li>
-<p>Use <code>nix fmt</code> in the flake directory to format your whole configuration.</p>
-</li>
-<li>
-<p>Now you can run <code>nix flake check</code> to run your checks. Running <code>nix flake show</code> will list your outputs.</p>
-</li>
-<li>
-<p>Tools like <code>nix-fast-build</code> rely on flake checks and can be used after setting this up.</p>
-</li>
-</ul>
-<h3 id="add-a-devshell-output">Add a devShell Output</h3>
-<ol start="6">
-<li>Make a devShell output:</li>
-</ol>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span> </span><span style="color:#ff3333;">in
-</span><span>    {
-</span><span>      </span><span style="color:#ffd580;">checks</span><span>.</span><span style="color:#ffd580;">x86_64-linux</span><span>.</span><span style="color:#ffd580;">style </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">check self</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>      </span><span style="color:#ffd580;">formatter</span><span>.</span><span style="color:#ffd580;">x86_64-linux </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">treefmtEval</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">config</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">build</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">wrapper</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>      </span><span style="color:#ffd580;">devShells</span><span>.</span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span>.</span><span style="color:#ffd580;">default </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#bae67e;">./lib/dev-shell.nix </span><span>{ </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">inputs</span><span style="color:#ccc9c2cc;">; </span><span>}</span><span style="color:#ccc9c2cc;">;
-</span></code></pre>
-<p>and in the <code>dev-shell.nix</code> you could put something like this:</p>
-<pre data-lang="nix" style="background-color:#212733;color:#ccc9c2;" class="language-nix "><code class="language-nix" data-lang="nix"><span style="font-style:italic;color:#5c6773;"># dev-shell.nix
-</span><span>{
-</span><span>  </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">,
-</span><span>  </span><span style="color:#ffcc66;">system </span><span style="color:#f29e74;">? </span><span style="color:#bae67e;">&quot;x86_64-linux&quot;</span><span style="color:#f29e74;">,
-</span><span>}:
-</span><span style="color:#ffa759;">let
-</span><span>  </span><span style="font-style:italic;color:#5c6773;"># Instantiate nixpkgs with the given system and allow unfree packages
-</span><span>  </span><span style="color:#ffd580;">pkgs </span><span style="color:#f29e74;">= </span><span style="color:#f28779;">import </span><span style="color:#ffcc66;">inputs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">nixpkgs </span><span>{
-</span><span>    </span><span style="color:#ffa759;">inherit </span><span style="color:#ffd580;">system</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">config</span><span>.</span><span style="color:#ffd580;">allowUnfree </span><span style="color:#f29e74;">= </span><span style="color:#ffcc66;">true</span><span style="color:#ccc9c2cc;">;
-</span><span>    </span><span style="color:#ffd580;">overlays </span><span style="color:#f29e74;">= </span><span>[
-</span><span>      </span><span style="font-style:italic;color:#5c6773;"># Add overlays if needed, e.g., inputs.neovim-nightly-overlay.overlays.default
-</span><span>    ]</span><span style="color:#ccc9c2cc;">;
-</span><span>  }</span><span style="color:#ccc9c2cc;">;
-</span><span style="color:#ffa759;">in
-</span><span style="color:#ffcc66;">pkgs</span><span style="color:#f29e74;">.</span><span style="color:#ffcc66;">mkShell </span><span>{
-</span><span>  </span><span style="color:#ffd580;">name </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&quot;nixos-dev&quot;</span><span style="color:#ccc9c2cc;">;
-</span><span>  </span><span style="color:#ffd580;">packages </span><span style="color:#f29e74;">= </span><span style="color:#ffa759;">with </span><span style="color:#ffcc66;">pkgs</span><span>; [
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Nix tools
-</span><span>    </span><span style="color:#ffcc66;">nixfmt-rfc-style </span><span style="font-style:italic;color:#5c6773;"># Formatter
-</span><span>    </span><span style="color:#ffcc66;">deadnix </span><span style="font-style:italic;color:#5c6773;"># Dead code detection
-</span><span>    </span><span style="color:#ffcc66;">nixd </span><span style="font-style:italic;color:#5c6773;"># Nix language server
-</span><span>    </span><span style="color:#ffcc66;">nil </span><span style="font-style:italic;color:#5c6773;"># Alternative Nix language server
-</span><span>    </span><span style="color:#ffcc66;">nh </span><span style="font-style:italic;color:#5c6773;"># Nix helper
-</span><span>    </span><span style="color:#ffcc66;">nix-diff </span><span style="font-style:italic;color:#5c6773;"># Compare Nix derivations
-</span><span>    </span><span style="color:#ffcc66;">nix-tree </span><span style="font-style:italic;color:#5c6773;"># Visualize Nix dependencies
-</span><span>
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># Code editing
-</span><span>    </span><span style="color:#ffcc66;">helix
-</span><span>
-</span><span>    </span><span style="font-style:italic;color:#5c6773;"># General utilities
-</span><span>    </span><span style="color:#ffcc66;">git
-</span><span>    </span><span style="color:#ffcc66;">ripgrep
-</span><span>    </span><span style="color:#ffcc66;">jq
-</span><span>    </span><span style="color:#ffcc66;">tree
-</span><span>  ]</span><span style="color:#ccc9c2cc;">;
-</span><span>
-</span><span>  </span><span style="color:#ffd580;">shellHook </span><span style="color:#f29e74;">= </span><span style="color:#bae67e;">&#39;&#39;
-</span><span style="color:#bae67e;">    echo &quot;Welcome to the NixOS development shell!&quot;
-</span><span style="color:#bae67e;">    echo &quot;System: </span><span style="font-style:italic;color:#ccc9c2;">${</span><span style="font-style:italic;color:#ffcc66;">system</span><span style="font-style:italic;color:#ccc9c2;">}</span><span style="color:#bae67e;">&quot;
-</span><span style="color:#bae67e;">    echo &quot;Tools available: nixfmt, deadnix, nixd, nil, nh, nix-diff, nix-tree, helix, git, ripgrep, jq, tree&quot;
-</span><span style="color:#bae67e;">  &#39;&#39;</span><span style="color:#ccc9c2cc;">;
-</span><span>}
-</span></code></pre>
-<ul>
-<li>You can enter this devshell with <code>nix develop</code> or automatically with <code>direnv</code>.</li>
-</ul>
-</div>
+with &lt;code&gt;inputs&lt;&#x2F;code&gt;. I use this to reference my personal wallpapers repo mentioned earlier.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;understanding-specialargs&quot;&gt;Understanding &lt;code&gt;specialArgs&lt;&#x2F;code&gt;&lt;&#x2F;h2&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Understanding &lt;code&gt;specialArgs&lt;&#x2F;code&gt; (nixos) and &lt;code&gt;extraSpecialArgs&lt;&#x2F;code&gt; (home-manager). Building on the @-patterns, using
+&lt;code&gt;specialArgs&lt;&#x2F;code&gt; and &lt;code&gt;extraSpecialArgs&lt;&#x2F;code&gt; is a way to pass arguments from your flake to your NixOS and home-manager
+modules.&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;For example, here is a snippet of some variables I set:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;outputs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;...
+&lt;&#x2F;span&gt;&lt;span&gt;} @ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;x86_64-linux&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;magic&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;jr&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;timezone &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;America&#x2F;New_York&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;locale &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;en_US.UTF-8&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;gitUsername &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;TSawyer87&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;dotfilesDir &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;~&#x2F;.dotfiles&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;wm &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hyprland&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;browser &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;firefox&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;term &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;ghostty&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;editor &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;hx&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;keyboardLayout &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;us&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Now I can pass them as special args like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosConfigurations &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosSystem &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;specialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;modules &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;configuration.nix
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;home-manager
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixosModules&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;stylix
+&lt;&#x2F;span&gt;&lt;span&gt;        {
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useGlobalPkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;useUserPackages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;username&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;hosts&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;host&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&#x2F;home.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;backupFileExtension &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;backup&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;home-manager&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;extraSpecialArgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;            &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;username
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;host
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userVars
+&lt;&#x2F;span&gt;&lt;span&gt;              &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;          }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;        }
+&lt;&#x2F;span&gt;&lt;span&gt;      ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;To access values in &lt;code&gt;userVars&lt;&#x2F;code&gt; for example:&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# git.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;, ... &lt;&#x2F;span&gt;&lt;span&gt;}: {
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;programs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;git &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;userName &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;userVars&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;gitUsername&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;set-up-flake-check-and-formatter-outputs&quot;&gt;Set up Flake Check and Formatter Outputs&lt;&#x2F;h2&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Set up &lt;code&gt;checks&lt;&#x2F;code&gt; and &lt;code&gt;formatter&lt;&#x2F;code&gt; outputs with &lt;code&gt;treefmt-nix&lt;&#x2F;code&gt;. Add &lt;code&gt;treefmt-nix&lt;&#x2F;code&gt; to your inputs and outputs arguments.
+Inside the &lt;code&gt;let&lt;&#x2F;code&gt; expression from tip 4 I would add:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# flake.nix
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# ... snip ...
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;allowUnfree &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;treefmtEval &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmt-nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;lib&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;evalModule pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;treefmt.nix&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;checks&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;x86_64-linux&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;style &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmtEval&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;check self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;formatter&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;x86_64-linux &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmtEval&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;wrapper&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# ... snip ...
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And in the &lt;code&gt;treefmt.nix&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# treefmt.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;projectRootFile &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;flake.nix&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;programs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;deadnix&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;statix&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;keep-sorted&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixfmt &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;enable &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;strict &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;settings&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;excludes &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;*.age&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;*.jpg&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;*.nu&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;*.png&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;.jj&#x2F;*&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;flake.lock&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;justfile&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;settings&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;formatter &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;deadnix &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;priority &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;statix &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;priority &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;nixfmt &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;priority &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;code&gt;treefmt-nix&lt;&#x2F;code&gt; to manage code formatters and linters as flake outputs. This ensures consistent styling
+and catches issues with tools like &lt;code&gt;deadnix&lt;&#x2F;code&gt;, &lt;code&gt;statix&lt;&#x2F;code&gt;, and &lt;code&gt;nixfmt&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;code&gt;nix fmt&lt;&#x2F;code&gt; in the flake directory to format your whole configuration.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Now you can run &lt;code&gt;nix flake check&lt;&#x2F;code&gt; to run your checks. Running &lt;code&gt;nix flake show&lt;&#x2F;code&gt; will list your outputs.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Tools like &lt;code&gt;nix-fast-build&lt;&#x2F;code&gt; rely on flake checks and can be used after setting this up.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;add-a-devshell-output&quot;&gt;Add a devShell Output&lt;&#x2F;h3&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;Make a devShell output:&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span&gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ff3333;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span&gt;    {
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;checks&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;x86_64-linux&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;style &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmtEval&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;check self&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;formatter&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;x86_64-linux &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;treefmtEval&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;wrapper&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;devShells&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;default &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;.&#x2F;lib&#x2F;dev-shell.nix &lt;&#x2F;span&gt;&lt;span&gt;{ &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;; &lt;&#x2F;span&gt;&lt;span&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;and in the &lt;code&gt;dev-shell.nix&lt;&#x2F;code&gt; you could put something like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;nix&quot; style=&quot;background-color:#212733;color:#ccc9c2;&quot; class=&quot;language-nix &quot;&gt;&lt;code class=&quot;language-nix&quot; data-lang=&quot;nix&quot;&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# dev-shell.nix
+&lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;system &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;? &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;x86_64-linux&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;}:
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;let
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Instantiate nixpkgs with the given system and allow unfree packages
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;pkgs &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f28779;&quot;&gt;import &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;inputs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixpkgs &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;inherit &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;config&lt;&#x2F;span&gt;&lt;span&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;allowUnfree &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;overlays &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span&gt;[
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Add overlays if needed, e.g., inputs.neovim-nightly-overlay.overlays.default
+&lt;&#x2F;span&gt;&lt;span&gt;    ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  }&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;in
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;mkShell &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;name &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;nixos-dev&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;packages &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffa759;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;pkgs&lt;&#x2F;span&gt;&lt;span&gt;; [
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Nix tools
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixfmt-rfc-style &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Formatter
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;deadnix &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Dead code detection
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nixd &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Nix language server
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nil &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Alternative Nix language server
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nh &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Nix helper
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix-diff &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Compare Nix derivations
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;nix-tree &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Visualize Nix dependencies
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# Code editing
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;helix
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#5c6773;&quot;&gt;# General utilities
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;git
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;ripgrep
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;jq
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffcc66;&quot;&gt;tree
+&lt;&#x2F;span&gt;&lt;span&gt;  ]&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#ffd580;&quot;&gt;shellHook &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f29e74;&quot;&gt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;#39;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;    echo &amp;quot;Welcome to the NixOS development shell!&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;    echo &amp;quot;System: &lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;${&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ffcc66;&quot;&gt;system&lt;&#x2F;span&gt;&lt;span style=&quot;font-style:italic;color:#ccc9c2;&quot;&gt;}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;    echo &amp;quot;Tools available: nixfmt, deadnix, nixd, nil, nh, nix-diff, nix-tree, helix, git, ripgrep, jq, tree&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bae67e;&quot;&gt;  &amp;#39;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#ccc9c2cc;&quot;&gt;;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You can enter this devshell with &lt;code&gt;nix develop&lt;&#x2F;code&gt; or automatically with &lt;code&gt;direnv&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
 
-  
-</article>
 
     </div>
 
