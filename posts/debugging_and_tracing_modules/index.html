@@ -1,10 +1,11 @@
 <!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Debugging_and_tracing_modules | NixOS Blog</title>
-<link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://saylesss88.github.io/posts/debugging_and_tracing_modules/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Debugging_and_tracing_modules"><meta property="og:description" content='Debugging and Tracing NixOS Modules Nix Code is particularly hard to debug
-let lib = import <nixpkgs/lib>; in lib.evalModules { modules = [ ({ lib, ... }: { options.foo = lib.mkOption { # type = lib.types.raw; type = lib.types.anything; # default = pkgs; }; config.foo = { bar = 10; list = [1 2 3 ]; baz = lib.mkDefault "baz"; }; }) { foo.baz = "bar"; } ]; } In the above code, adding lib to the function arguments isn’t required but if you were to move the module to another file it would fail without it because lib comes from outside of it. So it’s good practice to refer to lib in the modules themselves.'><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-15T10:08:17-04:00"><meta property="article:modified_time" content="2025-05-15T10:08:17-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Debugging_and_tracing_modules"><meta name=twitter:description content='Debugging and Tracing NixOS Modules Nix Code is particularly hard to debug
+<link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://saylesss88.github.io/posts/debugging_and_tracing_modules/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Debugging_and_tracing_modules"><meta property="og:description" content='Debugging and Tracing NixOS Modules Nix Code is particularly hard to debug because of (e.g. lazy evaluation, declarative nature, layered modules)
+let lib = import <nixpkgs/lib>; in lib.evalModules { modules = [ ({ lib, ... }: { options.foo = lib.mkOption { # type = lib.types.raw; type = lib.types.anything; # default = pkgs; }; config.foo = { bar = 10; list = [1 2 3 ]; baz = lib.mkDefault "baz"; }; }) { foo.baz = "bar"; } ]; } In the above code, adding lib to the function arguments isn’t required but if you were to move the module to another file it would fail without it because lib comes from outside of it. So it’s good practice to refer to lib in the modules themselves.'><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-15T10:08:17-04:00"><meta property="article:modified_time" content="2025-05-15T10:08:17-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Debugging_and_tracing_modules"><meta name=twitter:description content='Debugging and Tracing NixOS Modules Nix Code is particularly hard to debug because of (e.g. lazy evaluation, declarative nature, layered modules)
 let lib = import <nixpkgs/lib>; in lib.evalModules { modules = [ ({ lib, ... }: { options.foo = lib.mkOption { # type = lib.types.raw; type = lib.types.anything; # default = pkgs; }; config.foo = { bar = 10; list = [1 2 3 ]; baz = lib.mkDefault "baz"; }; }) { foo.baz = "bar"; } ]; } In the above code, adding lib to the function arguments isn’t required but if you were to move the module to another file it would fail without it because lib comes from outside of it. So it’s good practice to refer to lib in the modules themselves.'><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.e139b0e3b3aff8f0e8e0272554b671a06c857a42278b36c539d96c69ddee2ca2.css integrity="sha256-4Tmw47Ov+PDo4CclVLZxoGyFekInizbFOdlsad3uLKI=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://saylesss88.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a href=https://saylesss88.github.io//index.xml><img src=/images/rss.png alt="RSS Feed" width=24>
 </a><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://saylesss88.github.io/><span itemprop=name>Home</span>
 </a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://saylesss88.github.io/posts/><span itemprop=name>Posts</span>
-</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Debugging_and_tracing_modules</h1><time class=dim datetime=2025-05-15T10:08:17-04:00>May 15, 2025</time></div><section class=page-section><h1 id=debugging-and-tracing-nixos-modules>Debugging and Tracing NixOS Modules</h1><p>Nix Code is particularly hard to debug</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Debugging_and_tracing_modules</h1><time class=dim datetime=2025-05-15T10:08:17-04:00>May 15, 2025</time></div><section class=page-section><h1 id=debugging-and-tracing-nixos-modules>Debugging and Tracing NixOS Modules</h1><p>Nix Code is particularly hard to debug because of (e.g. lazy evaluation,
+declarative nature, layered modules)</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
 </span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
 </span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
 </span></span><span style=display:flex><span>lib<span style=color:#f92672>.</span>evalModules {
@@ -47,7 +48,7 @@ unique
 </span></span><span style=display:flex><span>  fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/&#34;</span><span style=color:#f92672>.</span>device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/devst&#34;</span>;
 </span></span><span style=display:flex><span>  system<span style=color:#f92672>.</span>stateVersion <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;24.11&#34;</span>;
 </span></span><span style=display:flex><span>}
-</span></span></code></pre></div><p>Run it in vim/neovim with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>:!nix-instantiate <span style=color:#e6db74>&#39;&lt;nixpkgs/nixos&gt;&#39;</span> --arg configuration ./configuration.nix -A system
+</span></span></code></pre></div><p>Run it in vim/neovim with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate <span style=color:#e6db74>&#39;&lt;nixpkgs/nixos&gt;&#39;</span> --arg configuration ./configuration.nix -A system
 </span></span></code></pre></div><p><strong>Output</strong>:</p><pre tabindex=0><code>/nix/store/kfcwvvpdbsb3xcks1s76id16i1mc3l5k-nixos-system-nixos-25.05pre-git.drv
 </code></pre><p>Ok, we can see that this successfully instantiates. Let&rsquo;s introduce an error to
 trace:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{ lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }: {
@@ -57,7 +58,7 @@ trace:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-co
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p><strong>Output</strong>:</p><pre tabindex=0><code>(stack trace truncated; use &#39;--show-trace&#39; to show the full, detailed trace)
 error: expected an integer but found null: null
-</code></pre><p>Rerun the command with <code>--show-trace</code> appended:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>:!nix-instantiate <span style=color:#e6db74>&#39;&lt;nixpkgs/nixos&gt;&#39;</span> --arg configuration ./configuration.nix -A system --show-trace
+</code></pre><p>Rerun the command with <code>--show-trace</code> appended:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate <span style=color:#e6db74>&#39;&lt;nixpkgs/nixos&gt;&#39;</span> --arg configuration ./configuration.nix -A system --show-trace
 </span></span></code></pre></div><p>Or on the command line</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate <span style=color:#e6db74>&#39;&lt;nixpkgs/nixos&gt;&#39;</span> --arg configuration ./configuration.nix -A system --show-trace
 </span></span></code></pre></div><ul><li>This outputs a much longer trace than the first example. It shows you the file
 the error occured in and you can see that in this case they are a lot of
@@ -104,20 +105,277 @@ parts will be at the bottom.</li></ul><h2 id=example-3>Example 3</h2><div class=
 </span></span><span style=display:flex><span>    })
 </span></span><span style=display:flex><span>  ];
 </span></span><span style=display:flex><span>}
-</span></span></code></pre></div><p>Instantiate this with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>:!nix-instantiate --eval --strict -A config.strings
+</span></span></code></pre></div><p>Instantiate this with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate --eval --strict -A config.strings
 </span></span></code></pre></div><p><strong>Output</strong>:</p><pre tabindex=0><code>evaluation warning: The type `types.string` is deprecated.
  See https://github.com/NixOS/nixpkgs/pull/66346 for better alternative types.
 &#34;foo&#34;
-</code></pre><ul><li>Unfortunately you won&rsquo;t get the same depreciation warning from <code>lib.attrsOf</code></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>export NIX_PATH<span style=color:#f92672>=</span>nixpkgs<span style=color:#f92672>=</span>channel:nixpkgs-unstable
+</code></pre><ul><li>Unfortunately you won&rsquo;t get the same depreciation warning from <code>lib.attrsOf</code></li></ul><p>Below is an interesting way to provide nixpkgs:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>export NIX_PATH<span style=color:#f92672>=</span>nixpkgs<span style=color:#f92672>=</span>channel:nixpkgs-unstable
 </span></span><span style=display:flex><span>echo $NIX_PATH
-</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate --find-file nixpkgs
-</span></span></code></pre></div><p><strong>Output</strong>:</p><p><code>/nix/store/ccfwxygjrarahgfv5865x2f828sjr5h0-source</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build channel:nixpkgs-unstable -A hello
+</span></span></code></pre></div><p><strong>Output</strong>:</p><pre tabindex=0><code>nixpkgs=channel:nixpkgs-unstable
+</code></pre><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate --find-file nixpkgs
+</span></span></code></pre></div><ul><li>The above command fetches nixpkgs from the channel</li></ul><p><strong>Output</strong> this store path matches the command below:</p><p><code>/nix/store/ccfwxygjrarahgfv5865x2f828sjr5h0-source</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build channel:nixpkgs-unstable -A hello
 </span></span></code></pre></div><p><strong>Output</strong>:</p><pre tabindex=0><code>unpacking &#39;https://nixos.org/channels/nixpkgs-unstable/nixexprs.tar.xz&#39; into the Git cache...
 this path will be fetched (0.05 MiB download, 0.22 MiB unpacked):
 /nix/store/zphkqn2wg8mnvbkixnl2aadkbn0rcnfj-hello-2.12.1
 copying path &#39;/nix/store/zphkqn2wg8mnvbkixnl2aadkbn0rcnfj-hello-2.12.1&#39; from &#39;https://cache.nixos.org&#39;...
 /nix/store/zphkqn2wg8mnvbkixnl2aadkbn0rcnfj-hello-2.12.1
 </code></pre><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate --eval channel:nixpkgs-unstable -A path
-</span></span></code></pre></div><p><strong>Output</strong></p><pre tabindex=0><code>/nix/store/ydrgwsibghsyx884qz97zbs1xs93yk11-source
-</code></pre><ul><li>To be continued</li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>701 words</span>
-<span>5 - 7 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#example-2>Example 2</a></li><li><a href=#example-3>Example 3</a></li></ul></nav></aside></div></div></body></html>
+</span></span></code></pre></div><p><strong>Output</strong>: This store path is the same as when we ran
+<code>nix-instantiate --find-file nixpkgs</code></p><pre tabindex=0><code>/nix/store/ydrgwsibghsyx884qz97zbs1xs93yk11-source
+</code></pre><h2 id=example-4>Example 4</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      ({lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span>}: {
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>ints <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>int;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          <span style=color:#75715e># type = lib.types.string;</span>
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>string;
+</span></span><span style=display:flex><span>          default <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>            x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;foo&#34;</span>;
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        config <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOptionDefault {
+</span></span><span style=display:flex><span>            x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;bar&#34;</span>;
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      })
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><p>Evaluate it with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-vim data-lang=vim><span style=display:flex><span>:!<span style=color:#a6e22e>nix</span>-<span style=color:#a6e22e>instantiate</span> --<span style=color:#a6e22e>eval</span> --<span style=color:#a6e22e>strict</span> -<span style=color:#a6e22e>A</span> <span style=color:#a6e22e>config</span>.<span style=color:#a6e22e>strings</span>
+</span></span></code></pre></div><ul><li><p><code>types.string</code> depricated because it silently concatenats strings</p></li><li><p>The above command has two options with the same priority level and evaluates
+to <code>{ x = "foobar"; }</code></p></li></ul><p><strong>Output:</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>evaluation warning: The type <span style=color:#e6db74>`</span>types.string<span style=color:#e6db74>`</span> is deprecated. See https://github.
+</span></span><span style=display:flex><span>com/NixOS/nixpkgs/pull/66346 <span style=color:#66d9ef>for</span> better alternative types.
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span> x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;foobar&#34;</span>; <span style=color:#f92672>}</span>
+</span></span></code></pre></div><ul><li><code>types.str</code> was the replacement for the depricated <code>types.string</code>:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      ({lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span>}: {
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>ints <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>int;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          <span style=color:#75715e># type = lib.types.string;</span>
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>str;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Sets the value with a lower priority: lib.mkOptionDefault</span>
+</span></span><span style=display:flex><span>          default <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>            x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;foo&#34;</span>;
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        config <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOptionDefault {
+</span></span><span style=display:flex><span>            x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;bar&#34;</span>;
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      })
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><p><strong>Output:</strong></p><pre tabindex=0><code>error:
+… while evaluating the attribute &#39;x&#39;
+
+… while evaluating the attribute &#39;value&#39;
+ at /nix/store/ydrgwsibghsyx884qz97zbs1xs93yk11-source/lib/modules.nix:1148:41:
+ 1147|
+ 1148|     optionalValue = if isDefined then { value = mergedValue; } else { };
+     |                                         ^
+ 1149|   };
+
+… while calling the &#39;foldl&#39;&#39; builtin
+ at /nix/store/ydrgwsibghsyx884qz97zbs1xs93yk11-source/lib/options.nix:508:8:
+  507|     else
+  508|       (foldl&#39; (
+     |        ^
+  509|         first: def:
+
+(stack trace truncated; use &#39;--show-trace&#39; to show the full, detailed trace)
+
+error: The option `strings.x&#39; has conflicting definition values:
+- In `&lt;unknown-file&gt;&#39;: &#34;foo&#34;
+- In `&lt;unknown-file&gt;&#39;: &#34;bar&#34;
+Use `lib.mkForce value` or `lib.mkDefault value` to change the priority on any of these definitions.
+
+shell returned 1
+</code></pre><h2 id=summary>Summary</h2><ul><li><p>So types in the module system aren&rsquo;t just types in the conventional sense
+but they also specify the emerging behavior of these values.</p></li><li><p>If we switch the type in the above example to <code>types.lines</code> you get this
+returned, <code>{ x = "foo\nbar"; }</code></p></li><li><p><code>mkOptionDefault</code> isn&rsquo;t typically something you should generally use, instead
+options have a <code>default</code> setting</p></li><li><p>If you want to make sure that you set a default but if the user specifies it,
+it shouldn&rsquo;t get overridden. You should not set it in the following:</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>options<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>  type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>lines;
+</span></span><span style=display:flex><span>  default <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;foo&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Because the above uses <code>mkOptionDefault</code> but instead in under the <code>config</code>
+attribute like the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># ...snip...</span>
+</span></span><span style=display:flex><span>options<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>  type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>lines;
+</span></span><span style=display:flex><span>  <span style=color:#75715e># default = {</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># x = &#34;foo&#34;;</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># };</span>
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span>config <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>  strings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    x <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkDefault <span style=color:#e6db74>&#34;foo&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span><span style=color:#75715e># ...snip...</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      ({lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span>}: {
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>ints <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>int;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          <span style=color:#75715e># type = lib.types.string;</span>
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>str;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Sets the value with a lower priority: lib.mkOptionDefault</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>#default = {</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>#  x = &#34;foo&#34;;</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>#};</span>
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        config<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;foo&#34;</span>;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      })
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>        config<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          y <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;bar&#34;</span>;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><p><strong>Output</strong>:</p><ul><li>This works now because there&rsquo;s no difference between <code>x</code> and <code>y</code></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>{</span> x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;foo&#34;</span>; y <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;bar&#34;</span>; <span style=color:#f92672>}</span>
+</span></span></code></pre></div><h2 id=more-functionality-between-modules>More Functionality between modules</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      ({lib<span style=color:#f92672>,</span> <span style=color:#f92672>...</span>}: {
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>ints <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>int;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        options<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>          <span style=color:#75715e># type = lib.types.string;</span>
+</span></span><span style=display:flex><span>          type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>str;
+</span></span><span style=display:flex><span>          <span style=color:#75715e># Sets the value with a lower priority: lib.mkOptionDefault</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>#default = {</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>#  x = &#34;foo&#34;;</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e>#};</span>
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>        config<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          x <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkDefault <span style=color:#e6db74>&#34;foo&#34;</span>;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      })
+</span></span><span style=display:flex><span>      {
+</span></span><span style=display:flex><span>        config<span style=color:#f92672>.</span>strings <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          x <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;x&#34;</span>;
+</span></span><span style=display:flex><span>          y <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;bar&#34;</span>;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><ul><li>The above command would cause a conflict without the <code>x = lib.mkDefault foo</code>
+And this is typically what you want to do for defaults and modules in things
+like nested configuration.</li></ul><p><strong>Output:</strong></p><pre tabindex=0><code>{ x = &#34;x&#34;; y = &#34;bar&#34;; }
+</code></pre><h3 id=infinite-recursion-error>Infinite recursion error</h3><p>We&rsquo;ll separate the logic for this example, this will be the <code>default.nix</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>./module.nix</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><p>And in the <code>module.nix</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>./module.nix</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><ul><li>If you evaluate this with the following you will get an infinite recursion error.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate --eval --strict -A config.etc
+</span></span></code></pre></div><ul><li>This happens because <code>--strict</code> evaluates the <code>etc</code>, then it goes into the
+<code>attrsOf</code>, and the <code>path</code></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix repl
+</span></span><span style=display:flex><span>nix-repl&gt; :l &lt;nixpkgs&gt;
+</span></span><span style=display:flex><span>nix-repl&gt; hello.out.out.out
+</span></span></code></pre></div><p>In this example:</p><ul><li><p><code>:l &lt;nixpkgs></code> loads the Nixpkgs library into the repl environment, making its
+definitions available.</p></li><li><p><code>hello</code> refers to the <code>hello</code> package definition within Nixpkgs. Packages in
+Nixpkgs are defined as <em>derivations</em>.</p></li><li><p><code>.out</code> is a common attribute name for the <em>main output</em> of a derivation
+(e.g., the installed package). Some packages, especially those with complex
+build processes or multiple outputs, might have nested output attributes.
+In the case of <code>hello</code>, accessing <code>.out.out.out</code> ultimately leads us to the
+<em>derivation</em> itself.</p></li></ul><p>The key takeaway here is that when you evaluate a package in the <code>nix repl</code>,
+you&rsquo;re often interacting with its derivation or one of its output paths in the
+Nix store. The <code>«derivation ...»</code> indicates that <code>hello.out.out.out</code> evaluates
+to a derivation – the blueprint for building the <code>hello</code> package. This is in
+contrast to <code>--eval --strict</code>, which tries to fully evaluate values, potentially
+leading to infinite recursion if it encounters a derivation that refers back to
+itself indirectly during attribute evaluation.</p><p><strong>Output:</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>«derivation /nix/store/b1vcpm321dwbwx6wj4n13l35f4y2wrfv-hello-2.12.1.drv»
+</span></span></code></pre></div><ul><li>So it recurses through the entire thing and tries to evaluate its string.</li></ul><p>So we want to change the command from <code>--eval --strict</code> which is only based on
+evaluation to at least <code>nix-instantiate</code> which is based on derivations:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate -A config.etc
+</span></span></code></pre></div><p><strong>Output:</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>warning: you did not specify <span style=color:#e6db74>&#39;--add-root&#39;</span>; the result might be removed by the garbage collector
+</span></span><span style=display:flex><span>/nix/store/abyfp1rxk73p0n5kfilv7pawxwvc7hsg-foo.drv
+</span></span></code></pre></div><ul><li>We don&rsquo;t really have a derivation yet for example:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># module.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: {
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>etc <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>    type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf (lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>path);
+</span></span><span style=display:flex><span>    default <span style=color:#f92672>=</span> {};
+</span></span><span style=display:flex><span>    description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      Specifies which paths are in /etc/
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#39;&#39;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>.</span>_module<span style=color:#f92672>.</span>args<span style=color:#f92672>.</span>pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs&gt;</span> {
+</span></span><span style=display:flex><span>    config <span style=color:#f92672>=</span> {};
+</span></span><span style=display:flex><span>    overlays <span style=color:#f92672>=</span> [];
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>.</span>etc<span style=color:#f92672>.</span>foo<span style=color:#f92672>.</span>bar <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>writeText <span style=color:#e6db74>&#34;foo&#34;</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    foo configuration
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Try to evaluate the above command with <code>nix-instantiate -A config.etc</code> and Nix
+doesn&rsquo;t even try to build it. With nested <code>attrsOf</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix repl -f default.nix
+</span></span><span style=display:flex><span>nix-repl&gt; config.etc
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  foo <span style=color:#f92672>=</span> <span style=color:#f92672>{</span> ... <span style=color:#f92672>}</span>;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>nix-repl&gt; config.etc.foo
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>  bar <span style=color:#f92672>=</span> «derivation /nix/store/abyfp1rxk73p0n5kfilv7pawxwvc7hsg-foo.drv»;
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><ul><li>So <code>config.foo</code> is an attribute set and <code>config.etc.foo</code> is also an attribute
+set but it&rsquo;s not a derivation by itself. So <code>nix-instantiate</code> does this one
+level of recursion here and it would have built <code>foo</code> value if it were a
+derivation.</li></ul><h3 id=key-takeaways-for-debugging-nixos-modules>Key Takeaways for Debugging NixOS Modules</h3><ul><li><p><strong><code>nix-instantiate</code> is Your Friend:</strong> Use <code>nix-instantiate</code> to evaluate your
+NixOS modules and pinpoint errors.</p></li><li><p><strong>Unlock Details with <code>--show-trace</code>:</strong> When errors occur, always append
+<code>--show-trace</code> to get a comprehensive stack trace, revealing the origin of the
+problem. Remember that in newer Nix versions, the most relevant parts of the
+trace are often at the bottom.</p></li><li><p><strong>Understand Option Types:</strong> Nix option types (<code>raw</code>, <code>anything</code>, <code>string</code>/<code>str</code>,
+<code>lines</code>, <code>attrsOf</code>) are not just about data types; they also dictate how values
+are merged and processed within the module system.</p></li><li><p><strong>Be Mindful of <code>mkOptionDefault</code>:</strong> While useful in specific scenarios,
+<code>mkOptionDefault</code> sets a lower priority default. For standard defaults that
+can be overridden by user configuration, define them directly within the <code>config</code>
+attribute using <code>lib.mkDefault</code>.</p></li><li><p><strong>Use <code>builtins.addErrorContext</code>:</strong> Enhance your custom error messages by
+providing specific context relevant to your module&rsquo;s logic using
+<code>builtins.addErrorContext</code>.</p></li><li><p><strong>Derivations vs. Evaluation:</strong> Be aware of the difference between evaluating
+expressions (<code>--eval --strict</code>) and instantiating derivations (<code>nix-instantiate</code>).
+Strict evaluation can trigger infinite recursion if it encounters unevaluated
+derivations with cyclic dependencies during attribute access.</p></li><li><p><strong>Explore with <code>nix repl</code>:</strong> The <code>nix repl</code> allows you to interactively explore
+Nix expressions and the outputs of derivations, providing insights into the
+structure and values within Nixpkgs.</p></li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>2060 words</span>
+<span>15 - 19 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#example-2>Example 2</a></li><li><a href=#example-3>Example 3</a></li><li><a href=#example-4>Example 4</a></li><li><a href=#summary>Summary</a></li><li><a href=#more-functionality-between-modules>More Functionality between modules</a><ul><li><a href=#infinite-recursion-error>Infinite recursion error</a></li><li><a href=#key-takeaways-for-debugging-nixos-modules>Key Takeaways for Debugging NixOS Modules</a></li></ul></li></ul></nav></aside></div></div></body></html>
