@@ -1,4 +1,45 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on NixOS Blog</title><link>https://saylesss88.github.io/posts/</link><description>Recent content in Posts on NixOS Blog</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Wed, 14 May 2025 19:28:57 -0400</lastBuildDate><atom:link href="https://saylesss88.github.io/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Using_overlays_to_add_packages</title><link>https://saylesss88.github.io/posts/using_overlays_to_add_packages/</link><pubDate>Wed, 14 May 2025 19:28:57 -0400</pubDate><guid>https://saylesss88.github.io/posts/using_overlays_to_add_packages/</guid><description>&lt;h1 id="using-overlays-to-add-packages-that-arent-in-nixpkgs">Using Overlays to add Packages that aren&amp;rsquo;t in Nixpkgs&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on NixOS Blog</title><link>https://saylesss88.github.io/posts/</link><description>Recent content in Posts on NixOS Blog</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Thu, 15 May 2025 13:02:06 -0400</lastBuildDate><atom:link href="https://saylesss88.github.io/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Nixpkgs_pull_requests</title><link>https://saylesss88.github.io/posts/nixpkgs_pull_requests/</link><pubDate>Thu, 15 May 2025 13:02:06 -0400</pubDate><guid>https://saylesss88.github.io/posts/nixpkgs_pull_requests/</guid><description>&lt;h1 id="nixpkgs-pull-requests">Nixpkgs Pull Requests&lt;/h1>
+&lt;p>Flakes often rely on having access to the full history of the Git repository
+to correctly determine dependencies, identify specific revisions of inputs,
+and evaluate the flake. Not in all situations will a shallow clone work and
+this is one of them.&lt;/p>
+&lt;p>If you have any changes to your local copy of Nixpkgs make sure to stash them
+before the following:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>git stash -u
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>This command saves your uncommited changes (including staged files)
+temporarily. You can restore them later with &lt;code>git stash pop&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>Step 1 Clone Nixpkgs Locally&lt;/strong>&lt;/p></description></item><item><title>Debugging_and_tracing_modules</title><link>https://saylesss88.github.io/posts/debugging_and_tracing_modules/</link><pubDate>Thu, 15 May 2025 10:08:17 -0400</pubDate><guid>https://saylesss88.github.io/posts/debugging_and_tracing_modules/</guid><description>&lt;h1 id="debugging-and-tracing-nixos-modules">Debugging and Tracing NixOS Modules&lt;/h1>
+&lt;p>Nix Code is particularly hard to debug&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-nix" data-lang="nix">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">let&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lib &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#f92672">import&lt;/span> &lt;span style="color:#e6db74">&amp;lt;nixpkgs/lib&amp;gt;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">in&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>lib&lt;span style="color:#f92672">.&lt;/span>evalModules {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> modules &lt;span style="color:#f92672">=&lt;/span> [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ({ lib&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#f92672">...&lt;/span> }: {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> options&lt;span style="color:#f92672">.&lt;/span>foo &lt;span style="color:#f92672">=&lt;/span> lib&lt;span style="color:#f92672">.&lt;/span>mkOption {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># type = lib.types.raw;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> type &lt;span style="color:#f92672">=&lt;/span> lib&lt;span style="color:#f92672">.&lt;/span>types&lt;span style="color:#f92672">.&lt;/span>anything;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># default = pkgs;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> };
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> config&lt;span style="color:#f92672">.&lt;/span>foo &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> bar &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">10&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> list &lt;span style="color:#f92672">=&lt;/span> [&lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">3&lt;/span> ];
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> baz &lt;span style="color:#f92672">=&lt;/span> lib&lt;span style="color:#f92672">.&lt;/span>mkDefault &lt;span style="color:#e6db74">&amp;#34;baz&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> };
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> })
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> foo&lt;span style="color:#f92672">.&lt;/span>baz &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;bar&amp;#34;&lt;/span>;
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ];
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>
+&lt;p>In the above code, adding &lt;code>lib&lt;/code> to the function arguments isn&amp;rsquo;t required but
+if you were to move the module to another file it would fail without it
+because lib comes from outside of it. So it&amp;rsquo;s good practice to refer to &lt;code>lib&lt;/code>
+in the modules themselves.&lt;/p></description></item><item><title>Using_overlays_to_add_packages</title><link>https://saylesss88.github.io/posts/using_overlays_to_add_packages/</link><pubDate>Wed, 14 May 2025 19:28:57 -0400</pubDate><guid>https://saylesss88.github.io/posts/using_overlays_to_add_packages/</guid><description>&lt;h1 id="using-overlays-to-add-packages-that-arent-in-nixpkgs">Using Overlays to add Packages that aren&amp;rsquo;t in Nixpkgs&lt;/h1>
 &lt;figure>&lt;img src="images/pokego.png"
  alt="window_view" width="1000">
 &lt;/figure>
