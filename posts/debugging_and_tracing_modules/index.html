@@ -384,7 +384,246 @@ doesn&rsquo;t even try to build it. With nested <code>attrsOf</code></p><div cla
 </span></span></code></pre></div><ul><li>So <code>config.foo</code> is an attribute set and <code>config.etc.foo</code> is also an attribute
 set but it&rsquo;s not a derivation by itself. So <code>nix-instantiate</code> does this one
 level of recursion here and it would have built <code>foo</code> value if it were a
-derivation.</li></ul><h3 id=key-takeaways-for-debugging-nixos-modules>Key Takeaways for Debugging NixOS Modules</h3><ul><li><p><strong><code>nix-instantiate</code> is Your Friend:</strong> Use <code>nix-instantiate</code> to evaluate your
+derivation.</li></ul><h3 id=example-5>Example 5</h3><p>We&rsquo;ll use the same <code>module.nix</code> and <code>default.nix</code> from the previous example.</p><p>Building More Complex Configurations with Modules
+In this next example, we&rsquo;ll focus on a common task in system configuration:
+managing files within the <code>/etc/</code> directory. We&rsquo;ll define a module that allows
+us to specify the content of arbitrary files in <code>/etc/</code> and then use a special
+Nix function to combine these individual file definitions into a single,
+manageable entity.</p><p>We&rsquo;ll introduce a new option, <code>options.etc</code>, which will allow us to define the
+content of files within <code>/etc/</code>. Then, we&rsquo;ll use <code>pkgs.linkFarm</code> to create a
+derivation that represents the entire <code>/etc/</code> directory as a collection of
+symbolic links pointing to the individual file contents we&rsquo;ve defined. This
+demonstrates how modules can abstract away the details of creating complex
+system configurations, providing a declarative and reproducible way to manage
+even fundamental aspects of the operating system.</p><p>Let&rsquo;s show how we can use Nix modules to declaratively manage the <code>/etc/</code>
+directory</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  lib <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs/lib&gt;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>./module.nix</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  }
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># module.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: {
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>etc <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>    type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf (lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>attrsOf lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>path);
+</span></span><span style=display:flex><span>    default <span style=color:#f92672>=</span> {};
+</span></span><span style=display:flex><span>    description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      Specifies which paths are in /etc/
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#39;&#39;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>etcCombined <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>    type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>package;
+</span></span><span style=display:flex><span>    default <span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>      pkgs<span style=color:#f92672>.</span>linkFarm <span style=color:#e6db74>&#34;etc&#34;</span>
+</span></span><span style=display:flex><span>      (lib<span style=color:#f92672>.</span>mapAttrsToList (name: value: {
+</span></span><span style=display:flex><span>        name <span style=color:#f92672>=</span> name;
+</span></span><span style=display:flex><span>        path <span style=color:#f92672>=</span> value;
+</span></span><span style=display:flex><span>      }) config<span style=color:#f92672>.</span>etc);
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>.</span>_module<span style=color:#f92672>.</span>args<span style=color:#f92672>.</span>pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs&gt;</span> {
+</span></span><span style=display:flex><span>    config <span style=color:#f92672>=</span> {};
+</span></span><span style=display:flex><span>    overlays <span style=color:#f92672>=</span> [];
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>.</span>etc<span style=color:#f92672>.</span>foo <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>writeText <span style=color:#e6db74>&#34;foo&#34;</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    foo configuration
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>.</span>etc<span style=color:#f92672>.</span>bar <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>writeText <span style=color:#e6db74>&#34;bar&#34;</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    bar configuration
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Run it with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate -A config.etcCombined
+</span></span></code></pre></div><p><strong>Output</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/nix/store/3da61nmfk546qn2zpxsm57mq6vz6fjx8-etc.drv
+</span></span></code></pre></div><ul><li>So we can see that it will instantiate, lets see if it will build:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build -A config.etcCombined
+</span></span></code></pre></div><p><strong>Output</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>these <span style=color:#ae81ff>3</span> derivations will be built:
+</span></span><span style=display:flex><span>/nix/store/41yfxq4af1vrs0rrgfk5gc36kmjc7270-bar.drv
+</span></span><span style=display:flex><span>/nix/store/abyfp1rxk73p0n5kfilv7pawxwvc7hsg-foo.drv
+</span></span><span style=display:flex><span>/nix/store/3da61nmfk546qn2zpxsm57mq6vz6fjx8-etc.drv
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/41yfxq4af1vrs0rrgfk5gc36kmjc7270-bar.drv&#39;</span>...
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/abyfp1rxk73p0n5kfilv7pawxwvc7hsg-foo.drv&#39;</span>...
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/3da61nmfk546qn2zpxsm57mq6vz6fjx8-etc.drv&#39;</span>...
+</span></span><span style=display:flex><span>/nix/store/ca3wyk5m3qhy8n1nbn0181m29qvp1klp-etc
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build -A config.etcCombined <span style=color:#f92672>&amp;&amp;</span> ls result/ -laa
+</span></span></code></pre></div><p><strong>Output</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/nix/store/ca3wyk5m3qhy8n1nbn0181m29qvp1klp-etc
+</span></span><span style=display:flex><span>dr-xr-xr-x - root <span style=color:#ae81ff>31</span> Dec  <span style=color:#ae81ff>1969</span>  .
+</span></span><span style=display:flex><span>drwxrwxr-t - root <span style=color:#ae81ff>16</span> May 15:13  ..
+</span></span><span style=display:flex><span>lrwxrwxrwx - root <span style=color:#ae81ff>31</span> Dec  <span style=color:#ae81ff>1969</span>  bar -&gt; /nix/store/1fsjyc2hmilab1qw6jfkf6cb767kz858-bar
+</span></span><span style=display:flex><span>lrwxrwxrwx - root <span style=color:#ae81ff>31</span> Dec  <span style=color:#ae81ff>1969</span>  foo -&gt; /nix/store/wai5dycp0zx1lxg0rhpdxnydhiadpk05-foo
+</span></span></code></pre></div><ul><li><p>We can see that <code>foo</code> and <code>bar</code> link to different derivations</p></li><li><p>When trying to figure out which <code>default</code> to use for <code>etcCombined</code> infinisil
+went to the Nixpkgs Reference Manual. Make sure to go to the correct version.</p><ul><li><p><a href=https://nixos.org/manual/nixpkgs/stable/>24.11pre-git</a></p></li><li><p><a href=https://nixos.org/manual/nixpkgs/unstable/>25.05pre-git</a> (i.e. unstable)</p></li><li><p>Once at the website press <code>Ctrl+f</code> and type <code>symlinkjoin</code> and hit enter.</p></li></ul></li></ul><p>Or in your local copy of Nixpkgs you could go to <code>nixpkgs/pkgs/build-support/ trivial-builders/default.nix</code>. Then use your editors search feature, with nvim
+and helix you press <code>/symlinkjoin</code> or <code>/linkFarm</code> hit enter then press <code>n</code> to
+cycle to the next match. It will bring you to comments and up to date
+information.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># linkFarm &#34;myexample&#34; [ { name = &#34;hello-test&#34;; path = pkgs.hello; }</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># { name = &#34;foobar&#34;; path = pkgs.stack; } ]</span>
+</span></span></code></pre></div><h3 id=tests>Tests</h3><ul><li>How to create a Derivation with <code>passthru.tests</code> outside of Nixpkgs
+and then run tests available to your package set?</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mkdir passthru-tests <span style=color:#f92672>&amp;&amp;</span> cd passthru-tests
+</span></span></code></pre></div><p>Create a <code>default.nix</code> with the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs&gt;</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  package <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>runCommand <span style=color:#e6db74>&#34;foo&#34;</span> {
+</span></span><span style=display:flex><span>    passthru<span style=color:#f92672>.</span>tests<span style=color:#f92672>.</span>simple <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>runCommand <span style=color:#e6db74>&#34;foo-test&#34;</span> {} <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      if [[ &#34;$(cat </span><span style=color:#e6db74>${</span>package<span style=color:#e6db74>}</span><span style=color:#e6db74>)&#34; != &#34;foo&#34; ]]; then
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        echo &#34;Result is not foo&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        exit 1
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      fi
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      touch $out
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span>  } <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    echo foo &gt; $out
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  &#39;&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>package
+</span></span></code></pre></div><p>See if it will build:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build
+</span></span></code></pre></div><p>Try running the test:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build -A passthru.tests
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>this derivation will be built:
+</span></span><span style=display:flex><span>/nix/store/pqpqq9x1wnsabzbsb52z4g4y4zy6p7yx-foo-test.drv
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/pqpqq9x1wnsabzbsb52z4g4y4zy6p7yx-foo-test.drv&#39;</span>...
+</span></span><span style=display:flex><span>/nix/store/7bbw2ban0mgkh4d59yz3cnai4aavwvb6-foo-test
+</span></span></code></pre></div><h3 id=test-2>Test 2</h3><ul><li><code>passthru.tests</code> is the convention for defining tests associated with a
+derivation. The attributes in <code>passthru</code> are preserved and accessible after
+the derivation is built.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs&gt;</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  package <span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>    pkgs<span style=color:#f92672>.</span>runCommand <span style=color:#e6db74>&#34;foo&#34;</span> {
+</span></span><span style=display:flex><span>      passthru<span style=color:#f92672>.</span>tests<span style=color:#f92672>.</span>simple <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>runCommand <span style=color:#e6db74>&#34;foo-test&#34;</span> {} <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        if [[ &#34;$(cat </span><span style=color:#e6db74>${</span>package<span style=color:#e6db74>}</span><span style=color:#e6db74>)&#34; != &#34;foo&#34; ]]; then
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          echo &#34;Result is not foo&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>          exit 1
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        fi
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        touch $out
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#39;&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      passthru<span style=color:#f92672>.</span>tests<span style=color:#f92672>.</span>version <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>testers<span style=color:#f92672>.</span>testVersion {
+</span></span><span style=display:flex><span>         package <span style=color:#f92672>=</span> package;
+</span></span><span style=display:flex><span>         version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;1.2&#34;</span>;
+</span></span><span style=display:flex><span>     };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e># pkgs.writeShellApplication</span>
+</span></span><span style=display:flex><span>      script <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        #!</span><span style=color:#e6db74>${</span>pkgs<span style=color:#f92672>.</span>runtimeShell<span style=color:#e6db74>}</span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        echo &#34;1.2&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#39;&#39;</span>;
+</span></span><span style=display:flex><span>      passAsFiles <span style=color:#f92672>=</span> [ <span style=color:#e6db74>&#34;script&#34;</span> ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    } <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      cp &#34;$scriptPath&#34; &#34;$out&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#39;&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  package
+</span></span></code></pre></div><p>Try to build it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build -A passthru.tests
+</span></span></code></pre></div><ul><li><p><code>testers.testVersion</code> checks if an executable outputs a specific version string.</p></li><li><p><code>nix-build -A passthru.tests</code> specifically targets the derivations defined
+within the tests attribute of the main derivation.</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>these <span style=color:#ae81ff>3</span> derivations will be built:
+</span></span><span style=display:flex><span>  /nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv
+</span></span><span style=display:flex><span>  /nix/store/s4iawjy5zpv89dbkc3zz7z3ngz4jq2cv-foo-test.drv
+</span></span><span style=display:flex><span>  /nix/store/z3gi4pb8jn2h9rvk4dhba85fiphp5g4z-foo-test-version.drv
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv&#39;</span>...
+</span></span><span style=display:flex><span>cp: cannot stat <span style=color:#e6db74>&#39;&#39;</span>: No such file or directory
+</span></span><span style=display:flex><span>error: builder <span style=color:#66d9ef>for</span> <span style=color:#e6db74>&#39;/nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv&#39;</span>
+</span></span><span style=display:flex><span> failed with exit code 1;
+</span></span><span style=display:flex><span>     last <span style=color:#ae81ff>1</span> log lines:
+</span></span><span style=display:flex><span>     &gt; cp: cannot stat <span style=color:#e6db74>&#39;&#39;</span>: No such file or directory
+</span></span><span style=display:flex><span>     For full logs, run:
+</span></span><span style=display:flex><span>       nix log /nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv
+</span></span><span style=display:flex><span>error: <span style=color:#ae81ff>1</span> dependencies of derivation <span style=color:#e6db74>&#39;/nix/store/z3gi4pb8jn2h9rvk4dhba85fiphp5g4z
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>-foo-test-version.drv&#39;</span> failed to build
+</span></span><span style=display:flex><span>error: build of <span style=color:#e6db74>&#39;/nix/store/s4iawjy5zpv89dbkc3zz7z3ngz4jq2cv-foo-test.drv&#39;</span>,
+</span></span><span style=display:flex><span> <span style=color:#e6db74>&#39;/nix/store/z3gi4pb8jn2h9rvk4dhba85fiphp5g4z-foo-test-version.drv&#39;</span> failed
+</span></span></code></pre></div><p>Run <code>nix-build</code> with no arguments:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix derivation show /nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv | jq <span style=color:#e6db74>&#39;.[].env&#39;</span>
+</span></span></code></pre></div><p><strong>Output</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;__structuredAttrs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;buildCommand&#34;</span>: <span style=color:#e6db74>&#34;cp \&#34;$scriptPath\&#34; \&#34;$out\&#34;\n&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;buildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;builder&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/xg75pc4yyfd5n2fimhb98ps910q5lm5n-bash-5.2p37/bin/bash&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;cmakeFlags&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;configureFlags&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsBuildBuild&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsBuildBuildPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsBuildTarget&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsBuildTargetPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsHostHost&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsHostHostPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsTargetTarget&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;depsTargetTargetPropagated&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;doCheck&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;doInstallCheck&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;enableParallelBuilding&#34;</span>: <span style=color:#e6db74>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;enableParallelChecking&#34;</span>: <span style=color:#e6db74>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;enableParallelInstalling&#34;</span>: <span style=color:#e6db74>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;mesonFlags&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;foo&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;nativeBuildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;out&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/9mcrnddb6lf1md14v4lj6s089i99l5k7-foo&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;outputs&#34;</span>: <span style=color:#e6db74>&#34;out&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;passAsFile&#34;</span>: <span style=color:#e6db74>&#34;buildCommand&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;passAsFiles&#34;</span>: <span style=color:#e6db74>&#34;script&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;patches&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;propagatedBuildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;propagatedNativeBuildInputs&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;script&#34;</span>: <span style=color:#e6db74>&#34;#!/nix/store/xg75pc4yyfd5n2fimhb98ps910q5lm5n-bash-5.2p37/bin/bash\necho \&#34;1.2\&#34;\n&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;stdenv&#34;</span>: <span style=color:#e6db74>&#34;/nix/store/lgydi1gl5wqcw6k4gyjbaxx7b40zxrsp-stdenv-linux&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;strictDeps&#34;</span>: <span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;system&#34;</span>: <span style=color:#e6db74>&#34;x86_64-linux&#34;</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix derivation show /nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv | jq
+</span></span><span style=display:flex><span> <span style=color:#e6db74>&#39;.[].env.buildCommand&#39;</span>
+</span></span></code></pre></div><p><strong>Output:</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#e6db74>&#34;cp \&#34;</span>$scriptPath<span style=color:#e6db74>\&#34; \&#34;</span>$out<span style=color:#e6db74>\&#34;\n&#34;</span>
+</span></span></code></pre></div><ul><li>raw mode below</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix derivation show /nix/store/lyz86bd78p7f3yjy1qky6annmggymcwd-foo.drv | jq
+</span></span><span style=display:flex><span> <span style=color:#e6db74>&#39;.[].env.buildCommand&#39;</span> -r
+</span></span></code></pre></div><p><strong>Output</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cp <span style=color:#e6db74>&#34;</span>$scriptPath<span style=color:#e6db74>&#34;</span> <span style=color:#e6db74>&#34;</span>$out<span style=color:#e6db74>&#34;</span>
+</span></span></code></pre></div><ul><li>It turns out the correct command was <code>passAsFile</code> not <code>passAsFiles</code> but that
+change wasn&rsquo;t enough to fix it. <code>passAsFiles</code> expects a list of files, not a
+single file path. Running <code>nix-build -A passthru.tests</code> failed
+saying <code>> foo --version returned a non-zero exit code.</code></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>&lt;nixpkgs&gt;</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  package <span style=color:#f92672>=</span>
+</span></span><span style=display:flex><span>    pkgs<span style=color:#f92672>.</span>runCommand <span style=color:#e6db74>&#34;foo&#34;</span> {
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#passthru.tests.simple = pkgs.runCommand &#34;foo-test&#34; {} &#39;&#39;</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#  if [[ &#34;$(cat ${package})&#34; != &#34;foo&#34; ]]; then</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#    echo &#34;Result is not foo&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#    exit 1</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#  fi</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#  touch $out</span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e>#&#39;&#39;;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      passthru<span style=color:#f92672>.</span>tests<span style=color:#f92672>.</span>version <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>testers<span style=color:#f92672>.</span>testVersion {
+</span></span><span style=display:flex><span>        package <span style=color:#f92672>=</span> package;
+</span></span><span style=display:flex><span>        version <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;1.2&#34;</span>;
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>      <span style=color:#75715e># pkgs.writeShellApplication</span>
+</span></span><span style=display:flex><span>      script <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        #!</span><span style=color:#e6db74>${</span>pkgs<span style=color:#f92672>.</span>runtimeShell<span style=color:#e6db74>}</span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>        echo &#34;1.2&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      &#39;&#39;</span>;
+</span></span><span style=display:flex><span>      passAsFile <span style=color:#f92672>=</span> [<span style=color:#e6db74>&#34;script&#34;</span>];
+</span></span><span style=display:flex><span>    } <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      mkdir -p &#34;$out/bin&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      cp &#34;$scriptPath&#34; &#34;$out/bin/foo&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      chmod +x &#34;$out/bin/foo&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    &#39;&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>  package
+</span></span></code></pre></div><p>Build it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-build -A passthru.tests
+</span></span></code></pre></div><p><strong>Output:</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>these <span style=color:#ae81ff>2</span> derivations will be built:
+</span></span><span style=display:flex><span>  /nix/store/lqrlcd64dmpzkggcfzlnsnwjd339czd3-foo.drv
+</span></span><span style=display:flex><span>  /nix/store/c3kw4xbdlrig08jrdm5wis1dmv2gnqsd-foo-test-version.drv
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/lqrlcd64dmpzkggcfzlnsnwjd339czd3-foo.drv&#39;</span>...
+</span></span><span style=display:flex><span>building <span style=color:#e6db74>&#39;/nix/store/c3kw4xbdlrig08jrdm5wis1dmv2gnqsd-foo-test-version.drv&#39;</span>...
+</span></span><span style=display:flex><span>1.2
+</span></span><span style=display:flex><span>/nix/store/zsbk5zawak68ailvkwi2gad2bqbqmdz9-foo-test-version
+</span></span></code></pre></div><h3 id=key-takeaways-for-debugging-nixos-modules>Key Takeaways for Debugging NixOS Modules</h3><ul><li><p><strong><code>nix-instantiate</code> is Your Friend:</strong> Use <code>nix-instantiate</code> to evaluate your
 NixOS modules and pinpoint errors.</p></li><li><p><strong>Unlock Details with <code>--show-trace</code>:</strong> When errors occur, always append
 <code>--show-trace</code> to get a comprehensive stack trace, revealing the origin of the
 problem. Remember that in newer Nix versions, the most relevant parts of the
@@ -400,5 +639,5 @@ expressions (<code>--eval --strict</code>) and instantiating derivations (<code>
 Strict evaluation can trigger infinite recursion if it encounters unevaluated
 derivations with cyclic dependencies during attribute access.</p></li><li><p><strong>Explore with <code>nix repl</code>:</strong> The <code>nix repl</code> allows you to interactively explore
 Nix expressions and the outputs of derivations, providing insights into the
-structure and values within Nixpkgs.</p></li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>2302 words</span>
-<span>16 - 21 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#example-2>Example 2</a></li><li><a href=#example-3>Example 3</a></li><li><a href=#example-4>Example 4</a></li><li><a href=#summary>Summary</a></li><li><a href=#more-functionality-between-modules>More Functionality between modules</a><ul><li><a href=#infinite-recursion-error>Infinite recursion error</a></li><li><a href=#key-takeaways-for-debugging-nixos-modules>Key Takeaways for Debugging NixOS Modules</a></li></ul></li></ul></nav></aside></div></div></body></html>
+structure and values within Nixpkgs.</p></li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>3322 words</span>
+<span>25 - 32 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#example-2>Example 2</a></li><li><a href=#example-3>Example 3</a></li><li><a href=#example-4>Example 4</a></li><li><a href=#summary>Summary</a></li><li><a href=#more-functionality-between-modules>More Functionality between modules</a><ul><li><a href=#infinite-recursion-error>Infinite recursion error</a></li><li><a href=#example-5>Example 5</a></li><li><a href=#tests>Tests</a></li><li><a href=#test-2>Test 2</a></li><li><a href=#key-takeaways-for-debugging-nixos-modules>Key Takeaways for Debugging NixOS Modules</a></li></ul></li></ul></nav></aside></div></div></body></html>
