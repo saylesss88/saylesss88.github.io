@@ -156,58 +156,50 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="chapter-1"><a class="header" href="#chapter-1">Chapter 1</a></h1>
-<h2 id="nix-language-basics"><a class="header" href="#nix-language-basics">Nix Language Basics</a></h2>
+<h2 id="getting-started-with-the-nix-language"><a class="header" href="#getting-started-with-the-nix-language">Getting Started with the Nix Language</a></h2>
 <p><img src="images/gruv13.png" alt="window_view" /></p>
-<p>Nix as a programming language can be thought of as a kind of "JSON, but with
-functions".</p>
-<p>All statements are declarative, meaning that there's no sequential flow of
-instructions that makes up a Nix package. Instead, functions are called that
-assign values to fields in attribute sets, which in turn may get assigned to
-other values.</p>
-<h2 id="how-does-nix-work"><a class="header" href="#how-does-nix-work">How does Nix work</a></h2>
-<p>Nix is a pure, functional, lazy, declarative, and reproducible programming
-language.</p>
-<div class="table-wrapper"><table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody>
-<tr><td>Pure</td><td>Functions don't cause side effects.</td></tr>
-<tr><td>Functional</td><td>Functions can be passed as arguments and returned as results.</td></tr>
-<tr><td>Lazy</td><td>Not evaluated until needed to complete a computation.</td></tr>
-<tr><td>Declarative</td><td>Describing a system outcome.</td></tr>
-<tr><td>Reproducible</td><td>Operations that are performed twice return same results</td></tr>
+<p>Welcome to the world of Nix, a powerful tool for reproducible and declarative
+software management. In this chapter, we’ll explore the basics of the Nix
+programming language, a pure, functional, and declarative language that
+underpins Nix’s package manager and operating system. By the end, you’ll
+understand Nix’s core concepts, syntax, and how to write simple expressions
+and derivations.</p>
+<blockquote>
+<p>[!TIP]
+If you’re new to Nix, think of it as a recipe book for software: you describe
+what you want (declarative), and Nix ensures it’s built the same way every
+time (reproducible).</p>
+</blockquote>
+<h2 id="why-learn-nix"><a class="header" href="#why-learn-nix">Why Learn Nix?</a></h2>
+<p>Nix is unique because it guarantees reproducible builds, isolates dependencies,
+and allows you to describe complex systems declaratively. Whether you’re
+managing packages, configuring servers, or developing software, Nix’s language
+is the foundation for creating reliable and repeatable environments. This
+chapter lays the groundwork for using Nix effectively.</p>
+<h2 id="nix-language-at-a-glance"><a class="header" href="#nix-language-at-a-glance">Nix Language at a Glance</a></h2>
+<p>Nix is often described as “JSON with functions.” It’s a declarative language
+where you define outcomes, not step-by-step instructions. Instead of writing
+sequential code, you create expressions that describe data structures,
+functions, and dependencies. These expressions are evaluated lazily, meaning
+Nix computes values only when needed, making it efficient for managing large
+systems.</p>
+<p>Let’s dive into the key characteristics of Nix:</p>
+<div class="table-wrapper"><table><thead><tr><th><strong>Concept</strong></th><th><strong>Description</strong></th></tr></thead><tbody>
+<tr><td><strong>Pure</strong></td><td>Functions have no side effects, ensuring predictable results.</td></tr>
+<tr><td><strong>Functional</strong></td><td>Functions can be passed as arguments or returned, enabling flexible composition.</td></tr>
+<tr><td><strong>Lazy</strong></td><td>Expressions are evaluated only when their results are needed.</td></tr>
+<tr><td><strong>Declarative</strong></td><td>You describe the desired outcome, not how to achieve it.</td></tr>
+<tr><td><strong>Reproducible</strong></td><td>The same inputs always produce the same outputs, ensuring consistency.</td></tr>
 </tbody></table>
 </div>
 <blockquote>
 <p>❗ Important: In Nix, everything is an expression, there are no statements.</p>
 <p>❗ Important: Values in Nix are immutable.</p>
 </blockquote>
-<ul>
-<li>
-<p>In Nix, the process of managing software starts with package definitions.
-These are files written in the Nix language that describe how a particular
-piece of software should be built. These package definitions, when processed
-by Nix, are translated into derivations.</p>
-</li>
-<li>
-<p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
-to build a specific software package or any other kind of file or directory.
-It's a declarative specification of:</p>
-</li>
-<li>
-<p>Inputs: What existing files or other derivations are needed as dependencies.</p>
-</li>
-<li>
-<p>Build Steps: The commands that need to be executed to produce the desired output.</p>
-</li>
-<li>
-<p>Environment: The specific environment (e.g., build tools, environment
-variables) required for the build process.</p>
-</li>
-<li>
-<p>Outputs: The resulting files or directories that the derivation produces.</p>
-</li>
-</ul>
-<p>Think of a package definition as the initial instructions, and the derivation as
-the detailed, low-level plan that Nix uses to actually perform the build."</p>
 <h2 id="syntax-basics"><a class="header" href="#syntax-basics">Syntax Basics</a></h2>
+<p>Let’s explore the building blocks of Nix’s syntax. We’ll cover identifiers,
+strings, attribute sets, and basic expressions, with examples to illustrate
+each concept.</p>
 <p><img src="images/lambda1.png" alt="window_view" /></p>
 <ul>
 <li>
@@ -225,59 +217,33 @@ error: undefined variable `a-b' at (string):1:1
 nix-repl&gt; a - b
 error: undefined variable `a' at (string):1:1
 </code></pre>
+<blockquote>
+<p><strong>Warning</strong>: <code>a-b</code> is parsed as an identifier, not as subtraction.</p>
+</blockquote>
 <ul>
-<li>
-<p><code>a-b</code> is parsed as an identifier, not as subtraction.</p>
-</li>
-<li>
-<p><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes (<code>''</code>).</p>
-</li>
+<li><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
+(<code>''</code>).</li>
 </ul>
 <pre><code class="language-nix">nix-repl&gt; "stringDaddy"
 "stringDaddy"
 nix-repl&gt; ''stringMoma''
 "stringMoma"
 </code></pre>
-<p><strong>String Interpolation</strong>: Is a language feature where a string, path, or attribute name can contain expressions enclosed in <code>${ }</code>. This construct is called <em>interpolated string</em>, and the expression inside is an <em>interpolated expression</em>.<a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.</p>
+<p><strong>String Interpolation</strong>: allows you to embed expressions in strings using <code>${}</code>
+<a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.</p>
 <p>Rather than writing:</p>
-<pre><code class="language-nix">"--with-freetype2-library=" + freetype + "/lib"
+<pre><code class="language-nix">let path = "/usr/local"; in "--prefix=${path}"
 </code></pre>
-<p>where <code>freetype</code> is a derivation, you could instead write:</p>
-<pre><code class="language-nix">"--with-freetype2-library=${freetype}/lib"
-</code></pre>
-<p>And the above expression will be translated to the former.</p>
-<p><strong>Interpolated Expression</strong>: An expression that is interpolated must evaluate to one of the following:</p>
 <ul>
 <li>
-<p>a string</p>
+<p>This evaluates to <code>"--prefix=/usr/local"</code>. Interpolated expressions must
+evaluate to a string, path, or an attribute set with an <code>outPath</code> or
+<code>__toString</code> attribute.</p>
 </li>
 <li>
-<p>a path</p>
+<p><strong>Attribute sets</strong> are all over Nix code, they are name-value pairs wrapped
+in curly braces, where the names must be unique:</p>
 </li>
-<li>
-<p>an attribute set that has a <code>__toString</code> attribute or an <code>outPath</code> attribute.</p>
-<ul>
-<li>
-<p><code>__toString</code> must be a function that takes an attribute set itself and returns a string.</p>
-</li>
-<li>
-<p><code>outPath</code> must be a string</p>
-</li>
-<li>
-<p>This includes derivations or flake inputs.</p>
-</li>
-</ul>
-</li>
-</ul>
-<p>A path in an interpolated expression is first copied into the Nix store, and the resulting string is the store path of the newly created store object.</p>
-<pre><code class="language-bash">mkdir foo
-</code></pre>
-<p>reference the empty directory in an interpolated expression:</p>
-<pre><code class="language-nix">"${./foo}"
-</code></pre>
-<p>Output: <code>"/nix/store/2hhl2nz5v0khbn06ys82nrk99aa1xxdw-foo"</code></p>
-<ul>
-<li><strong>Attribute sets</strong> are all over Nix code, they are name-value pairs wrapped in curly braces, where the names must be unique:</li>
 </ul>
 <pre><code class="language-nix">{
   string = "hello";
@@ -285,29 +251,14 @@ nix-repl&gt; ''stringMoma''
 }
 </code></pre>
 <ul>
-<li>
-<p>Attribute names usually don't need quotes.</p>
-</li>
-<li>
-<p>List elements are separated by white space.</p>
-</li>
+<li>Attribute names usually don't need quotes.</li>
 </ul>
-<pre><code class="language-nix">programs = {
-  bat.enable = true;
-}
+<p>You can access attributes using dot notation:</p>
+<pre><code class="language-nix">let person = { name = "Alice"; age = 30; }; in person.name
+"Alice"
 </code></pre>
-<ul>
-<li>The <code>bat.enable</code> is called dot notation. The above command can be written a few ways:</li>
-</ul>
-<pre><code class="language-nix">programs.bat.enable = true; # using dot notation
-# or
-programs = {  # using nested attribut sets.
-  bat = {
-    enable = true;
-  }
-}
-</code></pre>
-<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access to attributes within the set:</p>
+<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access
+to attributes within the set:</p>
 <pre><code class="language-nix">rec {
   one = 1;
   two = one + 1;
@@ -337,33 +288,7 @@ programs = {  # using nested attribut sets.
 <blockquote>
 <p>❗: This works because <code>x</code> is added to the lexical scope by the <code>let</code> construct.</p>
 </blockquote>
-<pre><code class="language-nix">inherit x y z;
-inherit (src-set) a b c;
-</code></pre>
-<p>is equivalent to:</p>
-<pre><code class="language-nix">x = x; y = y; z = z;
-a = src-set.a; b = src-set.b; c = src-set.c
-</code></pre>
-<p>In a <code>let</code> expression, <code>inherit</code> can be used to selectively bring specific attributes of a set into scope:</p>
-<pre><code class="language-nix">let
-  x = { a = 1; b = 2; };
-  inherit (builtins) attrNames;
-in
-{
-  names = attrNames x;
-}
-</code></pre>
-<p>is equivalent to:</p>
-<pre><code class="language-nix">let
-  x = { a = 1; b = 2; };
-in
-{
-  names = builtins.attrNames x;
-}
-</code></pre>
-<p>Both evaluate to:</p>
-<pre><code class="language-nix">{ names [ "a" "b" ]; }
-</code></pre>
+<h2 id="control-flow-with-expressions"><a class="header" href="#control-flow-with-expressions">Control Flow with Expressions</a></h2>
 <p><strong>If expressions</strong>:</p>
 <pre><code class="language-nix">nix-repl&gt; a = 6
 nix-repl&gt; b = 10
@@ -428,7 +353,7 @@ expression is not in need to be evaluated. That's why we can have all the
 packages defined on demand, yet have acces to specific packages very quickly.
 Some of these examples came from the Nix pill series.</li>
 </ul>
-<p><strong>Functions</strong>:</p>
+<h2 id="functions"><a class="header" href="#functions">Functions:</a></h2>
 <p>The code below calls a function called <code>my_function</code> with the parameters <code>2</code> and
 <code>3</code>, and assigns its output to the <code>my_value</code> field:</p>
 <pre><code class="language-nix">{
@@ -492,8 +417,65 @@ inner function is essentially waiting for its <code>y</code> argument to be prov
 <p>This new function takes <code>y</code> and returns the result of <code>x + y</code>.</p>
 </li>
 </ul>
+<h2 id="inheriting-attributes"><a class="header" href="#inheriting-attributes">Inheriting Attributes</a></h2>
+<pre><code class="language-nix">inherit x y z;
+inherit (src-set) a b c;
+</code></pre>
+<p>is equivalent to:</p>
+<pre><code class="language-nix">x = x; y = y; z = z;
+a = src-set.a; b = src-set.b; c = src-set.c
+</code></pre>
+<p>In a <code>let</code> expression, <code>inherit</code> can be used to selectively bring specific attributes of a set into scope:</p>
+<pre><code class="language-nix">let
+  x = { a = 1; b = 2; };
+  inherit (builtins) attrNames;
+in
+{
+  names = attrNames x;
+}
+</code></pre>
+<p>is equivalent to:</p>
+<pre><code class="language-nix">let
+  x = { a = 1; b = 2; };
+in
+{
+  names = builtins.attrNames x;
+}
+</code></pre>
+<p>Both evaluate to:</p>
+<pre><code class="language-nix">{ names [ "a" "b" ]; }
+</code></pre>
 <h3 id="derivations"><a class="header" href="#derivations">Derivations</a></h3>
 <p><img src="images/nix99.png" alt="nix99" /></p>
+<ul>
+<li>
+<p>In Nix, the process of managing software starts with package definitions.
+These are files written in the Nix language that describe how a particular
+piece of software should be built. These package definitions, when processed
+by Nix, are translated into derivations.</p>
+</li>
+<li>
+<p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
+to build a specific software package or any other kind of file or directory.
+It's a declarative specification of:</p>
+</li>
+<li>
+<p><strong>Inputs</strong>: What existing files or other derivations are needed as dependencies.</p>
+</li>
+<li>
+<p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
+output.</p>
+</li>
+<li>
+<p><strong>Environment</strong>: The specific environment (e.g., build tools, environment
+variables) required for the build process.</p>
+</li>
+<li>
+<p><strong>Outputs</strong>: The resulting files or directories that the derivation produces.</p>
+</li>
+</ul>
+<p>Think of a package definition as the initial instructions, and the derivation as
+the detailed, low-level plan that Nix uses to actually perform the build."</p>
 <p>Again, a derivation is like a blueprint that describes how to build a specific
 software package or any other kind of file or directory.</p>
 <p><strong>Key Characteristics of Derivations:</strong></p>
