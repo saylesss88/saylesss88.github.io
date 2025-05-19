@@ -9,7 +9,7 @@
 
         <!-- Custom HTML head -->
 
-        <meta name="description" content="A collection of Nix insights">
+        <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -158,26 +158,18 @@
                     <main>
                         <h1 id="chapter-1"><a class="header" href="#chapter-1">Chapter 1</a></h1>
 <h2 id="getting-started-with-the-nix-language"><a class="header" href="#getting-started-with-the-nix-language">Getting Started with the Nix Language</a></h2>
-<p><img src="images/gruv13.png" alt="window_view" /></p>
+<p><img src="images/gruv13.png" alt="gruv13" /></p>
 <p>Welcome to the world of Nix, a powerful tool for reproducible and declarative
 software management. In this chapter, we’ll explore the basics of the Nix
-programming language, a pure, functional, and declarative language that
-underpins Nix’s package manager and operating system. By the end, you’ll
-understand Nix’s core concepts, syntax, and how to write simple expressions
-and derivations.</p>
+programming language, a pure, functional, and declarative language that underpins
+Nix’s package manager and operating system. By the end, you’ll understand Nix’s
+core concepts, syntax, and how to write simple expressions and derivations.</p>
 <blockquote>
-<p>❗
-If you’re new to Nix, think of it as a recipe book for software: you describe
-what you want (declarative), and Nix ensures it’s built the same way every
-time (reproducible).</p>
+<p>❗ If you're new to Nix, think of it as a recipe book for software: you
+describe what you want (declarative), and Nix ensures it’s built the same
+way every time (reproducible).</p>
 </blockquote>
 <h2 id="why-learn-nix"><a class="header" href="#why-learn-nix">Why Learn Nix?</a></h2>
-<p>Nix is unique because it guarantees reproducible builds, isolates dependencies,
-and allows you to describe complex systems declaratively. Whether you’re
-managing packages, configuring servers, or developing software, Nix’s language
-is the foundation for creating reliable and repeatable environments. This
-chapter lays the groundwork for using Nix effectively.</p>
-<h2 id="nix-language-at-a-glance"><a class="header" href="#nix-language-at-a-glance">Nix Language at a Glance</a></h2>
 <p>Nix is often described as “JSON with functions.” It’s a declarative language
 where you define outcomes, not step-by-step instructions. Instead of writing
 sequential code, you create expressions that describe data structures,
@@ -185,12 +177,12 @@ functions, and dependencies. These expressions are evaluated lazily, meaning
 Nix computes values only when needed, making it efficient for managing large
 systems.</p>
 <p>Let’s dive into the key characteristics of Nix:</p>
-<div class="table-wrapper"><table><thead><tr><th><strong>Concept</strong></th><th><strong>Description</strong></th></tr></thead><tbody>
-<tr><td><strong>Pure</strong></td><td>Functions have no side effects, ensuring predictable results.</td></tr>
-<tr><td><strong>Functional</strong></td><td>Functions can be passed as arguments or returned, enabling flexible composition.</td></tr>
-<tr><td><strong>Lazy</strong></td><td>Expressions are evaluated only when their results are needed.</td></tr>
-<tr><td><strong>Declarative</strong></td><td>You describe the desired outcome, not how to achieve it.</td></tr>
-<tr><td><strong>Reproducible</strong></td><td>The same inputs always produce the same outputs, ensuring consistency.</td></tr>
+<div class="table-wrapper"><table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody>
+<tr><td><strong>Pure</strong></td><td>Functions don't cause side effects.</td></tr>
+<tr><td><strong>Functional</strong></td><td>Functions can be passed as arguments and returned as results.</td></tr>
+<tr><td><strong>Lazy</strong></td><td>Not evaluated until needed to complete a computation.</td></tr>
+<tr><td><strong>Declarative</strong></td><td>Describing a system outcome.</td></tr>
+<tr><td><strong>Reproducible</strong></td><td>Operations that are performed twice return same results</td></tr>
 </tbody></table>
 </div>
 <blockquote>
@@ -198,10 +190,7 @@ systems.</p>
 <p>❗ Important: Values in Nix are immutable.</p>
 </blockquote>
 <h2 id="syntax-basics"><a class="header" href="#syntax-basics">Syntax Basics</a></h2>
-<p>Let’s explore the building blocks of Nix’s syntax. We’ll cover identifiers,
-strings, attribute sets, and basic expressions, with examples to illustrate
-each concept.</p>
-<p><img src="images/lambda1.png" alt="window_view" /></p>
+<p><img src="images/lambda1.png" alt="lambda1" /></p>
 <ul>
 <li>
 <p><a href="https://nix.dev/manual/nix/2.24/language/">Nix Language Overview</a></p>
@@ -222,24 +211,25 @@ error: undefined variable `a' at (string):1:1
 <p>❗ Tip <code>a-b</code> is parsed as an identifier, not as subtraction.</p>
 </blockquote>
 <ul>
-<li><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
-(<code>''</code>).</li>
+<li><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes (<code>''</code>).</li>
 </ul>
 <pre><code class="language-nix">nix-repl&gt; "stringDaddy"
 "stringDaddy"
 nix-repl&gt; ''stringMoma''
 "stringMoma"
 </code></pre>
-<p><strong>String Interpolation</strong>: allows you to embed expressions in strings using <code>${}</code>
-<a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.</p>
+<p><strong>String Interpolation</strong>: Is a language feature where a string, path, or
+attribute name can contain expressions enclosed in <code>${ }</code>. This construct
+is called <em>interpolated string</em>, and the expression inside is an
+<em>interpolated expression</em>.<a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.</p>
 <p>Rather than writing:</p>
 <pre><code class="language-nix">let path = "/usr/local"; in "--prefix=${path}"
 </code></pre>
 <ul>
 <li>
 <p>This evaluates to <code>"--prefix=/usr/local"</code>. Interpolated expressions must
-evaluate to a string, path, or an attribute set with an <code>outPath</code> or
-<code>__toString</code> attribute.</p>
+evaluate to a string, path, or an attribute set with an outPath or <code>__toString</code>
+attribute.</p>
 </li>
 <li>
 <p><strong>Attribute sets</strong> are all over Nix code, they are name-value pairs wrapped
@@ -258,8 +248,7 @@ in curly braces, where the names must be unique:</p>
 <pre><code class="language-nix">let person = { name = "Alice"; age = 30; }; in person.name
 "Alice"
 </code></pre>
-<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access
-to attributes within the set:</p>
+<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access to attributes within the set:</p>
 <pre><code class="language-nix">rec {
   one = 1;
   two = one + 1;
@@ -433,18 +422,17 @@ to build a specific software package or any other kind of file or directory.
 It's a declarative specification of:</p>
 </li>
 <li>
-<p><strong>Inputs</strong>: What existing files or other derivations are needed as dependencies.</p>
+<p>Inputs: What existing files or other derivations are needed as dependencies.</p>
 </li>
 <li>
-<p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
-output.</p>
+<p>Build Steps: The commands that need to be executed to produce the desired output.</p>
 </li>
 <li>
-<p><strong>Environment</strong>: The specific environment (e.g., build tools, environment
+<p>Environment: The specific environment (e.g., build tools, environment
 variables) required for the build process.</p>
 </li>
 <li>
-<p><strong>Outputs</strong>: The resulting files or directories that the derivation produces.</p>
+<p>Outputs: The resulting files or directories that the derivation produces.</p>
 </li>
 </ul>
 <p>Think of a package definition as the initial instructions, and the derivation as
@@ -588,7 +576,7 @@ more sophisticated Nix expressions and derivations.</p>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-2"><a class="header" href="#chapter-2">Chapter 2</a></h1>
 <h2 id="understanding-nix-functions"><a class="header" href="#understanding-nix-functions">Understanding Nix Functions</a></h2>
-<p><img src="images/nixLogo.png" alt="NixFlakeLogo" /></p>
+<p><img src="images/nixLogo.png" alt="nixLogo" /></p>
 <p>Functions are a fundamental concept in Nix and are prevalent throughout Nix code. Grasping how they work is crucial for understanding and writing Nix expressions.</p>
 <h2 id="the-single-argument-nature-of-nix-functions"><a class="header" href="#the-single-argument-nature-of-nix-functions">The Single-Argument Nature of Nix Functions</a></h2>
 <p>A key concept to understand is that in Nix, every function conceptually takes <strong>exactly one argument</strong>. What might appear as multi-argument functions are actually achieved through a technique called <strong>currying</strong>, where a series of nested single-argument functions are used.</p>
@@ -756,9 +744,9 @@ then uses these values to define parts of your system.</p>
 </li>
 </ul>
 <h2 id="conclusion-1"><a class="header" href="#conclusion-1">Conclusion</a></h2>
-<p>Having explored the fundamental nature of functions in Nix, we can
-now see how this concept applies to more complex areas like NixOS
-configuration. In the next chapter, <a href="https://saylesss88.github.io/chapter_3.html">NixOS Modules Explained</a>.
+<p>Having explored the fundamental nature of functions in Nix, we can now see
+this concept applies to more complex areas like NixOS configuration. In the next
+chapter, <a href="https://saylesss88.github.io/chapter_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
 <h3 id="resources-1"><a class="header" href="#resources-1">Resources</a></h3>
@@ -1084,9 +1072,9 @@ specific versions becomes crucial.</p>
 <p>In the following example, we'll explore how to use a tool called <code>npins</code> to
 manage and lock the dependencies of a NixOS configuration, ensuring a more
 predictable and reproducible system. This will involve setting up a project
-structure and using <code>npins</code> to pin the specific version of Nixpkgs our
+structure and using npins to pin the specific version of Nixpkgs our
 configuration relies on.</p>
-<p>This is the file structure of this example:</p>
+<p>This is the file structure:</p>
 <pre><code class="language-bash">❯ tree
 .
 ├── configuration.nix
@@ -1188,17 +1176,18 @@ nix-repl&gt; builtins.filter (pkg: lib.hasPrefix "git" pkg.name) nixosSystem.con
 <pre><code class="language-nix">nix-repl&gt; nixosSystem.config.mine.desktop.enable
 true
 </code></pre>
-<p>As demonstrated with <code>npins</code>, explicitly managing the dependencies of your NixOS
+<p>As demonstrated with npins, explicitly managing the dependencies of your NixOS
 modules is a powerful technique for ensuring the long-term stability and
-reproducibility of your system configurations. By pinning specific versions of
-Nixpkgs and other resources, you gain greater control over your environment and
-reduce the risk of unexpected changes due to upstream updates.</p>
+reproducibility of your system configurations. By pinning specific versions
+of Nixpkgs and other resources, you gain greater control over your environment
+and reduce the risk of unexpected changes due to upstream updates.</p>
 <h2 id="conclusion-2"><a class="header" href="#conclusion-2">Conclusion</a></h2>
 <p>As we have seen throughout this chapter, modules are the building blocks of your
 NixOS system and are themselves often functions. There are a few different ways
-to use these modules to build your system. In the next chapter, <a href="https://saylesss88.github.io/chapter_4.html">Nix Flakes Explained</a>
-we will learn about Nix Flakes as a more modern and comprehensive entrypoint for
-managing your entire system and its dependencies.</p>
+to use these modules to build your system. In the next chapter, <a href="https://saylesss88.github.io/chapter_4.html">Nix Flakes
+Explained</a> we will learn about Nix
+Flakes as a more modern and comprehensive entrypoint for managing your entire
+system and its dependencies.</p>
 <p>To further deepen your understanding of NixOS Modules and the broader ecosystem
 of tools and best practices surrounding them, the following resources offer
 valuable insights and information.</p>
@@ -1227,13 +1216,12 @@ valuable insights and information.</p>
 </li>
 </ul>
 <h1 id="videos"><a class="header" href="#videos">Videos</a></h1>
-<p><a href="https://www.youtube.com/watch?v=N7hFP_40DJo&amp;t=17s">NixHour Writing NixOS modules</a>
--- This example is from this video
+<p><a href="https://www.youtube.com/watch?v=N7hFP_40DJo&amp;t=17s">NixHour Writing NixOS modules</a> -- This example is from this video
 <a href="https://infinisil.com/modules.mp4">infinisilModules</a></p>
 <p><a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-4"><a class="header" href="#chapter-4">Chapter 4</a></h1>
 <h2 id="nix-flakes-explained"><a class="header" href="#nix-flakes-explained">Nix Flakes Explained</a></h2>
-<p><img src="images/gruv3.png" alt="gruv3" /></p>
+<p><img src="images/gruv23.png" alt="gruv23" /></p>
 <p>This explanation highlights common areas of confusion for those new to Nix
 Flakes, aiming to clarify concepts rather than serve as a comprehensive guide.</p>
 <h2 id="what-is-a-nix-flake"><a class="header" href="#what-is-a-nix-flake">What is a Nix Flake?</a></h2>
@@ -1520,16 +1508,16 @@ managing Nix projects, from development environments to entire system
 configurations. We've seen how they provide structure, dependency management,
 and reproducibility through well-defined inputs and outputs. Flakes offer a
 cohesive way to organize your Nix code and share it with others.</p>
-<p>As we've worked with the <code>flake.nix</code> file, you've likely noticed its structure
-– a top-level attribute set defining various outputs like <code>devShells</code>,
-<code>packages</code>, <code>nixosConfigurations</code>, and more. These top-level attributes are not
-arbitrary; they follow certain conventions and play specific roles within the
-Flake ecosystem.</p>
+<p>As we've worked with the flake.nix file, you've likely noticed its structure –
+a top-level attribute set defining various outputs like devShells, packages,
+nixosConfigurations, and more. These top-level attributes are not arbitrary;
+they follow certain conventions and play specific roles within the Flake
+ecosystem.</p>
 <p>In the next chapter, <a href="https://saylesss88.github.io/chapter_5.html">Understanding Top-Level Attributes</a>
 we will delve deeper into the meaning and purpose of these common top-level
-attributes. We'll explore how they are structured, what kind of expressions
-they typically contain, and how they contribute to the overall functionality
-and organization of your Nix Flakes. Understanding these attributes is key to
+attributes. We'll explore how they are structured, what kind of expressions they
+typically contain, and how they contribute to the overall functionality and
+organization of your Nix Flakes. Understanding these attributes is key to
 effectively leveraging the full potential of Nix Flakes.</p>
 <h4 id="further-resources"><a class="header" href="#further-resources">Further Resources</a></h4>
 <ul>
@@ -1560,11 +1548,8 @@ effectively leveraging the full potential of Nix Flakes.</p>
 <li>
 <p><a href="https://flakehub.com/">FlakeHub</a></p>
 </li>
-<li>
-<p>This is a screenshot of FlakeHub and deadnix:
-<img src="images/nixosnix.png" alt="FlakeHub" /></p>
-</li>
 </ul>
+<p><img src="images/nixosnix.png" alt="FlakeHub" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-5"><a class="header" href="#chapter-5">Chapter 5</a></h1>
 <h2 id="understanding-top-level-attributes-in-nixos-modules"><a class="header" href="#understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules</a></h2>
 <p><img src="images/gruv9.png" alt="gruv9" /></p>
@@ -1759,32 +1744,33 @@ in this case) is defined elsewhere (e.g., in an imported module).</p>
 of whether those options are declared in the same module.</p>
 <h2 id="conclusion-3"><a class="header" href="#conclusion-3">Conclusion</a></h2>
 <p>Understanding the nuances of top-level attributes within NixOS modules,
-particularly <code>imports</code>, <code>options</code>, and <code>config</code>, is fundamental to structuring
+particularly imports, options, and config, is fundamental to structuring
 and managing your system's configuration effectively. As we've seen, the
 module system provides a powerful and declarative way to define and evaluate
 system settings, ultimately contributing to the construction of the
-<code>system.build.toplevel</code> derivation that represents your entire NixOS
-environment.</p>
+<code>system.build.toplevel</code> derivation that represents your entire NixOS environment.</p>
 <p>The concepts of option declaration and value assignment, along with the crucial
-rule of organizing non-option attributes under the <code>config</code> attribute when
-<code>options</code> is present, provide a clear framework for building modular and
-maintainable configurations.</p>
+rule of organizing non-option attributes under the config attribute when options
+is present, provide a clear framework for building modular and maintainable
+configurations.</p>
 <p>Now that we have a solid grasp of how NixOS modules are structured and how they
 contribute to the final system derivation, it's a natural next step to delve
-into the fundamental building blocks that these modules often manipulate:
-<strong>Nix derivations</strong>.</p>
+into the fundamental building blocks that these modules often manipulate: Nix
+derivations.</p>
 <p>In our next post, <a href="https://saylesss88.github.io/chapter_6.html">Introduction to Nix Derivations</a>,
 we will take a closer look at what Nix derivations are, how they define the
-process of building software and other artifacts, and how they form the core of
-Nix's reproducible build system. Understanding derivations will provide a deeper
-appreciation for how Nix manages packages and enables the declarative
+process of building software and other artifacts, and how they form the core
+of Nix's reproducible build system. Understanding derivations will provide a
+deeper appreciation for how Nix manages packages and enables the declarative
 configurations we've been exploring.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-6"><a class="header" href="#chapter-6">Chapter 6</a></h1>
 <h2 id="introduction-to-nix-derivations"><a class="header" href="#introduction-to-nix-derivations">Introduction to Nix Derivations</a></h2>
 <p><img src="images/gruv10.png" alt="gruv10" /></p>
 <ul>
 <li>
-<p>A derivation in Nix is a fundamental concept that describes how to build a piece of software or a resource (e.g., a package, library, or configuration file). Think of it as a recipe for creating something within the Nix ecosystem.</p>
+<p>A derivation in Nix is a fundamental concept that describes how to build
+a piece of software or a resource (e.g., a package, library, or configuration
+file). Think of it as a recipe for creating something within the Nix ecosystem.</p>
 </li>
 <li>
 <p>For beginners, the analogy of a cooking recipe is helpful:</p>
@@ -1802,7 +1788,8 @@ to use, how to build it, and what the final output should be.</p>
 <h2 id="creating-derivations-in-nix"><a class="header" href="#creating-derivations-in-nix">Creating Derivations in Nix</a></h2>
 <ul>
 <li>
-<p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function, which is part of the standard environment (<code>stdenv</code>). While a
+<p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function,
+which is part of the standard environment (<code>stdenv</code>). While a
 lower-level <code>derivation</code> function exists for advanced use cases,
 <code>mkDerivation</code> simplifies the process by automatically managing dependencies
 and the build environment.</p>
@@ -1950,17 +1937,16 @@ along with other Nix expressions and dependencies, has evolved over time.
 Traditionally, Nix projects often relied on patterns involving <code>default.nix</code>
 files, channel subscriptions, and manual dependency management.</p>
 <p>A more recent and increasingly popular approach to structuring Nix projects and
-managing dependencies is through <strong>Nix Flakes</strong>. Flakes introduce a standardized
+managing dependencies is through Nix Flakes. Flakes introduce a standardized
 project structure, explicit input tracking, and a more robust way to ensure
 reproducible builds across different environments.</p>
 <p>In our next chapter, <a href="https://saylesss88.github.io/chapter_7.html">Comparing Flakes to Traditional Nix</a>,
-we will directly compare and contrast these two approaches. We'll examine
-the strengths and weaknesses of traditional Nix practices in contrast to the
-benefits and features offered by Nix Flakes. This comparison will help you
-understand the motivations behind Flakes and when you might choose one approach
-over the other for your Nix projects.</p>
-<p>As you can see below, there is a ton of information on derivations freely
-available.</p>
+we will directly compare and contrast these two approaches. We'll examine the strengths and
+weaknesses of traditional Nix practices in contrast to the benefits and features
+offered by Nix Flakes. This comparison will help you understand the motivations
+behind Flakes and when you might choose one approach over the other for your Nix
+projects.</p>
+<p>As you can see below, there is a ton of information on derivations freely available.</p>
 <h4 id="links-to-articles-about-derivations"><a class="header" href="#links-to-articles-about-derivations">Links To Articles about Derivations</a></h4>
 <ul>
 <li>
@@ -2004,10 +1990,13 @@ available.</p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-7"><a class="header" href="#chapter-7">Chapter 7</a></h1>
-<h2 id="comparing-flakes-to-traditional-nix"><a class="header" href="#comparing-flakes-to-traditional-nix">Comparing Flakes to Traditional Nix</a></h2>
+<h2 id="introduction-flakes-and-traditional-nix"><a class="header" href="#introduction-flakes-and-traditional-nix">Introduction: Flakes and Traditional Nix</a></h2>
 <p><img src="images/nixWinter.png" alt="nixWinter" /></p>
 <ul>
-<li>This post is based on notes from Nix-Hour #4, comparing Traditional Nix and Flakes, focusing on achieving pure build results. See the <a href="https://www.youtube.com/watch?v=atmoYyBAhF4">YouTube video</a> for the original content. This guide adapts the information for clarity and ease of understanding.</li>
+<li>This post is based on notes from Nix-Hour #4, comparing Traditional Nix and
+Flakes, focusing on achieving pure build results. See the
+<a href="https://www.youtube.com/watch?v=atmoYyBAhF4">YouTube video</a> for the original
+content. This guide adapts the information for clarity and ease of understanding.</li>
 </ul>
 <h2 id="what-is-purity-in-nix"><a class="header" href="#what-is-purity-in-nix">What is Purity in Nix?</a></h2>
 <ul>
@@ -2015,7 +2004,8 @@ available.</p>
 <p>A key benefit of Nix Flakes is their <em>default</em> enforcement of <strong>pure evaluation</strong>.</p>
 </li>
 <li>
-<p>In Nix, an <strong>impure operation</strong> depends on something <em>outside</em> its explicit inputs. Examples include:</p>
+<p>In Nix, an <strong>impure operation</strong> depends on something <em>outside</em> its explicit
+inputs. Examples include:</p>
 <ul>
 <li>User's system configuration</li>
 <li>Environment variables</li>
@@ -2028,7 +2018,8 @@ available.</p>
 </ul>
 <h2 id="building-a-simple-hello-package-flakes-vs-traditional-nix"><a class="header" href="#building-a-simple-hello-package-flakes-vs-traditional-nix">Building a Simple "hello" Package: Flakes vs. Traditional Nix</a></h2>
 <ul>
-<li>We'll demonstrate building a basic "hello" package using both Flakes and Traditional Nix to highlight the differences in handling purity.</li>
+<li>We'll demonstrate building a basic "hello" package using both Flakes and
+Traditional Nix to highlight the differences in handling purity.</li>
 </ul>
 <h2 id="using-nix-flakes"><a class="header" href="#using-nix-flakes">Using Nix Flakes</a></h2>
 <ol>
@@ -2290,8 +2281,27 @@ nix-repl&gt; s.home-manager
 </code></pre>
 <pre><code class="language-bash">nix-build -A homeManagerDocs
 </code></pre>
+<h2 id="conclusion-5"><a class="header" href="#conclusion-5">Conclusion</a></h2>
+<p>In this chapter, we've explored the key differences between traditional Nix and
+Nix Flakes, particularly focusing on how each approach handles purity, dependency
+management, and project structure. We've seen that while traditional Nix can
+achieve purity with careful configuration, Flakes enforce it by default,
+offering a more robust and standardized way to build reproducible environments.
+Flakes also streamline dependency management and provide a more structured
+project layout compared to the often ad-hoc nature of traditional Nix projects.</p>
+<p>However, regardless of whether you're working with Flakes or traditional Nix,
+understanding how to debug and trace issues within your Nix code is crucial.
+When things go wrong, you'll need tools and techniques to inspect the evaluation
+process, identify the source of errors, and understand how your modules and
+derivations are being constructed.</p>
+<p>In our next chapter, <a href="https://saylesss88.github.io/chapter_8.html">Debugging and Tracing Modules</a>,
+"** we will delve into the world of Nix debugging. We'll explore various
+techniques and tools that can help you understand the evaluation process,
+inspect the values of expressions, and trace the execution of your Nix code,
+enabling you to effectively troubleshoot and resolve issues in both Flake-based
+and traditional Nix projects.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-8"><a class="header" href="#chapter-8">Chapter 8</a></h1>
-<h1 id="debugging-and-tracing-nixos-modules"><a class="header" href="#debugging-and-tracing-nixos-modules">Debugging and Tracing NixOS Modules</a></h1>
+<h2 id="debugging-and-tracing-nixos-modules"><a class="header" href="#debugging-and-tracing-nixos-modules">Debugging and Tracing NixOS Modules</a></h2>
 <p><img src="images/gruv17.png" alt="gruv17" /></p>
 <ul>
 <li>
@@ -3259,6 +3269,217 @@ derivations with cyclic dependencies during attribute access.</p>
 <p><strong>Explore with <code>nix repl</code>:</strong> The <code>nix repl</code> allows you to interactively explore
 Nix expressions and the outputs of derivations, providing insights into the
 structure and values within Nixpkgs.</p>
+</li>
+</ul>
+<h2 id="conclusion-6"><a class="header" href="#conclusion-6">Conclusion</a></h2>
+<p>This chapter has equipped you with essential techniques for debugging and tracing
+NixOS modules. We've explored how to use <code>nix-instantiate</code> and <code>--show-trace</code> to
+pinpoint errors, how to interpret Nix's often-verbose error messages, and how to
+leverage the <code>nix repl</code> for interactive exploration. Understanding option types
+and the nuances of <code>mkOptionDefault</code> is crucial for writing robust and
+predictable modules. We've also touched upon the distinction between evaluation
+and instantiation, and how that impacts debugging.</p>
+<p>While these tools and techniques are invaluable for understanding and
+troubleshooting your own Nix configurations, they also become essential
+when you want to contribute to or modify the vast collection of packages
+and modules within <strong>Nixpkgs</strong> itself. Nixpkgs is where the majority of Nix
+packages and NixOS modules reside, and learning how to navigate and contribute
+to it opens up a whole new level of control and customization within the Nix
+ecosystem.</p>
+<p>In the next chapter, <a href="https://saylesss88.github.io/chapter_9.html">Working with Nixpkgs Locally</a>,
+we'll shift our focus to exploring and modifying Nixpkgs. We'll cover how to clone
+Nixpkgs, how to make changes to package definitions, and how to test those changes
+locally before contributing them back upstream. This chapter will empower you to
+not just use existing Nix packages, but also to customize and extend them to fit
+your specific needs.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-9"><a class="header" href="#chapter-9">Chapter 9</a></h1>
+<h2 id="working-with-nixpkgs-locally-benefits-and-best-practices"><a class="header" href="#working-with-nixpkgs-locally-benefits-and-best-practices">Working with Nixpkgs Locally: Benefits and Best Practices</a></h2>
+<p><img src="images/gruv18.png" alt="gruv18" /></p>
+<ul>
+<li>Nixpkgs, the package repository for NixOS, is a powerful resource for building and customizing software.</li>
+<li>Working with a local copy enhances development, debugging, and contribution workflows.</li>
+<li>This post covers setting up a local Nixpkgs repository, searching for dependencies, and leveraging its advantages, incorporating tips from the Nix community.</li>
+</ul>
+<h1 id="i-why-work-with-nixpkgs-locally"><a class="header" href="#i-why-work-with-nixpkgs-locally">I. Why Work with Nixpkgs Locally?</a></h1>
+<ul>
+<li>
+<p>A local Nixpkgs repository offers significant advantages for Nix developers:</p>
+<h2 id="a-faster-development-cycle"><a class="header" href="#a-faster-development-cycle">A. Faster Development Cycle</a></h2>
+<ul>
+<li>Local searches for packages and dependencies are significantly quicker than querying remote repositories or channels.</li>
+<li>This speedup is crucial for efficient debugging and rapid prototyping of Nix expressions.</li>
+</ul>
+<h2 id="b-enhanced-version-control"><a class="header" href="#b-enhanced-version-control">B. Enhanced Version Control</a></h2>
+<ul>
+<li>By pinning your local repository to specific commits or branches (e.g., <code>nixos-unstable</code>), you ensure build reproducibility.</li>
+<li>This prevents unexpected issues arising from upstream changes in Nixpkgs.</li>
+</ul>
+<h2 id="c-flexible-debugging-capabilities"><a class="header" href="#c-flexible-debugging-capabilities">C. Flexible Debugging Capabilities</a></h2>
+<ul>
+<li>You can directly test and modify package derivations within your local copy.</li>
+<li>This allows for quick fixes to issues like missing dependencies without waiting for upstream updates or releases.</li>
+</ul>
+<h2 id="d-streamlined-contribution-workflow"><a class="header" href="#d-streamlined-contribution-workflow">D. Streamlined Contribution Workflow</a></h2>
+<ul>
+<li>Developing and testing new packages or patches locally is essential before submitting them as pull requests to Nixpkgs.</li>
+<li>A local setup provides an isolated environment for experimentation.</li>
+</ul>
+<h2 id="e-up-to-date-documentation-source"><a class="header" href="#e-up-to-date-documentation-source">E. Up-to-Date Documentation Source</a></h2>
+<ul>
+<li>The source code and comments within the Nixpkgs repository often contain the most current information about packages.</li>
+<li>This can sometimes be more up-to-date than official, external documentation.</li>
+</ul>
+<h2 id="f-optimized-storage-and-performance"><a class="header" href="#f-optimized-storage-and-performance">F. Optimized Storage and Performance</a></h2>
+<ul>
+<li>Employing efficient cloning strategies (e.g., shallow clones) and avoiding unnecessary practices (like directly using Nixpkgs as a flake for local development) minimizes disk usage and build times.</li>
+</ul>
+</li>
+</ul>
+<h1 id="ii-flake-vs-non-flake-syntax-for-local-nixpkgs"><a class="header" href="#ii-flake-vs-non-flake-syntax-for-local-nixpkgs">II. Flake vs. Non-Flake Syntax for Local Nixpkgs</a></h1>
+<ul>
+<li>
+<p>When working with Nixpkgs locally, the choice between Flake and non-Flake syntax has implications for performance and storage:</p>
+<h2 id="a-flake-syntax-nix-build-package"><a class="header" href="#a-flake-syntax-nix-build-package">A. Flake Syntax (<code>nix build .#&lt;package&gt;</code>)</a></h2>
+<ul>
+<li>Treats the current directory as a flake, requiring evaluation of <code>flake.nix</code>.</li>
+<li>For local Nixpkgs, this evaluates the flake definition in the repository root.</li>
+<li><strong>Performance and Storage Overhead:</strong> Flakes copy the entire working directory (including Git history if present) to <code>/nix/store</code> for evaluation. This can be slow and storage-intensive for large repositories like Nixpkgs.</li>
+</ul>
+<h2 id="b-non-flake-syntax-nix-build--f--package-or-nix-build--f--package"><a class="header" href="#b-non-flake-syntax-nix-build--f--package-or-nix-build--f--package">B. Non-Flake Syntax (<code>nix-build -f . &lt;package&gt;</code> or <code>nix build -f . &lt;package&gt;</code>)</a></h2>
+<ul>
+<li><code>-f .</code> specifies the Nix expression (e.g., <code>default.nix</code> or a specific file) in the current directory.</li>
+<li><strong>Efficiency:</strong> Evaluates the Nix expression directly <em>without</em> copying the entire worktree to <code>/nix/store</code>. This is significantly faster and more storage-efficient for local development on large repositories.</li>
+</ul>
+</li>
+</ul>
+<h2 id="iii-setting-up-a-local-nixpkgs-repository-efficiently"><a class="header" href="#iii-setting-up-a-local-nixpkgs-repository-efficiently">III. Setting Up a Local Nixpkgs Repository Efficiently</a></h2>
+<ul>
+<li>
+<p>Cloning Nixpkgs requires careful consideration due to its size.</p>
+<h2 id="a-initial-clone-shallow-cloning"><a class="header" href="#a-initial-clone-shallow-cloning">A. Initial Clone: Shallow Cloning</a></h2>
+<ul>
+<li>To avoid downloading the entire history, perform a shallow clone:
+<pre><code class="language-bash">git clone [https://github.com/NixOS/nixpkgs](https://github.com/NixOS/nixpkgs) --depth 1
+cd nixpkgs
+</code></pre>
+</li>
+</ul>
+<h2 id="b-managing-branches-with-worktrees"><a class="header" href="#b-managing-branches-with-worktrees">B. Managing Branches with Worktrees</a></h2>
+<ul>
+<li>
+<p>Use Git worktrees to manage different branches efficiently:</p>
+<pre><code class="language-bash">git fetch --all --prune --depth=1
+git worktree add -b nixos-unstable nixos-unstable # For just unstable
+</code></pre>
+</li>
+<li>
+<p><strong>Explanation of <code>git worktree</code>:</strong> Allows multiple working directories attached to the same <code>.git</code> directory, sharing history and objects but with separate checked-out files.</p>
+</li>
+<li>
+<p><code>git worktree add</code>: Creates a new working directory for the specified branch (<code>nixos-unstable</code> in this case).</p>
+</li>
+</ul>
+</li>
+</ul>
+<h1 id="iv-debugging-missing-dependencies-a-practical-example"><a class="header" href="#iv-debugging-missing-dependencies-a-practical-example">IV. Debugging Missing Dependencies: A Practical Example</a></h1>
+<ul>
+<li>
+<p>Let's say you're trying to build <code>icat</code> locally and encounter a missing dependency error:</p>
+<pre><code class="language-nix">nix-build -A icat
+# ... (Error log showing "fatal error: X11/Xlib.h: No such file or directory")
+</code></pre>
+<ul>
+<li>The error <code>fatal error: X11/Xlib.h: No such file or directory</code> indicates a missing X11 dependency.</li>
+</ul>
+<h2 id="a-online-search-with-searchnixosorg"><a class="header" href="#a-online-search-with-searchnixosorg">A. Online Search with <code>search.nixos.org</code></a></h2>
+<ul>
+<li>The Nixpkgs package search website (<a href="https://search.nixos.org/packages">https://search.nixos.org/packages</a>) is a valuable first step.</li>
+<li>However, broad terms like "x11" can yield many irrelevant results.</li>
+<li><strong>Tip:</strong> Utilize the left sidebar to filter by package sets (e.g., "xorg").</li>
+</ul>
+<h2 id="b-local-source-code-search-with-rg-ripgrep"><a class="header" href="#b-local-source-code-search-with-rg-ripgrep">B. Local Source Code Search with <code>rg</code> (ripgrep)</a></h2>
+<ul>
+<li>
+<p>Familiarity with searching the Nixpkgs source code is crucial for finding dependencies.</p>
+</li>
+<li>
+<p>Navigate to your local <code>nixpkgs/</code> directory and use <code>rg</code>:</p>
+<pre><code class="language-bash">rg "x11 =" pkgs # Case-sensitive search
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>pkgs/tools/X11/primus/default.nix
+21:  primus = if useNvidia then primusLib_ else primusLib_.override { nvidia_x11 = null; };
+22:  primus_i686 = if useNvidia then primusLib_i686_ else primusLib_i686_.override { nvidia_x11 = null; };
+
+pkgs/applications/graphics/imv/default.nix
+38:    x11 = [ libGLU xorg.libxcb xorg.libX11 ];
+</code></pre>
+</li>
+<li>
+<p>Refining the search (case-insensitive):</p>
+<pre><code class="language-bash">rg -i "libx11 =" pkgs
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code># ... (Output showing "xorg.libX11")
+</code></pre>
+</li>
+<li>
+<p>The key result is <code>xorg.libX11</code>, which is likely the missing dependency.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h1 id="v-local-derivation-search-with-nix-locate"><a class="header" href="#v-local-derivation-search-with-nix-locate">V. Local Derivation Search with <code>nix-locate</code></a></h1>
+<ul>
+<li>
+<p><code>nix-locate</code> (from the <code>nix-index</code> package) allows searching for derivations
+on the command line.</p>
+<blockquote>
+<p><strong>Note:</strong> Install <code>nix-index</code> and run <code>nix-index</code> to create the initial index.</p>
+</blockquote>
+<pre><code class="language-bash">nix-locate libx11
+# ... (Output showing paths related to libx11)
+</code></pre>
+</li>
+<li>
+<p>Combining online and local search tools (<code>search.nixos.org</code>, <code>rg</code>, <code>nix-locate</code>)
+provides a comprehensive approach to finding dependencies.</p>
+</li>
+</ul>
+<h1 id="vi-key-benefits-of-working-with-nixpkgs-locally-recap"><a class="header" href="#vi-key-benefits-of-working-with-nixpkgs-locally-recap">VI. Key Benefits of Working with Nixpkgs Locally (Recap)</a></h1>
+<ul>
+<li><strong>Speed:</strong> Faster searches and builds compared to remote operations.</li>
+<li><strong>Control:</strong> Full control over the Nixpkgs version.</li>
+<li><strong>Up-to-Date Information:</strong> Repository source often has the latest details.</li>
+</ul>
+<h1 id="vii-best-practices-and-tips-from-the-community"><a class="header" href="#vii-best-practices-and-tips-from-the-community">VII. Best Practices and Tips from the Community</a></h1>
+<ul>
+<li>
+<p><strong>Rebasing over Merging:</strong> Never merge upstream changes into your local branch.
+Always rebase your branch onto the upstream (e.g., <code>master</code> or <code>nixos-unstable</code>)
+to avoid accidental large-scale pings in pull requests (Tip from <code>soulsssx3</code> on
+Reddit).</p>
+</li>
+<li>
+<p><strong>Tip from <code>ElvishJErrico</code>:</strong> Avoid using Nixpkgs directly as a flake for local
+development due to slow copying to <code>/nix/store</code> and performance issues with
+garbage collection on large numbers of small files. Use <code>nix build -f . &lt;package&gt;</code> instead of <code>nix build .#&lt;package&gt;</code>.</p>
+</li>
+<li>
+<p><strong>Edge Cases for Flake Syntax:</strong> Flake syntax might be necessary in specific
+scenarios, such as NixOS installer tests where copying the Git history should
+be avoided.</p>
+</li>
+<li>
+<p><strong>Base Changes on <code>nixos-unstable</code>:</strong> For better binary cache hits, base your
+changes on the <code>nixos-unstable</code> branch instead of <code>master</code>. Consider the
+merge-base for staging branches as well.</p>
+</li>
+<li>
+<p><strong>Consider <code>jujutsu</code>:</strong> Explore <a href="https://github.com/jj-vcs/jj">jj-vcs</a>,
+a Git-compatible alternative that can offer a more intuitive workflow,
+especially for large monorepos like Nixpkgs. While it has a learning curve,
+it can significantly improve parallel work and branch management.</p>
 </li>
 </ul>
 
