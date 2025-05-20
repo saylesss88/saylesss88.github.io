@@ -1,0 +1,239 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Nix_modules_explained | NixOS Blog</title>
+<link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://saylesss88.github.io/posts/nix_modules_explained/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Nix_modules_explained"><meta property="og:description" content='NixOS Modules TL;DR: In this post I break down the NixOS module system and explain how to define options. As well as how to test modules with the repl.
+Most modules are functions that take an attribute set and return an attribute set. Refresher:
+An attribute set is a collection of name-value pairs wrapped in curly braces: { string = "hello"; int = 3; } A function with an attribute set argument: { a, b }: a + b The simplest possible NixOS Module: { ... }: { } NixOS produces a full system configuration by combining smaller, more isolated and reusable components: Modules. In my opinion modules are one of the first things you should understand when learning about NixOS.'><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-14T19:03:40-04:00"><meta property="article:modified_time" content="2025-05-14T19:03:40-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Nix_modules_explained"><meta name=twitter:description content='NixOS Modules TL;DR: In this post I break down the NixOS module system and explain how to define options. As well as how to test modules with the repl.
+Most modules are functions that take an attribute set and return an attribute set. Refresher:
+An attribute set is a collection of name-value pairs wrapped in curly braces: { string = "hello"; int = 3; } A function with an attribute set argument: { a, b }: a + b The simplest possible NixOS Module: { ... }: { } NixOS produces a full system configuration by combining smaller, more isolated and reusable components: Modules. In my opinion modules are one of the first things you should understand when learning about NixOS.'><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.e139b0e3b3aff8f0e8e0272554b671a06c857a42278b36c539d96c69ddee2ca2.css integrity="sha256-4Tmw47Ov+PDo4CclVLZxoGyFekInizbFOdlsad3uLKI=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://saylesss88.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a href=https://saylesss88.github.io//index.xml><img src=/images/rss.png alt="RSS Feed" width=24>
+</a><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://saylesss88.github.io/><span itemprop=name>Home</span>
+</a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://saylesss88.github.io/posts/><span itemprop=name>Posts</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Nix_modules_explained</h1><time class=dim datetime=2025-05-14T19:03:40-04:00>May 14, 2025</time></div><section class=page-section><h1 id=nixos-modules>NixOS Modules</h1><figure><img src=/images/gruv3.png alt=gruv3 width=1000></figure><p>TL;DR: In this post I break down the NixOS module system and explain how to
+define options. As well as how to test modules with the repl.</p><ul><li>Most modules are functions that take an attribute set and return an attribute
+set.</li></ul><p><strong>Refresher</strong>:</p><ul><li>An <strong>attribute set</strong> is a collection of name-value pairs wrapped in curly
+braces:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  string <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;hello&#34;</span>;
+</span></span><span style=display:flex><span>  int <span style=color:#f92672>=</span> <span style=color:#ae81ff>3</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li>A <strong>function</strong> with an attribute set argument:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{ a<span style=color:#f92672>,</span> b }: a <span style=color:#f92672>+</span> b
+</span></span></code></pre></div><ul><li>The simplest possible <strong>NixOS Module</strong>:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{ <span style=color:#f92672>...</span> }:
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>NixOS produces a full system configuration by combining smaller, more isolated
+and reusable components: <strong>Modules</strong>. In my opinion modules are one of the
+first things you should understand when learning about NixOS.</p><ul><li><p>A NixOS module defines configuration options and behaviors for system
+components, allowing users to extend, customize, and compose configurations
+declaratively.</p></li><li><p>A <strong>module</strong> is a file containing a Nix expression with a specific structure.
+It <em>declares</em> options for other modules to define (give a value). Modules were
+introduced to allow extending NixOS without modifying its source code.</p></li><li><p>To define any values, the module system first has to know which ones are
+allowed. This is done by declaring options that specify which attributes can
+be set and used elsewhere.</p></li><li><p>If you want to write your own modules, I recommend setting up
+<a href="https://github.com/nix-community/nixd?tab=readme-ov-file">nixd</a>
+or <a href=https://github.com/oxalica/nil>nil</a> with your editor of choice.
+This will allow your editor to warn you about missing arguments and
+dependencies as well as syntax errors.</p></li></ul><h2 id=declaring-options>Declaring Options</h2><p>The following is <code>nixpkgs/nixos/modules/programs/vim.nix</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  cfg <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>programs<span style=color:#f92672>.</span>vim;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>programs<span style=color:#f92672>.</span>vim <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>    enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption <span style=color:#e6db74>&#34;Vi IMproved, an advanced text&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    defaultEditor <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption <span style=color:#e6db74>&#34;vim as the default editor&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    package <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkPackageOption pkgs <span style=color:#e6db74>&#34;vim&#34;</span> { example <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;vim-full&#34;</span>; };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># TODO: convert it into assert after 24.11 release</span>
+</span></span><span style=display:flex><span>  config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf (cfg<span style=color:#f92672>.</span>enable <span style=color:#f92672>||</span> cfg<span style=color:#f92672>.</span>defaultEditor) {
+</span></span><span style=display:flex><span>    warnings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf (cfg<span style=color:#f92672>.</span>defaultEditor <span style=color:#f92672>&amp;&amp;</span> <span style=color:#f92672>!</span>cfg<span style=color:#f92672>.</span>enable) [
+</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;programs.vim.defaultEditor will only work if programs.vim.enable is
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>       enabled, which will be enforced after the 24.11 release&#34;</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>    environment <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      systemPackages <span style=color:#f92672>=</span> [ cfg<span style=color:#f92672>.</span>package ];
+</span></span><span style=display:flex><span>      variables<span style=color:#f92672>.</span>EDITOR <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf cfg<span style=color:#f92672>.</span>defaultEditor (lib<span style=color:#f92672>.</span>mkOverride <span style=color:#ae81ff>900</span> <span style=color:#e6db74>&#34;vim&#34;</span>);
+</span></span><span style=display:flex><span>      pathsToLink <span style=color:#f92672>=</span> [ <span style=color:#e6db74>&#34;/share/vim-plugins&#34;</span> ];
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li>It provides options to enable Vim, set it as the default editor, and specify
+the Vim package to use.</li></ul><ol><li>Module Inputs and Structure:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><p>Inputs: The module takes the above inputs and <code>...</code> (catch-all for other args)</p><ul><li><p><code>config</code>: Allows the module to read option values (e.g.
+<code>config.programs.vim.enable</code>). It provides access to the evaluated
+configuration.</p></li><li><p><code>lib</code>: The Nixpkgs library, giving us helper functions like <code>mkEnableOption</code>
+, <code>mkIf</code>, and <code>mkOverride</code>.</p></li><li><p><code>pkgs</code>: The Nixpkgs package set, used to access packages like <code>pkgs.vim</code></p></li><li><p><code>...</code>: Allows the module to accept additional arguments, making it flexible
+for extension in the future.</p></li></ul></li></ul><blockquote><p>Key Takeaways: A NixOS module is typically a function that can include
+<code>config</code>, <code>lib</code>, and <code>pkgs</code>, but it doesn’t require them. The <code>...</code>
+argument ensures flexibility, allowing a module to accept extra inputs
+without breaking future compatibility. Using <code>lib</code> simplifies handling
+options (mkEnableOption, mkIf, mkOverride) and helps follow best practices.
+Modules define options, which users can set in their configuration, and
+<code>config</code>, which applies changes based on those options.</p></blockquote><ol start=2><li>Local Configuration Reference:</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  cfg <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>programs<span style=color:#f92672>.</span>vim;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span>
+</span></span></code></pre></div><ul><li>This is a local alias. Instead of typing <code>config.programs.vim</code> over and over,
+the module uses <code>cfg</code>.</li></ul><ol start=3><li>Option Declaration</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>options<span style=color:#f92672>.</span>programs<span style=color:#f92672>.</span>vim <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>  enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption <span style=color:#e6db74>&#34;Vi IMproved, an advanced text&#34;</span>;
+</span></span><span style=display:flex><span>  defaultEditor <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption <span style=color:#e6db74>&#34;vim as the default editor&#34;</span>;
+</span></span><span style=display:flex><span>  package <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkPackageOption pkgs <span style=color:#e6db74>&#34;vim&#34;</span> { example <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;vim-full&#34;</span>; };
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p>This defines three user-configurable options:</p><ul><li><p><code>enable</code>: Turns on Vim support system-wide.</p></li><li><p><code>defaultEditor</code>: Sets Vim as the system&rsquo;s default <code>$EDITOR</code>.</p></li><li><p><code>package</code>: lets the user override which Vim package is used.</p></li></ul><blockquote><p><code>mkPackageOption</code> is a helper that defines a package-typed option with a
+default (<code>pkgs.vim</code>) and provides docs + example.</p></blockquote><ol start=4><li>Conditional Configuration</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf (cfg<span style=color:#f92672>.</span>enable <span style=color:#f92672>||</span> cfg<span style=color:#f92672>.</span>defaultEditor) {
+</span></span></code></pre></div><ul><li>This block is only activated if <em>either</em> <code>programs.vim.enable</code> or
+<code>defaultEditor</code> is set.</li></ul><ol start=5><li>Warnings</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>warnings <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf (cfg<span style=color:#f92672>.</span>defaultEditor <span style=color:#f92672>&amp;&amp;</span> <span style=color:#f92672>!</span>cfg<span style=color:#f92672>.</span>enable) [
+</span></span><span style=display:flex><span>  <span style=color:#e6db74>&#34;programs.vim.defaultEditor will only work if programs.vim.enable is enabled,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>   which will be enforced after the 24.11 release&#34;</span>
+</span></span><span style=display:flex><span>];
+</span></span></code></pre></div><ul><li>Gives you a soft warning if you try to set <code>defaultEditor = true</code> without
+also enabling Vim.</li></ul><ol start=6><li>Actual System Config Changes</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>environment <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>  systemPackages <span style=color:#f92672>=</span> [ cfg<span style=color:#f92672>.</span>package ];
+</span></span><span style=display:flex><span>  variables<span style=color:#f92672>.</span>EDITOR <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf cfg<span style=color:#f92672>.</span>defaultEditor (lib<span style=color:#f92672>.</span>mkOverride <span style=color:#ae81ff>900</span> <span style=color:#e6db74>&#34;vim&#34;</span>);
+</span></span><span style=display:flex><span>  pathsToLink <span style=color:#f92672>=</span> [ <span style=color:#e6db74>&#34;/share/vim-plugins&#34;</span> ];
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><ul><li>It adds Vim to your <code>systemPackages</code>, sets <code>$EDITOR</code> if <code>defaultEditor</code> is
+true, and makes <code>/share/vim-plugins</code> available in the environment.</li></ul><p>The following is a bat home-manager module that I wrote:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># bat.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  pkgs<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  config<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  lib<span style=color:#f92672>,</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>...</span>
+</span></span><span style=display:flex><span>}: <span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  cfg <span style=color:#f92672>=</span> config<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>batModule;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span> {
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>custom<span style=color:#f92672>.</span>batModule<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkOption {
+</span></span><span style=display:flex><span>    type <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>types<span style=color:#f92672>.</span>bool;
+</span></span><span style=display:flex><span>    default <span style=color:#f92672>=</span> <span style=color:#66d9ef>false</span>;
+</span></span><span style=display:flex><span>    description <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Enable bat module&#34;</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf cfg<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>    programs<span style=color:#f92672>.</span>bat <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>      enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>      themes <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>        dracula <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>          src <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>fetchFromGitHub {
+</span></span><span style=display:flex><span>            owner <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;dracula&#34;</span>;
+</span></span><span style=display:flex><span>            repo <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;sublime&#34;</span>; <span style=color:#75715e># Bat uses sublime syntax for its themes</span>
+</span></span><span style=display:flex><span>            rev <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;26c57ec282abcaa76e57e055f38432bd827ac34e&#34;</span>;
+</span></span><span style=display:flex><span>            sha256 <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;019hfl4zbn4vm4154hh3bwk6hm7bdxbr1hdww83nabxwjn99ndhv&#34;</span>;
+</span></span><span style=display:flex><span>          };
+</span></span><span style=display:flex><span>          file <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;Dracula.tmTheme&#34;</span>;
+</span></span><span style=display:flex><span>        };
+</span></span><span style=display:flex><span>      };
+</span></span><span style=display:flex><span>      extraPackages <span style=color:#f92672>=</span> <span style=color:#66d9ef>with</span> pkgs<span style=color:#f92672>.</span>bat-extras; [
+</span></span><span style=display:flex><span>        batdiff
+</span></span><span style=display:flex><span>        batman
+</span></span><span style=display:flex><span>        prettybat
+</span></span><span style=display:flex><span>        batgrep
+</span></span><span style=display:flex><span>      ];
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Now I could add this to my <code>home.nix</code> to enable it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># home.nix</span>
+</span></span><span style=display:flex><span>custom <span style=color:#f92672>=</span> {
+</span></span><span style=display:flex><span>  batModule<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> <span style=color:#66d9ef>true</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><p>If I set this option to true the bat configuration is dropped in place. If
+it&rsquo;s not set to true, it won&rsquo;t put the bat configuration in the system. Same
+as with options defined in modules within the Nixpkgs repository.</p></li><li><p>If I had set the default to <code>true</code>, it would automatically enable the module
+without requiring an explicit <code>custom.batModule.enable = true;</code> call in my
+<code>home.nix</code>.</p></li></ul><h3 id=module-composition>Module Composition</h3><ul><li><p>NixOS achieves its full system configuration by combining the configurations
+defined in various modules. This composition is primarily handled through the
+<code>imports</code> mechanism.</p></li><li><p><code>imports</code>: This is a standard option within a NixOS or Home Manager
+configuration (often found in your configuration.nix or home.nix). It takes
+a list of paths to other Nix modules. When you include a module in the imports
+list, the options and configurations defined in that module become part of
+your overall system configuration.</p></li><li><p>You declaratively state the desired state of your system by setting options
+across various modules. The NixOS build system then evaluates and merges these
+option settings. The culmination of this process, which includes building the
+entire system closure, is represented by the derivation built by
+<code>config.system.build.toplevel</code>.</p></li></ul><h3 id=nixos-modules-and-dependency-locking-with-npins>NixOS Modules and Dependency Locking with npins</h3><p>This is the file structure:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>❯ tree
+</span></span><span style=display:flex><span>.
+</span></span><span style=display:flex><span>├── configuration.nix
+</span></span><span style=display:flex><span>├── default.nix
+</span></span><span style=display:flex><span>├── desktop.nix
+</span></span><span style=display:flex><span>└── npins
+</span></span><span style=display:flex><span>    ├── default.nix
+</span></span><span style=display:flex><span>    └── sources.json
+</span></span></code></pre></div><p>This uses <code>npins</code> for dependency locking. Install it and run this in the project</p><p>directory:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>npins init
+</span></span></code></pre></div><p>Create a <code>default.nix</code> with the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span>{ system <span style=color:#f92672>?</span> builtins<span style=color:#f92672>.</span>currentSystem<span style=color:#f92672>,</span> sources <span style=color:#f92672>?</span> <span style=color:#f92672>import</span> <span style=color:#e6db74>./npins</span><span style=color:#f92672>,</span> }:
+</span></span><span style=display:flex><span><span style=color:#66d9ef>let</span>
+</span></span><span style=display:flex><span>  pkgs <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> sources<span style=color:#f92672>.</span>nixpkgs {
+</span></span><span style=display:flex><span>    config <span style=color:#f92672>=</span> { };
+</span></span><span style=display:flex><span>    overlays <span style=color:#f92672>=</span> [ ];
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>inherit</span> (pkgs) lib;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>in</span> lib<span style=color:#f92672>.</span>makeScope pkgs<span style=color:#f92672>.</span>newScope (self: {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  shell <span style=color:#f92672>=</span> pkgs<span style=color:#f92672>.</span>mkShell { packages <span style=color:#f92672>=</span> [ pkgs<span style=color:#f92672>.</span>npins self<span style=color:#f92672>.</span>myPackage ]; };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># inherit lib;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  nixosSystem <span style=color:#f92672>=</span> <span style=color:#f92672>import</span> (sources<span style=color:#f92672>.</span>nixpkgs <span style=color:#f92672>+</span> <span style=color:#e6db74>&#34;/nixos&#34;</span>) {
+</span></span><span style=display:flex><span>    configuration <span style=color:#f92672>=</span> <span style=color:#e6db74>./configuration.nix</span>;
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  moduleEvale <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>evalModules {
+</span></span><span style=display:flex><span>    modules <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>      <span style=color:#75715e># ...</span>
+</span></span><span style=display:flex><span>    ];
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>})
+</span></span></code></pre></div><p>A <code>configuration.nix</code> with the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># configuration.nix</span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  boot<span style=color:#f92672>.</span>loader<span style=color:#f92672>.</span>grub<span style=color:#f92672>.</span>device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;nodev&#34;</span>;
+</span></span><span style=display:flex><span>  fileSystems<span style=color:#f92672>.</span><span style=color:#e6db74>&#34;/&#34;</span><span style=color:#f92672>.</span>device <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/devst&#34;</span>;
+</span></span><span style=display:flex><span>  system<span style=color:#f92672>.</span>stateVersion <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;25.05&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># declaring options means to declare a new option</span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># defining options means to define a value of an option</span>
+</span></span><span style=display:flex><span>  imports <span style=color:#f92672>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#75715e># ./main.nix</span>
+</span></span><span style=display:flex><span>     <span style=color:#e6db74>./desktop.nix</span> <span style=color:#75715e># Files</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># ./minimal.nix</span>
+</span></span><span style=display:flex><span>  ];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># mine.desktop.enable = true;</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>And a <code>desktop.nix</code> with the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># desktop.nix</span>
+</span></span><span style=display:flex><span>{ pkgs<span style=color:#f92672>,</span> lib<span style=color:#f92672>,</span> config<span style=color:#f92672>,</span> <span style=color:#f92672>...</span> }:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  imports <span style=color:#f92672>=</span> [];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Define an option to enable or disable desktop configuration</span>
+</span></span><span style=display:flex><span>  options<span style=color:#f92672>.</span>mine<span style=color:#f92672>.</span>desktop<span style=color:#f92672>.</span>enable <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkEnableOption <span style=color:#e6db74>&#34;desktop settings&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#75715e># Configuration that applies when the option is enabled</span>
+</span></span><span style=display:flex><span>  config <span style=color:#f92672>=</span> lib<span style=color:#f92672>.</span>mkIf config<span style=color:#f92672>.</span>mine<span style=color:#f92672>.</span>desktop<span style=color:#f92672>.</span>enable {
+</span></span><span style=display:flex><span>    environment<span style=color:#f92672>.</span>systemPackages <span style=color:#f92672>=</span> [ pkgs<span style=color:#f92672>.</span>git ];
+</span></span><span style=display:flex><span>  };
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can
+uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and
+vice-versa.</p><p>You can test that this works by running:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix-instantiate -A nixosSystem.system
+</span></span></code></pre></div><ul><li><code>nix-instantiate</code> performs only the evaluation phase of Nix expressions.
+During this phase, Nix interprets the Nix code, resolves all dependencies, and
+constructs derivations but does not execute any build actions. Useful for
+testing.</li></ul><p>To check if this worked and <code>git</code> is installed in systemPackages you can
+load it into <code>nix repl</code> but first you&rsquo;ll want <code>lib</code> to be available so uncomment
+this in your <code>default.nix</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># default.nix</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>inherit</span> lib;
+</span></span></code></pre></div><p>Rerun <code>nix-instantiate -A nixosSystem.system</code></p><p>Then load the repl and check that <code>git</code> is in <code>systemPackages</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nix repl -f .
+</span></span><span style=display:flex><span>nix-repl&gt; builtins.filter <span style=color:#f92672>(</span>pkg: lib.hasPrefix <span style=color:#e6db74>&#34;git&#34;</span> pkg.name<span style=color:#f92672>)</span> nixosSystem.config.environment.systemPackages
+</span></span></code></pre></div><p>This shows the path to the derivation</p><p>Check that mine.desktop.enable is true</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span>nix-repl<span style=color:#f92672>&gt;</span> nixosSystem<span style=color:#f92672>.</span>config<span style=color:#f92672>.</span>mine<span style=color:#f92672>.</span>desktop<span style=color:#f92672>.</span>enable
+</span></span><span style=display:flex><span><span style=color:#66d9ef>true</span>
+</span></span></code></pre></div><h3 id=resources-on-modules>Resources on Modules</h3><ul><li><p><a href=https://nixos.org/manual/nixos/stable/#sec-writing-modules>WritingNixOsModules</a></p></li><li><p><a href=https://nixos.wiki/wiki/NixOS_modules>NixWikiNixOSModules</a></p></li><li><p><a href=https://nix.dev/tutorials/module-system/a-basic-module/index.html>nix.dev A basic module</a></p></li><li><p><a href=https://nix.dev/tutorials/module-system/deep-dive#module-system-deep-dive>ModuleSystemDeepDive</a></p></li><li><p><a href=https://xeiaso.net/talks/asg-2023-nixos/>MakingNixOSModulesForFun</a></p></li><li><p><a href=https://xeiaso.net/talks/asg-2023-nixos/>xeiaso Nixos Modules for fun & profit</a></p></li><li><p><a href=https://nixos-and-flakes.thiscute.world/other-usage-of-flakes/module-system>NixOS Flakes Book Module System</a></p></li></ul><h1 id=videos>Videos</h1><p><a href="https://www.youtube.com/watch?v=N7hFP_40DJo&amp;t=17s">NixHour Writing NixOS modules</a> &ndash; This example is from this video
+<a href=https://infinisil.com/modules.mp4>infinisilModules</a></p><h1 id=tweagmodulesystemrecursion><a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion</a></h1></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>1453 words</span>
+<span>10 - 13 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#declaring-options>Declaring Options</a><ul><li><a href=#module-composition>Module Composition</a></li><li><a href=#nixos-modules-and-dependency-locking-with-npins>NixOS Modules and Dependency Locking with npins</a></li><li><a href=#resources-on-modules>Resources on Modules</a></li></ul></li></ul></nav></aside></div></div></body></html>
