@@ -256,7 +256,7 @@ system state).</li>
 </ul>
 </li>
 </ul>
-<h4 id="our-builder-script"><a class="header" href="#our-builder-script">Our builder Script</a></h4>
+<h2 id="our-builder-script"><a class="header" href="#our-builder-script">Our builder Script</a></h2>
 <ul>
 <li>For our first derivation, we'll create a simple <code>builder.sh</code> file in the current directory:</li>
 </ul>
@@ -310,7 +310,7 @@ is a loosely defined term, but a derivation is simply the result of calling
 <code>builtins.derivation</code>.</p>
 </li>
 </ul>
-<h4 id="our-second-derivation"><a class="header" href="#our-second-derivation">Our Second Derivation</a></h4>
+<h2 id="our-second-derivation"><a class="header" href="#our-second-derivation">Our Second Derivation</a></h2>
 <p>The following is a simple <code>hello-drv</code> derivation:</p>
 <pre><code class="language-nix">nix-repl&gt; hello-drv = nixpkgs.stdenv.mkDerivation {
             name = "hello.txt";
@@ -327,6 +327,81 @@ nix-repl&gt; hello-drv
 <li>Derivations have a <code>.drv</code> suffix, as you can see the result of calling
 <code>hello-drv</code> is the nix store path to a derivation.</li>
 </ul>
+<h2 id="our-last-derivation"><a class="header" href="#our-last-derivation">Our Last Derivation</a></h2>
+<p>Create a new directory and a <code>hello.nix</code> with the following contents:</p>
+<pre><code class="language-nix"># hello.nix
+{
+  stdenv,
+  fetchzip,
+}:
+
+stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = fetchzip {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "";
+  };
+}
+</code></pre>
+<p>Save this file to <code>hello.nix</code> and run <code>nix-build</code> to observe the build failure:</p>
+<pre><code class="language-nix">$ nix-build hello.nix
+error: cannot evaluate a function that has an argument without a value ('stdenv')
+       Nix attempted to evaluate a function as a top level expression; in
+       this case it must have its arguments supplied either by default
+       values, or passed explicitly with '--arg' or '--argstr'. See
+       https://nix.dev/manual/nix/stable/language/constructs.html#functions.
+
+       at /home/nix-user/hello.nix:3:3:
+
+            2| {
+            3|   stdenv,
+             |   ^
+            4|   fetchzip,
+</code></pre>
+<p><strong>Problem</strong>: The expression in <code>hello.nix</code> is a <em>function</em>, which only produces
+it's intended output if it is passed the correct <em>arguments</em>.(i.e. <code>stdenv</code> is
+available from <code>nixpkgs</code> so we need to import <code>nixpkgs</code> before we can use
+<code>stdenv</code>):</p>
+<p>The recommended way to do this is to create a <code>default.nix</code> file in the same
+directory as the <code>hello.nix</code> with the following contents:</p>
+<pre><code class="language-nix"># default.nix
+let
+  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-24.05";
+  pkgs = import nixpkgs { config = {}; overlays = []; };
+in
+{
+  hello = pkgs.callPackage ./hello.nix { };
+}
+</code></pre>
+<p>This allows you to run <code>nix-build -A hello</code> to realize the derivation in <code>hello.nix</code>,
+similar to the current convention used in Nixpkgs:</p>
+<pre><code class="language-nix">nix-build -A hello
+error: hash mismatch in fixed-output derivation '/nix/store/pd2kiyfa0c06giparlhd1k31bvllypbb-source.drv':
+         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+            got:    sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=
+error: 1 dependencies of derivation '/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv' failed to build
+</code></pre>
+<p>Lastly replace the empty sha256 placeholder with the returned value from the last
+command:</p>
+<pre><code class="language-nix"># hello.nix
+{
+  stdenv,
+  fetchzip,
+}:
+
+stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = fetchzip {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=";
+  };
+}
+</code></pre>
+<p>Run <code>nix-build -A hello</code> again and you'll see the derivation successfully builds.</p>
 <h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
 <p><strong>Reproducible source paths</strong>: If we built the following derivation in
 <code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
