@@ -1,0 +1,336 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Using_nushell_with_nixos | NixOS Blog</title>
+<link rel=icon href=favicon.svg sizes=any type=image/svg+xml><meta property="og:url" content="https://TSawyer87.github.io/posts/using_nushell_with_nixos/"><meta property="og:site_name" content="NixOS Blog"><meta property="og:title" content="Using_nushell_with_nixos"><meta property="og:description" content="Nushell and NixOS TL;DR:I recently switched default shells from zsh to nushell, this post is about some of the challenges and advantages of using nushell with NixOS.
+While the average user might not immediately see significant advantages, those who frequently work with structured data formats like JSON, YAML, and CSV – such as developers interacting with APIs, system administrators managing configurations, and data professionals – will likely find Nushell’s native data handling and powerful pipeline capabilities a plus. Additionally, users who value a more consistent and safer scripting experience might appreciate Nushell’s language-first design and features like strong typing."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-16T19:54:01-04:00"><meta property="article:modified_time" content="2025-05-16T19:54:01-04:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Using_nushell_with_nixos"><meta name=twitter:description content="Nushell and NixOS TL;DR:I recently switched default shells from zsh to nushell, this post is about some of the challenges and advantages of using nushell with NixOS.
+While the average user might not immediately see significant advantages, those who frequently work with structured data formats like JSON, YAML, and CSV – such as developers interacting with APIs, system administrators managing configurations, and data professionals – will likely find Nushell’s native data handling and powerful pipeline capabilities a plus. Additionally, users who value a more consistent and safer scripting experience might appreciate Nushell’s language-first design and features like strong typing."><link rel=stylesheet href=/css/root.min.0e732b812b9751962e01a7c4798a1211cd5f8ac8abec7f99793fe306989e459f.css integrity="sha256-DnMrgSuXUZYuAafEeYoSEc1fisir7H+ZeT/jBpieRZ8=" crossorigin=anonymous><link rel=stylesheet href=/css/bundle.min.e139b0e3b3aff8f0e8e0272554b671a06c857a42278b36c539d96c69ddee2ca2.css integrity="sha256-4Tmw47Ov+PDo4CclVLZxoGyFekInizbFOdlsad3uLKI=" crossorigin=anonymous><script src=/js/bundle.995e4ec99401021e081ec256bee66154ef7f4e5136809432513b2e6d014b4b1d.js integrity="sha256-mV5OyZQBAh4IHsJWvuZhVO9/TlE2gJQyUTsubQFLSx0=" crossorigin=anonymous></script><script defer src=/js/search/flexsearch.compact.64594b125f7b78bdf4fa8316955922bbebb1cd6baef3f16654bfca20309f18f8.js integrity="sha256-ZFlLEl97eL30+oMWlVkiu+uxzWuu8/FmVL/KIDCfGPg="></script><script defer src=/js/search/search.1d980f84df11f3eb7c8c5f17f541d49a0611608df179dd74fa7f06225eb56ace.js integrity="sha256-HZgPhN8R8+t8jF8X9UHUmgYRYI3xed10+n8GIl61as4="></script><link rel=preconnect href=https://fonts.googleapis.com><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel=stylesheet></head><body class=notransition><div id=container><header id=main-header><div role=navigation aria-label=Main><div class=nav-left><a href=https://TSawyer87.github.io/ style=color:inherit>NixOS Blog</a></div><div class=nav-right><div style=position:absolute;width:0;height:0><div id=nav-dropdown-menu class=hidden href=#><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div></div><a href=https://TSawyer87.github.io//index.xml><img src=/images/rss.png alt="RSS Feed" width=24>
+</a><a id=nav-dropdown-button href=#><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a><div id=nav-menu><div class=nav-item><a aria-current=true class=ancestor href=/posts/>Posts</a></div></div><a id=theme-switcher href=#><svg class="light-icon" viewBox="0 0 24 24" fill="none"><path d="M12 3V4m0 16v1M4 12H3M6.31412 6.31412 5.5 5.5m12.1859.81412L18.5 5.5M6.31412 17.69 5.5 18.5001M17.6859 17.69 18.5 18.5001M21 12H20m-4 0c0 2.2091-1.7909 4-4 4-2.20914.0-4-1.7909-4-4 0-2.20914 1.79086-4 4-4 2.2091.0 4 1.79086 4 4z" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="dark-icon" viewBox="0 0 24 24" fill="none"><path d="M3.32031 11.6835c0 4.9706 4.02944 9 8.99999 9 3.7872.0 7.028-2.3392 8.3565-5.6515C19.6402 15.4486 18.5059 15.6834 17.3203 15.6834c-4.9706.0-8.99999-4.0294-8.99999-8.99998C8.32031 5.50338 8.55165 4.36259 8.96453 3.32996 5.65605 4.66028 3.32031 7.89912 3.32031 11.6835z" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div></div></header><div class="flex grow"><div id=main-pane><main id=main-content><div class=single-header><ol class=breadcrumbs itemscope itemtype=https://schema.org/BreadcrumbList><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/><span itemprop=name>Home</span>
+</a><meta itemprop=position content='1'></li><span>&nbsp»&nbsp</span><li itemprop=itemListElement itemscope itemtype=https://schema.org/ListItem><a itemprop=item href=https://TSawyer87.github.io/posts/><span itemprop=name>Posts</span>
+</a><meta itemprop=position content='2'></li><span>&nbsp»&nbsp</span></ol><h1>Using_nushell_with_nixos</h1><time class=dim datetime=2025-05-16T19:54:01-04:00>May 16, 2025</time></div><section class=page-section><h2 id=nushell-and-nixos>Nushell and NixOS</h2><figure><img src=/images/nu.png alt="nushell logo" width=1000></figure><ul><li><p><strong>TL;DR</strong>:I recently switched default shells from zsh to nushell, this post
+is about some of the challenges and advantages of using nushell with NixOS.</p></li><li><p>While the average user might not immediately see significant advantages, those
+who frequently work with structured data formats like JSON, YAML, and CSV –
+such as developers interacting with APIs, system administrators managing
+configurations, and data professionals – will likely find Nushell&rsquo;s native
+data handling and powerful pipeline capabilities a plus. Additionally, users
+who value a more consistent and safer scripting experience might appreciate
+Nushell&rsquo;s language-first design and features like strong typing.</p></li><li><p>I&rsquo;ll start with some of the unique build design choices and unique features
+that I think make Nushell special, then show an example using Nushell to
+manipulate JSON data. Finally, I will highlight some of the visually appealing
+aspects of Nushell and lastly I share some resources for learning more.</p></li></ul><h2 id=the-good>The Good</h2><ul><li><p>Nushell borrows concepts from many shells and languages and is itself both a
+programming language and a shell. Because of this, it has its own way of
+working with files, directories, websites, and more.</p></li><li><p>Nushell is powerful and has many essential commands built directly into the
+shell (&ldquo;internal&rdquo; commands) rather than a link to an executable. You can use
+this set of commands across different operating systems, having this
+consistency is helpful when creating cross-platform code.</p></li><li><p>When internal Nushell commands (like <code>ls</code>, <code>open</code>, <code>where</code>, <code>get</code>, <code>sort-by</code>,
+etc.) produce output, they generally do so in Nushell&rsquo;s structured data format
+(tables or records). This is the shell&rsquo;s native way of representing information.</p></li><li><p>Beyond these foundational strengths, Nushell offers a range of unique features
+that enhance its functionality and make it particularly well-suited for
+data-heavy tasks. Here are some highlights that showcase its versatility.</p></li></ul><p><strong>Some Unique Features</strong>:</p><ul><li><p>Besides the built-in commands, Nushell has a <a href=https://www.nushell.sh/book/standard_library.html>standard library</a>
+Nushell operates on <em>structured data</em>. You could call it a &ldquo;data-first&rdquo; shell
+and programming language.</p></li><li><p>Also included, is a full-featured dataframe processing engine using
+<a href=https://github.com/pola-rs/polars>Polars</a> if you want to process large data
+efficiently directly in your shell, check out the <a href=https://www.nushell.sh/book/dataframes.html>Dataframes-Docs</a></p></li><li><p><strong>Multi-Line Editing</strong>:</p></li><li><p>When writing a long command you can press Enter to add a newline and move to
+the next line. For example:</p></li></ul><pre tabindex=0><code class=language-nu data-lang=nu>ls            |    # press enter
+where name =~ |    # press enter, comments after pipe ok
+get name      |    # press enter
+mv ...$in ./backups/
+</code></pre><ul><li><p>This allows you to cycle through the entire multi-line command using the up
+and down arrow keys and then customize different lines or sections of the command.</p></li><li><p>You can manually insert a newline using <code>Alt+Enter</code> or <code>Shift+Enter</code>.</p></li><li><p>The <a href=https://www.nushell.sh/book/line_editor.html>Reedline-Editor</a> is powerful
+and provides good <code>vi-mode</code> or <code>emacs</code> support built in.</p></li><li><p>It&rsquo;s default <code>Ctrl+r</code> history command is nice to work with out of the box.</p></li><li><p>The <a href=https://www.nushell.sh/book/explore.html#parameters>explore</a> command, is
+nu&rsquo;s version of a table pager, just like <code>less</code> but for table structured data:</p></li></ul><pre tabindex=0><code class=language-nu data-lang=nu>$nu | explore --peek
+</code></pre><ul><li><p>With the above command you can navigate with vim keybinds or arrow keys.</p></li><li><p>These features demonstrate Nushell’s user-friendly interface, but what truly
+sets it apart is its underlying design as a structured data scripting language.
+This “language-first” approach powers many of its distinctive capabilities.</p></li></ul><figure><img src=/images/explore.png alt="explore command" width=80%></figure><p><strong>Unique design</strong>:</p><ul><li><p><strong>Fundamentally designed as a structured data scripting language</strong>: and then
+it acts as a shell on top of that foundation. This &ldquo;language first&rdquo; approach
+is what gives it many of its distinctive features and makes it a powerful
+scripting language. I reiterate this here because of the implications of this.
+A few of those features are:</p><ul><li><p><strong>Pipelines of structured data</strong>: Unlike traditional shells that primarily
+deal with plain text streams, Nushell pipelines operate on tables of
+structured data. Each command can understand and manipulate this structured
+data directly.</p></li><li><p><strong>Consistent syntax</strong>: Its syntax is more consistent and predictable compared
+to the often quirky syntax of Bash and Zsh, drawing inspiration from
+other programming languages.</p></li><li><p><strong>Strong typing</strong> Nushell has a type system, which helps catch errors early
+and allows for more robust scripting.</p></li><li><p><strong>First-class data types</strong>: It treats various data formats (like JSON, CSV,
+TOML) as native data types, making it easier to work with them. Because of this,
+Nushell aims to replace the need for external tools like <code>jq</code>, <code>awk</code>, <code>sed</code>,
+<code>cut</code>, and even some uses of <code>grep</code> and <code>curl</code>.</p></li></ul></li><li><p><strong>Variables are Immutable by Default</strong>: Nushell&rsquo;s commands are based on a
+functional-style of programming which requires immutability, sound familiar?</p></li><li><p><strong>Nushell&rsquo;s Environment is Scoped</strong>: Nushell takes many design cues from
+compiled languages, one is that languages should avoid global mutable state.
+Shells have commonly used global mutation to update the environment, Nushell
+attempts to steer clear of this increasing reproducability.</p></li><li><p><strong>Single-use Environment Variables</strong>:</p></li></ul><pre tabindex=0><code class=language-nu data-lang=nu>FOO=BAR $env.FOO
+# =&gt; BAR
+</code></pre><ul><li><strong>Permanent Environment Variables</strong>: In your <code>config.nu</code></li></ul><pre tabindex=0><code class=language-nu data-lang=nu># config.nu
+$env.FOO = &#39;BAR&#39;
+</code></pre><ul><li><p><a href=https://www.nushell.sh/book/coming_from_bash.html>Coming-From-Bash</a></p></li><li><p>These design principles make Nushell a powerful tool for scripting, but
+they’re best understood through a hands-on example. Let’s see how Nushell’s
+structured data capabilities shine in a common task: processing a JSON file.</p></li></ul><p><strong>Example</strong>: I wanted to provide a practical example to illustrate some of these
+&ldquo;Good&rdquo; features in action. And break it down for better understanding.</p><ul><li><p>Let&rsquo;s consider a common task: processing data from a JSON file. Imagine you
+have a file containing a list of users with their names and ages. With
+traditional shells, you&rsquo;d likely need to rely on external tools like <code>jq</code> to
+parse and filter this data. However, Nushell can handle this directly within
+its own commands.</p></li><li><p>For this example you could create a <code>test</code> directory and move to it:</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mkdir test ; cd test
+</span></span></code></pre></div><ul><li>Create a <code>users.json</code> with the following contents:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>[
+</span></span><span style=display:flex><span>  { <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;Alice&#34;</span>, <span style=color:#f92672>&#34;age&#34;</span>: <span style=color:#ae81ff>25</span> },
+</span></span><span style=display:flex><span>  { <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;Bob&#34;</span>, <span style=color:#f92672>&#34;age&#34;</span>: <span style=color:#ae81ff>30</span> },
+</span></span><span style=display:flex><span>  { <span style=color:#f92672>&#34;name&#34;</span>: <span style=color:#e6db74>&#34;Charlie&#34;</span>, <span style=color:#f92672>&#34;age&#34;</span>: <span style=color:#ae81ff>20</span> }
+</span></span><span style=display:flex><span>]
+</span></span></code></pre></div><ul><li>And create the following <code>filter.nu</code> that first converts <code>users.json</code> into
+its own internal structured data format with the <code>open</code> command, then to filters
+out people under <code>21</code> with the <code>where</code> control flow construct, then selects the
+<code>name</code> and <code>age</code> columns, sorts them by age, and finally converts them back to
+<code>json</code> and saves them to a file called <code>filtered_users.json</code>. A lot happening
+in a 6 line script.</li></ul><pre tabindex=0><code class=language-nu data-lang=nu>open users.json           # Read JSON file into structured data
+| where age &gt; 21         # Filter users older than 21
+| select name age        # Select only name and age columns
+| sort-by age            # Sort by age
+| to json                # Convert back to JSON
+| save filtered_users.json # Save result to a new file
+</code></pre><ul><li>The <code>open</code> command takes data from a file (or even a URL in some cases) and
+parses it and converts it into Nushells own internal structured data format.
+So this command isn&rsquo;t just showing you the contents of <code>users.json</code> but doing
+a conversion to Nu&rsquo;s special structured format.</li></ul><pre tabindex=0><code class=language-nu data-lang=nu>open users.json
+╭───┬─────────┬─────╮
+│ # │  name   │ age │
+├───┼─────────┼─────┤
+│ 0 │ Alice   │  25 │
+│ 1 │ Bob     │  30 │
+│ 2 │ Charlie │  20 │
+╰───┴─────────┴─────╯
+</code></pre><ul><li>The <code>source</code> command in Nushell is used to execute the commands within a script
+file (like <code>filter.nu</code>) in the current Nushell environment. It&rsquo;s similar to
+running the script directly in the shell, but keeps the shell open for further
+use. In this example, <code>source filter.nu</code> runs the commands inside <code>filter.nu</code>,
+processing the <code>users.json</code> file and creating the <code>filtered_users.json</code> file:</li></ul><pre tabindex=0><code class=language-nu data-lang=nu>source filter.nu
+bat filtered_users.json
+───────┬──────────────────────────────────────────────────────────────────────────────────────
+       │ File: filtered_users.json
+───────┼──────────────────────────────────────────────────────────────────────────────────────
+   1   │ [
+   2   │   {
+   3   │     &#34;name&#34;: &#34;Alice&#34;,
+   4   │     &#34;age&#34;: 25
+   5   │   },
+   6   │   {
+   7   │     &#34;name&#34;: &#34;Bob&#34;,
+   8   │     &#34;age&#34;: 30
+   9   │   }
+  10   │ ]
+───────┴───────────────────────────────────────────────────────────────────────────────────
+</code></pre><ul><li>As you can see, without needing any external tools, Nushell was able to read,
+filter, select, sort, and then re-serialize JSON data using a clear and concise
+pipeline. This demonstrates its power in handling structured data natively,
+making common data manipulation tasks within the shell significantly more
+streamlined and readable compared to traditional approaches.</li></ul><p><strong>In the filter.nu example:</strong></p><pre tabindex=0><code class=language-nu data-lang=nu>open users.json           # Read JSON file into structured data
+| where age &gt; 21         # Filter users older than 21
+| select name age        # Select only name and age columns
+| sort-by age            # Sort by age
+| to json                # Convert back to JSON
+| save filtered_users.json # Save result to a new file
+</code></pre><ol><li><p><code>open users.json</code>: Produces a <strong>Nushell table</strong> representing the data.</p></li><li><p><code>| where age > 21</code>: Receives the table, filters rows based on the <code>age</code>
+column, and outputs a new, filtered table.</p></li><li><p><code>| select name age</code>: Receives the filtered table, selects only the <code>name</code> and
+<code>age</code> columns, and outputs a table with fewer columns.</p></li><li><p><code>| sort-by age</code>: Receives the table, sorts the rows based on the <code>age</code> column,
+and outputs a sorted table.</p></li><li><p><code>| to json</code>: Receives the sorted table and converts it back into JSON text.</p></li><li><p><code>| save filtered_users.json</code>: Receives the JSON text and saves it to a file.</p></li></ol><ul><li><p>So, while the concept of piping is the same, the nature of the data flowing
+through the Nushell pipeline is richer and more structured, enabling more
+powerful and direct data manipulation.</p></li><li><p>While Nushell’s strengths, like its structured data pipelines, make it a
+game-changer for many tasks, it’s not without its challenges, especially when
+integrated with NixOS’s Bash-centric ecosystem. Let’s explore some of the
+limitations you might encounter when adopting Nushell as your default shell.</p></li></ul><h2 id=the-bad>The Bad</h2><ul><li><p>While the project is still maturing, the active community and ongoing
+improvements are promising. Don&rsquo;t get too discouraged by the following, there
+would be a bad section for any shell imo.</p></li><li><p>There are many similarities so it can be easy to forget that some Bash (and
+POSIX in general) style constructs just won&rsquo;t work in Nushell. Considering
+that NixOS seems to have been designed for bash, even Zsh isn&rsquo;t fully
+compatable you may want to think twice before you choose Nushell as your
+default.</p></li><li><p>The documentation is incomplete and written by devs for devs imo, it is quite
+a bit different from anything else I&rsquo;ve seen so there is a bit of a learning
+curve. Nushell is generally still considered to be in a stage where it might
+not be the most seamless or trouble-free experience as a daily driver default
+shell for most users, especially on a system like NixOS known for its unique
+approach.</p></li><li><p>The <a href=https://github.com/haslersn/any-nix-shell>any-nix-shell</a> project doesn&rsquo;t
+include Nushell as with many others because of it&rsquo;s lack of maturity.</p></li><li><p>The following addition comes from Joey_McKur&rsquo;s sugggestion, on mentioning the
+<code>job</code> command as one of the biggest criticisms against Nu because it doesn&rsquo;t
+support background tasks. I should also note that Nushell&rsquo;s team is aware of
+these criticisms and actively working on improving job control.</p></li></ul><p><strong>Limited Feature Set Compared to Traditional Job Control:</strong></p><ul><li><p><strong>Lack of Full POSIX Job Control</strong>: Nushell&rsquo;s job control doesn&rsquo;t yet fully
+implement all the features and signals defined by POSIX job control (e.g., more
+nuanced signal handling, stopped jobs). While it covers the basics, users
+accustomed to advanced Bash job control might find it lacking.</p></li><li><p><strong>Foregrounding Behavior</strong>: There have been criticisms about how foregrounding
+jobs interacts with the terminal and potential issues with signal propagation.</p></li></ul><p><strong>Output Handling Challenges</strong>:</p><ul><li><p><strong>Interleaved Output</strong>: Managing the output of multiple backgrounded jobs can
+sometimes be messy, with output from different jobs potentially interleaving in
+the terminal. While Nushell tries to handle this, it&rsquo;s not always as clean as
+desired.</p></li><li><p><strong>Redirection Complexity</strong>: Redirecting the input and output of backgrounded
+jobs can be less straightforward than in Bash, sometimes requiring more
+explicit handling.</p></li></ul><p><strong>Integration with Pipelines:</strong></p><ul><li><strong>Backgrounding Pipelines</strong>: Backgrounding complex pipelines with multiple
+stages can sometimes lead to unexpected behavior or difficulties in managing
+the entire pipeline as a single job.</li></ul><p><strong>Error Reporting:</strong></p><ul><li><p><strong>Difficult to Track Errors in Background Jobs</strong>: Identifying and debugging
+errors in backgrounded jobs can be less direct than with foreground processes,
+and the job command&rsquo;s output might not always provide sufficient information
+for troubleshooting.</p></li><li><p>Many of Nushell’s challenges stem from its departure from traditional shell
+conventions, particularly those of Bash, which NixOS heavily relies on. To
+better understand these differences and how they impact your workflow, let’s
+compare Nushell’s static, structured approach to Bash’s dynamic, text-based
+model.</p></li></ul><h2 id=key-differences-between-nushell--bash>Key Differences Between Nushell & Bash</h2><table><thead><tr><th><strong>Feature</strong></th><th><strong>Bash (Dynamic)</strong></th><th><strong>Nushell (Static)</strong></th></tr></thead><tbody><tr><td>Code Execution</td><td>Line-by-line</td><td>Whole script parsed first</td></tr><tr><td>Error Detection</td><td>Runtime errors only</td><td>Catches errors before running</td></tr><tr><td>Support for <code>eval</code></td><td>✅ Allowed</td><td>❌ Not supported</td></tr><tr><td>Custom Parsing</td><td>Limited</td><td>Built-in semantic analysis</td></tr><tr><td>IDE Features</td><td>Basic syntax highlighting</td><td>Advanced integration, linting, and formatting</td></tr></tbody></table><ul><li><p><code>&&</code> doesn&rsquo;t work use <code>;</code> instead.</p></li><li><p><code>></code> is used as the greater-than operator for comparisons:</p></li></ul><pre tabindex=0><code class=language-nu data-lang=nu>&#34;hello&#34; | save output.txt
+</code></pre><p>is equivalent to the following in bash:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>echo <span style=color:#e6db74>&#34;hello&#34;</span> &gt; output.txt
+</span></span></code></pre></div><ul><li>If you notice above the nushell command doesn&rsquo;t require an <code>echo</code> prefix, this
+is because Nushell has <strong>Implicit Return</strong>:</li></ul><pre tabindex=0><code class=language-nu data-lang=nu>&#34;Hello, World&#34; == (echo &#34;Hello, World&#34;)
+# =&gt; true
+</code></pre><ul><li><p>The above example shows that the string, <code>"Hello, World"</code> is equivalent to the
+output value from <code>echo "Hello, World"</code></p></li><li><p><strong>Every Command Returns a Value</strong>:</p></li></ul><pre tabindex=0><code class=language-nu data-lang=nu>let p = 7
+print $p  # 7
+$p * 6    # 42
+</code></pre><ul><li>Understanding these differences highlights why Nushell feels so distinct from
+Bash, but it’s the shell’s advanced features and integrations that truly make
+it shine. Let’s dive into some of the beautiful and powerful tools and custom
+commands that elevate Nushell for NixOS users.</li></ul><h2 id=the-beautiful-and-powerful>The Beautiful and Powerful</h2><ul><li><p><code>Ctrl+t</code> List Commands with carapace and fzf:</p><figure><img src=/images/nu4.png alt=atuin width=80%></figure></li><li><p><code>Carapace</code> <a href=https://carapace-sh.github.io/carapace-bin/install.html>Carapace-Bin Install</a>:</p><figure><img src=/images/nu9.png alt=carapace width=1000></figure></li><li><p><code>Carapace</code> man example:</p><figure><img src=/images/nu7.png alt=carapace_man width=80%></figure></li></ul><p><strong>Custom Nushell Commands</strong></p><ul><li>The following command allows you to choose which input to update interactively
+with fzf.</li></ul><pre tabindex=0><code class=language-nu data-lang=nu># nix.nu
+# upgrade system packages
+# `nix-upgrade` or `nix-upgrade -i`
+def nix-upgrade [
+  flake_path: string = &#34;/home/jr/flake&#34;, # path that contains a flake.nix
+  --interactive (-i) # select packages to upgrade interactively
+]: nothing -&gt; nothing {
+  let working_path = $flake_path | path expand
+  if not ($working_path | path exists) {
+    echo &#34;path does not exist: $working_path&#34;
+    exit 1
+  }
+  let pwd = $env.PWD
+  cd $working_path
+  if $interactive {
+    let selections = nix flake metadata . --json
+    | from json
+    | get locks.nodes
+    | columns
+    | str join &#34;\n&#34;
+    | fzf --multi --tmux center,20%
+    | lines
+    # Debug: Print selections to verify
+    print $&#34;Selections: ($selections)&#34;
+    # Check if selections is empty
+    if ($selections | is-empty) {
+      print &#34;No selections made.&#34;
+      cd $pwd
+      return
+    }
+    # Use spread operator to pass list items as separate arguments
+    nix flake update ...$selections
+  } else {
+    nix flake update
+  }
+  cd $pwd
+  nh os switch $working_path
+}
+</code></pre><figure><img src=/images/nu5.png alt=carapace width=80%></figure><ul><li>The <code>ns</code> command is designed to search for Nix packages using <code>nix search</code> and
+present the results in a cleaner format, specifically removing the architecture
+and operating system prefix that nix search often includes.</li></ul><pre tabindex=0><code class=language-nu data-lang=nu>def ns [
+    term: string # Search target.
+] {
+
+    let info = (
+        sysctl -n kernel.arch kernel.ostype
+        | lines
+        | {arch: ($in.0|str downcase), ostype: ($in.1|str downcase)}
+    )
+
+    nix search --json nixpkgs $term
+        | from json
+        | transpose package description
+        | flatten
+        | select package description version
+        | update package {|row| $row.package | str replace $&#34;legacyPackages.($info.arch)-($info.ostype).&#34; &#34;&#34;}
+}
+</code></pre><figure><img src=/images/nu10.png alt="nix search" width=80%></figure><ul><li><code>nufetch</code> command:</li></ul><pre tabindex=0><code class=language-nu data-lang=nu># `nufetch` `(nufetch).packages`
+def nufetch [] {
+{
+&#34;kernel&#34;: $nu.os-info.kernel_version,
+&#34;nu&#34;: $env.NU_VERSION,
+&#34;packages&#34;: (ls /etc/profiles/per-user | select name | prepend [[name];
+[&#34;/run/current-system/sw&#34;]] | each { insert &#34;number&#34; (nix path-info --recursive
+ ($in | get name) | lines | length) | insert &#34;size&#34; ( nix path-info -S
+ ($in | get name) | parse -r &#39;\s(.*)&#39; | get capture0.0 | into filesize) | update
+ &#34;name&#34; ($in | get name | parse -r &#39;.*/(.*)&#39; | get capture0.0 | if $in == &#34;sw&#34;
+ {&#34;system&#34;} else {$in}) | rename &#34;environment&#34;}),
+&#34;uptime&#34;: (sys host).uptime
+}
+}
+</code></pre><figure><img src=/images/nu1.png alt=nufetch width=80%></figure><ul><li><code>duf</code> command, I have mine aliased to <code>df</code>:</li></ul><figure><img src=/images/nu8.png alt=duff width=80%></figure><ul><li><code>ps</code> command:</li></ul><figure><img src=/images/ps.png alt=ps width=80%></figure><ul><li>Adding the following to your <code>configuration.nix</code> will show you the diff of the
+closures on rebuild:</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-nix data-lang=nix><span style=display:flex><span><span style=color:#75715e># configuration.nix</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># During system activation, compare the closure size difference between the</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># current and new system and display a formatted table if significant changes are</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># detected.</span>
+</span></span><span style=display:flex><span>system<span style=color:#f92672>.</span>activationScripts<span style=color:#f92672>.</span>diff <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  if [[ -e /run/current-system ]]; then
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    </span><span style=color:#e6db74>${</span>pkgs<span style=color:#f92672>.</span>nushell<span style=color:#e6db74>}</span><span style=color:#e6db74>/bin/nu -c &#34;let diff_closure = (</span><span style=color:#e6db74>${</span>pkgs<span style=color:#f92672>.</span>nix<span style=color:#e6db74>}</span><span style=color:#e6db74>/bin/nix store
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>     diff-closures /run/current-system &#39;$systemConfig&#39;); let table =
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>     (\$diff_closure | lines | where \$it =~ KiB | where \$it =~ → | parse -r
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>     &#39;^(?&lt;Package&gt;\S+): (?&lt;Old&gt;[^,]+)(?:.*) → (?&lt;New&gt;[^,]+)(?:.*), (?&lt;DiffBin&gt;.*)$&#39;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>     | insert Diff { get DiffBin | ansi strip | into filesize } | sort-by -r Diff
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>     | reject DiffBin); if (\$table | get Diff | is-not-empty) { print \&#34;\&#34;; \$table
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    | append [[Package Old New Diff]; [\&#34;\&#34; \&#34;\&#34; \&#34;\&#34; \&#34;\&#34;]] | append [[Package Old
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>     New Diff]; [\&#34;\&#34; \&#34;\&#34; \&#34;Total:\&#34; (\$table | get Diff | math sum) ]]
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    | print; print \&#34;\&#34; }&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>  fi
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>&#39;&#39;</span>;
+</span></span></code></pre></div><figure><img src=/images/config1.png alt=Diff width=80%></figure><ul><li><code>nix-list-system</code> command lists all installed packages:</li></ul><pre tabindex=0><code class=language-nu data-lang=nu># list all installed packages
+def nix-list-system []: nothing -&gt; list&lt;string&gt; {
+  ^nix-store -q --references /run/current-system/sw
+  | lines
+  | filter { not ($in | str ends-with &#39;man&#39;) }
+  | each { $in | str replace -r &#39;^[^-]*-&#39; &#39;&#39; }
+  | sort
+}
+</code></pre><figure><img src=/images/nu6.png alt=obsidian width=80%></figure><ul><li>These custom Nushell commands showcase its flexibility, but sometimes you need
+to work around Nushell’s limitations, like compatability with certain NixOS
+tools. This is where <code>just</code> and <code>justfiles</code> come in, simplifying complex
+workflows and bridging gaps in Nushell’s functionality.</li></ul><h3 id=using-just-and-justfiles>Using Just and Justfiles</h3><ul><li><p>The following is my <code>justfile</code> that I keep right next to my <code>flake.nix</code> it
+simplifies some commands and makes things work that weren&rsquo;t working with
+nushell for my case, you&rsquo;ll have to change it to match your configuration.
+It&rsquo;s not perfect but works for my use case, take whats useful and leave the
+rest.</p></li><li><p>You&rsquo;ll first need to install <a href=https://github.com/casey/just>just</a>
+to make use of <code>justfiles</code>.</p></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># nix shell nixpkgs#just nixpkgs#nushell</span>
+</span></span><span style=display:flex><span>set shell :<span style=color:#f92672>=</span> <span style=color:#f92672>[</span><span style=color:#e6db74>&#34;nu&#34;</span>, <span style=color:#e6db74>&#34;-c&#34;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>flake_path :<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;/home/jr/flake&#34;</span>
+</span></span><span style=display:flex><span>hostname :<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;magic&#34;</span>
+</span></span><span style=display:flex><span>home_manager_output :<span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;jr@magic&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>utils_nu :<span style=color:#f92672>=</span> absolute_path<span style=color:#f92672>(</span><span style=color:#e6db74>&#34;utils.nu&#34;</span><span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>default:
+</span></span><span style=display:flex><span>    @just --list
+</span></span><span style=display:flex><span><span style=color:#75715e># Rebuild</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>group<span style=color:#f92672>(</span><span style=color:#e6db74>&#39;nix&#39;</span><span style=color:#f92672>)]</span>
+</span></span><span style=display:flex><span>fr:
+</span></span><span style=display:flex><span>    nh os switch --hostname <span style=color:#f92672>{{</span>hostname<span style=color:#f92672>}}</span> <span style=color:#f92672>{{</span>flake_path<span style=color:#f92672>}}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Flake Update</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>group<span style=color:#f92672>(</span><span style=color:#e6db74>&#39;nix&#39;</span><span style=color:#f92672>)]</span>
+</span></span><span style=display:flex><span>fu:
+</span></span><span style=display:flex><span>    nh os switch  --hostname <span style=color:#f92672>{{</span>hostname<span style=color:#f92672>}}</span> --update <span style=color:#f92672>{{</span>flake_path<span style=color:#f92672>}}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Update specific input</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Usage: just upp nixpkgs</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>group<span style=color:#f92672>(</span><span style=color:#e6db74>&#39;nix&#39;</span><span style=color:#f92672>)]</span>
+</span></span><span style=display:flex><span>upp input:
+</span></span><span style=display:flex><span>    nix flake update <span style=color:#f92672>{{</span>input<span style=color:#f92672>}}</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Test</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>group<span style=color:#f92672>(</span><span style=color:#e6db74>&#39;nix&#39;</span><span style=color:#f92672>)]</span>
+</span></span><span style=display:flex><span>ft:
+</span></span><span style=display:flex><span>    nh os test --hostname <span style=color:#f92672>{{</span>hostname<span style=color:#f92672>}}</span> <span style=color:#f92672>{{</span>flake_path<span style=color:#f92672>}}</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Collect Garbage</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>group<span style=color:#f92672>(</span><span style=color:#e6db74>&#39;nix&#39;</span><span style=color:#f92672>)]</span>
+</span></span><span style=display:flex><span>ncg:
+</span></span><span style=display:flex><span>    nix-collect-garbage --delete-old ; sudo nix-collect-garbage -d ; sudo /run/current-system/bin/switch-to-configuration boot
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>group<span style=color:#f92672>(</span><span style=color:#e6db74>&#39;nix&#39;</span><span style=color:#f92672>)]</span>
+</span></span><span style=display:flex><span>cleanup:
+</span></span><span style=display:flex><span>    nh clean all
+</span></span></code></pre></div><ul><li>To list available commands type, (you must be in the same directory as the
+justfile): <code>just</code></li></ul><figure><img src=/images/just2.png alt=just width=80%></figure><ul><li><p>So <code>just fmt</code> will run <code>nix fmt</code>.</p></li><li><p>A lot of the <code>.nu</code> files came from this repo by BlindFS:</p><ul><li><p><a href=https://github.com/blindFS/modern-dot-files/tree/main>modern-dot-files</a>
+he uses Nix Darwin so there are a few changes for NixOS. I found this
+through <a href=https://github.com/nushell/this_week_in_nu>this_week_in_nu</a>.</p></li><li><p><a href=https://github.com/saylesss88/flake/tree/main/home/shells/nushell>my-nu-config</a></p></li><li><p>The examples use this starship config<a href=https://github.com/Aylur/dotfiles/blob/main/home/starship.nix>Aylur-dotfiles</a>
+The logic on the bottom enables starship for Nushell, Zsh, and Bash!</p></li><li><p>If you wan&rsquo;t to use my config you&rsquo;ll have to enable the experimental-feature
+<code>pipe-operators</code> in the same place you enable flakes and nix-command.</p></li></ul></li><li><p>There are still situations where I need to switch to zsh or bash to get something
+to work i.e. <code>nix-shell</code> and a few others.</p></li><li><p>From custom commands to <code>justfile</code> integrations, Nushell offers a wealth of
+tools to enhance your NixOS experience, even if occasional workarounds are
+needed. To dive deeper into Nushell and tailor it to your needs, here are some
+valuable resources to explore, from official documentation to community-driven
+configurations.</p></li></ul><h3 id=resources>Resources</h3><ul><li><p><a href=https://www.nushell.sh/book/>Nushell-Book</a></p></li><li><p><a href=https://www.nushell.sh/cookbook/>Nushell-Cookbook</a></p></li><li><p><a href=https://github.com/nushell/nu_scripts>nu_scripts</a> some of the custom
+commands came from here.</p></li><li><p><a href=https://github.com/nushell/nushell/tree/main/crates/nu-utils/src/default_files>nushell sample-config</a></p></li><li><p><a href=https://github.com/nushell/awesome-nu#plugins>awesome-nu repo</a></p></li><li><p><a href=https://github.com/nushell/showcase>nu showcase-repo</a></p></li><li><p><a href=https://discord.com/invite/NtAbbGn>discord</a> You can find custom commands,
+configurations, etc here.</p></li></ul></section></main><footer id=main-footer><div class=footer><a href=#>Scroll to Top</a><div class=footer-copyright><div class=dim>© 2025</div><div>Made with ❤️ and powered by <a href=https://github.com/math-queiroz/rusty-typewriter target=_blank>Rusty Typewriter</a> theme for <a href=https://gohugo.io/ target=_blank>Hugo</a></div></div></div></footer></div><aside id=side-pane class=side-sticky><div class=side-details><span>3160 words</span>
+<span>22 - 28 minutes read</span></div><h3>Table Of Contents</h3><nav id=TableOfContents><ul><li><a href=#nushell-and-nixos>Nushell and NixOS</a></li><li><a href=#the-good>The Good</a></li><li><a href=#the-bad>The Bad</a></li><li><a href=#key-differences-between-nushell--bash>Key Differences Between Nushell & Bash</a></li><li><a href=#the-beautiful-and-powerful>The Beautiful and Powerful</a><ul><li><a href=#using-just-and-justfiles>Using Just and Justfiles</a></li><li><a href=#resources>Resources</a></li></ul></li></ul></nav></aside></div></div></body></html>
