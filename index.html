@@ -225,8 +225,12 @@ error: undefined variable `a' at (string):1:1
 </ul>
 <pre><code class="language-nix">nix-repl&gt; "stringDaddy"
 "stringDaddy"
-nix-repl&gt; ''stringMoma''
-"stringMoma"
+nix-repl&gt; ''
+  This is a
+  multi-line
+  string
+''
+"This is a\nmulti-line\nstring.\n"
 </code></pre>
 <p><strong>String Interpolation</strong>: Is a language feature where a string, path, or
 attribute name can contain expressions enclosed in <code>${ }</code>. This construct
@@ -258,16 +262,21 @@ in curly braces, where the names must be unique:</p>
 <pre><code class="language-nix">let person = { name = "Alice"; age = 30; }; in person.name
 "Alice"
 </code></pre>
-<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access to attributes within the set:</p>
+<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access
+to attributes within the set:</p>
 <pre><code class="language-nix">rec {
   one = 1;
   two = one + 1;
   three = two + 1;
 }
 </code></pre>
-<ul>
-<li>Without <code>rec</code>, this command would fail because we are trying to use an attribute that is defined within this attribute set. You would get an undefined variable 'one' error.</li>
-</ul>
+<pre><code class="language-nix"># This would fail:
+{
+  one = 1;
+  two = one + 1;  # Error: undefined variable 'one'
+  three = two + 1;
+}
+</code></pre>
 <p><strong>Inheriting Attributes</strong></p>
 <pre><code class="language-nix">let x = 123; in
 {
@@ -285,6 +294,16 @@ in curly braces, where the names must be unique:</p>
 <p>Both evaluate to:</p>
 <pre><code class="language-nix">{ x = 123; y = 456; }
 </code></pre>
+<ul>
+<li><code>inherit</code> is commonly used to pick specific variables from the function's
+arguments, like in:</li>
+</ul>
+<pre><code class="language-nix">{ pkgs, lib }: ...
+let someVar = ...; in { inherit pkgs lib someVar; ... }
+</code></pre>
+<ul>
+<li>This shows another common use case beyond just <code>let</code> bindings.</li>
+</ul>
 <blockquote>
 <p>❗: This works because <code>x</code> is added to the lexical scope by the <code>let</code> construct.</p>
 </blockquote>
@@ -444,7 +463,7 @@ output will have a different path.</p>
 
 pkgs.stdenv.mkDerivation {
   name = "hello-world";
-  src = null; # No source code needed
+  src = null; # No external source code needed for this simple example
 
   buildPhase = ''
     echo "Hello, World!" &gt; $out
