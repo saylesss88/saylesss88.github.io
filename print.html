@@ -300,45 +300,12 @@ nix-repl&gt; if a &gt; b then "yes" else "no"
 <pre><code class="language-nix">let a = "foo"; b = "fighter"; in a + b
 "foofighter"
 </code></pre>
-<pre><code class="language-nix"># flake.nix
-outputs = my-inputs @ {
-  self,
-  nixpkgs,
-  treefmt-nix,
-  ...
-}: let
-     system = "x86_64-linux";
-     host = "magic";
-in {
-  ## Outputs go here
-}
-</code></pre>
-<pre><code class="language-nix"># nvf.nix
-{ pkgs, inputs, config, lib, ... }: let
-  cfg = config.custom.nvfModule;
-in {
-  options.custom.nvfModule.enable = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-    description = "Enable the nvf nvim configuration";
-  };
-}
-</code></pre>
 <p><strong>With expressions</strong>:</p>
 <pre><code class="language-nix">nix-repl&gt; longName = { a = 3; b = 4; }
 nix-repl&gt; longName.a + longName.b
 7
 nix-repl&gt; with longName; a + b
 7
-</code></pre>
-<pre><code class="language-nix"># utils.nix
-{ pkgs, ... }: {
-  environment.systemPackages = with pkgs; [
-    rustup
-    evcxr
-    nix-prefetch-git
-  ];
-}
 </code></pre>
 <p><strong>Laziness</strong>:</p>
 <ul>
@@ -804,8 +771,13 @@ braces:</li>
   int = 3;
 }
 </code></pre>
+<blockquote>
+<p>❗ Remember <code>{}</code> is a valid attribute set in Nix.</p>
+</blockquote>
 <ul>
-<li>A <strong>function</strong> with an attribute set argument:</li>
+<li>The following is a <strong>function</strong> with an attribute set argument, remember that
+anytime you see a <code>:</code> in Nix code it means this is a function. To the left is
+the <strong>function arguments</strong> and to the right is the <strong>function body</strong>:</li>
 </ul>
 <pre><code class="language-nix">{ a, b }: a + b
 </code></pre>
@@ -817,8 +789,8 @@ braces:</li>
 }
 </code></pre>
 <p>NixOS produces a full system configuration by combining smaller, more isolated
-and reusable components: <strong>Modules</strong>. In my opinion modules are one of the
-first things you should understand when learning about NixOS.</p>
+and reusable components: <strong>Modules</strong>. If you want to understand Nix and NixOS
+make sure you grasp modules!</p>
 <ul>
 <li>
 <p>A NixOS module defines configuration options and behaviors for system
@@ -1196,6 +1168,43 @@ modules is a powerful technique for ensuring the long-term stability and
 reproducibility of your system configurations. By pinning specific versions
 of Nixpkgs and other resources, you gain greater control over your environment
 and reduce the risk of unexpected changes due to upstream updates.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<p>You'll see the following all throughout Nix code and is convenient although it
+doesn't follow best practices. One reason is static analysis can't reason about
+the code, because it would have to actually evaluate the files to see which names
+are in scope:</p>
+<pre><code class="language-nix"># utils.nix
+{ pkgs, ... }: {
+  environment.systemPackages = with pkgs; [
+    rustup
+    evcxr
+    nix-prefetch-git
+  ];
+}
+</code></pre>
+<p>The following follows best practices:</p>
+<pre><code class="language-nix">{pkgs, ... }: {
+  environment.systemPackages = builtins.attrValues {
+    inherit (pkgs)
+      rustup
+      evcxr
+      nix-prefetch-git;
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p><code>builtins.attrValues</code> essentially converts an attribute set into a list.</p>
+</li>
+<li>
+<p>The above approach avoids scope pollution, <code>with pkgs; [...]</code> brings all
+attributes of <code>pkgs</code> into scope, which can make it harder to track where
+specific values come from.</p>
+</li>
+<li>
+<p>It can lead to unintended name clashes or confusion when debugging.</p>
+</li>
+</ul>
 <h2 id="conclusion-2"><a class="header" href="#conclusion-2">Conclusion</a></h2>
 <p>As we have seen throughout this chapter, modules are the building blocks of your
 NixOS system and are themselves often functions. There are a few different ways
