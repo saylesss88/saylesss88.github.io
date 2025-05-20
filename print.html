@@ -278,6 +278,28 @@ to attributes within the set:</p>
   three = two + 1;
 }
 </code></pre>
+<ul>
+<li>The <a href="https://nix.dev/manual/nix/2.24/language/operators.html#update">attribute set update operator</a>
+merges two attribute sets.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-nix">{ a = 1; b = 2; } // { b = 3; c = 4; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{ a = 1; b = 3; c = 4; }
+</code></pre>
+<ul>
+<li>However, names on the right take precedence, and updates are shallow.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-nix">{ a = { b = 1; }; } // { a = { c = 3; }; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{ a = { c = 3; }; }
+</code></pre>
+<ul>
+<li>Above, key <code>b</code> was completely removed, because the whole <code>a</code> value was replaced.</li>
+</ul>
 <p><strong>Inheriting Attributes</strong></p>
 <pre><code class="language-nix">let x = 123; in
 {
@@ -2311,6 +2333,30 @@ nix-repl&gt; hello-drv
 <li>Derivations have a <code>.drv</code> suffix, as you can see the result of calling
 <code>hello-drv</code> is the nix store path to a derivation.</li>
 </ul>
+<h2 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h2>
+<p><strong>Reproducible source paths</strong>: If we built the following derivation in
+<code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
+<code>/nix/store/&lt;hash&gt;-myproject</code> causing the build to no longer be reproducible:</p>
+<pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
+
+pkgs.stdenv.mkDerivation {
+  name = "foo";
+  src = ./.;
+}
+</code></pre>
+<blockquote>
+<p>❗ TIP:
+Use <code>builtins.path</code> with the <code>name</code> attribute set to something fixed.
+This will derive the symbolic name of the store path from the <code>name</code> instead
+of the working directory:</p>
+<pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
+
+pkgs.stdenv.mkDerivation {
+  name = "foo";
+  src = builtins.path { path = ./.; name = "myproject"; };
+}
+</code></pre>
+</blockquote>
 <h2 id="conclusion-5"><a class="header" href="#conclusion-5">Conclusion</a></h2>
 <p>In this chapter, we've laid the groundwork for understanding Nix derivations,
 the fundamental recipes that define how software and other artifacts are built
