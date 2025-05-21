@@ -174,7 +174,7 @@ Nix community, to help clarify the concept of top-level attributes within
 NixOS modules.</p>
 <h2 id="the-core-of-a-nixos-system-systembuildtoplevel"><a class="header" href="#the-core-of-a-nixos-system-systembuildtoplevel">The Core of a NixOS System: <code>system.build.toplevel</code></a></h2>
 <details>
-<summary> `system.build.toplevel` Explained (Click to Expand)
+<summary> `system.build.toplevel` Explained (Click to Expand) </summary>
 <p>In a NixOS system, everything is built from a single "system derivation." The
 command <code>nix-build '&lt;nixpkgs/nixos&gt;' -A system</code> initiates this build process.</p>
 <p>The <code>-A system</code> part tells Nix to focus on the <code>system</code> attribute defined in
@@ -188,7 +188,11 @@ intermediate steps.</p>
 <p><strong>Key Takeaway:</strong> <code>system.build.toplevel</code> is the ultimate output that defines your entire NixOS system.</p>
 </details>
 <h2 id="how-options-relate-a-chain-of-influence"><a class="header" href="#how-options-relate-a-chain-of-influence">How Options Relate: A Chain of Influence</a></h2>
-<p>Options in NixOS are not isolated; they often build upon each other. Here's an example of how a high-level option can lead down to a low-level system configuration:</p>
+<p>Options in NixOS are not isolated; they often build upon each other.</p>
+<details>
+<summary>Example: Nginx Option Chain (Click to Expand)</summary>
+<p>Here's an example of how a high-level option can lead down to a low-level system
+configuration:</p>
 <ul>
 <li>You enable Nginx with <code>services.nginx.enable = true;</code>.</li>
 <li>This setting influences the lower-level option <code>systemd.services.nginx</code>.</li>
@@ -199,6 +203,7 @@ intermediate steps.</p>
 <li>Finally, this unit file ends up as <code>result/etc/systemd/system/nginx.service</code>
 within the final <code>system.build.toplevel</code> derivation.</li>
 </ul>
+</details>
 <p><strong>Key Takeaway:</strong> Higher-level, user-friendly options are translated into
 lower-level system configurations that are part of the final system build.</p>
 <h2 id="the-nixos-module-system-evaluating-options"><a class="header" href="#the-nixos-module-system-evaluating-options">The NixOS Module System: Evaluating Options</a></h2>
@@ -240,6 +245,8 @@ in (import &lt;nixpkgs/lib&gt;).evalModules {
 merging option configurations from different modules.</p>
 <h2 id="how-the-module-system-works-a-simplified-overview"><a class="header" href="#how-the-module-system-works-a-simplified-overview">How the Module System Works: A Simplified Overview</a></h2>
 <p>The module system processes a set of "modules" through these general steps:</p>
+<details>
+<summary>Detailed Steps (Click to Expand)</summary>
 <ol>
 <li>
 <p><strong>Importing Modules</strong>: It recursively finds and includes all modules
@@ -263,6 +270,7 @@ them according to the option's defined type.</p>
 only computed when it's actually needed. It can also depend on the values of
 other options.</p>
 </blockquote>
+</details>
 <p><strong>Key Takeaway</strong>: The module system imports, declares, and then evaluates
 option values from various modules to build the final configuration.</p>
 <p><strong>Top-Level Attributes in a Module: <code>imports</code>, <code>options</code>, and <code>config</code></strong></p>
@@ -290,6 +298,8 @@ are the primary ways to structure a NixOS module.</p>
 <p>If you define either an <code>options</code> or a <code>config</code> attribute at the top level of
 your module, any other attributes that are not option declarations must be
 moved inside the config attribute.</p>
+<details>
+<summary>Examples of Correct and Incorrect Usage (Click to Expand)</summary>
 <p>Let's look at an example of what not to do:</p>
 <pre><code class="language-nix">{ pkgs, lib, config, ... }:
 {
@@ -359,6 +369,7 @@ attributes are automatically considered part of the configuration.</p>
 section, the <code>config = { environment.systemPackages = ... };</code> part will still
 function correctly, assuming the option it's referencing (<code>appstream.enable</code>
 in this case) is defined elsewhere (e.g., in an imported module).</p>
+</details>
 <p><strong>Key Takeaway</strong>: The <code>config</code> section defines values for options, regardless
 of whether those options are declared in the same module.</p>
 <h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
