@@ -282,9 +282,15 @@ resulting in <code>12</code>.</p>
 <p>This chaining is why Nix functions are so powerful—it allows you to build
 flexible, reusable functions.</p>
 <p><strong>A More Practical Example: Greetings</strong>:</p>
-<p>Let's explore currying with a more relatable example:</p>
-<pre><code class="language-nix">greeting = prefix: name: "${prefix}, ${name}!";
-greeting "Hello" "Alice"        # Output: "Hello, Alice!"
+<p>Let's explore currying with a more relatable example in the <code>nix repl</code>:</p>
+<pre><code class="language-nix">nix repl
+nix-repl&gt; greeting = prefix: name: "${prefix}, ${name}!";
+
+nix-repl&gt; greeting "Hello"
+&lt;&lt;lambda @ &lt;&lt;string&gt;&gt;:1:10&gt;&gt; # partial application returns a lambda
+
+nix-repl&gt; greeting "Hello" "Alice"
+"Hello, Alice!"         # providing both arguments returns the expected result
 </code></pre>
 <p>This function is a chain of two single-argument functions:</p>
 <ol>
@@ -321,18 +327,16 @@ arguments, you get a new function that "remembers" the provided arguments and
 waits for the rest.</p>
 <p><strong>Example:</strong></p>
 <p>Using our <code>greeting</code> function again:</p>
-<pre><code class="language-nix">greeting = prefix: name: "${prefix}, ${name}!";
-</code></pre>
-<p>If we only provide the prefix:</p>
-<pre><code class="language-nix">helloGreeting = greeting "Hello";
+<pre><code class="language-nix">nix repl
+nix-repl&gt; greeting = prefix: name: "${prefix}, ${name}!";
+nix-repl&gt; helloGreeting = greeting "Hello";
+nix-repl&gt; helloGreeting "Alice"
+"Hello, Alice"
 </code></pre>
 <ul>
 <li><code>helloGreeting</code> is now a new function. It has already received the <code>prefix</code>
-argument (<code>"Hello"</code>) and is waiting for the <code>name</code> argument.</li>
+argument (<code>"Hello"</code>), when we provide the second argument we get <code>"Hello, Alice!"</code></li>
 </ul>
-<p>Calling <code>helloGreeting</code>:</p>
-<pre><code class="language-nix">helloGreeting "Sally" # Evaluates to "Hello, Sally!"
-</code></pre>
 <p><strong>Benefits of Partial Application:</strong></p>
 <ul>
 <li>
