@@ -816,3 +816,26 @@ aria-label="Show hidden lines"></button>';
         document.addEventListener('scroll', updateBorder, { passive: true });
     })();
 })();
+(function backToTopButton() {
+    document.addEventListener("DOMContentLoaded", function () {
+        var backToTopButton = document.createElement("a");
+        backToTopButton.href = "#";
+        backToTopButton.className = "top-link";
+        backToTopButton.id = "back-to-top";
+        backToTopButton.textContent = "↑";
+        document.body.appendChild(backToTopButton);
+
+        window.addEventListener("scroll", function () {
+            if (window.scrollY > 200) {
+                backToTopButton.style.display = "block";
+            } else {
+                backToTopButton.style.display = "none";
+            }
+        });
+
+        backToTopButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    });
+})();
