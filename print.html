@@ -607,101 +607,8 @@ produces an output based on that input. Unlike many programming languages, Nix
 functions are designed to take exactly one argument at a time. This unique
 approach, combined with a technique called currying, allows Nix to simulate
 multi-argument functions in a flexible and reusable way.</p>
-<p>First I wanted to explain the "first-class" nature of functions in Nix because
-that was a bit confusing as a beginner. Then we'll break down the key components
-of a Nix function and how they fit together.</p>
-<h2 id="nix-functions-being-first-class-citizens"><a class="header" href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a></h2>
-<p>In the context of Nix, the phrase "Nix treats functions as first-class citizens"
-means that functions in Nix are treated as values, just like numbers, strings,
-or lists. They can be manipulated, passed around, and used in the same flexible
-ways as other data types. This concept comes from functional programming and
-has specific implications in Nix.</p>
-<p><strong>What It Means in Nix</strong></p>
-<ol>
-<li>Functions Can Be Assigned to Variables:</li>
-</ol>
-<ul>
-<li>
-<p>You can store a function in a variable, just like you would store a number
-or string.</p>
-</li>
-<li>
-<p>Example:</p>
-</li>
-</ul>
-<pre><code class="language-nix">greet = name: "Hello, ${name}!";
-Here, greet is a variable that holds a function.
-</code></pre>
-<ol start="2">
-<li>Functions Can Be Passed as Arguments:</li>
-</ol>
-<ul>
-<li>
-<p>You can pass a function to another function as an argument, allowing for
-higher-order functions (functions that operate on other functions).</p>
-</li>
-<li>
-<p>Example:</p>
-</li>
-</ul>
-<pre><code class="language-nix">applyTwice = f: x: f (f x);
-inc = x: x + 1;
-applyTwice inc 5 # Output: 7 (increments 5 twice: 5 → 6 → 7)
-Here, applyTwice takes a function f (in this case, inc) and applies it to x twice.
-</code></pre>
-<ol start="3">
-<li>Functions Can Be Returned from Functions:</li>
-</ol>
-<ul>
-<li>
-<p>Functions can produce other functions as their output, which is key to
-currying in Nix.</p>
-</li>
-<li>
-<p>Example:</p>
-</li>
-</ul>
-<pre><code class="language-nix">greeting = prefix: name: "${prefix}, ${name}!";
-helloGreeting = greeting "Hello";  # Returns a function
-helloGreeting "Alice"  # Output: "Hello, Alice!"
-The greeting function returns another function when partially applied with prefix.
-</code></pre>
-<ol start="4">
-<li>Functions Are Values in Expressions:</li>
-</ol>
-<ul>
-<li>
-<p>Functions can be used anywhere a value is expected, such as in attribute sets or lists.</p>
-</li>
-<li>
-<p>Example:</p>
-</li>
-</ul>
-<pre><code class="language-nix">myFuncs = {
-  add = x: y: x + y;
-  multiply = x: y: x * y;
-};
-myFuncs.add 3 4  # Output: 7
-</code></pre>
-<ul>
-<li>Here, functions are stored as values in an attribute set.</li>
-</ul>
-<p><strong>Why This Matters in Nix</strong>:</p>
-<ul>
-<li>
-<p>It increases flexibility, treating functions as first-class citizens allows
-you to write modular, reusable code.</p>
-</li>
-<li>
-<p>Many NixOS and Home Manager modules are functions, and their first-class
-status means they can be combined, reused, or passed to other parts of the
-configuration system.</p>
-</li>
-<li>
-<p>Now that we understand the "first-class" nature of Nix Functions let's dive
-into the structure of Nix Functions.</p>
-</li>
-</ul>
+<p>First I wanted to explain the structure of Nix Functions, and then we will talk
+about their "first-class" nature in Nix.</p>
 <h2 id="understanding-function-structure-the-role-of-the-colon"><a class="header" href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a></h2>
 <p>The colon (<code>:</code>) acts as a clear separator within a function definition:</p>
 <ul>
@@ -818,7 +725,7 @@ outer functions), the inner function "remembers" the <code>prefix</code> value.<
 <p>You can partially apply arguments and reuse functions.</p>
 </li>
 <li>
-<p>The "first-class" aspect of Nix Functions</p>
+<p>The "first-class" aspect of Nix Functions, explained further down.</p>
 </li>
 <li>
 <p>It can help break down complex logic into smaller, manageable functions.</p>
@@ -857,6 +764,97 @@ from general ones by fixing some of their parameters.</p>
 functions (like <code>map</code> and <code>filter</code>) expect functions with a certain number of
 arguments. Partial application allows you to adapt existing functions to fit
 these requirements.</p>
+</li>
+</ul>
+<h2 id="nix-functions-being-first-class-citizens"><a class="header" href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a></h2>
+<p>In the context of Nix, the phrase "Nix treats functions as first-class citizens"
+means that functions in Nix are treated as values, just like numbers, strings,
+or lists. They can be manipulated, passed around, and used in the same flexible
+ways as other data types. This concept comes from functional programming and
+has specific implications in Nix.</p>
+<p><strong>What It Means in Nix</strong></p>
+<ol>
+<li>Functions Can Be Assigned to Variables:</li>
+</ol>
+<ul>
+<li>
+<p>You can store a function in a variable, just like you would store a number
+or string.</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">greet = name: "Hello, ${name}!";
+Here, greet is a variable that holds a function.
+</code></pre>
+<ol start="2">
+<li>Functions Can Be Passed as Arguments:</li>
+</ol>
+<ul>
+<li>
+<p>You can pass a function to another function as an argument, allowing for
+higher-order functions (functions that operate on other functions).</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">applyTwice = f: x: f (f x);
+inc = x: x + 1;
+applyTwice inc 5 # Output: 7 (increments 5 twice: 5 → 6 → 7)
+Here, applyTwice takes a function f (in this case, inc) and applies it to x twice.
+</code></pre>
+<ol start="3">
+<li>Functions Can Be Returned from Functions:</li>
+</ol>
+<ul>
+<li>
+<p>Functions can produce other functions as their output, which is key to
+currying in Nix.</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">greeting = prefix: name: "${prefix}, ${name}!";
+helloGreeting = greeting "Hello";  # Returns a function
+helloGreeting "Alice"  # Output: "Hello, Alice!"
+The greeting function returns another function when partially applied with prefix.
+</code></pre>
+<ol start="4">
+<li>Functions Are Values in Expressions:</li>
+</ol>
+<ul>
+<li>
+<p>Functions can be used anywhere a value is expected, such as in attribute sets or lists.</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">myFuncs = {
+  add = x: y: x + y;
+  multiply = x: y: x * y;
+};
+myFuncs.add 3 4  # Output: 7
+</code></pre>
+<ul>
+<li>Here, functions are stored as values in an attribute set.</li>
+</ul>
+<p><strong>Why This Matters in Nix</strong>:</p>
+<ul>
+<li>
+<p>It increases the flexibility of Functions making them very powerful.</p>
+</li>
+<li>
+<p>Many NixOS and Home Manager modules are functions, and their first-class
+status means they can be combined, reused, or passed to other parts of the
+configuration system.</p>
+</li>
+<li>
+<p>Now that we understand the "first-class" nature of Nix Functions let's see how
+they fit into NixOS and Home Manager modules.</p>
 </li>
 </ul>
 <h3 id="the-function-nature-of-nixos-and-home-manager-modules"><a class="header" href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules</a></h3>
