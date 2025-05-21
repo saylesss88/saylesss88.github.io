@@ -284,9 +284,20 @@ to attributes within the set:</p>
   three = two + 1;
 }
 </code></pre>
+<p>Recursive sets introduce the danger of <em>infinite recursion</em> For example:</p>
+<pre><code class="language-nix">rec {
+  x = y;
+  y = x;
+}.x
+</code></pre>
 <ul>
-<li>The <a href="https://nix.dev/manual/nix/2.24/language/operators.html#update">attribute set update operator</a>
-merges two attribute sets.</li>
+<li>
+<p>Will crash with an <code>infinite recursion encountered</code> error message.</p>
+</li>
+<li>
+<p>The <a href="https://nix.dev/manual/nix/2.24/language/operators.html#update">attribute set update operator</a>
+merges two attribute sets.</p>
+</li>
 </ul>
 <p><strong>Example</strong>:</p>
 <pre><code class="language-nix">{ a = 1; b = 2; } // { b = 3; c = 4; }
@@ -344,7 +355,10 @@ nix-repl&gt; if a &gt; b then "yes" else "no"
 "no"
 </code></pre>
 <p><strong>Let expressions</strong>:</p>
-<pre><code class="language-nix">let a = "foo"; b = "fighter"; in a + b
+<pre><code class="language-nix">let
+  a = "foo";
+  b = "fighter";
+in a + b
 "foofighter"
 </code></pre>
 <p><strong>With expressions</strong>:</p>
@@ -367,6 +381,27 @@ with packages.</li>
 expression is not in need to be evaluated. That's why we can have all the
 packages defined on demand, yet have acces to specific packages very quickly.
 Some of these examples came from the Nix pill series.</li>
+</ul>
+<p><strong>Default Values</strong>:</p>
+<pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
+</code></pre>
+<ul>
+<li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
+accepts <code>y</code> and <code>z</code>.</li>
+</ul>
+<p><strong>@-patterns</strong>:</p>
+<ul>
+<li>An <code>@-pattern</code> provides a means of referring to the whole value being matched:</li>
+</ul>
+<pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
+# or
+{ x, y, z, ... } @ args: z + y + x + args.a
+</code></pre>
+<ul>
+<li>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
+against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense with
+an ellipsis(<code>...</code>) as you can access attribute names as <code>a</code>, using <code>args.a</code>,
+which was given as an additional attribute to the function.</li>
 </ul>
 <h2 id="functions"><a class="header" href="#functions">Functions:</a></h2>
 <p>The code below calls a function called <code>my_function</code> with the parameters <code>2</code> and
