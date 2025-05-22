@@ -367,22 +367,30 @@ merges two attribute sets.</p>
 replaced.</li>
 </ul>
 <p><strong>Inheriting Attributes</strong></p>
+<ul>
+<li>Click 👁️‍🗨️to see Output:</li>
+</ul>
 <pre><code class="language-nix">let x = 123; in
 {
   inherit x;
   y = 456;
 }
-</code></pre>
+<span class="boring">{
+</span><span class="boring">  x = 123;
+</span><span class="boring">  y = 456;
+</span><span class="boring">}
+</span></code></pre>
 <p>is equivalent to</p>
 <pre><code class="language-nix">let x = 123; in
 {
   x = x;
   y = 456;
 }
-</code></pre>
-<p>Both evaluate to:</p>
-<pre><code class="language-nix">{ x = 123; y = 456; }
-</code></pre>
+<span class="boring">{
+</span><span class="boring">  x = 123;
+</span><span class="boring">  y = 456;
+</span><span class="boring">}
+</span></code></pre>
 <blockquote>
 <p>❗: This works because <code>x</code> is added to the lexical scope by the <code>let</code>
 construct.</p>
@@ -409,7 +417,7 @@ nix-repl&gt; if a &gt; b then "yes" else "no"
 </span></code></pre>
 <p><strong>Let expressions</strong>:</p>
 <ul>
-<li>Click the 👀 to see the Output:</li>
+<li>Click the 👁️‍🗨️to see the Output:</li>
 </ul>
 <pre><code class="language-nix">let
   a = "foo";
@@ -440,7 +448,8 @@ Some of these examples came from the Nix pill series.</li>
 </ul>
 <p><strong>Default Values</strong>:</p>
 <pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
-</code></pre>
+<span class="boring"> «lambda @ «string»:1:1»
+</span></code></pre>
 <ul>
 <li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
 accepts <code>y</code> and <code>z</code>.</li>
@@ -450,9 +459,11 @@ accepts <code>y</code> and <code>z</code>.</li>
 <li>An <code>@-pattern</code> provides a means of referring to the whole value being matched:</li>
 </ul>
 <pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
-# or
+<span class="boring"> «lambda @ «string»:1:1»
+</span># or
 { x, y, z, ... } @ args: z + y + x + args.a
-</code></pre>
+<span class="boring"> «lambda @ «string»:1:1»
+</span></code></pre>
 <ul>
 <li>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
 against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense
@@ -460,18 +471,20 @@ with an ellipsis(<code>...</code>) as you can access attribute names as <code>a<
 <code>args.a</code>, which was given as an additional attribute to the function.</li>
 </ul>
 <h2 id="functions"><a class="header" href="#functions">Functions:</a></h2>
-<p>The code below calls a function called <code>my_function</code> with the parameters <code>2</code> and
-<code>3</code>, and assigns its output to the <code>my_value</code> field:</p>
-<pre><code class="language-nix">{
-  my_value = my_function 2 3;
-}
-</code></pre>
 <p>Functions are defined using this syntax, where <code>x</code> and <code>y</code> are attributes passed
 into the function:</p>
 <pre><code class="language-nix">{
   my_function = x: y: x + y;
 }
 </code></pre>
+<p>The code below calls a function called <code>my_function</code> with the parameters <code>2</code> and
+<code>3</code>, and assigns its output to the <code>my_value</code> field:</p>
+<pre><code class="language-nix">{
+  my_value = my_function 2 3;
+}
+my_value
+<span class="boring"> 5
+</span></code></pre>
 <ul>
 <li>The body of the function automatically returns the result of the function.
 Functions are called by spaces between it and its parameters. No commas are
@@ -538,29 +551,39 @@ output will have a different path.</p>
 containing the text "Hello, World!":</p>
 <details>
 <summary> ✔️ Hello World Derivation Example (Click to expand):</summary>
-<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
-
+<pre><code class="language-nix">{pkgs ? import &lt;nixpkgs&gt; {}}:
 pkgs.stdenv.mkDerivation {
   name = "hello-world";
-  src = null; # No external source code needed for this simple example
+
+  dontUnpack = true;
+
+  # No need for src = null; when dontUnpack = true;
+  # src = null;
 
   buildPhase = ''
-    echo "Hello, World!" &gt; $out
+     # Create a shell script that prints "Hello, World!"
+    echo '#!${pkgs.bash}/bin/bash' &gt; hello-output-file # Shebang line
+    echo 'echo "Hello, World!"' &gt;&gt; hello-output-file # The command to execute
+    chmod +x hello-output-file # Make it executable
   '';
 
   installPhase = ''
     mkdir -p $out/bin
-    cp $out $out/bin/hello
-    chmod +x $out/bin/hello
+    cp hello-output-file $out/bin/hello # Copy the file from build directory to $out/bin
   '';
 
   meta = {
     description = "A simple Hello World program built with Nix";
     homepage = null;
-    license = lib.licenses.unfree; # For simplicity
+    license = pkgs.lib.licenses.unfree; # Ensure this is pkgs.lib.licenses.unfree
     maintainers = [];
   };
 }
+</code></pre>
+<p>And a <code>default.nix</code> with the following contents:</p>
+<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+
+import ./hello.nix { pkgs = pkgs; }
 </code></pre>
 <ul>
 <li>
@@ -577,15 +600,27 @@ define software packages in Nix.</p>
 <p><code>name = "hello-world";</code>: Human-readable name of the derivation</p>
 </li>
 <li>
-<p><code>src = null</code>: No external source code for this simple example</p>
-</li>
-<li>
 <p>The rest are the build phases and package metadata.</p>
 </li>
 </ul>
 <p>To use the above derivation, save it as a <code>.nix</code> file (e.g. <code>hello.nix</code>). Then
-build the derivation using:</p>
-<pre><code class="language-bash">nix build ./hello.nix
+build the derivation using, (Click 👁️‍🗨️to see Output):</p>
+<pre><code class="language-bash">nix-build
+~ this derivation will be built:
+~   /nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv
+~ building '/nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv'...
+~ Running phase: patchPhase
+~ Running phase: updateAutotoolsGnuConfigScriptsPhase
+~ Running phase: configurePhase
+~ no configure script, doing nothing
+~ Running phase: buildPhase
+~ Running phase: installPhase
+~ Running phase: fixupPhase
+~ shrinking RPATHs of ELF executables and libraries in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+~ checking for references to /build/ in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world...
+~ patching script interpreter paths in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+~ stripping (with command strip and flags -S -p) in  /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world/bin
+~ /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
 </code></pre>
 <ul>
 <li>
@@ -601,8 +636,7 @@ something like <code>/nix/store/your-hash-hello-world</code>).</p>
 <pre><code class="language-bash">./result/bin/hello
 </code></pre>
 <ul>
-<li>This will execute the <code>hello</code> file from the Nix store and print "Hello,
-World!".</li>
+<li>This will execute the <code>hello</code> file from the Nix store and print <code>"Hello, World!"</code>.</li>
 </ul>
 </details>
 <h3 id="evaluating-nix-files"><a class="header" href="#evaluating-nix-files">Evaluating Nix Files</a></h3>
