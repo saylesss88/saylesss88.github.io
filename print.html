@@ -1595,8 +1595,9 @@ and reduce the risk of unexpected changes due to upstream updates.</p>
 <h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
 <p>You'll see the following all throughout Nix code and is convenient although it
 doesn't follow best practices. One reason is static analysis can't reason about
-the code, because it would have to actually evaluate the files to see which names
-are in scope:</p>
+the code (e.g. Because it implicitly brings all attributes into scope, tools can't
+verify which ones are actually being used), because it would have to actually
+evaluate the files to see which names are in scope:</p>
 <pre><code class="language-nix"># utils.nix
 { pkgs, ... }: {
   environment.systemPackages = with pkgs; [
@@ -1606,6 +1607,18 @@ are in scope:</p>
   ];
 }
 </code></pre>
+<ul>
+<li>
+<p>Another reason the above expression is considered an "anti-pattern" is when more
+then one <code>with</code> is used, it's no longer clear where the names are coming from.</p>
+</li>
+<li>
+<p>Scoping rules for <code>with</code> are not intuitive, see <a href="https://github.com/NixOS/nix/issues/490">issue</a> --nix.dev
+This can make debugging harder, as searching for variable origins becomes ambiguous
+(i.e. open to more than one interpretation).</p>
+</li>
+</ul>
+<p>&lt; details&gt;</p>
 <p>The following follows best practices:</p>
 <pre><code class="language-nix">{pkgs, ... }: {
   environment.systemPackages = builtins.attrValues {
@@ -1617,17 +1630,42 @@ are in scope:</p>
 }
 </code></pre>
 <ul>
+<li><a href="https://noogle.dev/f/builtins/attrValues">Noogle builtins.attrValues</a></li>
+</ul>
+<summary> Above Command Summary (Click to Expand) </summary>
+<pre><code class="language-nix">{
+  inherit (pkgs) rustup evcxr nix-prefetch-git;
+}
+</code></pre>
+<p>is equivalent to:</p>
+<pre><code class="language-nix">{
+  rustup = pkgs.rustup;
+  evcxr = pkgs.evcxr;
+  nix-prefetch-git = pkgs.nix-prefetch-git;
+}
+</code></pre>
+<p>Applying <code>builtins.attrValues</code> produces:</p>
+<pre><code class="language-nix">[ pkgs.evcxr pkgs.nix-prefetch-git pkgs.rustup ]
+</code></pre>
+<ul>
 <li>
-<p><code>builtins.attrValues</code> essentially converts an attribute set into a list.</p>
+<p>As you can see only the values are included in the list, not the keys. This
+is more explicit and declarative but can be more complicated, especially for
+a beginner.</p>
 </li>
 <li>
-<p>The above approach avoids scope pollution, <code>with pkgs; [...]</code> brings all
-attributes of <code>pkgs</code> into scope, which can make it harder to track where
-specific values come from.</p>
+<p><code>builtins.attrValues</code> returns the values of all attributes in the given set,
+sorted by attribute name. The above expression turns into something like the
+following avoiding bringing every attribute name from <code>nixpkgs</code> into scope.</p>
 </li>
-<li>
-<p>It can lead to unintended name clashes or confusion when debugging.</p>
-</li>
+</ul>
+<p>A more straightforward example:</p>
+<pre><code class="language-nix">attrValues {c = 3; a = 1; b = 2;}
+=&gt; [1 2 3]
+</code></pre>
+</details>
+<ul>
+<li>This approach avoids unintended name clashes or confusion when debugging.</li>
 </ul>
 <p>Upon looking into this a bit further, most people use the following format to
 avoid the "anti-pattern" from using <code>with pkgs;</code>:</p>
@@ -1641,8 +1679,19 @@ avoid the "anti-pattern" from using <code>with pkgs;</code>:</p>
 }
 </code></pre>
 <ul>
-<li>While the performance differences might be negligible on modern computers,
-adopting this best practice from the start is highly recommended.</li>
+<li>
+<p>While the performance differences might be negligible on modern computers,
+adopting this best practice from the start is highly recommended. The above
+approach is more explicit, it's clear exactly where each package is coming
+from.</p>
+</li>
+<li>
+<p>If maintaining strict scope control matters, use <code>builtins.attrValues</code>.</p>
+</li>
+<li>
+<p>If readability and simplicity are more your priority, explicitly referencing
+<code>pkgs.&lt;packageName&gt;</code> might be better. Now you can choose for yourself.</p>
+</li>
 </ul>
 <h2 id="conclusion-2"><a class="header" href="#conclusion-2">Conclusion</a></h2>
 <p>As we have seen throughout this chapter, modules are the building blocks of your
