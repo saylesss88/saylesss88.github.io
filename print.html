@@ -2883,20 +2883,23 @@ stdenv.mkDerivation {
 }
 </code></pre>
 <p>Save this file to <code>hello.nix</code> and run <code>nix-build</code> to observe the build failure:</p>
+<ul>
+<li>Click 👁️‍🗨️to expand output:</li>
+</ul>
 <pre><code class="language-nix">$ nix-build hello.nix
-error: cannot evaluate a function that has an argument without a value ('stdenv')
-       Nix attempted to evaluate a function as a top level expression; in
-       this case it must have its arguments supplied either by default
-       values, or passed explicitly with '--arg' or '--argstr'. See
-       https://nix.dev/manual/nix/stable/language/constructs.html#functions.
-
-       at /home/nix-user/hello.nix:3:3:
-
-            2| {
-            3|   stdenv,
-             |   ^
-            4|   fetchzip,
-</code></pre>
+<span class="boring">error: cannot evaluate a function that has an argument without a value ('stdenv')
+</span><span class="boring">       Nix attempted to evaluate a function as a top level expression; in
+</span><span class="boring">       this case it must have its arguments supplied either by default
+</span><span class="boring">       values, or passed explicitly with '--arg' or '--argstr'. See
+</span><span class="boring">       https://nix.dev/manual/nix/stable/language/constructs.html#functions.
+</span><span class="boring">
+</span><span class="boring">       at /home/nix-user/hello.nix:3:3:
+</span><span class="boring">
+</span><span class="boring">            2| {
+</span><span class="boring">            3|   stdenv,
+</span><span class="boring">             |   ^
+</span><span class="boring">            4|   fetchzip,
+</span></code></pre>
 <p><strong>Problem</strong>: The expression in <code>hello.nix</code> is a <em>function</em>, which only produces
 it's intended output if it is passed the correct <em>arguments</em>.(i.e. <code>stdenv</code> is
 available from <code>nixpkgs</code> so we need to import <code>nixpkgs</code> before we can use
@@ -2923,6 +2926,40 @@ similar to the current convention used in Nixpkgs:</p>
 </span><span class="boring">            got:    sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=
 </span><span class="boring">error: 1 dependencies of derivation '/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv' failed to build
 </span></code></pre>
+<ul>
+<li>Another way to do this is with <a href="https://nix.dev/manual/nix/2.24/command-ref/nix-prefetch-url">nix-prefetch-url</a>
+It is a utility to calculate the sha beforehand.</li>
+</ul>
+<pre><code class="language-bash">nix-prefetch-url https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz
+path is '/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz'
+086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd
+</code></pre>
+<ul>
+<li>When you use <code>nix-prefetch-url</code>, you get a Base32 hash when nix needs SRI format.</li>
+</ul>
+<p>Run the following command to convert from Base32 to SRI:</p>
+<pre><code class="language-bash">nix hash to-sri --type sha256 086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd
+sha256-jZkUKv2SV28wsM18tCqNxoCZmLxdYH2Idh9RLibH2yA=
+</code></pre>
+<ul>
+<li>
+<p>This actually fetched a different sha than the Nix compiler returned in the
+example where we replace the empty sha with the one Nix gives us. The difference
+was that <code>fetchzip</code> automatically extracts archives before computing the hash
+and slight differences in the metadata cause different results. I had to switch
+from <code>fetchzip</code> to <code>fetchurl</code> to get the correct results.</p>
+<ul>
+<li>
+<p>Extracted archives can differ in timestamps, permissions, or compression
+details, causing different hash values.</p>
+</li>
+<li>
+<p>A simple takeaway is to use <code>fetchurl</code> when you need an exact match, and
+<code>fetchzip</code> when working with extracted contents.</p>
+</li>
+</ul>
+</li>
+</ul>
 <p>Lastly replace the empty sha256 placeholder with the returned value from the last
 command:</p>
 <pre><code class="language-nix"># hello.nix
