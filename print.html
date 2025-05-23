@@ -1801,12 +1801,39 @@ valuable insights and information.</p>
 <!--toc:end-->
 <h2 id="nix-flakes-explained"><a class="header" href="#nix-flakes-explained">Nix Flakes Explained</a></h2>
 <img src="images/gruv15.png" width="800" height="600">
-<p>This explanation highlights common areas of confusion for those new to Nix
-Flakes, aiming to clarify concepts rather than serve as a comprehensive guide.</p>
 <p>If you're completely new, take a look at <a href="https://nixos.wiki/wiki/flakes#Installing_flakes">this</a>
 to get flakes on your system.</p>
+<p>Flakes replace stateful channels (which cause much confusion among novices) and
+introduce a more intuitive and consistent CLI, making them a perfect opportunity
+to start using Nix. -- Alexander Bantyev <a href="https://serokell.io/blog/practical-nix-flakes">Practical Nix Flakes</a></p>
+<ul>
+<li>
+<p>The "state" being remembered and updated by channels is the specific revision
+of the Nixpkgs repository that your local Nix installation considers "current"
+for a given channel. When this state changes on your machine, your builds
+diverge from others whose machines have a different, independently updated
+channel state.</p>
+<ul>
+<li>Channels are also constantly updated on the remote servers. So, "nixos-unstable"
+today refers to a different set of packages and versions than "nixos-unstable"
+did yesterday or will tomorrow.</li>
+</ul>
+</li>
+<li>
+<p>Flakes solve this by making the exact revision of <code>nixpkgs</code> (and other dependencies)
+an explicit input within your <code>flake.nix</code> file, pinned in the <code>flake.lock</code>. This
+means the state is explicitly defined in the configuration itself, not
+implicitly managed by a global system setting.</p>
+</li>
+</ul>
 <h2 id="what-is-a-nix-flake"><a class="header" href="#what-is-a-nix-flake">What is a Nix Flake?</a></h2>
 <ul>
+<li>
+<p><strong>Nix flakes</strong> are independent components in the Nix ecosystem. They define
+their own <strong>dependencies</strong> (inputs) and what they produce (outputs), which can
+include <strong>packages</strong>, <strong>deployment configurations</strong>, or <strong>Nix functions</strong> for
+other flakes to use.</p>
+</li>
 <li>
 <p>At its core, a flake is a source tree (like a Git repository) that contains
 a <code>flake.nix</code> file in its root directory. This file provides a standardized
@@ -2806,6 +2833,13 @@ isolation of your software builds through this fundamental concept.</p>
 <p>A derivation in Nix is a fundamental concept that describes how to build
 a piece of software or a resource (e.g., a package, library, or configuration
 file). Think of it as a recipe for creating something within the Nix ecosystem.</p>
+<ul>
+<li>Nix building instructions are called “derivations” and are written in the
+Nix programming language. Derivations can be written for packages or even
+entire systems. After that, they can then be deterministically “realised”
+(built) via Nix, the package manager. Derivations can only depend on a
+pre-defined set of inputs, so they are somewhat reproducible. -- Practical Nix Flakes</li>
+</ul>
 </li>
 <li>
 <p>For beginners, the analogy of a cooking recipe is helpful:</p>
@@ -2853,6 +2887,29 @@ At a minimum, you'll often encounter these essential attributes:</p>
 </ol>
 </li>
 </ul>
+<blockquote>
+<p>Our First fake derivation</p>
+<pre><code class="language-nix">nix-repl&gt; d = derivation { name = "myname"; builder = "mybuilder"; system = "mysystem"; }
+nix-repl&gt; :b d
+[...]
+these derivations will be built:
+ /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
+building path(s) `/nix/store/40s0qmrfb45vlh6610rk29ym318dswdr-myname'
+error: a `mysystem' is required to build `/nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv', but I am a `x86_64-linux'
+</code></pre>
+<ul>
+<li>Pretty print info about this derivation:</li>
+</ul>
+<pre><code class="language-nix"> $ nix derivation show /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
+</code></pre>
+<ul>
+<li>The <code>:b</code> is a <code>nix repl</code> specific command to build a derivation.
+To realise this outside of the <code>nix repl</code>:</li>
+</ul>
+<pre><code class="language-nix"> $ nix-store -r /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
+</code></pre>
+<p>-- <a href="https://nixos.org/guides/nix-pills/06-our-first-derivation.html">Nix Pills</a></p>
+</blockquote>
 <h2 id="our-first-simple-derivation-understanding-the-builder"><a class="header" href="#our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder</a></h2>
 <details>
 <summary> Click to Expand </summary>
