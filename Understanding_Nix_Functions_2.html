@@ -188,17 +188,14 @@
 <p><strong>Functions</strong> are the building blocks of Nix, appearing everywhere in Nix
 expressions and configurations. Mastering them is essential for writing
 effective Nix code and understanding tools like NixOS and Home Manager.
-This chapter explores how Nix functions work, focusing on their single-argument
-nature, currying, partial application, and their role in modules.</p>
+This chapter explores how Nix functions work, focusing on their <strong>single-argument
+nature</strong>, <strong>currying</strong>, <strong>partial application</strong>, and their role in <strong>modules</strong>.</p>
 <h2 id="what-are-nix-functions"><a class="header" href="#what-are-nix-functions">What are Nix Functions?</a></h2>
 <p>A <strong>Nix Function</strong> is a rule that takes an input (called an <strong>argument</strong>) and
-produces an output based on that input. Unlike many programming languages, Nix
+produces an <strong>output</strong> based on that input. Unlike many programming languages, Nix
 functions are designed to take exactly one argument at a time. This unique
 approach, combined with a technique called currying, allows Nix to simulate
 multi-argument functions in a flexible and reusable way.</p>
-<ul>
-<li><a href="https://nix.dev/manual/nix/2.26/language/operators">nix.dev Function Reference</a></li>
-</ul>
 <h2 id="builtins"><a class="header" href="#builtins">Builtins</a></h2>
 <details>
 <summary> ✔️ Nix Builtin Functions (Click to Expand)</summary>
@@ -228,8 +225,6 @@ multi-argument functions in a flexible and reusable way.</p>
 about their "first-class" nature in Nix.</p>
 <h2 id="understanding-function-structure-the-role-of-the-colon"><a class="header" href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a></h2>
 <p>The colon (<code>:</code>) acts as a clear separator within a function definition:</p>
-<details>
-  <summary> ✔️ Click to expand this section</summary>
 <ul>
 <li>
 <p><strong>Left of the Colon:</strong> This is the function's <strong>argument</strong>. It's a placeholder
@@ -243,7 +238,6 @@ that will be evaluated when the function is invoked.</p>
 <p><strong>Think of function arguments as naming values that aren't known in advance.</strong>
 These names are placeholders that get filled with specific values when the
 function is used.</p>
-</details>
 <p><strong>Example:</strong></p>
 <pre><code class="language-nix">greet = personName: "Hello, ${personName}!";
 </code></pre>
@@ -415,7 +409,7 @@ ways as other data types. This concept comes from functional programming and
 has specific implications in Nix.</p>
 <p><strong>What It Means in Nix</strong></p>
 <ol>
-<li>Functions Can Be Assigned to Variables:</li>
+<li>Functions Can Be <strong>Assigned to Variables</strong>:</li>
 </ol>
 <ul>
 <li>
@@ -427,10 +421,12 @@ or string.</p>
 </li>
 </ul>
 <pre><code class="language-nix">greet = name: "Hello, ${name}!";
-Here, greet is a variable that holds a function.
 </code></pre>
+<ul>
+<li>Here, greet is a variable that holds a function.</li>
+</ul>
 <ol start="2">
-<li>Functions Can Be Passed as Arguments:</li>
+<li>Functions Can Be <strong>Passed as Arguments</strong>:</li>
 </ol>
 <ul>
 <li>
@@ -451,7 +447,7 @@ applyTwice inc 5 # Output: 7 (increments 5 twice: 5 → 6 → 7)
 <code>x</code> twice.</li>
 </ul>
 <ol start="3">
-<li>Functions Can Be Returned from Functions:</li>
+<li>Functions Can Be <strong>Returned from Functions</strong>:</li>
 </ol>
 <ul>
 <li>
@@ -472,7 +468,7 @@ helloGreeting "Alice"  # Output: "Hello, Alice!"
 prefix.</li>
 </ul>
 <ol start="4">
-<li>Functions Are Values in Expressions:</li>
+<li>Functions <strong>Are Values in Expressions</strong>:</li>
 </ol>
 <ul>
 <li>
@@ -502,17 +498,14 @@ myFuncs.add 3 4  # Output: 7
 <li>
 <p>This functional approach is fundamental to Nix's unique build system. In Nix,
 <strong>package builds (called derivations)</strong> are essentially functions. They take
-specific inputs (source code, dependencies, build scripts) and deterministically
-produce outputs (a built package).</p>
+specific <strong>inputs</strong> (source code, dependencies, build scripts) and deterministically
+produce <strong>outputs</strong> (a built package).</p>
 <ul>
 <li>This design ensures <strong>atomicity</strong>: if a build does not succeed completely
 and perfectly, it produces no output at all. This prevents situations common
 in other package managers where partial updates or corrupted builds can leave
 your system in an inconsistent or broken state.</li>
 </ul>
-</li>
-<li>
-<p>It increases the flexibility of Functions making them very powerful.</p>
 </li>
 <li>
 <p>Many NixOS and Home Manager modules are functions, and their first-class
@@ -528,13 +521,13 @@ they fit into NixOS and Home Manager modules.</p>
 <p>It's crucial to understand that most NixOS and Home Manager modules are
 fundamentally <strong>functions</strong>.</p>
 <ul>
-<li>These module functions typically accept a single argument: an
-<strong>attribute set</strong>.</li>
+<li>These module functions typically accept a single argument:
+<strong>an attribute set</strong> (remember this, it's important to understand).</li>
 </ul>
 <p><strong>Example</strong>:</p>
-<p>A NixOS module to enable Thunar with some plugins that I'm actually using right
-now:</p>
-<pre><code class="language-nix">{pkgs, ...}: {
+<p>A practical NixOS module example for Thunar with plugins:</p>
+<pre><code class="language-nix"># thunar.nix
+{pkgs, ...}: {
   programs = {
     thunar = {
       enable = true;
@@ -547,6 +540,35 @@ now:</p>
 }
 </code></pre>
 <ul>
+<li>
+<p>This is actually a pretty good example of <code>with</code> making it a bit harder to
+reason where the plugins are from. You might instinctively try to trace a path
+like <code>programs.thunar.plugins.pkgs.xfce</code> because you saw <code>pkgs.xfce</code> in the
+<code>with</code> statement. But that's now how <code>with</code> works. The <code>pkgs.xfce</code> path exists
+<em>outside</em> the <code>plugins</code> list, defining the source of the items, not their
+nested structure within the list.</p>
+</li>
+<li>
+<p>To follow best practices you could write the above as:</p>
+</li>
+</ul>
+<pre><code class="language-nix">plugins = [
+  pkgs.xfce.thunar-archive-plugin
+  pkgs.xfce.thunar-volman
+];
+</code></pre>
+<ul>
+<li>
+<p>Now it's clear that each plugin comes directly from <code>pkgs</code> and each will
+resolve to a derivation.</p>
+<ul>
+<li>To be clear either way is fine, especially in such a small self contained
+module. If it were in a single file <code>configuration.nix</code> it would be a bit
+more confusing to trace. Explicitness is your friend with Nix and maintaining
+reproducability. <code>with</code> isn't always bad but should be avoided at the top
+of a file for example to bring <code>nixpkgs</code> into scope, use <code>let</code> instead.</li>
+</ul>
+</li>
 <li>
 <p>The entire module definition is a function that takes one argument (an
 attribute set):
