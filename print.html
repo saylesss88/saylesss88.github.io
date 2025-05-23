@@ -2889,17 +2889,18 @@ At a minimum, you'll often encounter these essential attributes:</p>
 </ul>
 <blockquote>
 <p>Our First fake derivation</p>
-<pre><code class="language-nix">nix-repl&gt; d = derivation { name = "myname"; builder = "mybuilder"; system = "mysystem"; }
+<pre><code class="language-nix">nix-repl&gt; :l &lt;nixpkgs&gt; # Makes Nixpkgs available for ${pkgs.bash}
+nix-repl&gt; d = derivation { name = "myname"; builder = "${pkgs.bash}/bin/bash"; system = "mysystem"; }
 nix-repl&gt; :b d
 [...]
 these derivations will be built:
- /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
-building path(s) `/nix/store/40s0qmrfb45vlh6610rk29ym318dswdr-myname'
-error: a `mysystem' is required to build `/nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv', but I am a `x86_64-linux'
+error: a 'mysystem' with features {} is required to build '/nix/store/fq6843vfzzbhy3s6iwcd0hm10l578883-myname.drv',
+but I am a 'x86_64-linux' with features {benchmark, big-parallel, kvm, nixos-test}
 </code></pre>
 <ul>
-<li>The <code>:b</code> is a <code>nix repl</code> specific command to build a derivation.
-To realise this outside of the <code>nix repl</code>:</li>
+<li>The build failure is expected here due to the inaccurate attributes</li>
+<li>The <code>:b</code> is a <code>nix repl</code> specific command to build a derivation.</li>
+<li>To realise this outside of the <code>nix repl</code> you can use <code>nix-store -r</code>:</li>
 </ul>
 <pre><code class="language-nix"> $ nix-store -r /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
 </code></pre>
@@ -2910,6 +2911,11 @@ To realise this outside of the <code>nix repl</code>:</li>
 </code></pre>
 <p>-- <a href="https://nixos.org/guides/nix-pills/06-our-first-derivation.html">Nix Pills</a></p>
 </blockquote>
+<ul>
+<li>The above example shows the fundamental structure of a Nix derivation, how it's
+defined within the <code>nix-repl</code>, and the importance of correctly specifying attributes
+like <code>system</code>.</li>
+</ul>
 <h2 id="our-first-simple-derivation-understanding-the-builder"><a class="header" href="#our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder</a></h2>
 <details>
 <summary> Click to Expand </summary>
