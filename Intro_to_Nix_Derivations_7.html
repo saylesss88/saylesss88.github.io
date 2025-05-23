@@ -194,12 +194,39 @@
 a piece of software or a resource (e.g., a package, library, or configuration
 file). Think of it as a recipe for creating something within the Nix ecosystem.</p>
 <ul>
-<li>Nix building instructions are called “derivations” and are written in the
+<li>
+<p>Nix building instructions are called “derivations” and are written in the
 Nix programming language. Derivations can be written for packages or even
 entire systems. After that, they can then be deterministically “realised”
 (built) via Nix, the package manager. Derivations can only depend on a
-pre-defined set of inputs, so they are somewhat reproducible. -- Practical Nix Flakes</li>
+pre-defined set of inputs, so they are somewhat reproducible. -- Practical Nix Flakes</p>
+</li>
+<li>
+<p>Most things in NixOS are build around derivations:</p>
+<ul>
+<li>
+<p>Programs/Applications: Are derivations</p>
+</li>
+<li>
+<p>Config Files: Are a derivation that takes the nix configuration and produces
+an appropriate config file for the application.</p>
+</li>
+<li>
+<p>The system configuration (i.e. <code>/run/current-system</code>) is a derivation</p>
+</li>
 </ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<pre><code class="language-nix"> ls -lsah /run/current-system
+ 0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/cy2c0kxpjrl7ajlg9v3zh898mhj4dyjv-nixos-system-magic-25.11.20250520.2795c50
+</code></pre>
+</blockquote>
+<ul>
+<li>
+<p>The <code>-&gt;</code> indicates a symlink and it's pointing to a derivation.</p>
 </li>
 <li>
 <p>For beginners, the analogy of a cooking recipe is helpful:</p>
@@ -276,9 +303,89 @@ but I am a 'x86_64-linux' with features {benchmark, big-parallel, kvm, nixos-tes
 defined within the <code>nix-repl</code>, and the importance of correctly specifying attributes
 like <code>system</code>.</li>
 </ul>
-<h2 id="our-first-simple-derivation-understanding-the-builder"><a class="header" href="#our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder</a></h2>
+<h2 id="our-first-simple-derivation"><a class="header" href="#our-first-simple-derivation">Our First Simple Derivation</a></h2>
+<p>Building on the concept of a derivation as a recipe, let's create our first
+practical derivation. This example shows how to define a temporary development
+environment (a shell) using stdenv.mkDerivation, which is the primary function
+for defining packages in Nix.</p>
+<pre><code class="language-nix"># my-shell.nix
+# We use a `let` expression to bring `pkgs` and `stdenv` into scope.
+# This is a recommended practice over `with import &lt;nixpkgs&gt; {}`
+# for clarity and to avoid potential name collisions.
+let
+  pkgs = import &lt;nixpkgs&gt; {};
+  stdenv = pkgs.stdenv; # Access stdenv from the imported nixpkgs
+in
+
+# Make a new "derivation" that represents our shell
+stdenv.mkDerivation {
+  name = "my-environment";
+
+  # The packages in the `buildInputs` list will be added to the PATH in our shell
+  buildInputs = [
+    # cowsay is an arbitrary package
+    # see https://nixos.org/nixos/packages.html to search for more
+    pkgs.cowsay
+    pkgs.fortune
+  ];
+}
+</code></pre>
+<p><strong>Usage</strong></p>
+<pre><code class="language-bash">nix-shell my-shell.nix
+fortune | cowsay
+ _________________________________________
+/ "Lines that are parallel meet at        \
+| Infinity!" Euclid repeatedly, heatedly, |
+| urged.                                  |
+|                                         |
+| Until he died, and so reached that      |
+| vicinity: in it he found that the       |
+| damned things diverged.                 |
+|                                         |
+\ -- Piet Hein                            /
+ -----------------------------------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+</code></pre>
+<ul>
+<li>To exit type: <code>exit</code></li>
+</ul>
+<p>This Nix expression defines a temporary development shell. Let's break it down:</p>
+<ul>
+<li>
+<p><code>let ... in</code> block defines variables to use in the <code>in</code> blocks scope.</p>
+<ul>
+<li>
+<p><code>pkgs = import &lt;nixpkgs&gt; {};</code>: Standard way to get access to all the packages
+and helper functions (i.e. <code>nixpkgs.lib</code>)</p>
+</li>
+<li>
+<p><code>stdenv = pkgs.stdenv;</code>: <code>stdenv</code> provides us <code>mkDerivation</code> and is from the
+<code>nixpkgs</code> collection.</p>
+</li>
+<li>
+<p><code>stdenv.mkDerivation { ... };</code>: This is the core function for creating
+packages. <code>stdenv</code> provides a set of common build tools and conventions.
+<code>mkDerivation</code> takes an attribute set (a collection of key-value pairs) as its argument.</p>
+</li>
+<li>
+<p><code>name = "my-environment";</code>: This gives your derivation a human-readable name.</p>
+</li>
+<li>
+<p><code>buildInputs = [ pkgs.cowsay ];</code>: This is a list of dependencies that will
+be available in the build environment of this derivation (or in the <code>PATH</code> if
+you enter the shell created by this derivation). <code>pkgs.cowsay</code> refers to the
+<code>cowsay</code> package from the imported <code>pkgs</code> collection.</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="our-second-derivation-understanding-the-builder"><a class="header" href="#our-second-derivation-understanding-the-builder">Our Second Derivation: Understanding the Builder</a></h2>
 <details>
-<summary> Click to Expand </summary>
+<summary> Understanding the Builder (Click to Expand) </summary>
 <ul>
 <li>To understand how derivations work, let's create a very basic example using a
 bash script as our <code>builder</code>.</li>
@@ -377,26 +484,6 @@ is really foo! We've built our first derivation.</p>
 is a loosely defined term, but a derivation is simply the result of calling
 <code>builtins.derivation</code>.</p>
 </li>
-</ul>
-</details>
-<h2 id="our-second-derivation"><a class="header" href="#our-second-derivation">Our Second Derivation</a></h2>
-<details>
-<summary> Click to Expand </summary>
-<p>The following is a simple <code>hello-drv</code> derivation:</p>
-<pre><code class="language-nix">nix-repl&gt; hello-drv = nixpkgs.stdenv.mkDerivation {
-            name = "hello.txt";
-            unpackPhase = "true";
-            installPhase = ''
-              echo -n "Hello World!" &gt; $out
-            '';
-          }
-
-nix-repl&gt; hello-drv
-«derivation /nix/store/ad6c51ia15p9arjmvvqkn9fys9sf1kdw-hello.txt.drv»
-</code></pre>
-<ul>
-<li>Derivations have a <code>.drv</code> suffix, as you can see the result of calling
-<code>hello-drv</code> is the nix store path to a derivation.</li>
 </ul>
 </details>
 <h2 id="our-last-derivation"><a class="header" href="#our-last-derivation">Our Last Derivation</a></h2>
