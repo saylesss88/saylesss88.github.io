@@ -2810,9 +2810,12 @@ isolation of your software builds through this fundamental concept.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-7"><a class="header" href="#chapter-7">Chapter 7</a></h1>
 <!--toc:start-->
 <ul>
+<li><a href="Intro_to_Nix_Derivations_7.html#chapter-7">Chapter 7</a>
+<ul>
 <li><a href="Intro_to_Nix_Derivations_7.html#introduction-to-nix-derivations">Introduction to Nix Derivations</a></li>
 <li><a href="Intro_to_Nix_Derivations_7.html#creating-derivations-in-nix">Creating Derivations in Nix</a></li>
-<li><a href="Intro_to_Nix_Derivations_7.html#our-first-simple-derivation-understanding-the-builder">Our First Simple Derivation: Understanding the Builder</a>
+<li><a href="Intro_to_Nix_Derivations_7.html#produce-a-development-shell-from-a-derivation">Produce a development shell from a derivation</a></li>
+<li><a href="Intro_to_Nix_Derivations_7.html#our-second-derivation-understanding-the-builder">Our Second Derivation: Understanding the Builder</a>
 <ul>
 <li><a href="Intro_to_Nix_Derivations_7.html#why-a-builder-script">Why a Builder Script?</a></li>
 <li><a href="Intro_to_Nix_Derivations_7.html#the-challenge-with-shebangs-in-nix">The Challenge with Shebangs in Nix</a></li>
@@ -2826,6 +2829,8 @@ isolation of your software builds through this fundamental concept.</p>
 <li><a href="Intro_to_Nix_Derivations_7.html#links-to-articles-about-derivations">Links To Articles about Derivations</a></li>
 </ul>
 <!--toc:end-->
+</li>
+</ul>
 <h2 id="introduction-to-nix-derivations"><a class="header" href="#introduction-to-nix-derivations">Introduction to Nix Derivations</a></h2>
 <p><img src="images/gruv10.png" alt="gruv10" /></p>
 <ul>
@@ -2866,7 +2871,8 @@ an appropriate config file for the application.</p>
 </blockquote>
 <ul>
 <li>
-<p>The <code>-&gt;</code> indicates a symlink and it's pointing to a derivation.</p>
+<p>The <code>-&gt;</code> indicates a symlink and it's pointing to a <strong>store path</strong> which is
+the result of a derivation being built (the system closure)</p>
 </li>
 <li>
 <p>For beginners, the analogy of a cooking recipe is helpful:</p>
@@ -2943,7 +2949,7 @@ but I am a 'x86_64-linux' with features {benchmark, big-parallel, kvm, nixos-tes
 defined within the <code>nix-repl</code>, and the importance of correctly specifying attributes
 like <code>system</code>.</li>
 </ul>
-<h2 id="our-first-simple-derivation"><a class="header" href="#our-first-simple-derivation">Our First Simple Derivation</a></h2>
+<h2 id="produce-a-development-shell-from-a-derivation"><a class="header" href="#produce-a-development-shell-from-a-derivation">Produce a development shell from a derivation</a></h2>
 <p>Building on the concept of a derivation as a recipe, let's create our first
 practical derivation. This example shows how to define a temporary development
 environment (a shell) using stdenv.mkDerivation, which is the primary function
@@ -2996,9 +3002,6 @@ fortune | cowsay
 <p>This Nix expression defines a temporary development shell. Let's break it down:</p>
 <ul>
 <li>
-<p><code>let ... in</code> block defines variables to use in the <code>in</code> blocks scope.</p>
-<ul>
-<li>
 <p><code>pkgs = import &lt;nixpkgs&gt; {};</code>: Standard way to get access to all the packages
 and helper functions (i.e. <code>nixpkgs.lib</code>)</p>
 </li>
@@ -3021,8 +3024,16 @@ you enter the shell created by this derivation). <code>pkgs.cowsay</code> refers
 <code>cowsay</code> package from the imported <code>pkgs</code> collection.</p>
 </li>
 </ul>
-</li>
-</ul>
+<p>The command <code>nix-instantiate --eval my-shell.nix</code> evaluates the Nix expression
+in the file. It does not build the derivation. Instead, it returns the Nix value
+that the expression evaluates to.</p>
+<pre><code class="language-bash">nix-instantiate --eval my-shell.nix
+</code></pre>
+<p>This value is a structured data type that encapsulates all the attributes (like
+<code>name</code>, <code>system</code>, <code>buildInputs</code>, etc.) required to build the derivation. Your
+output shows this detailed internal representation of the derivation's "recipe"
+as understood by Nix. This is useful for debugging and inspecting the
+derivation's definition.</p>
 <h2 id="our-second-derivation-understanding-the-builder"><a class="header" href="#our-second-derivation-understanding-the-builder">Our Second Derivation: Understanding the Builder</a></h2>
 <details>
 <summary> Understanding the Builder (Click to Expand) </summary>
@@ -3116,8 +3127,8 @@ this derivation produced the following outputs:
 </code></pre>
 <ul>
 <li>
-<p>Boom! The contents of <code>/nix/store/w024zci0x1hh1wj6gjq0jagkc1sgrf5r-foo</code>
-is really foo! We've built our first derivation.</p>
+<p>The contents of the resulting store path (<code>/nix/store/...-foo</code>) now contain the
+file <code>foo</code>, as intended. We have successfully built a derivation!</p>
 </li>
 <li>
 <p>Derivations are the primitive that Nix uses to define packages. “Package”
