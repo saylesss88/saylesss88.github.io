@@ -2998,36 +2998,75 @@ At a minimum, you'll often encounter these essential attributes:</p>
 </ol>
 </li>
 </ul>
-<blockquote>
-<p>Our First fake derivation</p>
-<pre><code class="language-nix">nix-repl&gt; :l &lt;nixpkgs&gt; # Makes Nixpkgs available for ${pkgs.bash}
-nix-repl&gt; d = derivation { name = "myname"; builder = "${pkgs.bash}/bin/bash"; system = "mysystem"; }
-nix-repl&gt; :b d
-[...]
-these derivations will be built:
-error: a 'mysystem' with features {} is required to build '/nix/store/fq6843vfzzbhy3s6iwcd0hm10l578883-myname.drv',
-but I am a 'x86_64-linux' with features {benchmark, big-parallel, kvm, nixos-test}
+<h2 id="simple-rust-derivation"><a class="header" href="#simple-rust-derivation">Simple Rust Derivation</a></h2>
+<p>Create a <code>simple.rs</code> with the following contents:</p>
+<pre><pre class="playground"><code class="language-rust">fn main() {
+  println!("Simple Rust!")
+}</code></pre></pre>
+<p>And a <code>rust_builder.sh</code> like this (this is our builder script):</p>
+<pre><code class="language-bash"># rust_builder.sh
+# Set up the PATH to include rustc coreutils and gcc
+export PATH="$rustc/bin:$coreutils/bin:$gcc/bin"
+
+# IMPORTANT: Create the $out directory BEFORE rustc tries to write to it
+mkdir -p "$out"
+
+# Compile the Rust source code and place the executable inside $out
+rustc -o "$out/simple_rust" "$src"
 </code></pre>
-<ul>
-<li>The build failure is expected here due fake system and name attributes, (it didn't
-build the derivation but it <strong>did create a .drv file</strong>)</li>
-<li>The <code>:b</code> is a <code>nix repl</code> specific command to build a derivation.</li>
-<li>To realise this outside of the <code>nix repl</code> you can use <code>nix-store -r</code>:</li>
-</ul>
-<pre><code class="language-nix"> $ nix-store -r /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
+<p>Now we'll enter the <code>nix repl</code> and build it:</p>
+<pre><code class="language-bash">❯ nix repl
+Nix 2.28.3
+Type :? for help.
+
+nix-repl&gt; :l &lt;nixpkgs&gt;
+added 3950 variables.
+
+# Define the variables for rustc, coreutils, bash, AND gcc from the loaded nixpkgs
+nix-repl&gt; rustc = pkgs.rustc
+
+nix-repl&gt; coreutils = pkgs.coreutils
+
+nix-repl&gt; bash = pkgs.bash
+
+nix-repl&gt; gcc = pkgs.gcc
+
+# Now define the derivation
+nix-repl&gt; simple_rust_program = derivation {
+            name = "simple-rust-program";
+            builder = "${bash}/bin/bash";
+            args = [ ./rust_builder.sh ];
+            rustc = rustc;
+            coreutils = coreutils;
+            gcc = gcc;
+            src = ./simple.rs;
+            system = builtins.currentSystem;
+          }
+
+nix-repl&gt; :b simple_rust_program
+This derivation produced the following outputs:
+out -&gt; /nix/store/fmyqr2d3ph0lpnxd0xppwvwyhv3iyb7y-simple-rust-program
 </code></pre>
-<ul>
-<li><code>nix derivation show</code>: Pretty print the contents of a store derivation:</li>
-</ul>
-<pre><code class="language-nix"> $ nix derivation show /nix/store/z3hhlxbckx4g3n9sw91nnvlkjvyw754p-myname.drv
+<pre><code class="language-bash">nix-store -r /nix/store/fmyqr2d3ph0lpnxd0xppwvwyhv3iyb7y-simple-rust-program
+
+warning: you did not specify '--add-root'; the result might be removed by the garbage collector
+/nix/store/fmyqr2d3ph0lpnxd0xppwvwyhv3iyb7y-simple-rust-program
 </code></pre>
-<p>-- <a href="https://nixos.org/guides/nix-pills/06-our-first-derivation.html">Nix Pills</a></p>
-</blockquote>
+<p>This simple Rust example, built with a direct derivation call, illustrates:</p>
 <ul>
 <li>
+<p>How Nix explicitly manages every single tool in your build environment (<code>bash</code>,
+<code>rustc</code>, <code>gcc</code>, <code>coreutils</code>).</p>
+</li>
+<li>
+<p>The strict isolation of Nix builds, where nothing is implicitly available.</p>
+</li>
+<li>
+<p>The deterministic mapping of inputs to unique output paths in the Nix store.</p>
+</li>
+<li>
 <p>The above example shows the fundamental structure of a Nix derivation, how it's
-defined within the <code>nix-repl</code>, and the importance of correctly specifying attributes
-like <code>system</code>.</p>
+defined within the <code>nix-repl</code>.</p>
 </li>
 <li>
 <p><code>.drv</code> files are intermediate files that describe how to build a derivation;
@@ -3036,7 +3075,8 @@ it's the bare minimum information.</p>
 </ul>
 <h2 id="when-derivations-are-built"><a class="header" href="#when-derivations-are-built">When Derivations are Built</a></h2>
 <p>Nix doesn't build derivations during the evaluation of your Nix expressions.
-Instead, it processes your code in two main phases:</p>
+Instead, it processes your code in two main phases (and why you need to use
+<code>:b simple_rust_program</code> or <code>nix-store -r</code> to actually build or realize it):</p>
 <ol>
 <li>
 <p>Evaluation/Instantiate Phase: This is when Nix parses and interprets your
