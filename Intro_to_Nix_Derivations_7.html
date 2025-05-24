@@ -193,37 +193,29 @@
 </ul>
 <h2 id="introduction-to-nix-derivations"><a class="header" href="#introduction-to-nix-derivations">Introduction to Nix Derivations</a></h2>
 <p><img src="images/gruv10.png" alt="gruv10" /></p>
+<p>Nix's build instructions, known as <strong>derivations</strong>, are defined using the Nix
+Language. These derivations can describe anything from individual software
+packages to complete system configurations. The Nix package manager then
+deterministically "realizes" (builds) these derivations, ensuring consistency
+because they rely solely on a predefined set of inputs.</p>
 <ul>
 <li>
-<p>A derivation in Nix is a fundamental concept that describes how to build
-a piece of software or a resource (e.g., a package, library, or configuration
-file). Think of it as a recipe for creating something within the Nix ecosystem.</p>
+<p>Most things in NixOS are built around derivations:</p>
 <ul>
-<li>
-<p>Nix building instructions are called “derivations” and are written in the
-Nix programming language. Derivations can be written for packages or even
-entire systems. After that, they can then be deterministically “realised”
-(built) via Nix, the package manager. Derivations can only depend on a
-pre-defined set of inputs, so they are somewhat reproducible. -- Practical Nix Flakes</p>
-</li>
-<li>
-<p>Most things in NixOS are build around derivations:</p>
-<ul>
-<li>
-<p>Programs/Applications: Are derivations</p>
-</li>
-<li>
-<p>Config Files: Are a derivation that takes the nix configuration and produces
-an appropriate config file for the application.</p>
-</li>
-<li>
-<p>The system configuration (i.e. <code>/run/current-system</code>) is a derivation</p>
-</li>
+<li>The system configuration (i.e. <code>/run/current-system</code>) is a derivation</li>
 </ul>
 </li>
 </ul>
-</li>
-</ul>
+<p>In NixOS, your entire operating system configuration—including the kernel,
+system services, installed applications, and their configurations—is defined
+as a single, overarching <strong>derivation</strong>. When you build and apply a new NixOS
+configuration, Nix creates this entire system as an atomic unit within the
+immutable Nix store.</p>
+<p>The <code>/run/current-system</code> path is a vital symbolic link that always points to
+the specific, active version of your system in the Nix store. This gives NixOS
+the ability to perform atomic upgrades and rollbacks; changing your system simply
+involves building a new system derivation and updating this symlink to point to
+the latest, desired version.</p>
 <blockquote>
 <pre><code class="language-nix"> ls -lsah /run/current-system
  0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/cy2c0kxpjrl7ajlg9v3zh898mhj4dyjv-nixos-system-magic-25.11.20250520.2795c50
@@ -237,9 +229,15 @@ the result of a derivation being built (the system closure)</p>
 <li>
 <p>For beginners, the analogy of a cooking recipe is helpful:</p>
 <ul>
-<li><strong>Ingredients (Dependencies):</strong> What other software or libraries are needed.</li>
-<li><strong>Steps (Build Instructions):</strong> The commands to compile, configure, and install.</li>
-<li><strong>Final Dish (Output):</strong> The resulting package or resource.</li>
+<li>
+<p><strong>Ingredients (Dependencies):</strong> What other software or libraries are needed.</p>
+</li>
+<li>
+<p><strong>Steps (Build Instructions):</strong> The commands to compile, configure, and install.</p>
+</li>
+<li>
+<p><strong>Final Dish (Output):</strong> The resulting package or resource.</p>
+</li>
 </ul>
 </li>
 <li>
@@ -271,12 +269,18 @@ and the build environment.</p>
 <p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument.
 At a minimum, you'll often encounter these essential attributes:</p>
 <ol>
-<li><strong>name:</strong> A human-readable identifier for the derivation
-(e.g., "foo", "hello.txt"). This helps you and Nix refer to the package.</li>
-<li><strong>system:</strong> Specifies the target architecture for the build
-(e.g., <code>builtins.currentSystem</code> for your current machine).</li>
-<li><strong>builder:</strong> Defines the program that will execute the build instructions
-(e.g., <code>bash</code>).</li>
+<li>
+<p><strong>name:</strong> A human-readable identifier for the derivation
+(e.g., "foo", "hello.txt"). This helps you and Nix refer to the package.</p>
+</li>
+<li>
+<p><strong>system:</strong> Specifies the target architecture for the build
+(e.g., <code>builtins.currentSystem</code> for your current machine).</p>
+</li>
+<li>
+<p><strong>builder:</strong> Defines the program that will execute the build instructions
+(e.g., <code>bash</code>).</p>
+</li>
 </ol>
 </li>
 </ul>
@@ -291,7 +295,8 @@ error: a 'mysystem' with features {} is required to build '/nix/store/fq6843vfzz
 but I am a 'x86_64-linux' with features {benchmark, big-parallel, kvm, nixos-test}
 </code></pre>
 <ul>
-<li>The build failure is expected here due to the inaccurate attributes</li>
+<li>The build failure is expected here due fake system and name attributes, (it didn't
+build the derivation but it <strong>did create a .drv file</strong>)</li>
 <li>The <code>:b</code> is a <code>nix repl</code> specific command to build a derivation.</li>
 <li>To realise this outside of the <code>nix repl</code> you can use <code>nix-store -r</code>:</li>
 </ul>
@@ -305,10 +310,35 @@ but I am a 'x86_64-linux' with features {benchmark, big-parallel, kvm, nixos-tes
 <p>-- <a href="https://nixos.org/guides/nix-pills/06-our-first-derivation.html">Nix Pills</a></p>
 </blockquote>
 <ul>
-<li>The above example shows the fundamental structure of a Nix derivation, how it's
+<li>
+<p>The above example shows the fundamental structure of a Nix derivation, how it's
 defined within the <code>nix-repl</code>, and the importance of correctly specifying attributes
-like <code>system</code>.</li>
+like <code>system</code>.</p>
+</li>
+<li>
+<p><code>.drv</code> files are intermediate files that describe how to build a derivation;
+it's the bare minimum information.</p>
+</li>
 </ul>
+<h2 id="when-derivations-are-built"><a class="header" href="#when-derivations-are-built">When Derivations are Built</a></h2>
+<p>Nix doesn't build derivations during the evaluation of your Nix expressions.
+Instead, it processes your code in two main phases:</p>
+<ol>
+<li>
+<p>Evaluation/Instantiate Phase: This is when Nix parses and interprets your
+.nix expression. The result is a precise derivation description (often
+represented as a .drv file on disk), and the unique "out paths" where the
+final built products will go are calculated. No actual code is compiled or
+executed yet.</p>
+</li>
+<li>
+<p>Realize/Build Phase: Only after a derivation has been fully described does
+Nix actually execute its build instructions. It first ensures all the
+derivation's inputs (dependencies) are built, then runs the builder script
+in an isolated environment, and places the resulting products into their
+designated "out paths" in the Nix store.</p>
+</li>
+</ol>
 <h2 id="produce-a-development-shell-from-a-derivation"><a class="header" href="#produce-a-development-shell-from-a-derivation">Produce a development shell from a derivation</a></h2>
 <p>Building on the concept of a derivation as a recipe, let's create our first
 practical derivation. This example shows how to define a temporary development
@@ -371,8 +401,13 @@ and helper functions (i.e. <code>nixpkgs.lib</code>)</p>
 </li>
 <li>
 <p><code>stdenv.mkDerivation { ... };</code>: This is the core function for creating
-packages. <code>stdenv</code> provides a set of common build tools and conventions.
-<code>mkDerivation</code> takes an attribute set (a collection of key-value pairs) as its argument.</p>
+packages.</p>
+<ul>
+<li><code>stdenv</code> provides a set of common build tools and conventions.</li>
+</ul>
+</li>
+<li>
+<p><code>mkDerivation</code> takes an attribute set (a collection of key-value pairs) as its argument.</p>
 </li>
 <li>
 <p><code>name = "my-environment";</code>: This gives your derivation a human-readable name.</p>
@@ -432,16 +467,70 @@ dependency conflicts and makes rollbacks difficult.</p>
 a package, it creates a unique, immutable directory in the Nix store. This
 means:</p>
 <ul>
-<li><strong>No Conflicts:</strong> Different versions of the same package can coexist
-without interfering with each other.</li>
-<li><strong>Reliable Rollback:</strong> You can easily switch back to previous versions
-without affecting system-wide files.</li>
-<li><strong>Reproducibility:</strong> Builds are more likely to produce the same result
+<li>
+<p><strong>No Conflicts:</strong> Different versions of the same package can coexist
+without interfering with each other.</p>
+</li>
+<li>
+<p><strong>Reliable Rollback:</strong> You can easily switch back to previous versions
+without affecting system-wide files.</p>
+</li>
+<li>
+<p><strong>Reproducibility:</strong> Builds are more likely to produce the same result
 across different machines if they are "pure" (don't rely on external
-system state).</li>
+system state).</p>
+</li>
 </ul>
 </li>
 </ul>
+<h3 id="the-isolated-nix-build-environment-a-quick-overview"><a class="header" href="#the-isolated-nix-build-environment-a-quick-overview">The Isolated Nix Build Environment: A Quick Overview</a></h3>
+<p>When Nix executes a builder script, it sets up a highly controlled and pristine
+environment to ensure <strong>reproducibility</strong> and <strong>isolation</strong>. Here's what
+happens:</p>
+<ol>
+<li>
+<p><strong>Fresh Start:</strong> Nix creates a temporary, empty directory for the build and
+makes it the current working directory.</p>
+</li>
+<li>
+<p><strong>Clean Environment:</strong> It completely clears the environment variables from
+your shell.</p>
+</li>
+<li>
+<p><strong>Controlled Inputs:</strong> Nix then populates the environment with <em>only</em> the
+variables essential for the build, such as:</p>
+<ul>
+<li>
+<p><code>$NIX_BUILD_TOP</code>: The path to the temporary build directory.</p>
+</li>
+<li>
+<p><code>$PATH</code>: Carefully set to include only the explicit <code>buildInputs</code> you've
+specified, preventing reliance on arbitrary system tools.</p>
+</li>
+<li>
+<p><code>$HOME</code>: Set to <code>/homeless-shelter</code> to prevent programs from reading
+user-specific configuration files.</p>
+</li>
+<li>
+<p>Variables for each declared output (<code>$out</code>, etc.), indicating where the
+final results should be placed in the Nix store.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Execution &amp; Logging:</strong> The builder script is run with its specified
+arguments. All its output (stdout/stderr) is captured in a log.</p>
+</li>
+<li>
+<p><strong>Clean Up &amp; Registration:</strong> If successful, the temporary directory is
+removed. Nix then scans the build outputs for references to other store
+paths, ensuring all dependencies are correctly tracked for future use and
+garbage collection. Finally, it normalizes file permissions and timestamps
+in the output for consistent hashing.</p>
+</li>
+</ol>
+<p>This meticulous setup ensures that your builds are independent of the machine
+they run on and always produce the same result, given the same inputs.</p>
 <h2 id="our-builder-script"><a class="header" href="#our-builder-script">Our builder Script</a></h2>
 <ul>
 <li>For our first derivation, we'll create a simple <code>builder.sh</code> file in the current directory:</li>
