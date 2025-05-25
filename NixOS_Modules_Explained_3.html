@@ -523,7 +523,8 @@ dependencies as well as syntax errors.</p>
 </li>
 </ul>
 <h2 id="declaring-options"><a class="header" href="#declaring-options">Declaring Options</a></h2>
-<p>The following is <code>nixpkgs/nixos/modules/programs/vim.nix</code>:</p>
+<p>The following is <code>nixpkgs/nixos/modules/programs/vim.nix</code>, a module that is
+included in the Nixpkgs collection:</p>
 <pre><code class="language-nix">{
   config,
   lib,
@@ -558,8 +559,50 @@ in
 }
 </code></pre>
 <ul>
-<li>It provides options to enable Vim, set it as the default editor, and specify
-the Vim package to use.</li>
+<li>
+<p>It provides options to enable Vim, set it as the default editor, and specify
+the Vim package to use.</p>
+</li>
+<li>
+<p>Nixpkgs collection is a good place to see best practices and community norms.
+As you can see the above module avoids using a top-level <code>with lib;</code> that is
+suggested in the NixOS wiki. Modules, package definitions etc. often contain
+fairly detailed comments throughout the code explaining why they did certain
+things.</p>
+</li>
+</ul>
+<p>NixOS Wiki example click the eye to see full example:</p>
+<pre><code class="language-nix">{ lib, pkgs, config, ... }:
+with lib;
+let
+  # Shorter name to access final settings a
+  # user of hello.nix module HAS ACTUALLY SET.
+  # cfg is a typical convention.
+  cfg = config.services.hello;
+in {
+<span class="boring">   # Declare what settings a user of this "hello.nix" module CAN SET.
+</span><span class="boring">   options.services.hello = {
+</span><span class="boring">     enable = mkEnableOption "hello service";
+</span><span class="boring">     greeter = mkOption {
+</span><span class="boring">       type = types.str;
+</span><span class="boring">       default = "world";
+</span><span class="boring">     };
+</span><span class="boring">   };
+</span><span class="boring">
+</span><span class="boring">   # Define what other settings, services and resources should be active IF
+</span><span class="boring">   # a user of this "hello.nix" module ENABLED this module
+</span><span class="boring">   # by setting "services.hello.enable = true;".
+</span><span class="boring">   config = mkIf cfg.enable {
+</span><span class="boring">     systemd.services.hello = {
+</span><span class="boring">       wantedBy = [ "multi-user.target" ];
+</span><span class="boring">       serviceConfig.ExecStart = "${pkgs.hello}/bin/hello -g'Hello, ${escapeShellArg cfg.greeter}!'";
+</span><span class="boring">     };
+</span><span class="boring">   };
+</span><span class="boring"> }
+</span></code></pre>
+<ul>
+<li>I showed you this example to let you know that Nixpkgs is a good resource for
+up to date best practices and community norms.</li>
 </ul>
 <details>
 <summary> ✔️ Breakdown of the vim module.(Click to Expand)</summary>
@@ -637,7 +680,11 @@ the module uses <code>cfg</code>.</li>
 </ul>
 <blockquote>
 <p><code>mkPackageOption</code> is a helper that defines a package-typed option with a
-default (<code>pkgs.vim</code>) and provides docs + example.</p>
+default (<code>pkgs.vim</code>) and provides docs + example. Using <code>lib.mkEnableOption</code>
+makes it clear exactly where this function is coming from. Same with <code>lib.mkIf</code>
+and as you can see they can be further down the configuration, further from
+where you defined <code>with lib;</code> making it less clear where they come from.
+Explicitness is your friend when it comes to reproducability and clarity.</p>
 </blockquote>
 <ol start="4">
 <li>Conditional Configuration</li>
