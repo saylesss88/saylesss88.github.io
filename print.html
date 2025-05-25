@@ -3206,26 +3206,28 @@ packages to complete system configurations. The Nix package manager then
 deterministically "realizes" (builds) these derivations, ensuring consistency
 because they rely solely on a predefined set of inputs.</p>
 <ul>
-<li>
-<p>Most things in NixOS are built around derivations:</p>
+<li>Most things in NixOS are built around derivations. Your NixOS system is
+described by such a single system derivation. When you want to apply a new
+configuration, <code>nixos-rebuild</code> handles the process:</li>
+</ul>
+<p>It first builds this derivation:</p>
+<pre><code class="language-bash">nix-build '&lt;nixpkgs/nixos&gt;' -A system
+</code></pre>
+<p>Then, once the build is complete, it switches to that new system:</p>
+<pre><code class="language-bash">result/bin/switch-to-configuration
+</code></pre>
 <ul>
-<li>The system configuration (i.e. <code>/run/current-system</code>) is a derivation</li>
+<li>After the build, <code>nixos-rebuild</code> updates a crucial symbolic link: <code>/run/current-system</code>
+This symlink always points to the active, running version of your system in the
+Nix store. In essence, the <code>/run/current-system</code> path is the currently active
+system derivation. This design choice gives NixOS its powerful atomic upgrade
+and rollback capabilities: changing your system involves building a new system
+derivation and updating this symlink to point to the latest version.</li>
 </ul>
-</li>
-</ul>
-<p>In NixOS, your entire operating system configuration—including the kernel,
-system services, installed applications, and their configurations—is defined
-as a single, overarching <strong>derivation</strong>. When you build and apply a new NixOS
-configuration, Nix creates this entire system as an atomic unit within the
-immutable Nix store.</p>
-<p>The <code>/run/current-system</code> path is a vital symbolic link that always points to
-the specific, active version of your system in the Nix store. This gives NixOS
-the ability to perform atomic upgrades and rollbacks; changing your system simply
-involves building a new system derivation and updating this symlink to point to
-the latest, desired version.</p>
 <blockquote>
 <pre><code class="language-nix"> ls -lsah /run/current-system
- 0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/cy2c0kxpjrl7ajlg9v3zh898mhj4dyjv-nixos-system-magic-25.11.20250520.2795c50
+ 0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/
+ cy2c0kxpjrl7ajlg9v3zh898mhj4dyjv-nixos-system-magic-25.11.20250520.2795c50
 </code></pre>
 </blockquote>
 <ul>
