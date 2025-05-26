@@ -223,6 +223,12 @@ A <code>.nix</code> file can import other Nix files or by looking them up in the
 search path (<code>$NIX_PATH</code>). This causes a cached result to be inconsistent
 unless every file is perfectly kept track of. Flakes solve this problem by
 ensuring fully hermetic evaluation.</p>
+<ul>
+<li>"Hermetic" means that the output of an evaluation (the derivation itself)
+depends <em>only</em> on the explicit inputs provided, not on anything external like
+environment variables or pulling in files only on your system. This is the
+problem that Nix solves and the problem that flakes are built around.</li>
+</ul>
 </li>
 </ul>
 <h2 id="what-is-a-nix-flake"><a class="header" href="#what-is-a-nix-flake">What is a Nix Flake?</a></h2>
@@ -268,6 +274,12 @@ include <code>description</code> and <code>inputs</code>.</li>
   nixConfig = { /* Advanced configuration options */ };
 }
 </code></pre>
+<ul>
+<li>I typically see <code>nixConfig</code> used for extra-substituters for cachix. This is
+a general-purpose way to define Nix configuration oprions that apply when
+this flake is evaluated or built. It ties into your <code>/etc/nix/nix.conf</code> or
+<code>~/.config/nix/nix.conf</code>.</li>
+</ul>
 <p>For example, create a directory and add a <code>flake.nix</code> with the following
 contents, yes this is a complete <code>flake.nix</code> demonstrating <em>outputs</em> being the
 only required attribute:</p>
@@ -306,7 +318,58 @@ flake. In this case, it's telling Nix to evaluate the <code>multiply</code> attr
 </ul>
 <p>In the next example we will create a <code>devShells</code> output as well as a <code>packages</code>
 output.</p>
-<h2 id="a-simple-devshells-and-packages-outputs-example"><a class="header" href="#a-simple-devshells-and-packages-outputs-example">A Simple devShells and packages outputs example</a></h2>
+<p><strong><code>flake.lock</code> auto-generated lock file</strong></p>
+<p>All flake inputs are pinned to specific revisions in a lockfile called <code>flake.lock</code>
+This file stores the revision info as JSON.</p>
+<p>The <code>flake.lock</code> file ensures that Nix flakes have purely deterministic outputs.
+A <code>flake.nix</code> file without an accompanying <code>flake.lock</code> should be considered
+incomplete and a kind of proto-flake. Any Nix CLI command that is run against
+the flake—like <code>nix build</code>, <code>nix develop</code>, or even <code>nix flake show</code>—generates a
+<code>flake.lock</code> for you.</p>
+<p>Here’s an example section of a <code>flake.lock</code> file that pins Nixpkgs to a specific
+revision:</p>
+<pre><code class="language-bash">$ cat flake.lock
+{
+  "nodes": {
+    "nixpkgs": {
+      "info": {
+        "lastModified": 1587398327,
+        "narHash": "sha256-mEKkeLgUrzAsdEaJ/1wdvYn0YZBAKEG3AN21koD2AgU="
+      },
+      "locked": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "5272327b81ed355bbed5659b8d303cf2979b6953",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-20.03",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 5
+}
+</code></pre>
+<ul>
+<li>Any future build of this flake will use the version of <code>nixpkgs</code> recorded in
+the lock file. If you add new inputs, they will be automatically added when
+you run a nix flake command like <code>nix flake show</code>. But it won't replace
+existing locks.</li>
+</ul>
+<p>If you need to update a locked input to the latest version:</p>
+<pre><code class="language-bash">nix flake lock --update-input nixpkgs
+nix build
+</code></pre>
+<h2 id="a-simple-flake-that-outputs-a-devshell-and-a-package"><a class="header" href="#a-simple-flake-that-outputs-a-devshell-and-a-package">A Simple flake that outputs a devshell and a package</a></h2>
 <p>In a new directory create a <code>flake.nix</code></p>
 <pre><code class="language-nix"># flake.nix
 {
@@ -316,7 +379,9 @@ output.</p>
   }: let
     pkgs = nixpkgs.legacyPackages.x86_64-linux;
   in {
+
     packages.x86_64-linux.default = pkgs.kakoune; # You could define a meta-package here
+
     devShells.x86_64-linux.default = pkgs.mkShell {
       packages = [
         pkgs.kakoune
@@ -329,6 +394,9 @@ output.</p>
 }
 </code></pre>
 <ul>
+<li>
+<p><code>mkShell</code> is a wrapper around <code>mkDerivation</code></p>
+</li>
 <li>
 <p>This flake offers two main outputs for <code>x86_64-linux</code> systems:</p>
 <ol>
@@ -477,7 +545,7 @@ my_attrset.foo
 </details>
 </li>
 </ul>
-<h3 id="anatomy-of-flakenix"><a class="header" href="#anatomy-of-flakenix">Anatomy of <code>flake.nix</code></a></h3>
+<h3 id="deeper-dive-into-the-structure-of-flakenix"><a class="header" href="#deeper-dive-into-the-structure-of-flakenix">Deeper Dive into the Structure of <code>flake.nix</code></a></h3>
 <p><img src="images/Flakes.png" alt="Flakes" /></p>
 <p><code>inputs</code>: <strong>Declaring Dependencies</strong></p>
 <ul>
@@ -571,26 +639,12 @@ however, to output functions via whichever attribute you prefer. --
 (64-bit AMD/Intel Linux) including packages, development environments, and
 NixOS configurations)</li>
 </ul>
-<p><strong>Referencing the Current Flake</strong> (<code>self</code>)</p>
-<ul>
-<li>
-<p><code>self</code> provides a way to refer back to the current flake from within the
-outputs function. You can use it to access other top-level attributes like
-inputs (e.g., <code>self.inputs</code>).</p>
-</li>
-<li>
-<p>The outputs function always receives an argument conventionally named self,
-which represents the entire flake, including all its top-level attributes.
-You'll typically use self to reference things defined within your own flake
-(e.g., <code>self.packages.my-package</code>).</p>
-</li>
-</ul>
 <p><strong>Variadic Attributes (...) and @-patterns</strong></p>
 <ul>
 <li>
 <p>The <code>...</code> syntax in the input arguments of the outputs function indicates
 variadic attributes, meaning the input attribute set can contain more
-attributes than just those explicitly listed (like <code>self</code> and <code>nixpkgs</code>).</p>
+attributes than just those explicitly listed (like <code>lib</code> and <code>nixpkgs</code>).</p>
 <p><strong>Example:</strong></p>
 <pre><code class="language-nix">mul = { a, b, ... }: a * b;
 mul { a = 3; b = 4; c = 2; } # 'c' is an extra attribute
@@ -786,6 +840,12 @@ cd first
   };
 }
 </code></pre>
+<ul>
+<li>This demonstrates using <code>self</code> to reference this flake from within its own
+outputs. This is the main use for <code>self</code> with flakes. Without <code>self</code>, I wouldn't
+have a direct way to refer to the <code>nixosModules.default</code> that's defined within
+the same flake.</li>
+</ul>
 <p>Now in the <code>players/second</code> directory create this <code>flake.nix</code>:</p>
 <pre><code class="language-nix"># flake.nix
 {
@@ -809,6 +869,17 @@ cd first
   };
 }
 </code></pre>
+<ul>
+<li>
+<p><code>nixosModules.default</code> is a module which is a function that, when called by
+the NixOS module system, returns an attribute set representing a piece of
+system configuration.</p>
+<ul>
+<li>Within that attribute set, it specifies that the file <code>/etc/second-file</code>
+should exist with "Hello player # 2!" as its content.</li>
+</ul>
+</li>
+</ul>
 <p>And finally in <code>players/third</code> create another <code>flake.nix</code>:</p>
 <pre><code class="language-nix"># flake.nix
 {
@@ -839,7 +910,7 @@ cd first
 </code></pre>
 <ul>
 <li>You'll have to change the locations to where you placed your <code>players</code>
-directory.</li>
+directory in the <code>inputs</code> above.</li>
 </ul>
 <p>In your <code>third</code> directory inspect it with:</p>
 <pre><code class="language-bash">  ~/players/third
@@ -896,7 +967,7 @@ incredible power of flake extensibility for building complex, modular, and
 composable systems.</p>
 <h2 id="conclusion-unifying-your-nix-experience-with-flakes"><a class="header" href="#conclusion-unifying-your-nix-experience-with-flakes">Conclusion: Unifying Your Nix Experience with Flakes</a></h2>
 <p>For some examples of more advanced outputs like <code>devShells</code> and <code>checks</code>, check
-out this blog post:
+out this blog post that I wrote:
 <a href="https://tsawyer87.github.io/posts/nix_flakes_tips/">Nix Flakes Tips and Tricks</a></p>
 <p>In this chapter, we've explored Nix Flakes as a powerful and modern approach to
 managing Nix projects, from development environments to entire system
