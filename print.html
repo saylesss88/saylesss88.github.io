@@ -2653,26 +2653,61 @@ looks for a file named <code>default.nix</code> within that directory. If found,
 evaluates the expressions within <code>default.nix</code> as if you had specified its
 path directly in the import statement.</li>
 </ul>
-<h2 id="example-flake"><a class="header" href="#example-flake">Example Flake</a></h2>
-<pre><code class="language-nix">{
+<h2 id="example-flake-showing-the-extensibility-of-flakes"><a class="header" href="#example-flake-showing-the-extensibility-of-flakes">Example Flake showing the extensibility of Flakes</a></h2>
+<p>NixOS modules and configurations offer us a powerful and composable way
+to define and share system configurations. Imagine we have several independent
+"players," each with their own unique set of configurations or modules. How do
+we combine these individual contributions into a single, cohesive system
+without directly altering each player's original flake?</p>
+<p>This example demonstrates how flakes can extend and compose each other, allowing
+you to layer configurations on top of existing ones. This is particularly
+useful when you want to:</p>
+<ul>
+<li>
+<p>Build upon a base configuration without modifying its source.</p>
+</li>
+<li>
+<p>Combine features from multiple independent flakes into a single system.</p>
+</li>
+<li>
+<p>Create specialized versions of an existing configuration.</p>
+</li>
+</ul>
+<p>Let's simulate this by creating a players directory with three sub-directories:
+<code>first</code>, <code>second</code>, and <code>third</code>. Each of these will contain its own <code>flake.nix</code>.</p>
+<pre><code class="language-bash">mkdir players
+cd players
+mkdir first
+mkdir second
+mkdir third
+cd first
+</code></pre>
+<p>Now create a <code>flake.nix</code> with the following contents:</p>
+<pre><code class="language-nix"># flake.nix
+{
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
   };
 
-  outputs = { self, nixpkgs }: {
-    nixosModules.default = { config, pkgs, lib, ... }: {
-      # Create a file `/etc/hello-file`
-      environment.etc.goodbye-file.text = "Goodbye world!";
-
-      # You can ignore these, just keeping things small
+  outputs = {
+    self,
+    nixpkgs,
+  }: {
+    nixosModules.default = {
+      config,
+      pkgs,
+      lib,
+      ...
+    }: {
+      # Create a file `/etc/first-file`
+      environment.etc.first-file.text = "Hello player # 1!";
       boot.initrd.includeDefaultModules = false;
       documentation.man.enable = false;
       boot.loader.grub.enable = false;
       fileSystems."/".device = "/dev/null";
       system.stateVersion = "24.11";
     };
-
-    nixosConfigurations.test = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.testing = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         self.nixosModules.default
@@ -2681,18 +2716,114 @@ path directly in the import statement.</li>
   };
 }
 </code></pre>
-<p>Build it with:</p>
-<pre><code class="language-bash">nix build .#nixosConfigurations.test.config.system.build.toplevel
+<p>Now in the <code>players/second</code> directory create this <code>flake.nix</code>:</p>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+  }: {
+    nixosModules.default = {
+      config,
+      pkgs,
+      lib,
+      ...
+    }: {
+      # Create a file `/etc/second-file`
+      environment.etc.second-file.text = "Hello player # 2!";
+    };
+  };
+}
 </code></pre>
-<pre><code class="language-bash">cat result/etc/goodbye-file
-  ~/tested  ✗
-❯ cat result/etc/goodbye-file
-───────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-       │ File: result/etc/goodbye-file
-───────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   1   │ Goodbye world!
-───────┴────────────────────────────────
+<p>And finally in <code>players/third</code> create another <code>flake.nix</code>:</p>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs = {
+    first.url = "/home/jr/players/first";
+    nixpkgs.follows = "first/nixpkgs";
+    second = {
+      url = "/home/jr/players/second";
+      inputs.nixpkgs.follows = "first/nixpkgs";
+    };
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    first,
+    second,
+  }:
+    first.outputs
+    // {
+      nixosConfigurations.testing = first.nixosConfigurations.testing.extendModules {
+        modules = [
+          second.nixosModules.default
+        ];
+      };
+    };
+}
 </code></pre>
+<ul>
+<li>You'll have to change the locations to where you placed your <code>players</code>
+directory.</li>
+</ul>
+<p>In your <code>third</code> directory inspect it with:</p>
+<pre><code class="language-bash">  ~/players/third
+❯ nix flake show
+path:/home/jr/players/third?lastModified=1748271697&amp;narHash=sha256-oNzkC6X9hA0MpOBmJSZ89w4znXxv4Q5EkFhp0ewehY0%3D
+├───nixosConfigurations
+│   └───testing: NixOS configuration
+└───nixosModules
+    └───default: NixOS module
+</code></pre>
+<p>and build it with:</p>
+<pre><code class="language-bash">nix build .#nixosConfigurations.testing.config.system.build.toplevel
+</code></pre>
+<pre><code class="language-bash">cat result/etc/first-file
+Hello player # 1!
+cat result/etc/second-file
+Hello player # 2!
+</code></pre>
+<p><strong>Understanding the Extension</strong></p>
+<p>As you saw in the <code>flake.nix</code> for the third player, we leveraged two key flake
+features to combine and extend the previous configurations:</p>
+<ol>
+<li><strong>Attribute Set Union</strong> (<code>//</code> operator):</li>
+</ol>
+<pre><code class="language-nix">outputs = { ..., first, second, ... }:
+first.outputs // { # ... your extensions here ...
+};
+</code></pre>
+<p>The <code>//</code> (attribute set union) operator allows us to take all the outputs from
+<code>first.outputs</code> (which includes its <code>nixosConfigurations</code> and <code>nixosModules</code>)
+and then overlay or add to them on the right-hand side. This means our third
+flake will inherit all the outputs from first, but we can then modify or add
+new ones without changing the first flake itself.</p>
+<ol start="2">
+<li><code>config.extendModules</code>:</li>
+</ol>
+<pre><code class="language-nix">    nixosConfigurations.testing = first.nixosConfigurations.testing.extendModules {
+      modules = [
+        second.nixosModules.default
+      ];
+    };
+</code></pre>
+<p>This is the core of the extension. We're taking the testing NixOS configuration
+defined in the first flake (<code>first.nixosConfigurations.testing</code>) and then
+calling its <code>extendModules</code> function. This function allows us to inject
+additional NixOS modules into an already defined system configuration. In this
+case, we're adding the default module from the second flake
+(<code>second.nixosModules.default</code>).</p>
+<p>By combining these techniques, the third flake successfully creates a NixOS
+configuration that includes both the settings from first (like <code>/etc/first-file</code>
+and the base system options) and the settings from second (like <code>/etc/second-file</code>),
+all without directly altering the first or second flakes. This demonstrates the
+incredible power of flake extensibility for building complex, modular, and
+composable systems.</p>
 <h2 id="conclusion-unifying-your-nix-experience-with-flakes"><a class="header" href="#conclusion-unifying-your-nix-experience-with-flakes">Conclusion: Unifying Your Nix Experience with Flakes</a></h2>
 <p>For some examples of more advanced outputs like <code>devShells</code> and <code>checks</code>, check
 out this blog post:
@@ -2732,6 +2863,9 @@ effectively leveraging the full potential of Nix Flakes.</p>
 </li>
 <li>
 <p><a href="https://nix.dev/concepts/flakes.html">nix.dev flakes</a></p>
+</li>
+<li>
+<p><a href="https://vtimofeenko.com/posts/practical-nix-flake-anatomy-a-guided-tour-of-flake.nix/">anatomy-of-a-flake</a></p>
 </li>
 <li>
 <p><a href="https://jade.fyi/blog/flakes-arent-real/">flakes-arent-real</a></p>
