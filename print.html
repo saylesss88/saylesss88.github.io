@@ -2169,6 +2169,14 @@ dependencies) an explicit input within your <code>flake.nix</code> file, pinned 
 <code>flake.lock</code>. This means the state is explicitly defined in the configuration
 itself, not implicitly managed by a global system setting.</p>
 </li>
+<li>
+<p>Evaluation time is notoriously slow on NixOS, the problem was that in the
+past Nix evaluation wasn't hermetic preventing effective evaluation caching.
+A <code>.nix</code> file can import other Nix files or by looking them up in the Nix
+search path (<code>$NIX_PATH</code>). This causes a cached result to be inconsistent
+unless every file is perfectly kept track of. Flakes solve this problem by
+ensuring fully hermetic evaluation.</p>
+</li>
 </ul>
 <h2 id="what-is-a-nix-flake"><a class="header" href="#what-is-a-nix-flake">What is a Nix Flake?</a></h2>
 <ul>
@@ -2214,7 +2222,8 @@ include <code>description</code> and <code>inputs</code>.</li>
 }
 </code></pre>
 <p>For example, create a directory and add a <code>flake.nix</code> with the following
-contents:</p>
+contents, yes this is a complete <code>flake.nix</code> demonstrating <em>outputs</em> being the
+only required attribute:</p>
 <pre><code class="language-nix"># flake.nix
 {
   outputs = _: { multiply = 2 * 2; };
@@ -2377,9 +2386,23 @@ revisions and that Flakes have purely deterministic outputs.</li>
 </ul>
 </li>
 </ul>
-</details>
+<p>Example:</p>
 </li>
 </ul>
+<pre><code class="language-bash">nix shell nixpkgs#ponysay --command ponysay "Flakes Rock!"
+</code></pre>
+<ul>
+<li>This works because of the [flake registry] that maps symbolic identifiers like
+<code>nixpkgs</code> to actual locations such as <code>https://github.com/NixOS/nixpkgs</code>. So
+the following are equivalent:</li>
+</ul>
+<pre><code class="language-bash">nix shell nixpkgs#ponysay --command ponysay Flakes Rock!
+nix shell github:NixOS/nixpkgs#ponysay --command ponysay Flakes Rock!
+</code></pre>
+<p>To override the <code>nixpkgs</code> registry with your own local copy you could:</p>
+<pre><code class="language-bash">nix registry add nixpkgs ~/src/local-nixpkgs
+</code></pre>
+</details>
 <h2 id="attribute-sets-the-building-blocks"><a class="header" href="#attribute-sets-the-building-blocks">Attribute Sets: The Building Blocks</a></h2>
 <details>
 <summary> ✔️ Attribute set Refresher (Click to Expand) </summary>
