@@ -260,6 +260,41 @@ include <code>description</code> and <code>inputs</code>.</li>
   nixConfig = { /* Advanced configuration options */ };
 }
 </code></pre>
+<p>For example, create a directory and add a <code>flake.nix</code> with the following
+contents:</p>
+<pre><code class="language-nix"># flake.nix
+{
+  outputs = _: { multiply = 2 * 2; };
+}
+</code></pre>
+<p>Now evaluate it with:</p>
+<pre><code class="language-bash">nix eval .#multiply
+4
+</code></pre>
+<ul>
+<li>
+<p>In the <code>outputs = _: { ... };</code> line, the <code>_</code> (underscore) is a placeholder
+argument. It represents the inputs that the outputs function could receive
+(like <code>inputs</code>, <code>self</code>, <code>pkgs</code>, etc.), but in this specific case, we're not
+using any of them to define the multiply attribute. It's a common convention
+in Nix to use <code>_</code> when an argument is required by a function but intentionally
+ignored.</p>
+</li>
+<li>
+<p>In the command <code>nix eval .#multiply</code>:</p>
+<ul>
+<li>
+<p>the <code>.</code> signifies the current directory,
+indicating that Nix should look for a <code>flake.nix</code> file in the directory where
+you're running the command.</p>
+</li>
+<li>
+<p>The <code>#</code> is used to select a specific attribute from the <code>outputs</code> of the
+flake. In this case, it's telling Nix to evaluate the <code>multiply</code> attribute.</p>
+</li>
+</ul>
+</li>
+</ul>
 <h2 id="flake-references"><a class="header" href="#flake-references">Flake References</a></h2>
 <details>
 <summary> ✔️ Flake References (Click to Expand) </summary>
@@ -611,6 +646,46 @@ looks for a file named <code>default.nix</code> within that directory. If found,
 evaluates the expressions within <code>default.nix</code> as if you had specified its
 path directly in the import statement.</li>
 </ul>
+<h2 id="example-flake"><a class="header" href="#example-flake">Example Flake</a></h2>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+  };
+
+  outputs = { self, nixpkgs }: {
+    nixosModules.default = { config, pkgs, lib, ... }: {
+      # Create a file `/etc/hello-file`
+      environment.etc.goodbye-file.text = "Goodbye world!";
+
+      # You can ignore these, just keeping things small
+      boot.initrd.includeDefaultModules = false;
+      documentation.man.enable = false;
+      boot.loader.grub.enable = false;
+      fileSystems."/".device = "/dev/null";
+      system.stateVersion = "24.11";
+    };
+
+    nixosConfigurations.test = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        self.nixosModules.default
+      ];
+    };
+  };
+}
+</code></pre>
+<p>Build it with:</p>
+<pre><code class="language-bash">nix build .#nixosConfigurations.test.config.system.build.toplevel
+</code></pre>
+<pre><code class="language-bash">cat result/etc/goodbye-file
+  ~/tested  ✗
+❯ cat result/etc/goodbye-file
+───────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       │ File: result/etc/goodbye-file
+───────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1   │ Goodbye world!
+───────┴────────────────────────────────
+</code></pre>
 <h2 id="conclusion-unifying-your-nix-experience-with-flakes"><a class="header" href="#conclusion-unifying-your-nix-experience-with-flakes">Conclusion: Unifying Your Nix Experience with Flakes</a></h2>
 <p>For some examples of more advanced outputs like <code>devShells</code> and <code>checks</code>, check
 out this blog post:
