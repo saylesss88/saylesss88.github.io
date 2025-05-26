@@ -2248,6 +2248,60 @@ flake. In this case, it's telling Nix to evaluate the <code>multiply</code> attr
 </ul>
 </li>
 </ul>
+<p>In the next example we will create a <code>devShells</code> output as well as a <code>packages</code>
+output.</p>
+<h2 id="a-simple-devshells-and-packages-outputs-example"><a class="header" href="#a-simple-devshells-and-packages-outputs-example">A Simple devShells and packages outputs example</a></h2>
+<p>In a new directory create a <code>flake.nix</code></p>
+<pre><code class="language-nix"># flake.nix
+{
+  outputs = {
+    self,
+    nixpkgs,
+  }: let
+    pkgs = nixpkgs.legacyPackages.x86_64-linux;
+  in {
+    packages.x86_64-linux.default = pkgs.kakoune; # You could define a meta-package here
+    devShells.x86_64-linux.default = pkgs.mkShell {
+      packages = [
+        pkgs.kakoune
+        pkgs.git
+        pkgs.ripgrep
+        pkgs.fzf
+      ];
+    };
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p>This flake offers two main outputs for <code>x86_64-linux</code> systems:</p>
+<ol>
+<li>
+<p>A <strong>standard package</strong> (<code>packages.x86_64-linux.default</code>): This simple example
+just re-exports <code>kakoune</code> from <code>nixpkgs</code>. You could build your own apps here.</p>
+</li>
+<li>
+<p>A <strong>development shell</strong> (<code>devShells.x86_64-linux.default</code>): This provides a
+convenient environment where you have specific tools available without
+installing them globally on your system.</p>
+</li>
+</ol>
+</li>
+</ul>
+<p>To use this flake you have a few options:</p>
+<ul>
+<li>
+<p><code>nix run</code> will launch kakoune</p>
+</li>
+<li>
+<p><code>nix develop</code> will activate the development environment providing all of the
+pkgs listed under <code>mkShell</code>.</p>
+</li>
+<li>
+<p>Or more explicitly <code>nix develop .#devShells.x86_64-linux.default</code>, does the same
+thing as the command above.</p>
+</li>
+</ul>
 <h2 id="flake-references"><a class="header" href="#flake-references">Flake References</a></h2>
 <details>
 <summary> ✔️ Flake References (Click to Expand) </summary>
