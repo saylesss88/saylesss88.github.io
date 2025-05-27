@@ -750,6 +750,47 @@ specified path (usually a file or directory) and return its value.</p>
 </ul>
 <p><strong>Passing Arguments During Import</strong></p>
 <ul>
+<li><code>import &lt;nixpkgs&gt; {}</code> is calling two functions, not one.</li>
+</ul>
+<ol>
+<li><code>import &lt;nixpkgs&gt;</code>: The first function call</li>
+</ol>
+<ul>
+<li>
+<p><code>import</code> is a built-in Nix function. Its job is to load and evaluate a Nix
+expression from a specified path.</p>
+</li>
+<li>
+<p><code>&lt;nixpkgs&gt;</code> is a flake reference. When you use <code>import &lt;nixpkgs&gt;</code>, Nix
+evaluates the <code>default.nix</code> file (or sometimes <code>lib/default.nix</code>) found
+at that location.</p>
+</li>
+<li>
+<p>The <code>default.nix</code> in <code>nixpkgs</code> evaluates to a function. This function is
+designed to be configurable, allowing you to pass arguments like <code>system</code>,
+<code>config</code>, etc. to customize how <code>nixpkgs</code> behaves and what packages it provides.</p>
+</li>
+<li>
+<p>So, <code>import &lt;nixpkgs&gt;</code> doesn't give you the <code>nixpkgs</code> package set directly;
+it gives you the function that generates the <code>nixpkgs</code> package set derivation.</p>
+</li>
+</ul>
+<ol start="2">
+<li><code>{}</code>: The second function call (and its argument)</li>
+</ol>
+<ul>
+<li>
+<p><code>{}</code> denotes an empty attribute set</p>
+</li>
+<li>
+<p>When an attribute set immediately follows a function, it means you are calling
+that function and passing the attribute set as its single argument.</p>
+</li>
+</ul>
+<p>So, the <code>{}</code> after <code>import &lt;nixpkgs&gt;</code> is not part of the <code>import</code> function iteself.
+It's the argument being passed to the function that <code>import &lt;nixpkgs&gt;</code> just
+returned.</p>
+<ul>
 <li>You can also pass an attribute set as an argument to the Nix expression being
 imported:</li>
 </ul>
