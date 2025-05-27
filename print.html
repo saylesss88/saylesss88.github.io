@@ -3295,6 +3295,32 @@ attribute set where the names are platforms, and the values are the outputs
 specific to that platform. For the packages output, each platform-specific
 value is itself an attribute set containing the various packages built for
 that particular system.</p>
+<h2 id="exporting-functions"><a class="header" href="#exporting-functions">Exporting Functions</a></h2>
+<p>This example outputs a <code>sayGoodbye</code> function, via the <code>lib</code> attribute, that takes
+a name for its input and outputs a string saying Goodbye very nicely to the person
+with that name:</p>
+<pre><code class="language-nix">{
+  outputs = { self }: {
+    lib = {
+      sayGoodbye = name: "Goodbye F*** Off, ${name}!";
+    };
+  };
+}
+</code></pre>
+<p>You could then specify this flake as an input to another flake and use <code>sayGoodbye</code>
+however you'd like.</p>
+<p>Or load it into the <code>nix repl</code> like so:</p>
+<pre><code class="language-bash">nix repl
+nix-repl&gt; :lf .
+nix-repl&gt; lib.sayGoodbye
+«lambda sayGoodbye @ /nix/store/665rwfvkwdx6kwvk9ldijp2a6jvcgv1n-source/flake.nix:4:20»
+nix-repl&gt; lib.sayGoodbye "Jr"
+"Goodbye F*** Off, Jr!"
+</code></pre>
+<ul>
+<li>As you can see, specifying <code>lib.sayGoodbye</code> without any arguments returns a
+function. (a lambda function)</li>
+</ul>
 <h2 id="simplifying-multi-platform-outputs-with-flake-utils"><a class="header" href="#simplifying-multi-platform-outputs-with-flake-utils">Simplifying Multi-Platform Outputs with flake-utils</a></h2>
 <p>Manually repeating these platform definitions for every output (<code>packages</code>,
 <code>devShells</code>, <code>checks</code>, etc.) can quickly become verbose. This is where the
