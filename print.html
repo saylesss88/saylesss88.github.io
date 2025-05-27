@@ -3279,9 +3279,34 @@ various <code>nix</code> utilities. <code>packages</code> is one of these:</p>
   };
 
   outputs = { self, nixpkgs }: {
-    packages.x86_64-linux.hello = /* something here */;
+    # this is the re-exporting part!
+    packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
   };
 }
+</code></pre>
+<ul>
+<li>
+<p>Re-exporting happens when you take the value of <code>hello</code> in its standard
+derivation format, exactly as <code>nixpkgs</code> produces it and assign it to an
+attribute in your own flake's outputs.</p>
+<ul>
+<li>
+<p><code>packages.x86_64-linux.hello</code>(your flake's output path)
+<code>=</code> <code> nixpkgs.legacyPackages.x86_64-linux.hello</code>(the source from the <code>nixpkgs</code>
+flake's output)</p>
+</li>
+<li>
+<p>We're saying, My flakes <code>hello</code> package is exactly the same as the <code>hello</code>
+package found inside the <code>nixpkgs</code> input flake.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>The following command builds the reexported package:</p>
+<pre><code class="language-bash">nix build .#hello
+</code></pre>
+<p>or run it with:</p>
+<pre><code class="language-bash">nix run .#hello
 </code></pre>
 <p>You might notice <code>x86_64-linux</code> appearing in the package path, and there's a good
 reason for it. Flakes are designed to provide <em>hermetic evaluation</em>, meaning
