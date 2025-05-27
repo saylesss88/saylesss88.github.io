@@ -3098,8 +3098,9 @@ provide either some kind of software or dependencies of software.</p>
 <p>and so on...</p>
 </li>
 <li>
-<p>The <code>outputs</code> top-level attribute is actually a function that essentially
-returns a recipe for building the flake.</p>
+<p>The <code>outputs</code> top-level attribute is actually a function that takes an attribute
+set of inputs and returns an attribute set that is essentially a recipe for
+building the flake.</p>
 </li>
 </ul>
 <h2 id="output-schema"><a class="header" href="#output-schema">Output Schema</a></h2>
@@ -3108,7 +3109,7 @@ returns a recipe for building the flake.</p>
 (or the <code>lambda</code> syntax) that follows its definition. This function takes the
 resolved inputs (and <code>self</code>, the flake's directory in the store) as arguments,
 and its return value dictates the outputs of the flake, following this schema:</p>
-<pre><code class="language-nix">{ self, ... }@inputs:
+<pre><code class="language-nix">{ self, nixpkgs, ... }@inputs:
 {
   # Executed by `nix flake check`
   checks."&lt;system&gt;"."&lt;name&gt;" = derivation;
@@ -3154,6 +3155,31 @@ and its return value dictates the outputs of the flake, following this schema:</
   templates.default = { path = "&lt;store-path&gt;"; description = ""; };
 }
 </code></pre>
+<ul>
+<li>The first line <code>{ self, nixpkgs, ... }@ inputs:</code> defines the functions parameters:
+It's important to understand that within the scope of the <code>outputs</code> function
+<code>nixpkgs</code> is available at the top-level because we explicitly passed it as an
+argument but for individual modules outside of this flake the scope is lost
+and you need to use <code>inputs.nixpkgs</code> (or equivalent)</li>
+</ul>
+<ol>
+<li>
+<p>It explicitly names the <code>self</code> attribute, making it directly accessible.
+The variadic <code>...</code> ellipses part of the function signature is what allows
+all your flake inputs to be brought into the function's scope without having
+to list each one explicitly.</p>
+</li>
+<li>
+<p>It destructures all other attributes (your defined <code>inputs</code>) into the
+functions scope.</p>
+</li>
+<li>
+<p>It gives you a conveniente single variable, <code>inputs</code>, that refers to the
+entire attribute set passed to the <code>outputs</code> function. This allows you to
+access inputs either individually (e.g. <code>nixpkgs</code>) or through the <code>inputs</code>
+variable (e.g. <code>inputs.nixpkgs</code>).</p>
+</li>
+</ol>
 <p>You can also define additional arbitrary attributes, but these are the outputs
 that Nix knows about.</p>
 <p>As you can see, the majority of the outputs within the outputs schema expect a
@@ -3201,6 +3227,72 @@ path:/home/jr/players/third?lastModified=1748272555&amp;narHash=sha256-oNzkC6X9h
 <pre><code class="language-bash">nix eval .#bada
 "bing"
 </code></pre>
+<h2 id="outputs-understood-by-nix"><a class="header" href="#outputs-understood-by-nix">Outputs understood by Nix</a></h2>
+<p>While the attribute set that <code>outputs</code> returns may contain arbitrary attributes,
+meaning any valid Nix value. Some of the standard outputs are understood by
+various <code>nix</code> utilities. <code>packages</code> is one of these:</p>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs";
+  };
+
+  outputs = { self, nixpkgs }: {
+    packages.x86_64-linux.hello = /* something here */;
+  };
+}
+</code></pre>
+<p>You might notice <code>x86_64-linux</code> appearing in the package path, and there's a good
+reason for it. Flakes are designed to provide <em>hermetic evaluation</em>, meaning
+their outputs should be identical regardless of the environment where they're
+built. A key factor in any build system is the platform (which combines the
+architecture and operating system, like <code>x86_64-linux</code> or <code>aarch64-darwin</code>).</p>
+<p>Because of Nix's commitment to reproducibility across different systems, any
+flake output that involves building software packages must explicitly specify
+the platform. The standard approach is to structure these outputs as an
+attribute set where the names are platforms, and the values are the outputs
+specific to that platform. For the packages output, each platform-specific
+value is itself an attribute set containing the various packages built for
+that particular system.</p>
+<h2 id="simplifying-multi-platform-outputs-with-flake-utils"><a class="header" href="#simplifying-multi-platform-outputs-with-flake-utils">Simplifying Multi-Platform Outputs with flake-utils</a></h2>
+<p>Manually repeating these platform definitions for every output (<code>packages</code>,
+<code>devShells</code>, <code>checks</code>, etc.) can quickly become verbose. This is where the
+flake-utils helper flake comes in handy. It provides utilities to reduce
+boilerplate when defining outputs for multiple systems.</p>
+<p>A commonly used function is <code>flake-utils.lib.eachDefaultSystem</code>, which
+automatically generates outputs for common platforms (like <code>x86_64-linux</code>,
+<code>aarch64-linux</code>, <code>x86_64-darwin</code>, <code>aarch64-darwin</code>). This transforms your
+outputs definition from manually listing each system to a more concise structure:</p>
+<h1 id="example-using-flake-utils"><a class="header" href="#example-using-flake-utils">Example using flake-utils</a></h1>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils"; # Don't forget to add flake-utils to inputs!
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
+        pkgs = import nixpkgs {inherit system;};
+      in {
+        packages.hello = pkgs.hello; # Now directly defines 'hello' for the current 'system' # packages.default = self.packages.${system}.hello; # Optional default alias
+        devShells.default = pkgs.mkShell {
+          packages = [pkgs.hello];
+        };
+      }
+    );
+}
+</code></pre>
+<ul>
+<li>This flake-utils pattern is particularly useful for defining consistent
+development environments across platforms, which can then be activated simply
+by running <code>nix develop</code> in the flake's directory.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-flake-examples"><a class="header" href="#nix-flake-examples">Nix Flake Examples</a></h1>
 <p>This chapter provides practical examples to illustrate the concepts discussed in
 "Nix Flakes Explained."</p>
