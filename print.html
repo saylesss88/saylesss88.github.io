@@ -4143,6 +4143,7 @@ isolation of your software builds through this fundamental concept.</p>
 <li><a href="Intro_to_Nix_Derivations_7.html#creating-derivations-in-nix">Creating Derivations in Nix</a></li>
 <li><a href="Intro_to_Nix_Derivations_7.html#simple-rust-derivation">Simple Rust Derivation</a></li>
 <li><a href="Intro_to_Nix_Derivations_7.html#when-derivations-are-built">When Derivations are Built</a></li>
+<li><a href="Intro_to_Nix_Derivations_7.html#referring-to-other-derivations">Referring to other derivations</a></li>
 <li><a href="Intro_to_Nix_Derivations_7.html#produce-a-development-shell-from-a-derivation">Produce a development shell from a derivation</a></li>
 <li><a href="Intro_to_Nix_Derivations_7.html#our-second-derivation-understanding-the-builder">Our Second Derivation: Understanding the Builder</a>
 <ul>
@@ -4351,6 +4352,23 @@ in an isolated environment, and places the resulting products into their
 designated "out paths" in the Nix store.</p>
 </li>
 </ol>
+<h2 id="referring-to-other-derivations"><a class="header" href="#referring-to-other-derivations">Referring to other derivations</a></h2>
+<p>The way that we can refer to other packages/derivations is to use the <code>outPath</code>.</p>
+<p>The <code>outPath</code> describes the location of the files of that derivation. Nix can
+then convert the derivation set into a string:</p>
+<pre><code class="language-bash">nix repl
+nix-repl&gt; :l &lt;nixpkgs&gt;
+nix-repl&gt; fzf
+«derivation /nix/store/vw1zag9q4xvf10z24j1qybji7wfsz78v-fzf-0.62.0.drv»
+nix-repl&gt; fzf.outPath
+"/nix/store/z3ayhjslz72ldiwrv3mn5n7rs96p2g8a-fzf-0.62.0"
+nix-repl&gt; builtins.toString fzf
+"/nix/store/z3ayhjslz72ldiwrv3mn5n7rs96p2g8a-fzf-0.62.0"
+</code></pre>
+<ul>
+<li>As long as there is an <code>outPath</code> attribute, Nix will do the "set to string
+conversion".</li>
+</ul>
 <h2 id="produce-a-development-shell-from-a-derivation"><a class="header" href="#produce-a-development-shell-from-a-derivation">Produce a development shell from a derivation</a></h2>
 <p>Building on the concept of a derivation as a recipe, let's create our first
 practical derivation. This example shows how to define a temporary development
