@@ -168,6 +168,129 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="nix-flake-outputs"><a class="header" href="#nix-flake-outputs">Nix Flake Outputs</a></h1>
+<p>Flake outputs are what the flake produces when built. Flakes can have multiple
+outputs simultaneously such as:</p>
+<ul>
+<li>
+<p><strong>Packages</strong>: Self-contained bundles that are built using derivations and
+provide either some kind of software or dependencies of software.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS modules</a></p>
+</li>
+<li>
+<p>Nix development environments</p>
+</li>
+<li>
+<p><a href="https://github.com/NixOS/templates">Nix templates</a></p>
+</li>
+<li>
+<p>and so on...</p>
+</li>
+<li>
+<p>The <code>outputs</code> top-level attribute is actually a function that essentially
+returns a recipe for building the flake.</p>
+</li>
+</ul>
+<h2 id="output-schema"><a class="header" href="#output-schema">Output Schema</a></h2>
+<p>Once the inputs are resolved, they're passed to the <code>outputs</code> attribute. This
+<code>outputs</code> attribute is, in fact, a function, as indicated by the <code>:</code> colon
+(or the <code>lambda</code> syntax) that follows its definition. This function takes the
+resolved inputs (and <code>self</code>, the flake's directory in the store) as arguments,
+and its return value dictates the outputs of the flake, following this schema:</p>
+<pre><code class="language-nix">{ self, ... }@inputs:
+{
+  # Executed by `nix flake check`
+  checks."&lt;system&gt;"."&lt;name&gt;" = derivation;
+  # Executed by `nix build .#&lt;name&gt;`
+  packages."&lt;system&gt;"."&lt;name&gt;" = derivation;
+  # Executed by `nix build .`
+  packages."&lt;system&gt;".default = derivation;
+  # Executed by `nix run .#&lt;name&gt;`
+  apps."&lt;system&gt;"."&lt;name&gt;" = {
+    type = "app";
+    program = "&lt;store-path&gt;";
+  };
+  # Executed by `nix run . -- &lt;args?&gt;`
+  apps."&lt;system&gt;".default = { type = "app"; program = "..."; };
+
+  # Formatter (alejandra, nixfmt or nixpkgs-fmt)
+  formatter."&lt;system&gt;" = derivation;
+  # Used for nixpkgs packages, also accessible via `nix build .#&lt;name&gt;`
+  legacyPackages."&lt;system&gt;"."&lt;name&gt;" = derivation;
+  # Overlay, consumed by other flakes
+  overlays."&lt;name&gt;" = final: prev: { };
+  # Default overlay
+  overlays.default = final: prev: { };
+  # Nixos module, consumed by other flakes
+  nixosModules."&lt;name&gt;" = { config, ... }: { options = {}; config = {}; };
+  # Default module
+  nixosModules.default = { config, ... }: { options = {}; config = {}; };
+  # Used with `nixos-rebuild switch --flake .#&lt;hostname&gt;`
+  # nixosConfigurations."&lt;hostname&gt;".config.system.build.toplevel must be a derivation
+  nixosConfigurations."&lt;hostname&gt;" = {};
+  # Used by `nix develop .#&lt;name&gt;`
+  devShells."&lt;system&gt;"."&lt;name&gt;" = derivation;
+  # Used by `nix develop`
+  devShells."&lt;system&gt;".default = derivation;
+  # Hydra build jobs
+  hydraJobs."&lt;attr&gt;"."&lt;system&gt;" = derivation;
+  # Used by `nix flake init -t &lt;flake&gt;#&lt;name&gt;`
+  templates."&lt;name&gt;" = {
+    path = "&lt;store-path&gt;";
+    description = "template description goes here?";
+  };
+  # Used by `nix flake init -t &lt;flake&gt;`
+  templates.default = { path = "&lt;store-path&gt;"; description = ""; };
+}
+</code></pre>
+<p>You can also define additional arbitrary attributes, but these are the outputs
+that Nix knows about.</p>
+<p>As you can see, the majority of the outputs within the outputs schema expect a
+derivation. This means that for packages, applications, formatters, checks,
+and development shells, you'll be defining a Nix derivation—a set of
+instructions that tells Nix how to build a particular software component. This
+is central to Nix's declarative nature.</p>
+<ul>
+<li>The command <code>nix flake show</code>, takes a flake URI and prints all the outputs of
+the flake as a nice tree structure, mapping attribute paths to the types of values.</li>
+</ul>
+<pre><code class="language-bash">  ~/players/third  3s
+❯ nix flake show
+path:/home/jr/players/third?lastModified=1748272555&amp;narHash=sha256-oNzkC6X9hA0MpOBmJSZ89w4znXxv4Q5EkFhp0ewehY0%3D
+├───nixosConfigurations
+│   └───testing: NixOS configuration
+└───nixosModules
+    └───default: NixOS module
+</code></pre>
+<p>To show you the structure of this little flake project:</p>
+<pre><code class="language-bash">  ~/players
+❯ tree
+ .
+├──  first
+│   ├──  flake.lock
+│   ├──  flake.nix
+│   └──  result -&gt; /nix/store/701vyaanmqchd2nnaq71y65v8ws11zx0-nixos-system-nixos-24.11.20250523.f09dede
+├──  second
+│   ├──  flake.lock
+│   └──  flake.nix
+└──  third
+    ├──  flake.lock
+    ├──  flake.nix
+    └──  result -&gt; /nix/store/mlszr5ws3xaly8m4q9jslgs31w6w76y2-nixos-system-nixos-24.11.20250523.f09dede
+</code></pre>
+<h2 id="simple-example-providing-an-output"><a class="header" href="#simple-example-providing-an-output">Simple Example providing an output</a></h2>
+<pre><code class="language-nix"># flake.nix
+{
+  outputs = { self }: {
+    bada = "bing";
+  };
+}
+</code></pre>
+<p>You can then evaluate this specific output using <code>nix eval</code>:</p>
+<pre><code class="language-bash">nix eval .#bada
+"bing"
+</code></pre>
 
                     </main>
 
