@@ -173,7 +173,7 @@
 <ul>
 <li><a href="Getting_Started_with_Nix_1.html#chapter1">Chapter1</a>
 <ul>
-<li><a href="Getting_Started_with_Nix_1.html#getting-started-with-the-nix-ecosystem">Getting Started with the Nix Ecosystem</a></li>
+<li><a href="Getting_Started_with_Nix_1.html#intro">Intro</a></li>
 <li><a href="Getting_Started_with_Nix_1.html#nix-ecosystem">Nix Ecosystem</a></li>
 <li><a href="Getting_Started_with_Nix_1.html#why-learn-nix">Why Learn Nix?</a></li>
 <li><a href="Getting_Started_with_Nix_1.html#how-it-fits-together">How it Fits Together</a></li>
@@ -183,11 +183,13 @@
 <!--toc:end-->
 </li>
 </ul>
-<h2 id="getting-started-with-the-nix-ecosystem"><a class="header" href="#getting-started-with-the-nix-ecosystem">Getting Started with the Nix Ecosystem</a></h2>
+<h2 id="intro"><a class="header" href="#intro">Intro</a></h2>
 <p><img src="images/gruv13.png" alt="gruv13" /></p>
-<p>Welcome to the world of Nix, a powerful tool for reproducible and declarative
-software management. In this chapter, I will explain how the pieces of the Nix
-Ecosystem fit together.</p>
+<p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
+towards using Flakes but will contrast traditional Nix where beneficial. This
+started as a blog so I am working on the flow please bear with me.</p>
+<p>In this chapter, I will touch on the different parts of the Nix ecosystem, give
+a quick example of each and explain how they fit together.</p>
 <details>
 <summary>
 - ✔️: Will indicate an expandable section, click the little triangle to expand.
@@ -210,13 +212,16 @@ code block next to the copy clipboard.</p>
 </span>}
 </code></pre>
 </li>
+</ul>
+<h2 id="nix-ecosystem"><a class="header" href="#nix-ecosystem">Nix Ecosystem</a></h2>
+<ul>
 <li>
-<p><a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a>(Click Here
-for the Nix Lang Overview Chapter 1.1).</p>
+<p><a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a>(Chapter 1.1).</p>
 </li>
 <li>
-<p><strong>Nix</strong>: is a package manager and a build system that allows you to write
-declarative scripts for reproducible software builds in the <strong>Nix Language</strong>.</p>
+<p><a href="https://saylesss88.github.io/nix/nix_package_manager.html">The Nix Package Manager</a>(Chapter 1.2)
+is a package manager and build system that allows you to write declarative
+scripts for reproducible software builds in the <strong>Nix Language</strong>.</p>
 </li>
 <li>
 <p><strong>NixOS</strong> is the natural consequence of using Nix to build Linux
@@ -226,10 +231,11 @@ you want. Each of those snippets is called a module. -- xeiaso</p>
 </li>
 </ul>
 <p>The following bulletpoints can help you get started, they are vast resources
-that take a while to fully absorb. The documentation isn't necessarily bad it's
-just spread out because from my understanding Nix isn't "allowed" to mention
-Flakes in it's manual so you have to look elsewhere.</p>
-<h2 id="nix-ecosystem"><a class="header" href="#nix-ecosystem">Nix Ecosystem</a></h2>
+that take a while to fully absorb. Historically, some core Nix documentation
+has focused on the stable non-flake parts of the ecosystem, leading to
+information about flakes being found primarily in community resources or more
+recent guides. This book aims to bridge the gap by incorporating flake-centric
+examples where appropriate while contrasting traditional nix when reasonable.</p>
 <ul>
 <li>
 <p><a href="https://wiki.nixos.org/wiki/Nix_ecosystem">Nix Core Ecosystem</a>, Nix, NixOS,
@@ -314,15 +320,94 @@ or something in your <code>$PATH</code> isn't affecting your build.</p>
 1 + 2
 </code></pre>
 <ul>
+<li><strong>Package Definitions</strong>: Specialized expressions that tell Nix how to build
+software.</li>
+</ul>
+<p>Example of a package definition:</p>
+<pre><code class="language-nix"># hello.nix
+{pkgs ? import &lt;nixpkgs&gt; {}}:
+pkgs.stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = pkgs.fetchurl {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd";
+  };
+
+  nativeBuildInputs = [pkgs.autoconf pkgs.automake pkgs.gcc];
+
+  configurePhase = ''
+    ./configure --prefix=$out
+  '';
+
+  buildPhase = ''
+    make
+  '';
+
+  installPhase = ''
+    make install
+  '';
+}
+</code></pre>
+<ol>
+<li><strong>Evaluation Phase</strong>:</li>
+</ol>
+<p>Now when you run something like:</p>
+<pre><code class="language-bash">nix-instantiate hello.nix
+warning: you did not specify '--add-root'; the result might be removed by the garbage collector
+/nix/store/p2hbg16a9kpqgx2nzcsq39wmnyxyq4jy-hello-2.12.1.drv
+</code></pre>
+<ul>
+<li>Nix evaluates the expression and produces a <code>.drv</code> file (the <strong>derivation</strong>),
+a precise JSON-like blueprint describing how the package will be built. It
+does not contain the built software itself.</li>
+</ul>
+<ol start="2">
+<li><strong>Realization Phase</strong>:</li>
+</ol>
+<p>When you run:</p>
+<pre><code class="language-bash">nix-build hello.nix
+#...snip...
+shrinking RPATHs of ELF executables and libraries in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+shrinking /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin/hello
+checking for references to /build/ in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1...
+gzipping man pages under /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/share/man/
+patching script interpreter paths in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+stripping (with command strip and flags -S -p) in  /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin
+/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+</code></pre>
+<ul>
 <li>
-<p><strong>Package Definitions</strong>: Specialized expressions that tell Nix how to build
-software.</p>
+<p>Nix realizes the derivation by actually executing the build steps, fetching
+sources, compiling (if needed), and producing the final result (typically stored
+in e.g. <code>/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1</code>)</p>
 </li>
 <li>
-<p><strong>Derivations</strong>: The result of evaluating a package definition is a
-derivation. Derivations are immutable, precise blueprints that Nix uses to
-perform a build. These unique derivations (and their outputs) reside in the
-nix store.</p>
+<p><code>nix-build</code> also creates a symlink named <code>result</code> in your current directory,
+pointing to the final build output in the Nix store.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Execute the program:</li>
+</ol>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
+<ul>
+<li>
+<p><code>result/bin/hello</code> points to the executable inside the output of the
+derivation.</p>
+</li>
+<li>
+<p>To say that another way, the derivation is not the executable. The executable
+is one of the derivations outputs. When Nix "realizes" a derivation, it executes
+those build instructions, and the result is the actual built software, which
+gets placed into its own unique path in the Nix store.</p>
+</li>
+<li>
+<p>A single derivation can produce multiple outputs. The executable is typically
+part of the <code>out</code> output, specifically in its <code>bin</code> directory.</p>
 </li>
 <li>
 <p>The <strong>Nix Package Manager</strong>: is the engine that takes these Nix expressions
@@ -413,7 +498,7 @@ functions, and dependencies. These expressions are evaluated lazily, meaning Nix
 computes values only when needed, making it efficient for managing large
 systems.</p>
 <p>You can plug most of the following into the <code>nix repl</code> I'm showing it in a single
-code block here for berevity:</p>
+code block here for brevity:</p>
 <pre><code class="language-nix"># Comments Look Like This!
 
 # Strings
@@ -3871,6 +3956,339 @@ and the base system options) and the settings from second (like <code>/etc/secon
 all without directly altering the first or second flakes. This demonstrates the
 incredible power of flake extensibility for building complex, modular, and
 composable systems.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="hack-the-helix-flake"><a class="header" href="#hack-the-helix-flake">Hack the Helix Flake</a></h1>
+<ul>
+<li>A cool feature of flakes is being able to make changes to source code with
+minimal effort.</li>
+</ul>
+<ol>
+<li>Let's clone the Helix repository:</li>
+</ol>
+<pre><code class="language-bash">git clone https://github.com/helix-editor/helix.git
+cd helix
+</code></pre>
+<ol start="2">
+<li>Enter the Development Shell:</li>
+</ol>
+<p>The Helix project's <code>flake.nix</code> includes a <code>devShells.default</code> output, specifically
+designed for development.</p>
+<pre><code class="language-bash">nix develop
+</code></pre>
+<ol start="3">
+<li>You're now in a fully configured development environment:</li>
+</ol>
+<ul>
+<li>When you run <code>nix develop</code>, Nix builds and drops you into a shell environment
+with all the dependencies specified in <code>devShells.default</code>. This means you
+don’t have to manually install or manage tools like Rust, Cargo, or Clang—it’s
+all handled declaratively through Nix.</li>
+</ul>
+<p>You can now build and run the project using its standard tooling:</p>
+<pre><code class="language-bash">cargo build
+cargo run
+</code></pre>
+<ol start="4">
+<li>Making Changes and Testing Them</li>
+</ol>
+<p>Since you're in a reproducible environment, you can confidently hack on the
+project without worrying about your system setup. Try modifying some code in
+<code>helix</code> and rebuilding with Cargo. The Nix shell ensures consistency for every
+contributor or device you work on.</p>
+<ol start="5">
+<li>Run Just the Binary</li>
+</ol>
+<p>If you only want to run the compiled program without entering the shell, use
+the nix run command:</p>
+<pre><code class="language-bash">nix run
+</code></pre>
+<p>This builds and runs the default package defined by the flake. In the case of
+Helix, this launches the <code>hx</code> editor directly.</p>
+<ol start="6">
+<li>Build Without Running</li>
+</ol>
+<p>To just build the project and get the path to the output binary:</p>
+<pre><code class="language-bash">nix build
+</code></pre>
+<p>You’ll find the compiled binary under <code>./result/bin</code>.</p>
+<ol start="7">
+<li>Pinning and Reproducing</li>
+</ol>
+<p>Because the project uses a flake, you can ensure full reproducibility by
+pinning the inputs. For example, you can clone with --recurse-submodules
+and copy the flake.lock to ensure you're using the same dependency versions
+as upstream. This is great for debugging or sharing exact builds.</p>
+<p>✅ Recap:</p>
+<p>With flakes, projects like Helix provide everything you need for development
+and running in a single flake.nix. You can nix develop to get started hacking,
+nix run to quickly try it out, and nix build to produce binaries—all without
+installing or polluting your system.</p>
+<h2 id="understanding-the-helix-flakenix"><a class="header" href="#understanding-the-helix-flakenix">Understanding the Helix flake.nix</a></h2>
+<p>The helix flake is full of idiomatic Nix code and displays some of the more
+advanced things a flake can provide:</p>
+<pre><code class="language-nix">{
+  description = "A post-modern text editor.";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    rust-overlay,
+    ...
+  }: let
+    inherit (nixpkgs) lib;
+    systems = [
+      "x86_64-linux"
+      "aarch64-linux"
+      "x86_64-darwin"
+      "aarch64-darwin"
+    ];
+    eachSystem = lib.genAttrs systems;
+    pkgsFor = eachSystem (system:
+      import nixpkgs {
+        localSystem.system = system;
+        overlays = [(import rust-overlay) self.overlays.helix];
+      });
+    gitRev = self.rev or self.dirtyRev or null;
+  in {
+    packages = eachSystem (system: {
+      inherit (pkgsFor.${system}) helix;
+      /*
+      The default Helix build. Uses the latest stable Rust toolchain, and unstable
+      nixpkgs.
+
+      The build inputs can be overridden with the following:
+
+      packages.${system}.default.override { rustPlatform = newPlatform; };
+
+      Overriding a derivation attribute can be done as well:
+
+      packages.${system}.default.overrideAttrs { buildType = "debug"; };
+      */
+      default = self.packages.${system}.helix;
+    });
+    checks =
+      lib.mapAttrs (system: pkgs: let
+        # Get Helix's MSRV toolchain to build with by default.
+        msrvToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+        msrvPlatform = pkgs.makeRustPlatform {
+          cargo = msrvToolchain;
+          rustc = msrvToolchain;
+        };
+      in {
+        helix = self.packages.${system}.helix.override {
+          rustPlatform = msrvPlatform;
+        };
+      })
+      pkgsFor;
+
+    # Devshell behavior is preserved.
+    devShells =
+      lib.mapAttrs (system: pkgs: {
+        default = let
+          commonRustFlagsEnv = "-C link-arg=-fuse-ld=lld -C target-cpu=native --cfg tokio_unstable";
+          platformRustFlagsEnv = lib.optionalString pkgs.stdenv.isLinux "-Clink-arg=-Wl,--no-rosegment";
+        in
+          pkgs.mkShell {
+            inputsFrom = [self.checks.${system}.helix];
+            nativeBuildInputs = with pkgs;
+              [
+                lld
+                cargo-flamegraph
+                rust-bin.nightly.latest.rust-analyzer
+              ]
+              ++ (lib.optional (stdenv.isx86_64 &amp;&amp; stdenv.isLinux) cargo-tarpaulin)
+              ++ (lib.optional stdenv.isLinux lldb)
+              ++ (lib.optional stdenv.isDarwin darwin.apple_sdk.frameworks.CoreFoundation);
+            shellHook = ''
+              export RUST_BACKTRACE="1"
+              export RUSTFLAGS="''${RUSTFLAGS:-""} ${commonRustFlagsEnv} ${platformRustFlagsEnv}"
+            '';
+          };
+      })
+      pkgsFor;
+
+    overlays = {
+      helix = final: prev: {
+        helix = final.callPackage ./default.nix {inherit gitRev;};
+      };
+
+      default = self.overlays.helix;
+    };
+  };
+  nixConfig = {
+    extra-substituters = ["https://helix.cachix.org"];
+    extra-trusted-public-keys = ["helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="];
+  };
+}
+</code></pre>
+<h2 id="top-level-metadata"><a class="header" href="#top-level-metadata">Top-Level Metadata</a></h2>
+<pre><code class="language-nix">{
+  description = "A post-modern text editor.";
+}
+</code></pre>
+<ul>
+<li>This sets a human-readable description for the flake.</li>
+</ul>
+<h2 id="inputs"><a class="header" href="#inputs">Inputs</a></h2>
+<pre><code class="language-nix">inputs = {
+  nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  rust-overlay = {
+    url = "github:oxalica/rust-overlay";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+};
+</code></pre>
+<ul>
+<li>
+<p><code>nixpkgs</code>: Uses the <code>nixos-unstable</code> branch of the Nixpkgs repository.</p>
+</li>
+<li>
+<p><code>rust-overlay</code>: follows the same <code>nixpkgs</code>, ensuring compatibility between
+inputs.</p>
+</li>
+</ul>
+<h2 id="outputs-function"><a class="header" href="#outputs-function">Outputs Function</a></h2>
+<pre><code class="language-nix">outputs = { self, nixpkgs, rust-overlay, ... }:
+</code></pre>
+<ul>
+<li>This defines what this flake exports, including <code>packages</code>, <code>devShells</code>, etc.</li>
+</ul>
+<h2 id="common-setup"><a class="header" href="#common-setup">Common Setup</a></h2>
+<pre><code class="language-nix">let
+  inherit (nixpkgs) lib;
+  systems = [ ... ];
+  eachSystem = lib.genAttrs systems;
+</code></pre>
+<ul>
+<li>
+<p><code>systems</code>: A list of the supported systems</p>
+</li>
+<li>
+<p><code>eachSystem</code>: A Helper to map over all platforms.</p>
+</li>
+</ul>
+<pre><code class="language-nix">  pkgsFor = eachSystem (system:
+    import nixpkgs {
+      localSystem.system = system;
+      overlays = [(import rust-overlay) self.overlays.helix];
+    });
+</code></pre>
+<ul>
+<li>This imports <code>nixpkgs</code> for each system and applies overlays</li>
+</ul>
+<p>📦 <code>packages</code></p>
+<pre><code class="language-nix">packages = eachSystem (system: {
+  inherit (pkgsFor.${system}) helix;
+  default = self.packages.${system}.helix;
+});
+</code></pre>
+<ul>
+<li>
+<p>For each platform:</p>
+<ul>
+<li>
+<p>Includes a <code>helix</code> package (defined in <code>./default.nix</code>)</p>
+</li>
+<li>
+<p>Sets <code>default</code> to <code>helix</code> (used by <code>nix build</code>, <code>nix run</code>)</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Let's look at the helix <code>default.nix</code>:</p>
+<pre><code class="language-nix">{
+  lib,
+  rustPlatform,
+  callPackage,
+  runCommand,
+  installShellFiles,
+  git,
+  gitRev ? null,
+  grammarOverlays ? [],
+  includeGrammarIf ? _: true,
+}: let
+  fs = lib.fileset;
+
+  src = fs.difference (fs.gitTracked ./.) (fs.unions [
+    ./.envrc
+    ./rustfmt.toml
+    ./screenshot.png
+    ./book
+    ./docs
+    ./runtime
+    ./flake.lock
+    (fs.fileFilter (file: lib.strings.hasInfix ".git" file.name) ./.)
+    (fs.fileFilter (file: file.hasExt "svg") ./.)
+    (fs.fileFilter (file: file.hasExt "md") ./.)
+    (fs.fileFilter (file: file.hasExt "nix") ./.)
+  ]);
+
+  # Next we actually need to build the grammars and the runtime directory
+  # that they reside in. It is built by calling the derivation in the
+  # grammars.nix file, then taking the runtime directory in the git repo
+  # and hooking symlinks up to it.
+  grammars = callPackage ./grammars.nix {inherit grammarOverlays includeGrammarIf;};
+  runtimeDir = runCommand "helix-runtime" {} ''
+    mkdir -p $out
+    ln -s ${./runtime}/* $out
+    rm -r $out/grammars
+    ln -s ${grammars} $out/grammars
+  '';
+in
+  rustPlatform.buildRustPackage (self: {
+    cargoLock = {
+      lockFile = ./Cargo.lock;
+      # This is not allowed in nixpkgs but is very convenient here: it allows us to
+      # avoid specifying `outputHashes` here for any git dependencies we might take
+      # on temporarily.
+      allowBuiltinFetchGit = true;
+    };
+
+    nativeBuildInputs = [
+      installShellFiles
+      git
+    ];
+
+    buildType = "release";
+
+    name = with builtins; (fromTOML (readFile ./helix-term/Cargo.toml)).package.name;
+    src = fs.toSource {
+      root = ./.;
+      fileset = src;
+    };
+
+    # Helix attempts to reach out to the network and get the grammars. Nix doesn't allow this.
+    HELIX_DISABLE_AUTO_GRAMMAR_BUILD = "1";
+
+    # So Helix knows what rev it is.
+    HELIX_NIX_BUILD_REV = gitRev;
+
+    doCheck = false;
+    strictDeps = true;
+
+    # Sets the Helix runtime dir to the grammars
+    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+
+    # Get all the application stuff in the output directory.
+    postInstall = ''
+      mkdir -p $out/lib
+      installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
+      mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
+      cp ${./contrib/Helix.desktop} $out/share/applications/Helix.desktop
+      cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/helix.svg
+      cp ${./contrib/helix.png} $out/share/icons/hicolor/256x256/apps/helix.png
+    '';
+
+    meta.mainProgram = "hx";
+  })
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-5"><a class="header" href="#chapter-5">Chapter 5</a></h1>
 <!--toc:start-->
 <ul>

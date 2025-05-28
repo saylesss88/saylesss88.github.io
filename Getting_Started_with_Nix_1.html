@@ -172,7 +172,7 @@
 <ul>
 <li><a href="#chapter1">Chapter1</a>
 <ul>
-<li><a href="#getting-started-with-the-nix-ecosystem">Getting Started with the Nix Ecosystem</a></li>
+<li><a href="#intro">Intro</a></li>
 <li><a href="#nix-ecosystem">Nix Ecosystem</a></li>
 <li><a href="#why-learn-nix">Why Learn Nix?</a></li>
 <li><a href="#how-it-fits-together">How it Fits Together</a></li>
@@ -182,11 +182,13 @@
 <!--toc:end-->
 </li>
 </ul>
-<h2 id="getting-started-with-the-nix-ecosystem"><a class="header" href="#getting-started-with-the-nix-ecosystem">Getting Started with the Nix Ecosystem</a></h2>
+<h2 id="intro"><a class="header" href="#intro">Intro</a></h2>
 <p><img src="images/gruv13.png" alt="gruv13" /></p>
-<p>Welcome to the world of Nix, a powerful tool for reproducible and declarative
-software management. In this chapter, I will explain how the pieces of the Nix
-Ecosystem fit together.</p>
+<p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
+towards using Flakes but will contrast traditional Nix where beneficial. This
+started as a blog so I am working on the flow please bear with me.</p>
+<p>In this chapter, I will touch on the different parts of the Nix ecosystem, give
+a quick example of each and explain how they fit together.</p>
 <details>
 <summary>
 - ✔️: Will indicate an expandable section, click the little triangle to expand.
@@ -209,13 +211,16 @@ code block next to the copy clipboard.</p>
 </span>}
 </code></pre>
 </li>
+</ul>
+<h2 id="nix-ecosystem"><a class="header" href="#nix-ecosystem">Nix Ecosystem</a></h2>
+<ul>
 <li>
-<p><a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a>(Click Here
-for the Nix Lang Overview Chapter 1.1).</p>
+<p><a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a>(Chapter 1.1).</p>
 </li>
 <li>
-<p><strong>Nix</strong>: is a package manager and a build system that allows you to write
-declarative scripts for reproducible software builds in the <strong>Nix Language</strong>.</p>
+<p><a href="https://saylesss88.github.io/nix/nix_package_manager.html">The Nix Package Manager</a>(Chapter 1.2)
+is a package manager and build system that allows you to write declarative
+scripts for reproducible software builds in the <strong>Nix Language</strong>.</p>
 </li>
 <li>
 <p><strong>NixOS</strong> is the natural consequence of using Nix to build Linux
@@ -225,10 +230,11 @@ you want. Each of those snippets is called a module. -- xeiaso</p>
 </li>
 </ul>
 <p>The following bulletpoints can help you get started, they are vast resources
-that take a while to fully absorb. The documentation isn't necessarily bad it's
-just spread out because from my understanding Nix isn't "allowed" to mention
-Flakes in it's manual so you have to look elsewhere.</p>
-<h2 id="nix-ecosystem"><a class="header" href="#nix-ecosystem">Nix Ecosystem</a></h2>
+that take a while to fully absorb. Historically, some core Nix documentation
+has focused on the stable non-flake parts of the ecosystem, leading to
+information about flakes being found primarily in community resources or more
+recent guides. This book aims to bridge the gap by incorporating flake-centric
+examples where appropriate while contrasting traditional nix when reasonable.</p>
 <ul>
 <li>
 <p><a href="https://wiki.nixos.org/wiki/Nix_ecosystem">Nix Core Ecosystem</a>, Nix, NixOS,
@@ -313,15 +319,94 @@ or something in your <code>$PATH</code> isn't affecting your build.</p>
 1 + 2
 </code></pre>
 <ul>
+<li><strong>Package Definitions</strong>: Specialized expressions that tell Nix how to build
+software.</li>
+</ul>
+<p>Example of a package definition:</p>
+<pre><code class="language-nix"># hello.nix
+{pkgs ? import &lt;nixpkgs&gt; {}}:
+pkgs.stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = pkgs.fetchurl {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd";
+  };
+
+  nativeBuildInputs = [pkgs.autoconf pkgs.automake pkgs.gcc];
+
+  configurePhase = ''
+    ./configure --prefix=$out
+  '';
+
+  buildPhase = ''
+    make
+  '';
+
+  installPhase = ''
+    make install
+  '';
+}
+</code></pre>
+<ol>
+<li><strong>Evaluation Phase</strong>:</li>
+</ol>
+<p>Now when you run something like:</p>
+<pre><code class="language-bash">nix-instantiate hello.nix
+warning: you did not specify '--add-root'; the result might be removed by the garbage collector
+/nix/store/p2hbg16a9kpqgx2nzcsq39wmnyxyq4jy-hello-2.12.1.drv
+</code></pre>
+<ul>
+<li>Nix evaluates the expression and produces a <code>.drv</code> file (the <strong>derivation</strong>),
+a precise JSON-like blueprint describing how the package will be built. It
+does not contain the built software itself.</li>
+</ul>
+<ol start="2">
+<li><strong>Realization Phase</strong>:</li>
+</ol>
+<p>When you run:</p>
+<pre><code class="language-bash">nix-build hello.nix
+#...snip...
+shrinking RPATHs of ELF executables and libraries in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+shrinking /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin/hello
+checking for references to /build/ in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1...
+gzipping man pages under /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/share/man/
+patching script interpreter paths in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+stripping (with command strip and flags -S -p) in  /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin
+/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+</code></pre>
+<ul>
 <li>
-<p><strong>Package Definitions</strong>: Specialized expressions that tell Nix how to build
-software.</p>
+<p>Nix realizes the derivation by actually executing the build steps, fetching
+sources, compiling (if needed), and producing the final result (typically stored
+in e.g. <code>/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1</code>)</p>
 </li>
 <li>
-<p><strong>Derivations</strong>: The result of evaluating a package definition is a
-derivation. Derivations are immutable, precise blueprints that Nix uses to
-perform a build. These unique derivations (and their outputs) reside in the
-nix store.</p>
+<p><code>nix-build</code> also creates a symlink named <code>result</code> in your current directory,
+pointing to the final build output in the Nix store.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Execute the program:</li>
+</ol>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
+<ul>
+<li>
+<p><code>result/bin/hello</code> points to the executable inside the output of the
+derivation.</p>
+</li>
+<li>
+<p>To say that another way, the derivation is not the executable. The executable
+is one of the derivations outputs. When Nix "realizes" a derivation, it executes
+those build instructions, and the result is the actual built software, which
+gets placed into its own unique path in the Nix store.</p>
+</li>
+<li>
+<p>A single derivation can produce multiple outputs. The executable is typically
+part of the <code>out</code> output, specifically in its <code>bin</code> directory.</p>
 </li>
 <li>
 <p>The <strong>Nix Package Manager</strong>: is the engine that takes these Nix expressions
