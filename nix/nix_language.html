@@ -173,14 +173,15 @@
 <li><a href="#nix-language">Nix Language</a>
 <ul>
 <li><a href="#nix-lang-syntax-overview">Nix Lang Syntax Overview</a></li>
+<li><a href="#understanding-laziness">Understanding Laziness</a></li>
 <li><a href="#strings-and-string-interpolation">Strings and String Interpolation</a></li>
 <li><a href="#attribute-sets">Attribute Sets</a></li>
 <li><a href="#functionslambdas">Functions(lambdas):</a></li>
 <li><a href="#if-let-and-with-expressions">If, Let, and With Expressions</a></li>
 </ul>
+<!--toc:end-->
 </li>
 </ul>
-<!--toc:end-->
 <p><img src="../images/lambda1.png" alt="lambda1" /></p>
 <h2 id="nix-lang-syntax-overview"><a class="header" href="#nix-lang-syntax-overview">Nix Lang Syntax Overview</a></h2>
 <p>Nix is often described as “JSON with functions.” It’s a declarative language
@@ -282,6 +283,20 @@ builtins.head[ 5 6 7 ]
 inherit pkgs     # pkgs = pkgs;
 src;             # src = src;
 </code></pre>
+<h2 id="understanding-laziness"><a class="header" href="#understanding-laziness">Understanding Laziness</a></h2>
+<p>Nix expressions are evaluated lazily, meaning Nix computes values only when
+needed. This is a powerful feature that makes Nix efficient for managing large
+systems, as it avoids unnecessary computations.</p>
+<p>For example, observe how <code>a</code> is never evaluated in the following <code>nix-repl</code>
+session:</p>
+<pre><code class="language-nix">nix-repl&gt; let a = builtins.div 4 0; b = 6; in b
+6
+</code></pre>
+<ul>
+<li>Since <code>a</code> isn't used in the final result, there's no division by zero error.
+Values are only evaluated as needed by nix allowing us to bring all of the
+attributes within <code>nixpkgs</code> into scope without performance loss.</li>
+</ul>
 <h2 id="strings-and-string-interpolation"><a class="header" href="#strings-and-string-interpolation">Strings and String Interpolation</a></h2>
 <ul>
 <li><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
@@ -466,9 +481,36 @@ needed to separate parameters.</li>
 attributes <code>a</code> and <code>b</code> and concatenates (adds) them:</p>
 <pre><code class="language-nix">{ a, b }: a + b
 </code></pre>
+<p><strong>Default Values in Functions</strong>:</p>
+<p>Functions in Nix can define <strong>default values</strong> for their arguments. This allows
+for more flexible function calls where some arguments are optional.</p>
+<pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
+</code></pre>
 <ul>
-<li>We will expand on this in the <a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Next Chapter</a>
-Let's move on to some control flow constructs.</li>
+<li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
+accepts <code>y</code> and <code>z</code>.</li>
+</ul>
+<p><strong>@-patterns in functions</strong>:</p>
+<ul>
+<li>An <code>@-pattern</code> provides a means of referring to the whole value being matched
+by the function's argument pattern, in addition to destructuring it. This is
+especially useful when you want to access attributes that are not explicitly
+destructured in the pattern:</li>
+</ul>
+<pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
+# or
+{ x, y, z, ... } @ args: z + y + x + args.a
+</code></pre>
+<ul>
+<li>
+<p>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
+against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense
+with an ellipsis(<code>...</code>) as you can access attribute names as <code>a</code>, using
+<code>args.a</code>, which was given as an additional attribute to the function.</p>
+</li>
+<li>
+<p>We will expand on Functions in <a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">This Chapter</a></p>
+</li>
 </ul>
 <h2 id="if-let-and-with-expressions"><a class="header" href="#if-let-and-with-expressions">If, Let, and With Expressions</a></h2>
 <p><strong>If expressions</strong>:</p>

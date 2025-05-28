@@ -395,14 +395,15 @@ sophisticated Nix expressions and derivations.</p>
 <li><a href="nix/nix_language.html#nix-language">Nix Language</a>
 <ul>
 <li><a href="nix/nix_language.html#nix-lang-syntax-overview">Nix Lang Syntax Overview</a></li>
+<li><a href="nix/nix_language.html#understanding-laziness">Understanding Laziness</a></li>
 <li><a href="nix/nix_language.html#strings-and-string-interpolation">Strings and String Interpolation</a></li>
 <li><a href="nix/nix_language.html#attribute-sets">Attribute Sets</a></li>
 <li><a href="nix/nix_language.html#functionslambdas">Functions(lambdas):</a></li>
 <li><a href="nix/nix_language.html#if-let-and-with-expressions">If, Let, and With Expressions</a></li>
 </ul>
+<!--toc:end-->
 </li>
 </ul>
-<!--toc:end-->
 <p><img src="nix/../images/lambda1.png" alt="lambda1" /></p>
 <h2 id="nix-lang-syntax-overview"><a class="header" href="#nix-lang-syntax-overview">Nix Lang Syntax Overview</a></h2>
 <p>Nix is often described as “JSON with functions.” It’s a declarative language
@@ -504,6 +505,20 @@ builtins.head[ 5 6 7 ]
 inherit pkgs     # pkgs = pkgs;
 src;             # src = src;
 </code></pre>
+<h2 id="understanding-laziness"><a class="header" href="#understanding-laziness">Understanding Laziness</a></h2>
+<p>Nix expressions are evaluated lazily, meaning Nix computes values only when
+needed. This is a powerful feature that makes Nix efficient for managing large
+systems, as it avoids unnecessary computations.</p>
+<p>For example, observe how <code>a</code> is never evaluated in the following <code>nix-repl</code>
+session:</p>
+<pre><code class="language-nix">nix-repl&gt; let a = builtins.div 4 0; b = 6; in b
+6
+</code></pre>
+<ul>
+<li>Since <code>a</code> isn't used in the final result, there's no division by zero error.
+Values are only evaluated as needed by nix allowing us to bring all of the
+attributes within <code>nixpkgs</code> into scope without performance loss.</li>
+</ul>
 <h2 id="strings-and-string-interpolation"><a class="header" href="#strings-and-string-interpolation">Strings and String Interpolation</a></h2>
 <ul>
 <li><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
@@ -688,9 +703,36 @@ needed to separate parameters.</li>
 attributes <code>a</code> and <code>b</code> and concatenates (adds) them:</p>
 <pre><code class="language-nix">{ a, b }: a + b
 </code></pre>
+<p><strong>Default Values in Functions</strong>:</p>
+<p>Functions in Nix can define <strong>default values</strong> for their arguments. This allows
+for more flexible function calls where some arguments are optional.</p>
+<pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
+</code></pre>
 <ul>
-<li>We will expand on this in the <a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Next Chapter</a>
-Let's move on to some control flow constructs.</li>
+<li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
+accepts <code>y</code> and <code>z</code>.</li>
+</ul>
+<p><strong>@-patterns in functions</strong>:</p>
+<ul>
+<li>An <code>@-pattern</code> provides a means of referring to the whole value being matched
+by the function's argument pattern, in addition to destructuring it. This is
+especially useful when you want to access attributes that are not explicitly
+destructured in the pattern:</li>
+</ul>
+<pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
+# or
+{ x, y, z, ... } @ args: z + y + x + args.a
+</code></pre>
+<ul>
+<li>
+<p>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
+against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense
+with an ellipsis(<code>...</code>) as you can access attribute names as <code>a</code>, using
+<code>args.a</code>, which was given as an additional attribute to the function.</p>
+</li>
+<li>
+<p>We will expand on Functions in <a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">This Chapter</a></p>
+</li>
 </ul>
 <h2 id="if-let-and-with-expressions"><a class="header" href="#if-let-and-with-expressions">If, Let, and With Expressions</a></h2>
 <p><strong>If expressions</strong>:</p>
@@ -741,7 +783,58 @@ realise a Nix package.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-package-manager"><a class="header" href="#nix-package-manager">Nix Package Manager</a></h1>
 <h2 id="derivations"><a class="header" href="#derivations">Derivations</a></h2>
 <p><img src="nix/../images/nix99.png" alt="nix99" /></p>
-<p>Derivation Overview</p>
+<p>Nix is a <em>purely functional package manager</em>. This means that it treats packages
+like values in purely functional programming languages -- they are built by
+functions that don't have side-effects, and they never change after they have
+been built.</p>
+<ul>
+<li>Nix stores packages in the <em>Nix store</em>, usually the directory <code>/nix/store</code>,
+where each package has its own unique subdirectory such as:</li>
+</ul>
+<pre><code class="language-bash">/nix/store/y53c0lamag5wpx7vsiv7wmnjdgq97yd6-yazi-25.5.14pre20250526_74a8ea9
+</code></pre>
+<ul>
+<li>
+<p>You can use the Nix on most Linux distributions and Mac OS has good support
+for Nix as well. It should work on most platforms that support POSIX threads
+and have a C++11 compiler.</p>
+</li>
+<li>
+<p>When I install Nix on a distro like Arch Linux I usually use the Zero to Nix
+installer as it automates several steps, such as enabling flakes by default:</p>
+</li>
+</ul>
+<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+</code></pre>
+<p>If you have concerns about the "curl to Bash" approach you could examine the
+installation script <a href="https://raw.githubusercontent.com/DeterminateSystems/nix-installer/main/nix-installer.sh">here</a>
+then download and run it:</p>
+<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix &gt; nix-installer.sh
+chmod +x nix-installer.sh
+./nix-installer.sh install
+</code></pre>
+<ul>
+<li>
+<p>I got the above commands from <a href="https://zero-to-nix.com/start/install/">zero-to-nix</a></p>
+</li>
+<li>
+<p>The main difference between using the nix package manager on another distribution
+and NixOS is that NixOS uses Nix not just for package management but also to
+manage the system configuration (e.g., to build config files in <code>/etc</code>).</p>
+</li>
+<li>
+<p><a href="https://nix-community.github.io/home-manager/">Home Manager</a> is a Nix-powered
+tool for reproducible management of the contents of the users' home directories.
+This includes programs, configuration files, environment variables, and arbitrary
+files. Home manager uses the same module system as NixOS.</p>
+</li>
+<li>
+<p>Now that we've discussed some of the basics of the Nix package manager, lets
+see how it is used to build and manage software in NixOS.</p>
+</li>
+</ul>
+<h2 id="managing-software-with-nix"><a class="header" href="#managing-software-with-nix">Managing software with Nix</a></h2>
+<p><strong>Derivation Overview</strong></p>
 <ul>
 <li>
 <p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
@@ -826,7 +919,7 @@ pkgs.stdenv.mkDerivation {
   meta = {
     description = "A simple Hello World program built with Nix";
     homepage = null;
-    license = pkgs.lib.licenses.unfree; # Ensure this is pkgs.lib.licenses.unfree
+    license = pkgs.lib.licenses.unfree; # licenses.mit is often used as well
     maintainers = [];
   };
 }
@@ -889,59 +982,6 @@ something like <code>/nix/store/your-hash-hello-world</code>).</p>
 <ul>
 <li>This will execute the <code>hello</code> file from the Nix store and print <code>"Hello, World!"</code>.</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="nixos"><a class="header" href="#nixos">NixOS</a></h1>
-<h2 id="unique-nix-features"><a class="header" href="#unique-nix-features">Unique Nix Features</a></h2>
-<p><strong>Laziness</strong>:</p>
-<ul>
-<li>Nix evaluates expressions only when needed. This is a great feature when
-working with packages.</li>
-</ul>
-<pre><code class="language-nix">nix-repl&gt; let a = builtins.div 4 0; b = 6; in b
-6
-</code></pre>
-<ul>
-<li>Since <code>a</code> isn't needed, there's no error about division by zero, because the
-expression is not in need to be evaluated. That's why we can have all the
-packages defined on demand, yet have acces to specific packages very quickly.
-Some of these examples came from the Nix pill series.</li>
-</ul>
-<p><strong>Default Values</strong>:</p>
-<pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
-<span class="boring"> «lambda @ «string»:1:1»
-</span></code></pre>
-<ul>
-<li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
-accepts <code>y</code> and <code>z</code>.</li>
-</ul>
-<p><strong>@-patterns</strong>:</p>
-<ul>
-<li>An <code>@-pattern</code> provides a means of referring to the whole value being matched:</li>
-</ul>
-<pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
-<span class="boring"> «lambda @ «string»:1:1»
-</span># or
-{ x, y, z, ... } @ args: z + y + x + args.a
-<span class="boring"> «lambda @ «string»:1:1»
-</span></code></pre>
-<ul>
-<li>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
-against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense
-with an ellipsis(<code>...</code>) as you can access attribute names as <code>a</code>, using
-<code>args.a</code>, which was given as an additional attribute to the function.</li>
-</ul>
-<h3 id="evaluating-nix-files"><a class="header" href="#evaluating-nix-files">Evaluating Nix Files</a></h3>
-<p>Use <code>nix-instantiate --eval</code> to evaluate the expression in a Nix file:</p>
-<pre><code class="language-bash">echo 1 + 2 &gt; file.nix
-nix-instantiate --eval file.nix
-3
-</code></pre>
-<blockquote>
-<p><strong>Note:</strong> <code>--eval</code> is required to evaluate the file and do nothing else. If
-<code>--eval</code> is omitted, <code>nix-instantiate</code> expects the expression in the given
-file to evaluate to a derivation.</p>
-</blockquote>
-<p>If you don't specify an argument, <code>nix-instantiate --eval</code> will try to read from
-<code>default.nix</code> in the current directory.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-2"><a class="header" href="#chapter-2">Chapter 2</a></h1>
 <!--toc:start-->
 <ul>
@@ -2505,6 +2545,77 @@ existing locks.</li>
 <p>If you need to update a locked input to the latest version:</p>
 <pre><code class="language-bash">nix flake lock --update-input nixpkgs
 nix build
+</code></pre>
+<h2 id="helper-functions-that-are-good-to-know-for-working-with-flakes"><a class="header" href="#helper-functions-that-are-good-to-know-for-working-with-flakes">Helper functions that are good to know for working with Flakes</a></h2>
+<ul>
+<li><code>lib.genAttrs</code>: A function, given the name of the attribute, returns the
+attribute's value</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">nix repl
+nix-repl&gt; :l &lt;nixpgs&gt;
+nix-repl&gt; lib.genAttrs [ "boom" "bash" ] (name: "sonic" + namd)
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{
+  bash = "sonicbash";
+  boom = "sonicboom";
+}
+</code></pre>
+<p>You will often see the following:</p>
+<p>A common use for this with flakes is to have a list of different systems:</p>
+<pre><code class="language-nix">     systems = [
+       "x86_64-linux"
+       "aarch64-linux"
+       "x86_64-darwin"
+       "aarch64-darwin"
+     ];
+</code></pre>
+<p>And use it to generate an attribute set for each listed system:</p>
+<pre><code class="language-nix">eachSystem = lib.genAttrs systems;
+</code></pre>
+<ul>
+<li>
+<p>The above command creates an attribute set by mapping over a list of system
+strings. If you notice, you provide it a list (i.e. [ 1 2 3 ]) and the
+function returns a set (i.e. <code>{ ... }</code>)</p>
+</li>
+<li>
+<p>Why <code>genAttrs</code> is useful:</p>
+<ul>
+<li>It lets you define attributes (like <code>packages</code>, <code>checks</code>, <code>devShells</code>) per
+supported system in a DRY(don't repeat yourself), structured way.</li>
+</ul>
+</li>
+<li>
+<p><code>lib.mapAttrs</code>: A function, given an attribute's name and value, returns a new
+<code>nameValuePair</code>.</p>
+</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">nix-repl&gt; builtins.mapAttrs (name: value: name + "-" + value) { x = "foo"; y = "bar"; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{
+  x = "x-foo";
+  y = "y-bar";
+}
+</code></pre>
+<ul>
+<li><code>pkgs.mkShell</code>: is a specialized <code>stdenv.mkDerivation</code> that removes some
+repetition when using it with <code>nix-shell</code> (or <code>nix develop</code>)</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+pkgs.mkShell {
+  packages = [ pkgs.gnumake ];
+
+  inputsFrom = [ pkgs.hello pkgs.gnutar ];
+
+  shellHook = ''
+    export DEBUG=1
+  '';
+}
 </code></pre>
 <h2 id="a-simple-flake-that-outputs-a-devshell-and-a-package"><a class="header" href="#a-simple-flake-that-outputs-a-devshell-and-a-package">A Simple flake that outputs a devshell and a package</a></h2>
 <p>In a new directory create a <code>flake.nix</code></p>

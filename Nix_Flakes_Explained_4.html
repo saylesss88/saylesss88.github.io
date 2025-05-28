@@ -369,6 +369,77 @@ existing locks.</li>
 <pre><code class="language-bash">nix flake lock --update-input nixpkgs
 nix build
 </code></pre>
+<h2 id="helper-functions-that-are-good-to-know-for-working-with-flakes"><a class="header" href="#helper-functions-that-are-good-to-know-for-working-with-flakes">Helper functions that are good to know for working with Flakes</a></h2>
+<ul>
+<li><code>lib.genAttrs</code>: A function, given the name of the attribute, returns the
+attribute's value</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">nix repl
+nix-repl&gt; :l &lt;nixpgs&gt;
+nix-repl&gt; lib.genAttrs [ "boom" "bash" ] (name: "sonic" + namd)
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{
+  bash = "sonicbash";
+  boom = "sonicboom";
+}
+</code></pre>
+<p>You will often see the following:</p>
+<p>A common use for this with flakes is to have a list of different systems:</p>
+<pre><code class="language-nix">     systems = [
+       "x86_64-linux"
+       "aarch64-linux"
+       "x86_64-darwin"
+       "aarch64-darwin"
+     ];
+</code></pre>
+<p>And use it to generate an attribute set for each listed system:</p>
+<pre><code class="language-nix">eachSystem = lib.genAttrs systems;
+</code></pre>
+<ul>
+<li>
+<p>The above command creates an attribute set by mapping over a list of system
+strings. If you notice, you provide it a list (i.e. [ 1 2 3 ]) and the
+function returns a set (i.e. <code>{ ... }</code>)</p>
+</li>
+<li>
+<p>Why <code>genAttrs</code> is useful:</p>
+<ul>
+<li>It lets you define attributes (like <code>packages</code>, <code>checks</code>, <code>devShells</code>) per
+supported system in a DRY(don't repeat yourself), structured way.</li>
+</ul>
+</li>
+<li>
+<p><code>lib.mapAttrs</code>: A function, given an attribute's name and value, returns a new
+<code>nameValuePair</code>.</p>
+</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">nix-repl&gt; builtins.mapAttrs (name: value: name + "-" + value) { x = "foo"; y = "bar"; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{
+  x = "x-foo";
+  y = "y-bar";
+}
+</code></pre>
+<ul>
+<li><code>pkgs.mkShell</code>: is a specialized <code>stdenv.mkDerivation</code> that removes some
+repetition when using it with <code>nix-shell</code> (or <code>nix develop</code>)</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+pkgs.mkShell {
+  packages = [ pkgs.gnumake ];
+
+  inputsFrom = [ pkgs.hello pkgs.gnutar ];
+
+  shellHook = ''
+    export DEBUG=1
+  '';
+}
+</code></pre>
 <h2 id="a-simple-flake-that-outputs-a-devshell-and-a-package"><a class="header" href="#a-simple-flake-that-outputs-a-devshell-and-a-package">A Simple flake that outputs a devshell and a package</a></h2>
 <p>In a new directory create a <code>flake.nix</code></p>
 <pre><code class="language-nix"># flake.nix
