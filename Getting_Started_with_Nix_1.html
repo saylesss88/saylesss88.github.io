@@ -173,15 +173,9 @@
 <li><a href="#chapter1">Chapter1</a>
 <ul>
 <li><a href="#getting-started-with-the-nix-ecosystem">Getting Started with the Nix Ecosystem</a></li>
+<li><a href="#nix-ecosystem">Nix Ecosystem</a></li>
 <li><a href="#why-learn-nix">Why Learn Nix?</a></li>
-<li><a href="#syntax-basics">Syntax Basics</a></li>
-<li><a href="#control-flow-with-expressions">Control Flow with Expressions</a></li>
-<li><a href="#functions">Functions:</a>
-<ul>
-<li><a href="#derivations">Derivations</a></li>
-<li><a href="#evaluating-nix-files">Evaluating Nix Files</a></li>
-</ul>
-</li>
+<li><a href="#how-it-fits-together">How it Fits Together</a></li>
 <li><a href="#conclusion">Conclusion</a></li>
 <li><a href="#resources">Resources</a></li>
 </ul>
@@ -191,11 +185,8 @@
 <h2 id="getting-started-with-the-nix-ecosystem"><a class="header" href="#getting-started-with-the-nix-ecosystem">Getting Started with the Nix Ecosystem</a></h2>
 <p><img src="images/gruv13.png" alt="gruv13" /></p>
 <p>Welcome to the world of Nix, a powerful tool for reproducible and declarative
-software management. In this chapter, we’ll explore the basics of the Nix
-programming language, a pure, functional, and declarative language that
-underpins Nix’s package manager and operating system. By the end, you’ll
-understand Nix’s core concepts, syntax, and how to write simple expressions and
-derivations.</p>
+software management. In this chapter, I will explain how the pieces of the Nix
+Ecosystem fit together.</p>
 <details>
 <summary>
 - ✔️: Will indicate an expandable section, click the little triangle to expand.
@@ -219,6 +210,10 @@ code block next to the copy clipboard.</p>
 </code></pre>
 </li>
 <li>
+<p><a href="https://saylesss88.github.io/nix/nix_language.md">Nix Language</a>(Click Here
+for a Nix Lang Overview).</p>
+</li>
+<li>
 <p><strong>Nix</strong>: is a package manager and a build system that allows you to write
 declarative scripts for reproducible software builds in the <strong>Nix Language</strong>.</p>
 </li>
@@ -233,8 +228,7 @@ you want. Each of those snippets is called a module. -- xeiaso</p>
 that take a while to fully absorb. The documentation isn't necessarily bad it's
 just spread out because from my understanding Nix isn't "allowed" to mention
 Flakes in it's manual so you have to look elsewhere.</p>
-<details>
-<summary> ✔️ Nix Ecosystem (Click to Expand) </summary>
+<h2 id="nix-ecosystem"><a class="header" href="#nix-ecosystem">Nix Ecosystem</a></h2>
 <ul>
 <li>
 <p><a href="https://wiki.nixos.org/wiki/Nix_ecosystem">Nix Core Ecosystem</a>, Nix, NixOS,
@@ -260,19 +254,41 @@ in my opinion. There is a lot of great stuff in here, and they actively update
 the information.</p>
 </li>
 </ul>
-</details>
 <blockquote>
 <p>❗ If you're new to Nix, think of it as a recipe book for software: you
 describe what you want (declarative), and Nix ensures it’s built the same way
 every time (reproducible).</p>
 </blockquote>
 <h2 id="why-learn-nix"><a class="header" href="#why-learn-nix">Why Learn Nix?</a></h2>
-<p>Nix is often described as “JSON with functions.” It’s a declarative language
-where you define outcomes, not step-by-step instructions. Instead of writing
-sequential code, you create expressions that describe data structures,
-functions, and dependencies. These expressions are evaluated lazily, meaning Nix
-computes values only when needed, making it efficient for managing large
-systems.</p>
+<p>The main reason to learn Nix is that it allows you to write declarative scripts
+for reproducible software builds. Rather than mutate the global state and install
+packages to a global location such as <code>/usr/bin</code> Nix stores packages in the Nix
+store, usually the directory <code>/nix/store</code>, where each package has its own unique
+subdirectory. This paradigm gives you some power features,
+such as:</p>
+<ul>
+<li>
+<p>Allowing multiple versions or variants of the same package at the same time.
+This prevents "DLL hell" from different applications having dependencies on
+different versions of the same package. They end up in different paths in the
+Nix store preventing interferance with each other.</p>
+</li>
+<li>
+<p>Atomic upgrades: Upgrading or uninstalling an application cannot break other
+applications and either succeed completely or fail completely preventing
+partial upgrades breaking your system. The nix store is immutable preventing
+package management operations from overwriting other packages. They wouldn't
+overwrite each other anyways because the hashing scheme ensures that new
+versions or repeat packages end up at different paths.</p>
+</li>
+<li>
+<p>Nix tries hard to provide hermetic builds that aren't affected by the environment
+this helps you make sure that when packaging software that the dependencies
+are complete because they must be explicitly declared as inputs. With other
+package managers it is more difficult to be sure that an environment variable
+or something in your <code>$PATH</code> isn't affecting your build.</p>
+</li>
+</ul>
 <p>Let’s dive into the key characteristics of Nix:</p>
 <div class="table-wrapper"><table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody>
 <tr><td><strong>Pure</strong></td><td>Functions don't cause side effects.</td></tr>
@@ -286,447 +302,62 @@ systems.</p>
 <p>❗ Important: In Nix, everything is an expression, there are no statements.</p>
 <p>❗ Important: Values in Nix are immutable.</p>
 </blockquote>
-<h2 id="syntax-basics"><a class="header" href="#syntax-basics">Syntax Basics</a></h2>
-<p><img src="images/lambda1.png" alt="lambda1" /></p>
-<p>A few resources to help get you started with the Nix Language, I have actually
-grown to love the language. I find it fairly simple but powerful!</p>
+<h2 id="how-it-fits-together"><a class="header" href="#how-it-fits-together">How it Fits Together</a></h2>
 <ul>
-<li>
-<p><a href="https://nix.dev/manual/nix/2.24/language/">Nix Language Overview</a></p>
-</li>
-<li>
-<p><a href="https://nixos.org/guides/nix-pills/04-basics-of-language">Basics of the Language Pill</a></p>
-</li>
-<li>
-<p>Dashes are allowed as identifiers:</p>
-</li>
+<li>The <strong>Nix Language</strong> is the foundation of the ecosystem and is used to write
+<strong>Nix Expressions</strong>.</li>
 </ul>
-<pre><code class="language-nix">nix-repl&gt; a-b
-error: undefined variable `a-b' at (string):1:1
-nix-repl&gt; a - b
-error: undefined variable `a' at (string):1:1
-<span class="boring"> testing
-</span></code></pre>
-<blockquote>
-<p>❗ Tip <code>a-b</code> is parsed as an identifier, not as subtraction.</p>
-</blockquote>
-<ul>
-<li><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
-(<code>''</code>).</li>
-</ul>
-<pre><code class="language-nix">nix-repl&gt; "stringDaddy"
-"stringDaddy"
-nix-repl&gt; ''
-  This is a
-  multi-line
-  string
-''
-"This is a\nmulti-line\nstring.\n"
-</code></pre>
-<details>
-<summary> ✔️ String Interpolation (Click to Expand)</summary>
-<p>Is a language feature where a string, path, or attribute name can contain
-expressions enclosed in <code>${ }</code>. This construct is called <em>interpolated string</em>,
-and the expression inside is an <em>interpolated expression</em>.</p>
-<p><a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.</p>
-<p>Rather than writing:</p>
-<pre><code class="language-nix">let path = "/usr/local"; in "--prefix=${path}"
-</code></pre>
-<ul>
-<li>This evaluates to <code>"--prefix=/usr/local"</code>. Interpolated expressions must
-evaluate to a string, path, or an attribute set with an outPath or
-<code>__toString</code> attribute.</li>
-</ul>
-</details>
-<ul>
-<li><strong>Attribute sets</strong> are all over Nix code, they are name-value pairs wrapped in
-curly braces, where the names must be unique:</li>
-</ul>
-<pre><code class="language-nix">{
-  string = "hello";
-  int = 8;
-}
-</code></pre>
-<ul>
-<li>Attribute names usually don't need quotes.</li>
-</ul>
-<p>You can access attributes using dot notation:</p>
-<pre><code class="language-nix">let person = { name = "Alice"; age = 30; }; in person.name
-"Alice"
-</code></pre>
-<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access
-to attributes within the set:</p>
-<ul>
-<li>Click to see the Output:</li>
-</ul>
-<pre><code class="language-nix">rec {
-  x = y;
-  y = 123;
-}.x
-<span class="boring"> 123
-</span></code></pre>
-<p><strong>Output</strong>: <code>123</code></p>
-<p>or</p>
-<pre><code class="language-nix">rec {
-  one = 1;
-  two = one + 1;
-  three = two + 1;
-}
-<span class="boring"> {
-</span><span class="boring">  one = 1;
-</span><span class="boring">  three = 3;
-</span><span class="boring">  two = 2;
-</span><span class="boring"> }
-</span></code></pre>
-<pre><code class="language-nix"># This would fail:
-{
-  one = 1;
-  two = one + 1;  # Error: undefined variable 'one'
-  three = two + 1;
-}
-</code></pre>
-<p>Recursive sets introduce the danger of <em>infinite recursion</em> For example:</p>
-<pre><code class="language-nix">rec {
-  x = y;
-  y = x;
-}.x
-<span class="boring"> error:
-</span><span class="boring">       … while evaluating the attribute 'x'
-</span><span class="boring">         at «string»:2:3:
-</span><span class="boring">            1| rec {
-</span><span class="boring">            2|   x = y;
-</span><span class="boring">             |   ^
-</span><span class="boring">            3|   y = x;
-</span><span class="boring">
-</span><span class="boring">       error: infinite recursion encountered
-</span><span class="boring">       at «string»:2:7:
-</span><span class="boring">            1| rec {
-</span><span class="boring">            2|   x = y;
-</span><span class="boring">             |       ^
-</span><span class="boring">            3|   y = x;
-</span></code></pre>
-<ul>
-<li>
-<p>Will crash with an <code>infinite recursion encountered</code> error message.</p>
-</li>
-<li>
-<p>The
-<a href="https://nix.dev/manual/nix/2.24/language/operators.html#update">attribute set update operator</a>
-merges two attribute sets.</p>
-</li>
-</ul>
-<p><strong>Example</strong>:</p>
-<pre><code class="language-nix">{ a = 1; b = 2; } // { b = 3; c = 4; }
-</code></pre>
-<p><strong>Output</strong>:</p>
-<pre><code class="language-nix">{ a = 1; b = 3; c = 4; }
-</code></pre>
-<ul>
-<li>However, names on the right take precedence, and updates are shallow.</li>
-</ul>
-<p><strong>Example</strong>:</p>
-<pre><code class="language-nix">{ a = { b = 1; }; } // { a = { c = 3; }; }
-</code></pre>
-<p><strong>Output</strong>:</p>
-<pre><code class="language-nix">{ a = { c = 3; }; }
-</code></pre>
-<ul>
-<li>Above, key <code>b</code> was completely removed, because the whole <code>a</code> value was
-replaced.</li>
-</ul>
-<p><strong>Inheriting Attributes</strong></p>
-<ul>
-<li>Click to see Output:</li>
-</ul>
-<pre><code class="language-nix">let x = 123; in
-{
-  inherit x;
-  y = 456;
-}
-<span class="boring">{
-</span><span class="boring">  x = 123;
-</span><span class="boring">  y = 456;
-</span><span class="boring">}
-</span></code></pre>
-<p>is equivalent to</p>
-<pre><code class="language-nix">let x = 123; in
-{
-  x = x;
-  y = 456;
-}
-<span class="boring">{
-</span><span class="boring">  x = 123;
-</span><span class="boring">  y = 456;
-</span><span class="boring">}
-</span></code></pre>
-<blockquote>
-<p>❗: This works because <code>x</code> is added to the lexical scope by the <code>let</code>
-construct.</p>
-</blockquote>
-<ul>
-<li><code>inherit</code> is commonly used to pick specific variables from the function's
-arguments, like in:</li>
-</ul>
-<pre><code class="language-nix">{ pkgs, lib }: ...
-let someVar = ...; in { inherit pkgs lib someVar; ... }
-</code></pre>
-<ul>
-<li>This shows another common use case beyond just <code>let</code> bindings.</li>
-</ul>
-<h2 id="control-flow-with-expressions"><a class="header" href="#control-flow-with-expressions">Control Flow with Expressions</a></h2>
-<p><strong>If expressions</strong>:</p>
-<ul>
-<li>Click to see the Output:</li>
-</ul>
-<pre><code class="language-nix">nix-repl&gt; a = 6
-nix-repl&gt; b = 10
-nix-repl&gt; if a &gt; b then "yes" else "no"
-<span class="boring"> "no"
-</span></code></pre>
-<p><strong>Let expressions</strong>:</p>
-<ul>
-<li>Click to see the Output:</li>
-</ul>
-<pre><code class="language-nix">let
-  a = "foo";
-  b = "fighter";
-in a + b
-<span class="boring"> "foofighter"
-</span></code></pre>
-<p><strong>With expressions</strong>:</p>
-<pre><code class="language-nix">nix-repl&gt; longName = { a = 3; b = 4; }
-nix-repl&gt; longName.a + longName.b
-7
-nix-repl&gt; with longName; a + b
-7
-</code></pre>
-<p><strong>Laziness</strong>:</p>
-<ul>
-<li>Nix evaluates expressions only when needed. This is a great feature when
-working with packages.</li>
-</ul>
-<pre><code class="language-nix">nix-repl&gt; let a = builtins.div 4 0; b = 6; in b
-6
-</code></pre>
-<ul>
-<li>Since <code>a</code> isn't needed, there's no error about division by zero, because the
-expression is not in need to be evaluated. That's why we can have all the
-packages defined on demand, yet have acces to specific packages very quickly.
-Some of these examples came from the Nix pill series.</li>
-</ul>
-<p><strong>Default Values</strong>:</p>
-<pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
-<span class="boring"> «lambda @ «string»:1:1»
-</span></code></pre>
-<ul>
-<li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
-accepts <code>y</code> and <code>z</code>.</li>
-</ul>
-<p><strong>@-patterns</strong>:</p>
-<ul>
-<li>An <code>@-pattern</code> provides a means of referring to the whole value being matched:</li>
-</ul>
-<pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
-<span class="boring"> «lambda @ «string»:1:1»
-</span># or
-{ x, y, z, ... } @ args: z + y + x + args.a
-<span class="boring"> «lambda @ «string»:1:1»
-</span></code></pre>
-<ul>
-<li>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
-against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense
-with an ellipsis(<code>...</code>) as you can access attribute names as <code>a</code>, using
-<code>args.a</code>, which was given as an additional attribute to the function.</li>
-</ul>
-<h2 id="functions"><a class="header" href="#functions">Functions:</a></h2>
-<p>Functions are defined using this syntax, where <code>x</code> and <code>y</code> are attributes passed
-into the function:</p>
-<pre><code class="language-nix">{
-  my_function = x: y: x + y;
-}
-</code></pre>
-<p>The code below calls a function called <code>my_function</code> with the parameters <code>2</code> and
-<code>3</code>, and assigns its output to the <code>my_value</code> field:</p>
-<pre><code class="language-nix">{
-  my_value = my_function 2 3;
-}
-my_value
-<span class="boring"> 5
-</span></code></pre>
-<ul>
-<li>The body of the function automatically returns the result of the function.
-Functions are called by spaces between it and its parameters. No commas are
-needed to separate parameters.</li>
-</ul>
-<h3 id="derivations"><a class="header" href="#derivations">Derivations</a></h3>
-<p><img src="images/nix99.png" alt="nix99" /></p>
-<details>
-<summary> ✔️ Derivation Overview (Click to Expand) </summary>
-<ul>
-<li>
-<p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
-These are files written in the Nix language that describe how a particular
-piece of software should be built. These package definitions, when processed
-by Nix, are translated into derivations.</p>
-</li>
-<li>
-<p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
-to build a specific software package or any other kind of file or directory.
-It's a declarative specification of:</p>
-</li>
-<li>
-<p><strong>Inputs</strong>: What existing files or other derivations are needed as dependencies.</p>
-</li>
-<li>
-<p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
-output.</p>
-</li>
-<li>
-<p><strong>Environment</strong>: The specific environment (e.g., build tools, environment
-variables) required for the build process.</p>
-</li>
-<li>
-<p><strong>Outputs</strong>: The resulting files or directories that the derivation produces.</p>
-</li>
-</ul>
-<p>Think of a package definition as the initial instructions, and the derivation as
-the detailed, low-level plan that Nix uses to actually perform the build."</p>
-<p>Again, a derivation is like a blueprint that describes how to build a specific
-software package or any other kind of file or directory.</p>
-<p><strong>Key Characteristics of Derivations:</strong></p>
-<ul>
-<li>
-<p><strong>Declarative</strong>: You describe the desired outcome and the inputs, not the
-exact sequence of imperative steps. Nix figures out the necessary steps based
-on the builder and args.</p>
-</li>
-<li>
-<p><strong>Reproducible</strong>: Given the same inputs and build instructions, a derivation
-will always produce the same output. This is a cornerstone of Nix's
-reproducibility.</p>
-</li>
-<li>
-<p><strong>Tracked by Nix</strong>: Nix keeps track of all derivations and their outputs in
-the Nix store. This allows for efficient management of dependencies and
-ensures that different packages don't interfere with each other.</p>
-</li>
-<li>
-<p><strong>Content-Addressed</strong>: The output of a derivation is stored in the Nix store
-under a unique path that is derived from the hash of all its inputs and build
-instructions. This means that if anything changes in the derivation, the
-output will have a different path.</p>
-</li>
-</ul>
-<p>Here's a simple Nix derivation that creates a file named hello in the Nix store
-containing the text "Hello, World!":</p>
-</details>
-<details>
-<summary> ✔️ Hello World Derivation Example (Click to expand):</summary>
-<pre><code class="language-nix">{pkgs ? import &lt;nixpkgs&gt; {}}:
-pkgs.stdenv.mkDerivation {
-  name = "hello-world";
-
-  dontUnpack = true;
-
-  # No need for src = null; when dontUnpack = true;
-  # src = null;
-
-  buildPhase = ''
-     # Create a shell script that prints "Hello, World!"
-    echo '#!${pkgs.bash}/bin/bash' &gt; hello-output-file # Shebang line
-    echo 'echo "Hello, World!"' &gt;&gt; hello-output-file # The command to execute
-    chmod +x hello-output-file # Make it executable
-  '';
-
-  installPhase = ''
-    mkdir -p $out/bin
-    cp hello-output-file $out/bin/hello # Copy the file from build directory to $out/bin
-  '';
-
-  meta = {
-    description = "A simple Hello World program built with Nix";
-    homepage = null;
-    license = pkgs.lib.licenses.unfree; # Ensure this is pkgs.lib.licenses.unfree
-    maintainers = [];
-  };
-}
-</code></pre>
-<p>And a <code>default.nix</code> with the following contents:</p>
-<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
-
-import ./hello.nix { pkgs = pkgs; }
+<p>Example of a simple nix expression:</p>
+<pre><code class="language-nix">{ hello = "world"; }
+# or
+1 + 2
 </code></pre>
 <ul>
 <li>
-<p><code>{ pkgs ? import &lt;nixpkgs&gt; {} }</code>: This is a function that takes an optional
-argument <code>pkgs</code>. We need Nixpkgs to access standard build environments like
-<code>stdenv</code>.</p>
+<p><strong>Package Definitions</strong>: Specialized expressions that tell Nix how to build
+software.</p>
 </li>
 <li>
-<p><code>pkgs.stdenv.mkDerivation { ... }:</code> This calls the mkDerivation function from
-the standard environment (stdenv). mkDerivation is the most common way to
-define software packages in Nix.</p>
+<p><strong>Derivations</strong>: The result of evaluating a package definition is a
+derivation. Derivations are immutable, precise blueprints that Nix uses to
+perform a build. These unique derivations (and their outputs) reside in the
+nix store.</p>
 </li>
 <li>
-<p><code>name = "hello-world";</code>: Human-readable name of the derivation</p>
-</li>
-<li>
-<p>The rest are the build phases and package metadata.</p>
-</li>
-</ul>
-<p>To use the above derivation, save it as a <code>.nix</code> file (e.g. <code>hello.nix</code>). Then
-build the derivation using,:</p>
-<pre><code class="language-bash">nix-build
-this derivation will be built:
-  /nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv
-building '/nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv'...
-Running phase: patchPhase
-Running phase: updateAutotoolsGnuConfigScriptsPhase
-Running phase: configurePhase
-no configure script, doing nothing
-Running phase: buildPhase
-Running phase: installPhase
-Running phase: fixupPhase
-shrinking RPATHs of ELF executables and libraries in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
-checking for references to /build/ in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world...
-patching script interpreter paths in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
-stripping (with command strip and flags -S -p) in  /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world/bin
-/nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
-</code></pre>
+<p>The <strong>Nix Package Manager</strong>: is the engine that takes these Nix expressions
+(like package definitions), evaluates them into derivations, builds them, and
+manages the Nix store.</p>
 <ul>
-<li>
-<p>Nix will execute the <code>buildPhase</code> and <code>installPhase</code></p>
+<li><code>nixpkgs</code>: a set of thousands of packages for the Nix package manager. Nix
+expressions describe how to build packages from source and are collected
+in the <a href="https://github.com/NixOS/nixpkgs">nixpkgs repository</a>. NixOS modules
+are also included in the nixpkgs repo.</li>
+</ul>
 </li>
 <li>
-<p>After a successful build, the output will be in the Nix store. You can find
-the exact path by looking at the output of the nix build command (it will be
-something like <code>/nix/store/your-hash-hello-world</code>).</p>
+<p><strong>NixOS</strong>: is based on Nix, a purely functional package management system.
+NixOS is what you get when you use Nix to build a linux system.</p>
+</li>
+<li>
+<p><strong>NixOS Modules</strong> are also Nix expressions, often functions that define
+system configurations, leveraging package definitions and derivations. They
+often take the current state of the world and return things to change it.</p>
+</li>
+<li>
+<p>One of the main ways Nix is different is the idea that package builds are
+functions.</p>
+</li>
+<li>
+<p>I got the following image from <a href="https://xeiaso.net/talks/asg-2023-nixos/">this</a>
+blog post.</p>
 </li>
 </ul>
-<p>Run the "installed" program:</p>
-<pre><code class="language-bash">./result/bin/hello
-</code></pre>
-<ul>
-<li>This will execute the <code>hello</code> file from the Nix store and print <code>"Hello, World!"</code>.</li>
-</ul>
-</details>
-<h3 id="evaluating-nix-files"><a class="header" href="#evaluating-nix-files">Evaluating Nix Files</a></h3>
-<p>Use <code>nix-instantiate --eval</code> to evaluate the expression in a Nix file:</p>
-<pre><code class="language-bash">echo 1 + 2 &gt; file.nix
-nix-instantiate --eval file.nix
-3
-</code></pre>
-<blockquote>
-<p><strong>Note:</strong> <code>--eval</code> is required to evaluate the file and do nothing else. If
-<code>--eval</code> is omitted, <code>nix-instantiate</code> expects the expression in the given
-file to evaluate to a derivation.</p>
-</blockquote>
-<p>If you don't specify an argument, <code>nix-instantiate --eval</code> will try to read from
-<code>default.nix</code> in the current directory.</p>
+<p><img src="images/nix_isnot_nixos.png" alt="Nix is not" /></p>
 <h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
-<p>As we have now seen, this chapter touched on the basic syntax of function
-definition and application, including concepts like currying. However, the power
-and flexibility of Nix functions extend far beyond what we've covered so far.</p>
+<p>As we have now seen, the Nix ecosystem is vast and each aspect fits together and
+builds upon the last. The Nix Language is used to write expressions that are
+usually functions that describe how a package is to be built. The expressions
+are evaluated and realised into derivations.</p>
 <p>In the next chapter,
 <a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Understanding Nix Functions</a>
 we will peel back the layers and explore the intricacies of function arguments,
@@ -763,7 +394,7 @@ sophisticated Nix expressions and derivations.</p>
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
-                            <a rel="next prefetch" href="Understanding_Nix_Functions_2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="nix/nix_language.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -774,7 +405,7 @@ sophisticated Nix expressions and derivations.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
-                    <a rel="next prefetch" href="Understanding_Nix_Functions_2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="nix/nix_language.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
