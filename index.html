@@ -182,8 +182,8 @@
 <!--toc:end-->
 </li>
 </ul>
-<h2 id="intro"><a class="header" href="#intro">Intro</a></h2>
 <p><img src="images/gruv13.png" alt="gruv13" /></p>
+<h2 id="intro"><a class="header" href="#intro">Intro</a></h2>
 <p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
 towards using Flakes but will contrast traditional Nix where beneficial.
 Originally, this content started as a blog. I'm refining its flow to make it
@@ -256,7 +256,7 @@ environment variable or something in your <code>$PATH</code> isn't affecting you
 <p>❗ Important: Values in Nix are immutable.</p>
 </blockquote>
 <h2 id="the-nix-ecosystem"><a class="header" href="#the-nix-ecosystem">The Nix Ecosystem</a></h2>
-<p><a href="https://saylesss88.github.io/nix/nix_language.html">The Nix Language</a> is the
+<p><a href="https://saylesss88.github.io/nix/nix_language.html">The Nix Language Chapter 1.1</a> is the
 foundation of the ecosystem and is used to write <strong>Nix Expressions</strong>.</p>
 <p>Example of a simple nix expression:</p>
 <pre><code class="language-nix">{ hello = "world"; }
@@ -271,21 +271,86 @@ come into play.</p>
 <p>Nix expressions are fundamental, but their true power emerges when paired with
 package management and system-wide configuration.</p>
 <h2 id="the-nix-package-manager-nixpkgs-and-nixos"><a class="header" href="#the-nix-package-manager-nixpkgs-and-nixos">The Nix Package Manager, Nixpkgs, and NixOS</a></h2>
-<p>At the heart of the Nix ecosystem lies the <a href="https://saylesss88.github.io/nix/nix_package_manager.html">Nix Package Manager</a>.
+<p>At the heart of the Nix ecosystem is <a href="https://saylesss88.github.io/nix/nix_package_manager.html">Nix Package Manager Chapter</a>.
 This powerful engine is responsible for orchestrating the entire process: taking
 <strong>Nix expressions</strong> (like <em>package definitions</em> and <em>configuration modules</em>),
 evaluating them into precise <em>derivations</em>, executing their build steps
 (the <em>realization phase</em>), and meticulously managing the immutable Nix store.</p>
 <p>A cornerstone of the Nix ecosystem is <strong>Nixpkgs</strong>. This vast collection
 comprises tens of thousands of Nix expressions that describe how to build
-a wide array of software packages from source. Nixpkgs is not just a package
-repository; it also includes NixOS Modules, which are specialized Nix
-expressions (often structured as functions) designed to define system
-configurations. These modules enable users to declaratively describe a
-Linux system, with each module contributing to the desired state of the
-overall system by leveraging <em>package definitions</em> and <em>derivations</em>. This is
-how NixOS emerges: it is quite simply the natural consequence of applying
-the Nix philosophy to building an entire Linux operating system.</p>
+a wide array of software packages from source. Nixpkgs is more than just a
+package repository—it also contains <strong>NixOS Modules</strong>, declarative configurations
+that define system behavior, ensuring a structured and reproducible environment.
+These modules enable users to declaratively describe a Linux system, with each
+module contributing to the desired state of the overall system by leveraging
+<em>package definitions</em> and <em>derivations</em>. This is how NixOS emerges: it is
+quite simply the natural consequence of applying the Nix philosophy to building
+an entire Linux operating system.</p>
+<p>We will further expand our understanding of modules in <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">Chapter 3</a></p>
+<p>The following is an example of a NixOS module that is part of the <code>nixpkgs</code>
+collection:</p>
+<pre><code class="language-nix"># nixpkgs/nixos/modules/programs/zmap.nix
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.programs.zmap;
+in
+{
+  options.programs.zmap = {
+    enable = lib.mkEnableOption "ZMap, a network scanner designed for Internet-wide network surveys";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [ pkgs.zmap ];
+
+    environment.etc."zmap/blacklist.conf".source = "${pkgs.zmap}/etc/zmap/blacklist.conf";
+    environment.etc."zmap/zmap.conf".source = "${pkgs.zmap}/etc/zmap.conf";
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p>This module, <code>programs.zmap.nix</code>, demonstrates how NixOS configurations work.
+It defines an enable option for the ZMap network scanner. If enabled by the
+user in their system configuration, the module ensures the <code>zmap</code> package is
+installed and its default configuration files are placed in <code>/etc</code>, allowing
+ZMap to be managed declaratively as part of the operating system.</p>
+<ul>
+<li>
+<p>When <code>nixpkgs</code> is imported (e.g., in a NixOS configuration), the configuration
+options and settings defined by its modules (like <code>programs.zmap.nix</code>) become
+available for use, typically accessed via dot notation (e.g., <code>config.programs.zmap.enable</code>).
+This ability to make such a huge set of modules and packages readily
+available without a significant performance penalty is due to Nix's <strong>lazy
+evaluation</strong>; only the expressions required for a particular build or
+configuration are actually evaluated.</p>
+</li>
+<li>
+<p>Most of the time you'll simply <a href="https://search.nixos.org/packages">search</a>
+to see if the package is already included in <code>nixpkgs</code> and follow the
+instructions there to get it on your system. It is good practice to first
+search for the <a href="https://search.nixos.org/options?">options</a> to see what
+configurable settings are available, and then proceed to search for the
+package itself if you know it exists or if you need its specific package
+definition. When you look up the options for Zmap, <code>programs.zmap.enable</code>
+is all that is listed in this example.</p>
+</li>
+<li>
+<p>Home Manager uses the same underlying Nix module system as NixOS, and when
+you do something like home.packages = with pkgs; you are referring to the
+same package derivations from nixpkgs as you would with <code>environment.systemPackages</code>.
+However, Home Manager's own configuration modules (e.g., for <code>programs.zsh</code> or
+<code>git</code>) are distinct and reside in the Home Manager repository, designed for
+user-specific configurations.</p>
+</li>
+</ul>
+</li>
+</ul>
 <p>One of the main differentiating aspects of Nix, as opposed to traditional
 package managers, is this concept that package builds are treated as pure
 functions. This functional paradigm ensures consistency and reproducibility,
@@ -379,17 +444,72 @@ those build instructions, and the result is the actual built software, which
 gets placed into its own unique path in the Nix store.</p>
 <p>A single derivation can produce multiple outputs. The executable is typically
 part of the <code>out</code> output, specifically in its <code>bin</code> directory.</p>
+<p>Here is a small snippet of what a <code>.drv</code> file could look like, I got this from
+building the hello derivation and running on the store path:</p>
+<pre><code class="language-bash">nix show-derivation /nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1
+</code></pre>
+<pre><code class="language-nix">{
+  "/nix/store/871398c9cbskmzy6bvfnynr8yrlh7nk0-hello-2.12.1.drv": {
+    "args": [
+      "-e",
+      "/nix/store/v6x3cs394jgqfbi0a42pam708flxaphh-default-builder.sh"
+    ],
+    "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
+    "env": {
+      "__structuredAttrs": "",
+      "buildInputs": "",
+      "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
+      "cmakeFlags": "",
+      "configureFlags": "",
+      "depsBuildBuild": "",
+      "depsBuildBuildPropagated": "",
+      "depsBuildTarget": "",
+      "depsBuildTargetPropagated": "",
+      "depsHostHost": "",
+      "depsHostHostPropagated": "",
+      "depsTargetTarget": "",
+      "depsTargetTargetPropagated": "",
+      "doCheck": "",
+      "doInstallCheck": "",
+      "mesonFlags": "",
+      "name": "hello-2.12.1",
+      "nativeBuildInputs": "",
+      "out": "/nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1",
+      "outputs": "out",
+      "patches": "",
+      "pname": "hello",
+      "propagatedBuildInputs": "",
+      "propagatedNativeBuildInputs": "",
+      "src": "/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz",
+      "stdenv": "/nix/store/80wijs24wjp619zmrasrh805bax02xjm-stdenv-linux",
+      "strictDeps": "",
+      "system": "x86_64-linux",
+      "version": "2.12.1"
+    },
+# ... snip ...
+</code></pre>
 <h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
-<p>As we have now seen, the Nix ecosystem is vast and each aspect fits together and
-builds upon the last. The Nix Language is used to write expressions that are
-usually functions that describe how a package is to be built. The expressions
-are evaluated and realised into derivations.</p>
-<p>In the next chapter,
-<a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Understanding Nix Functions</a>
+<p>In this introductory chapter, we've laid the groundwork for understanding the
+powerful Nix ecosystem. We explored how the Nix Language forms the declarative
+bedrock, enabling us to define desired system states and software builds as
+expressions. You saw how the Nix Package Manager orchestrates this process,
+transforming those expressions into precise derivations during the evaluation
+phase, and then faithfully "realizing" them into reproducible, isolated
+artifacts within the immutable <code>/nix/store</code>.</p>
+<p>We also introduced the vast Nixpkgs collection, which provides tens of thousands
+of package definitions and forms the foundation for NixOS — a fully declarative
+operating system built on these principles—and even user-level configurations
+like those managed by Home Manager. This unique functional approach, with its
+emphasis on immutability and lazy evaluation, is what enables Nix's promises
+of consistency, atomic upgrades, and truly hermetic builds, fundamentally
+changing how we think about software and system management.</p>
+<p>Now that you have a foundational understanding of the Nix ecosystem and its core
+operational cycle, we are ready to delve deeper into the building blocks of Nix
+expressions. In the next chapter, <a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Understanding Nix Functions</a>,
 we will peel back the layers and explore the intricacies of function arguments,
 advanced patterns, scope, and how functions play a crucial role in building more
 sophisticated Nix expressions and derivations.</p>
-<p>Here are some resources that I found helpful when learning the Nix Language.</p>
+<p>Here are some resources that are helpful for getting started:</p>
 <h2 id="resources"><a class="header" href="#resources">Resources</a></h2>
 <details>
 <summary> ✔️ Resources (Click to Expand)</summary>
