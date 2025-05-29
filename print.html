@@ -652,15 +652,27 @@ a + a + builtins.toString "4")
 "lastname " first)
 # =&gt; "lastname firstname"
 
-## Lists
+# Lists
 
 [ 1 2 "three" "bar" "baz" ]   # lists are whitespace separated
+
+builtins.elemAt [ 1 2 3 4 5 ] 3
+# =&gt; 4
+
+builtins.length [ 1 2 3 4 ]
+# =&gt; 4
+
+# Attrsets
 
 { first = "Jim"; last = "Bo"; }.last # Attribute selection
 # =&gt; "Bo"
 
 { a = 1; b = 3; } // { c = 4; b = 2; }   # Attribute Set merging
 # =&gt; { a = 1; b = 2; c = 4; }               # Right Side takes precedence
+
+builtins.listToAttrs [ { name = "Jr"; value = "Jr Juniorville"; } {name = "$"; value = "JR"; } { name = "jr"; value = "jr
+ville"; }]
+# =&gt; { "$" = "JR"; Jr = "Jr Juniorville"; jr = "jrville"; }
 
 # Control Flow
 
@@ -1240,7 +1252,12 @@ grown to love the language. I find it fairly simple but powerful!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-package-manager"><a class="header" href="#nix-package-manager">Nix Package Manager</a></h1>
 <ul>
 <li><a href="nix/nix_package_manager.html#nix-package-manager">Nix Package Manager</a></li>
+<li><a href="nix/nix_package_manager.html#channels">Channels</a></li>
+<li><a href="nix/nix_package_manager.html#channels-vs-flakes-enhancing-reproducibility">Channels vs. Flakes Enhancing Reproducibility</a>
+<ul>
 <li><a href="nix/nix_package_manager.html#managing-software-with-nix">Managing software with Nix</a></li>
+</ul>
+</li>
 </ul>
 <p><img src="nix/../images/nix99.png" alt="nix99" /></p>
 <h2 id="nix-package-manager-1"><a class="header" href="#nix-package-manager-1">Nix Package Manager</a></h2>
@@ -1294,7 +1311,45 @@ files. Home manager uses the same module system as NixOS.</p>
 see how it is used to build and manage software in NixOS.</p>
 </li>
 </ul>
-<h2 id="managing-software-with-nix"><a class="header" href="#managing-software-with-nix">Managing software with Nix</a></h2>
+<h2 id="channels"><a class="header" href="#channels">Channels</a></h2>
+<p>Nix packages are distributed through Nix channels; mechanisms for distributing
+Nix expressions and the associated binary caches for them. Channels are what
+determine which versions your packages have. (i.e. <em>stable</em> or <em>unstable</em>). A
+channel is a name for the latest "verified" git commits in Nixpkgs. Each channel
+represents a different policy for what "verified" means. Whenever a new commit
+in <code>Nixpkgs</code> passes the verification process, the respective channel is updated
+to point to that new commit.</p>
+<p>While channels provide a convenient way to get the latest stable or unstable
+packages, they introduce a challenge for strict reproducibility. Because a
+channel like nixos-unstable is constantly updated, fetching packages from it
+today might give you a different set of package versions than fetching from it
+tomorrow, even if your configuration remains unchanged. This "rolling release"
+nature at a global level can make it harder to share and reproduce exact
+development environments or system configurations across different machines
+or at different points in time.## Managing software with Nix</p>
+<h2 id="channels-vs-flakes-enhancing-reproducibility"><a class="header" href="#channels-vs-flakes-enhancing-reproducibility">Channels vs. Flakes Enhancing Reproducibility</a></h2>
+<p>Before the introduction of Nix Flakes, channels were the primary mechanism for
+sourcing Nixpkgs. While functional, they posed a challenge for exact
+reproducibility because they point to a moving target (the latest commit on a
+branch). This meant that a nix-build command run yesterday might produce a
+different result than one run today, simply because the channel updated.</p>
+<p>Nix Flakes were introduced to address this. Flakes bring a built-in, standardized
+way to define the exact inputs to a Nix build, including the precise Git
+revision of Nixpkgs or any other dependency.</p>
+<p>Here's a quick comparison:</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Nix Channels (traditional)</th><th style="text-align: left">Nix Flakes (modern approach)</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Input Source</strong></td><td style="text-align: left">Global system configuration (<code>nix-channel --update</code>)</td><td style="text-align: left">Explicitly defined in <code>flake.nix</code> (e.g., <code>github:NixOS/nixpkgs/nixos-23.11</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Reproducibility</strong></td><td style="text-align: left">"Rolling release"; less reproducible across time/machines</td><td style="text-align: left">Highly reproducible due to locked inputs (<code>flake.lock</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Dependency Mgmt.</strong></td><td style="text-align: left">Implicitly managed by global channel</td><td style="text-align: left">Explicitly declared and version-locked within <code>flake.nix</code></td></tr>
+<tr><td style="text-align: left"><strong>Sharing</strong></td><td style="text-align: left">Relies on users having same channel version</td><td style="text-align: left">Self-contained; <code>flake.lock</code> ensures everyone gets same inputs</td></tr>
+<tr><td style="text-align: left"><strong>Learning Curve</strong></td><td style="text-align: left">Simpler initial setup, but tricky reproducibility debugging</td><td style="text-align: left">Higher initial learning curve, but simplifies reproducibility</td></tr>
+</tbody></table>
+</div>
+<p>The ability of Flakes to "lock" the exact version of all dependencies in a
+<code>flake.lock</code> file is a game-changer for collaboration and long-term
+reproducibility, ensuring that your Nix configuration builds the same way,
+every time, everywhere.</p>
+<h3 id="managing-software-with-nix"><a class="header" href="#managing-software-with-nix">Managing software with Nix</a></h3>
 <p><strong>Derivation Overview</strong></p>
 <ul>
 <li>
