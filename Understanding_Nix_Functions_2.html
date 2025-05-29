@@ -175,21 +175,13 @@
 <li><a href="#understanding-nix-functions">Understanding Nix Functions</a></li>
 <li><a href="#what-are-nix-functions">What are Nix Functions?</a></li>
 <li><a href="#builtins">Builtins</a></li>
-<li><a href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a></li>
-<li><a href="#declaring-functions-single-and-simulated-multiple-arguments">Declaring Functions: Single and Simulated "Multiple" Arguments</a></li>
-<li><a href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a>
-<ul>
-<li><a href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules</a></li>
-</ul>
-</li>
-<li><a href="#conclusion">Conclusion</a></li>
-<li><a href="#resources">Resources</a></li>
+<li><a href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a> - <a href="#single-argument-functions-the-basics">Single-Argument Functions: The Basics</a> - <a href="#simulating-multiple-arguments-currying">Simulating Multiple Arguments: Currying</a> - <a href="#greeting-example">Greeting Example</a> - <a href="#partial-application-using-functions-incrementally">Partial Application: Using Functions Incrementally</a> - <a href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a> - <a href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules</a> - <a href="#conclusion">Conclusion</a> - <a href="#resources">Resources</a></li>
 </ul>
 <!--toc:end-->
 </li>
 </ul>
-<h2 id="understanding-nix-functions"><a class="header" href="#understanding-nix-functions">Understanding Nix Functions</a></h2>
 <img src="images/nixLogo.png" width="400" height="300">
+<h2 id="understanding-nix-functions"><a class="header" href="#understanding-nix-functions">Understanding Nix Functions</a></h2>
 <p><strong>Functions</strong> are the building blocks of Nix, appearing everywhere in Nix
 expressions and configurations. Mastering them is essential for writing
 effective Nix code and understanding tools like NixOS and Home Manager.
@@ -226,8 +218,6 @@ multi-argument functions in a flexible and reusable way.</p>
 </li>
 </ul>
 </details>
-<p>First I wanted to explain the structure of Nix Functions, and then we will talk
-about their "first-class" nature in Nix.</p>
 <h2 id="understanding-function-structure-the-role-of-the-colon"><a class="header" href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a></h2>
 <p>The colon (<code>:</code>) acts as a clear separator within a function definition:</p>
 <ul>
@@ -269,8 +259,7 @@ the function body.</p>
 complex.</p>
 </li>
 </ul>
-<h2 id="declaring-functions-single-and-simulated-multiple-arguments"><a class="header" href="#declaring-functions-single-and-simulated-multiple-arguments">Declaring Functions: Single and Simulated "Multiple" Arguments</a></h2>
-<p><strong>Single-Argument Functions</strong>: The Basics</p>
+<h3 id="single-argument-functions-the-basics"><a class="header" href="#single-argument-functions-the-basics">Single-Argument Functions: The Basics</a></h3>
 <p>The simplest form of a Nix function takes a single argument. In Nix, function
 definitions like <code>x: x + 1</code> or <code>personName: "Hello, ${personName}!";</code> are
 <strong>anonymous lambda functions</strong>. They exist as values until they are assigned
@@ -291,13 +280,11 @@ inc 5
 <li>
 <p><code>x + 1</code> is the function body.</p>
 </li>
-<li>
+</ul>
 <p>This straightforward design makes single-argument functions easy to understand
 and use. But what if you need a function that seems to take multiple arguments?
 That's where <strong>currying</strong> comes in.</p>
-</li>
-</ul>
-<p><strong>Simulating Multiple Arguments: Currying</strong></p>
+<h3 id="simulating-multiple-arguments-currying"><a class="header" href="#simulating-multiple-arguments-currying">Simulating Multiple Arguments: Currying</a></h3>
 <p>To create functions that appear to take multiple arguments, Nix uses currying.
 This involves nesting single-argument functions, where each function takes one
 argument and returns another function that takes the next argument, and so on.</p>
@@ -334,7 +321,15 @@ resulting in <code>12</code>.</p>
 </ul>
 <p>This chaining is why Nix functions are so powerful—it allows you to build
 flexible, reusable functions.</p>
-<p><strong>A More Practical Example: Greetings</strong>:</p>
+<p>Currying is a powerful feature in Nix that enables you to partially apply
+arguments to functions, leading to increased reusability. This behavior is a
+direct consequence of Nix functions being "first-class citizens" (a concept
+we'll delve into later), and it proves invaluable for decomposing intricate
+logic into a series of smaller, more focused functions.</p>
+<p><strong>Key Insight</strong>: Every colon in a function definition separates a <strong>single
+argument</strong> from its <strong>function body</strong>, even if that body is another function
+definition.</p>
+<h4 id="greeting-example"><a class="header" href="#greeting-example">Greeting Example</a></h4>
 <p>Let's explore currying with a more relatable example in the <code>nix repl</code>:</p>
 <pre><code class="language-nix">nix repl
 nix-repl&gt; greeting = prefix: name: "${prefix}, ${name}!";
@@ -358,24 +353,7 @@ to produce the final string.</p>
 </ol>
 <p>Thanks to <strong>lexical scope</strong> (where inner functions can access variables from
 outer functions), the inner function "remembers" the <code>prefix</code> value.</p>
-<p><strong>Why Currying Matters</strong></p>
-<ul>
-<li>
-<p>You can partially apply arguments and reuse functions.</p>
-</li>
-<li>
-<p>The "first-class" aspect of Nix Functions, explained further down.</p>
-</li>
-<li>
-<p>It can help break down complex logic into smaller, manageable functions.</p>
-</li>
-</ul>
-<p><strong>Key Insight</strong>: Every colon in a function definition separates a <strong>single
-argument</strong> from its <strong>function body</strong>, even if that body is another function
-definition.</p>
-<p><strong>Partial Application: Using Functions Incrementally</strong></p>
-<details>
-<summary> ✔️ Partial Application (Click to Expand)</summary>
+<h4 id="partial-application-using-functions-incrementally"><a class="header" href="#partial-application-using-functions-incrementally">Partial Application: Using Functions Incrementally</a></h4>
 <p>Because of <strong>currying</strong>, you can apply arguments to a Nix function one at a time.
 This is called <em>partial application</em>. When you provide only some of the expected
 arguments, you get a new function that "remembers" the provided arguments and
@@ -393,20 +371,12 @@ nix-repl&gt; helloGreeting "Alice"
 argument (<code>"Hello"</code>), when we provide the second argument we get <code>"Hello, Alice!"</code></li>
 </ul>
 <p><strong>Benefits of Partial Application:</strong></p>
-<ul>
-<li>
-<p><strong>Creating Specialized Functions</strong>: You can create more specific functions
-from general ones by fixing some of their parameters.</p>
-</li>
-<li>
-<p><strong>Adapting to Higher-Order Functions</strong>: Many functions that operate on other
-functions (like <code>map</code> and <code>filter</code>) expect functions with a certain number of
-arguments. Partial application allows you to adapt existing functions to fit
-these requirements.</p>
-</li>
-</ul>
-</details>
-<h2 id="nix-functions-being-first-class-citizens"><a class="header" href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a></h2>
+<p>Partial application provides significant benefits by enabling you to derive
+specialized functions from more general ones through the process of fixing
+certain parameters. Additionally, it serves as a powerful tool for adapting
+existing functions to fit the precise argument requirements of higher-order
+functions like <code>map</code> and <code>filter</code>.</p>
+<h4 id="nix-functions-being-first-class-citizens"><a class="header" href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a></h4>
 <p>In the context of Nix, the phrase "Nix treats functions as first-class citizens"
 means that functions in Nix are treated as values, just like numbers, strings,
 or lists. They can be manipulated, passed around, and used in the same flexible
@@ -499,36 +469,24 @@ myFuncs.add 3 4  # Output: 7
 </li>
 </ul>
 <p><strong>Why This Matters in Nix</strong>:</p>
-<ul>
-<li>
 <p>This functional approach is fundamental to Nix's unique build system. In Nix,
 <strong>package builds (called derivations)</strong> are essentially functions. They take
 specific <strong>inputs</strong> (source code, dependencies, build scripts) and deterministically
 produce <strong>outputs</strong> (a built package).</p>
-<ul>
-<li>This design ensures <strong>atomicity</strong>: if a build does not succeed completely
+<p>This design ensures <strong>atomicity</strong>: if a build does not succeed completely
 and perfectly, it produces no output at all. This prevents situations common
 in other package managers where partial updates or corrupted builds can leave
-your system in an inconsistent or broken state.</li>
-</ul>
-</li>
-<li>
+your system in an inconsistent or broken state.</p>
 <p>Many NixOS and Home Manager modules are functions, and their first-class
 status means they can be combined, reused, or passed to other parts of the
 configuration system.</p>
-</li>
-<li>
 <p>Now that we understand the "first-class" nature of Nix Functions let's see how
 they fit into NixOS and Home Manager modules.</p>
-</li>
-</ul>
-<h3 id="the-function-nature-of-nixos-and-home-manager-modules"><a class="header" href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules</a></h3>
+<h4 id="the-function-nature-of-nixos-and-home-manager-modules"><a class="header" href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules</a></h4>
 <p>It's crucial to understand that most NixOS and Home Manager modules are
 fundamentally <strong>functions</strong>.</p>
-<ul>
-<li>These module functions typically accept a single argument:
-<strong>an attribute set</strong> (remember this, it's important to understand).</li>
-</ul>
+<p>These module functions typically accept a single argument:
+<strong>an attribute set</strong> (remember this, it's important to understand).</p>
 <p><strong>Example</strong>:</p>
 <p>A practical NixOS module example for Thunar with plugins:</p>
 <pre><code class="language-nix"># thunar.nix
@@ -583,25 +541,20 @@ reproducability. <code>with</code> isn't always bad but should be avoided at the
 of a file for example to bring <code>nixpkgs</code> into scope, use <code>let</code> instead.</li>
 </ul>
 </li>
-<li>
-<p>The entire module definition is a function that takes one argument (an
-attribute set):
-<code>{ pkgs, ... }</code>.</p>
-</li>
-<li>
-<p>When this module is included in your configuration, the NixOS module system
-calls this function with a specific attribute set. This attribute set contains
-the available packages (<code>pkgs</code>), and other relevant information. The module
-then uses these values to define parts of your system.</p>
-</li>
 </ul>
-<h2 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h2>
+<p>The entire module definition is a function that takes one argument (an
+attribute set):<code>{ pkgs, ... }</code>. When this module is included in your
+configuration, the NixOS module system calls this function with a specific
+attribute set. This attribute set contains the available packages (<code>pkgs</code>),
+and other relevant information. The module then uses these values to define
+parts of your system.</p>
+<h4 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h4>
 <p>Having explored the fundamental nature of functions in Nix, we can now see
 this concept applies to more complex areas like NixOS configuration. In the next
 chapter, <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
-<h2 id="resources"><a class="header" href="#resources">Resources</a></h2>
+<h4 id="resources"><a class="header" href="#resources">Resources</a></h4>
 <details>
 <summary> ✔️ Resources (Click to Expand) </summary>
 <ul>
