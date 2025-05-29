@@ -4632,6 +4632,200 @@ in
     meta.mainProgram = "hx";
   })
 </code></pre>
+<h3 id="breaking-down-helixdefaultnix"><a class="header" href="#breaking-down-helixdefaultnix">Breaking Down <code>helix/default.nix</code></a></h3>
+<p>This <code>default.nix</code> file is a Nix derivation that defines how to build the Helix
+editor itself. It's designed to be called by the main <code>flake.nix</code> as part of its
+<code>packages</code> output.</p>
+<p>Here's a breakdown of its components:</p>
+<ol>
+<li><strong>Function Arguments</strong>:</li>
+</ol>
+<pre><code class="language-nix">{
+  lib,
+  rustPlatform,
+  callPackage,
+  runCommand,
+  installShellFiles,
+  git,
+  gitRev ? null,
+  grammarOverlays ? [],
+  includeGrammarIf ? _: true,
+}:
+</code></pre>
+<p><code>lib</code>: The Nixpkgs <code>lib</code> (library) functions, essential for common operations
+like <code>fileset</code> and <code>strings</code>.</p>
+<p><code>rustPlatform</code>: A helper function from Nixpkgs specifically for building Rust
+projects. It provides a <code>buildRustPackage</code> function, which simplifies the
+process significantly.</p>
+<p><code>callPackage</code>: A Nixpkgs function used to instantiate a Nix expression (like
+<code>grammars.nix</code>) with its dependencies automatically supplied from the current
+Nix environment.</p>
+<p><code>runCommand</code>: A Nixpkgs primitive that creates a derivation by running a shell
+command. It's used here to construct the <code>runtimeDir</code>.</p>
+<p><code>installShellFiles</code>: A utility from Nixpkgs for installing shell completion
+files.</p>
+<p><code>git</code>: The Git package, needed for determining the <code>gitRev</code>.</p>
+<p><code>gitRev ? null</code>: The Git revision of the Helix repository. It's an optional
+argument, defaulting to null. This is passed in from the main <code>flake.nix</code>.</p>
+<p><code>grammarOverlays ? []</code>: An optional list of overlays for grammars, allowing
+customization.</p>
+<p><code>includeGrammarIf ? _: true</code>: An optional function to control which grammars
+are included.</p>
+<ol start="2">
+<li><strong>Local Variables</strong> (<code>let ... in</code>)</li>
+</ol>
+<pre><code class="language-nix">let
+  fs = lib.fileset;
+
+  src = fs.difference (fs.gitTracked ./.) (fs.unions [
+    ./.envrc
+    ./rustfmt.toml
+    ./screenshot.png
+    ./book
+    ./docs
+    ./runtime
+    ./flake.lock
+    (fs.fileFilter (file: lib.strings.hasInfix ".git" file.name) ./.)
+    (fs.fileFilter (file: file.hasExt "svg") ./.)
+    (fs.fileFilter (file: file.hasExt "md") ./.)
+    (fs.fileFilter (file: file.hasExt "nix") ./.)
+  ]);
+</code></pre>
+<p><code>fs = lib.fileset;</code>: Aliases <code>lib.fileset</code> for convenience, which provides
+functions for working with file sets.</p>
+<p><code>src</code>: This is a crucial part. It defines the source files that will be used to
+build Helix.</p>
+<p><code>fs.gitTracked ./.</code>: This takes all files tracked by Git in the current
+directory.</p>
+<ul>
+<li>
+<p><code>fs.difference</code> and <code>fs.unions</code>: Excludes specific files (like <code>.envrc</code>, <code>.md</code>,
+<code>.nix</code>) from the Git-tracked source, keeping only relevant code for the build.
+This reduces build time and Nix store size.</p>
+<ul>
+<li>
+<p>It explicitly excludes configuration files (<code>.envrc</code>, <code>rustfmt.toml</code>),
+Nix-specific files (<code>flake.lock</code>, <code>.nix</code> files), and Git-related files.</p>
+</li>
+<li>
+<p>This filtering ensures only relevant source files are included in the build,
+reducing the Nix store size and preventing unnecessary rebuilds when
+non-source files (e.g., documentation) change.</p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-nix">grammars = callPackage ./grammars.nix {inherit grammarOverlays includeGrammarIf;};
+  runtimeDir = runCommand "helix-runtime" {} ''
+    mkdir -p $out
+    ln -s ${./runtime}/* $out
+    rm -r $out/grammars
+    ln -s ${grammars} $out/grammars
+  '';
+</code></pre>
+<p><code>grammars</code>: This calls the <code>grammars.nix</code> file and passes along the <code>grammarOverlays</code>
+and <code>includeGrammarIf</code> arguments. This modularizes the grammar building process.</p>
+<p><code>runtimeDir</code>: This creates a custom runtime directory for Helix.</p>
+<p><code>mkdir -p $out</code>: Creates the output directory.</p>
+<p><code>ln -s ${./runtime}/* $out</code>: Symlinks the contents of the runtime directory
+from the Helix source into the output.</p>
+<p><code>rm -r $out/grammars</code>: Removes the original grammars directory from the
+symlinked <code>runtime</code> (as it might be empty or outdated).</p>
+<p><code>ln -s ${grammars} $out/grammars</code>: Replaces the grammars directory with a
+symlink to the built grammars derivation. This ensures Helix uses the grammars
+managed by Nix.</p>
+<ol start="3">
+<li><strong>The Build Derivation</strong> (<code>rustPlatform.buildRustPackage</code>)</li>
+</ol>
+<p>The core of this <code>default.nix</code> is the <code>rustPlatform.buildRustPackage</code> call, which
+is a specialized builder for Rust projects:</p>
+<pre><code class="language-nix">in
+  rustPlatform.buildRustPackage (self: {
+    cargoLock = {
+      lockFile = ./Cargo.lock;
+      # ... comments ...
+      allowBuiltinFetchGit = true;
+    };
+</code></pre>
+<p><code>cargoLock</code>: Specifies how Cargo dependencies are handled.</p>
+<p><code>lockFile = ./Cargo.lock;</code> Points to the <code>Cargo.lock</code> file for reproducible builds.</p>
+<p><code>allowBuiltinFetchGit = true</code>: Allows Cargo to fetch Git dependencies directly
+from repositories specified in <code>Cargo.lock</code>. This is discouraged in Nixpkgs
+because it can break build reproducibility, but it’s used here for convenience
+during development, eliminating the need to manually specify <code>outputHashes</code> for
+Git dependencies.</p>
+<pre><code class="language-nix">nativeBuildInputs = [
+      installShellFiles
+      git
+    ];
+</code></pre>
+<p><code>nativeBuildInputs</code>: Are tools needed during the build process but not necessarily
+at runtime.</p>
+<pre><code class="language-nix">buildType = "release";
+</code></pre>
+<p><code>buildType</code>: Specifies that Helix should be built in "release" mode (optimized).</p>
+<pre><code class="language-nix">name = with builtins; (fromTOML (readFile ./helix-term/Cargo.toml)).package.name;
+    src = fs.toSource {
+      root = ./.;
+      fileset = src;
+    };
+</code></pre>
+<p><code>name</code>: Dynamically sets the package name by reading it from the <code>Cargo.toml</code> file.</p>
+<p><code>src</code>: Uses the <code>src</code> file set defined earlier as the source for the build.</p>
+<pre><code class="language-nix"># Helix attempts to reach out to the network and get the grammars. Nix doesn't allow this.
+    HELIX_DISABLE_AUTO_GRAMMAR_BUILD = "1";
+
+    # So Helix knows what rev it is.
+    HELIX_NIX_BUILD_REV = gitRev;
+</code></pre>
+<p><strong>Environment Variables</strong>: Sets environment variables that Helix uses.</p>
+<p><code>HELIX_DISABLE_AUTO_GRAMMAR_BUILD = "1"</code>: Prevents Helix from downloading
+grammars during the build, as Nix’s sandboxed environment disallows network
+access. Instead, grammars are provided via the <code>runtimeDir</code> derivation.</p>
+<p><code>HELIX_NIX_BUILD_REV = gitRev</code>: Embeds the specified Git revision (or <code>null</code> if
+unspecified) into the Helix binary, allowing Helix to display its version or
+commit hash.</p>
+<pre><code class="language-nix"> doCheck = false;
+    strictDeps = true;
+</code></pre>
+<p><code>doCheck = false;</code>: Skips running tests during the build. This is common for
+faster builds, especially in CI/CD, but tests are often run in a separate
+<code>checks</code> output (as seen in the <code>flake.nix</code>).</p>
+<p><code>strictDeps = true;</code>: Ensures that all dependencies are explicitly declared.</p>
+<pre><code class="language-nix">    # Sets the Helix runtime dir to the grammars
+    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+</code></pre>
+<pre><code class="language-nix">    # Sets the Helix runtime dir to the grammars
+    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+</code></pre>
+<p><code>env.HELIX_DEFAULT_RUNTIME</code>: Tells Helix where to find its runtime files
+(including the Nix-managed grammars).</p>
+<pre><code class="language-nix">
+    # Get all the application stuff in the output directory.
+    postInstall = ''
+      mkdir -p $out/lib
+      installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
+      mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
+      cp ${./contrib/Helix.desktop} $out/share/applications/Helix.desktop
+      cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/helix.svg
+      cp ${./contrib/helix.png} $out/share/icons/hicolor/256x256/apps/helix.png
+    '';
+</code></pre>
+<p><code>postInstall</code>: A shell script that runs after the main build is complete. This
+is used for installing additional files that are part of the Helix distribution
+but not directly built by Cargo.</p>
+<p>Installs shell completion files (<code>hx.bash</code>, <code>hx.fish</code>, <code>hx.zsh</code>). This enables
+tab completion.</p>
+<p>Installs desktop entry files (<code>Helix.desktop</code>) and icons (<code>logo.svg</code>, <code>helix.png</code>)
+for desktop integration for GUI environments.</p>
+<pre><code class="language-nix">
+    meta.mainProgram = "hx";
+
+})
+</code></pre>
+<p><code>meta.mainProgram</code>: Specifies the primary executable provided by this package,
+allowing <code>nix run</code> to automatically execute <code>hx</code>.</p>
+<p>A lot going on in this derivation!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-5"><a class="header" href="#chapter-5">Chapter 5</a></h1>
 <ul>
 <li><a href="Understanding_Top-Level_Attributes_5.html#understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules</a>
