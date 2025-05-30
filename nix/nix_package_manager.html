@@ -171,8 +171,15 @@
 <ul>
 <li><a href="#nix-package-manager">Nix Package Manager</a></li>
 <li><a href="#channels">Channels</a></li>
-<li><a href="#channels-vs-flakes-enhancing-reproducibility">Channels vs. Flakes Enhancing Reproducibility</a>
+<li><a href="#channels-vs-flakes-enhancing-reproducibility">Channels vs. Flakes Enhancing Reproducibility</a></li>
+<li><a href="#nixpkgs">Nixpkgs</a>
 <ul>
+<li><a href="#updates">Updates</a>
+<ul>
+<li><a href="#updating-with-channels-traditional-approach">Updating with Channels (Traditional Approach)</a></li>
+<li><a href="#updating-with-flakes-modern-approach">Updating with Flakes (Modern Approach)</a></li>
+</ul>
+</li>
 <li><a href="#managing-software-with-nix">Managing software with Nix</a></li>
 </ul>
 </li>
@@ -251,6 +258,91 @@ revision of <code>Nixpkgs</code> or any other dependency.</p>
 <code>flake.lock</code> file is a game-changer for collaboration and long-term
 reproducibility, ensuring that your Nix configuration builds the same way,
 every time, everywhere.</p>
+<h2 id="nixpkgs"><a class="header" href="#nixpkgs">Nixpkgs</a></h2>
+<p><strong>Nixpkgs</strong> is the largest repository of Nix packages and NixOS modules.</p>
+<p>For <strong>NixOS</strong> users, <code>nixos-unstable</code> channel branch is the rolling release, where
+the packages are tested and must pass integration tests.</p>
+<p>For <strong>standalone Nix</strong> users, <code>nixpkgs-unstable</code> channel branch is the rolling
+release, where packages pass only basic build tests and are upgraded often.</p>
+<p>For Flakes, as mentioned above they don't use channels so <code>nixpkgs</code> will be listed
+as an <code>input</code> to your flake. (e.g., <code>inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";</code>)
+When using flakes you can actually disable channels and actually recommended to
+avoid conflicts between traditional channel-based workflows and the flake system.</p>
+<h3 id="updates"><a class="header" href="#updates">Updates</a></h3>
+<p>The mechanism for updating your Nix environment differs fundamentally between
+channels and flakes, directly impacting reproducibility and control.</p>
+<h4 id="updating-with-channels-traditional-approach"><a class="header" href="#updating-with-channels-traditional-approach">Updating with Channels (Traditional Approach)</a></h4>
+<p>With channels, updates are a global operation that pulls the latest state of a
+specific branch.</p>
+<ul>
+<li>
+<p><strong>How it works</strong>: You typically use <code>nix-channel --update</code> to fetch the latest
+commit from the channels you've subscribed to. For instance,
+<code>sudo nix-channel --update nixos</code> (for NixOS) or <code>nix-channel --update nixpkgs</code>
+(for <code>nix-env</code> on other Linux distributions).</p>
+</li>
+<li>
+<p><strong>Implication</strong>: This command updates your local system's understanding of
+what "nixos" or "nixpkgs-unstable" means. From that point on, any <code>nixos-rebuild switch</code>,
+<code>nix-env -iA</code>, or <code>nix-build</code> commands that implicitly or explicitly refer to
+<code>nixpkgs</code> will use this newly updated version.</p>
+</li>
+<li>
+<p><strong>Reproducibility Challenge</strong>: The update itself is not recorded in your
+configuration files. If you share your <code>configuration.nix</code> with someone, they
+might run <code>nix-channel --update</code> on a different day and get a different set of
+package versions because the channel has moved. This makes it challenging to
+guarantee that two users building the "same" configuration will get identical
+results. You're effectively relying on the implicit, globally managed state of
+your channels.</p>
+</li>
+</ul>
+<h4 id="updating-with-flakes-modern-approach"><a class="header" href="#updating-with-flakes-modern-approach">Updating with Flakes (Modern Approach)</a></h4>
+<p><strong>Flakes</strong>, by contrast, use a more explicit and localized update mechanism tied
+to your <code>flake.lock</code> file.</p>
+<ul>
+<li>
+<p><strong>How it works</strong>: When you define a <code>flake.nix</code>, you specify the exact URL
+(e.g., a Git repository with a specific branch or tag) for each input. When
+you first use a flake, Nix resolves these URLs to a precise Git commit hash
+and records this hash, along with a content hash, in a <code>flake.lock</code> file.</p>
+<ul>
+<li>To update your flake inputs, you run <code>nix flake update</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Implication</strong>: This command goes to each input's specified URL (e.g.,
+<code>github:NixOS/nixpkgs/nixos-unstable</code>) and fetches the latest commit for that
+input. It then updates your <code>flake.lock</code> file with the new, precise Git commit
+hash and content hash for that input. Your <code>flake.nix</code> itself doesn't change,
+but the <code>flake.lock</code> file now points to newer versions of your dependencies.</p>
+</li>
+<li>
+<p><strong>Reproducibility Advantage</strong>: The <code>flake.lock</code> file acts as a manifest of your
+exact dependency versions.</p>
+</li>
+<li>
+<p><strong>Sharing</strong>: When you share your flake (the <code>flake.nix</code> and <code>flake.lock</code> files),
+anyone using it will fetch precisely the same Git commit hashes recorded in the
+<code>flake.lock</code>, guaranteeing identical inputs and thus, identical builds (assuming
+the same system architecture).</p>
+</li>
+<li>
+<p><strong>Updating Selectively</strong>: You can update individual inputs within your flake
+by specifying them: <code>nix flake update nixpkgs</code>. This provides fine-grained
+control over which parts of your dependency graph you want to advance.</p>
+</li>
+<li>
+<p><strong>Rolling Back</strong>: Because the <code>flake.lock</code> explicitly records the versions,
+you can easily revert to a previous state by checking out an older <code>flake.lock</code>
+from your version control system.</p>
+</li>
+</ul>
+<p><strong>In essence</strong>: Channels involve a global "pull" of the latest branch state,
+making reproducibility harder to guarantee across time and machines. Flakes,
+however, explicitly pin all inputs in <code>flake.lock</code>, and updates involve
+explicitly refreshing these pins, providing strong reproducibility and version
+control out of the box.</p>
 <h3 id="managing-software-with-nix"><a class="header" href="#managing-software-with-nix">Managing software with Nix</a></h3>
 <p><strong>Derivation Overview</strong></p>
 <p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
