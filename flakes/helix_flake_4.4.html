@@ -179,6 +179,7 @@
 <ul>
 <li><a href="#breaking-down-helixdefaultnix">Breaking Down <code>helix/default.nix</code></a></li>
 <li><a href="#making-actual-changes">Making Actual Changes</a></li>
+<li><a href="#another-way-to-modify-behavior">Another way to Modify Behavior</a></li>
 </ul>
 </li>
 </ul>
@@ -766,6 +767,165 @@ if you were, for example, attatching a debugger.</li>
 the behavior of a package defined within a Nix flake without changing the
 original source code or the upstream flake directly. You're simply telling Nix
 how you'd like your version of the package to be built.</p>
+<h3 id="another-way-to-modify-behavior"><a class="header" href="#another-way-to-modify-behavior">Another way to Modify Behavior</a></h3>
+<p>Since we are already familiar with the structure and behavior of Helix’s
+<code>flake.nix</code>, we can leverage that understanding to create our own Nix flake.
+By analyzing how Helix organizes its <code>inputs</code>, <code>outputs</code>, and package definitions,
+we gain the confidence to modify and extend a flake’s functionality to suit our
+specific needs—whether that’s customizing builds, adding overlays, or
+integrating with home-manager.</p>
+<ol>
+<li>Create a <code>flake.nix</code> in your own directory (outside the helix repo):</li>
+</ol>
+<pre><code class="language-nix">{
+  description = "Customized Helix build with debug features";
+
+  inputs = {
+    helix.url = "github:helix-editor/helix";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+  outputs = {
+    self,
+    helix,
+    nixpkgs,
+    rust-overlay,
+  }: let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs {
+      system = system;
+      overlays = [rust-overlay.overlay.overlays.default];
+    };
+  in {
+    packages.${system}.default = helix.packages.${system}.helix.overrideAttrs (old: {
+      buildType = "debug";
+
+      # Add additional cargo features
+      cargoBuildFlags =
+        (old.cargoBuildFlags or [])
+        ++ [
+          "--features"
+          "tokio-console"
+        ];
+
+      # Inject custom RUSTFLAGS
+      RUSTFLAGS = (old.RUSTFLAGS or "") + " -C debuginfo=2 -C opt-level=1";
+    });
+  };
+}
+</code></pre>
+<p>Check it:</p>
+<pre><code class="language-bash">nix flake check
+warning: creating lock file '"/home/jr/world/flake.lock"':
+• Added input 'helix':
+    'github:helix-editor/helix/8961ae1dc66633ea6c9f761896cb0d885ae078ed?narHash=sha256-f14perPUk%2BH15GyGRbg0Akqhn3rxFnc6Ez5onqpzu6A%3D' (2025-05-29)
+• Added input 'helix/nixpkgs':
+    'github:nixos/nixpkgs/5135c59491985879812717f4c9fea69604e7f26f?narHash=sha256-Vr3Qi346M%2B8CjedtbyUevIGDZW8LcA1fTG0ugPY/Hic%3D' (2025-02-26)
+• Added input 'helix/rust-overlay':
+    'github:oxalica/rust-overlay/d342e8b5fd88421ff982f383c853f0fc78a847ab?narHash=sha256-3SdPQrZoa4odlScFDUHd4CUPQ/R1gtH4Mq9u8CBiK8M%3D' (2025-02-27)
+• Added input 'helix/rust-overlay/nixpkgs':
+    follows 'helix/nixpkgs'
+• Added input 'nixpkgs':
+    'github:nixos/nixpkgs/96ec055edbe5ee227f28cdbc3f1ddf1df5965102?narHash=sha256-7doLyJBzCllvqX4gszYtmZUToxKvMUrg45EUWaUYmBg%3D' (2025-05-28)
+• Added input 'rust-overlay':
+    'github:oxalica/rust-overlay/405ef13a5b80a0a4d4fc87c83554423d80e5f929?narHash=sha256-k0nhPtkVDQkVJckRw6fGIeeDBktJf1BH0i8T48o7zkk%3D' (2025-05-30)
+• Added input 'rust-overlay/nixpkgs':
+    follows 'nixpkgs'
+</code></pre>
+<ul>
+<li>The <code>nix flake check</code> command will generate a <code>flake.lock</code> file if one doesn't
+exist, and the warnings you see indicate that new inputs are being added and
+locked to specific versions for reproducibility. This is expected behavior for
+a new or modified flake.</li>
+</ul>
+<p>Inspect the outputs:</p>
+<pre><code class="language-bash">nix flake show
+path:/home/jr/world?lastModified=1748612128&amp;narHash=sha256-WEYtptarRrrm0Jb/0PJ/b5VPqLkCk5iEenjbKYU4Xm8%3D
+└───packages
+    └───x86_64-linux
+        └───default: package 'helix-term'
+</code></pre>
+<ul>
+<li>
+<p>The <code>└───packages</code> line indicates that our flake exposes a top-level <code>packages</code>
+attribute.</p>
+</li>
+<li>
+<p><code>└───x86_64-linux</code>: System architecture specificity</p>
+</li>
+<li>
+<p><code>└───default: package 'helix-term'</code> Signifies that within the <code>x86_64-linux</code>
+packages, there's a package named <code>default</code>. This is a special name that allows
+you to omit the package name when using commands like <code>nix build</code>.</p>
+</li>
+<li>
+<p><code>package 'helix-term'</code> This is the most direct confirmation of our "hack". It
+tells us that our <code>default</code> package is <code>helix-term</code>. This confirms that our
+<code>overrideAttrs</code> in the <code>packages.${system}.default</code> section successfully
+targeted and modified the Helix editor package, which is internally named
+<code>helix-term</code> by the Helix flake.</p>
+</li>
+</ul>
+<p><strong>What This Does</strong>:</p>
+<ul>
+<li>
+<p><code>overrideAttrs</code> lets you change <em>only</em> parts of the derivation without
+rewriting everything.</p>
+</li>
+<li>
+<p><code>buildType = "debug"</code> enables debug builds.</p>
+</li>
+<li>
+<p><code>cargoBuildFlags</code> adds extra features passed to Cargo, e.g., <code>--features tokio-console</code></p>
+</li>
+<li>
+<p><code>RUSTFLAGS</code> gives you even more control over compiler behavior, optimization
+levels, etc.</p>
+</li>
+</ul>
+<p><strong>Run It</strong>:</p>
+<pre><code class="language-bash">nix run
+</code></pre>
+<p>Or drop into the dev shell:</p>
+<pre><code class="language-bash">nix develop
+</code></pre>
+<ul>
+<li>(assuming you also wire in a <code>devShells</code> output)</li>
+</ul>
+<p><strong>Adding the <code>devShells</code> output</strong>:</p>
+<p>Since we already have the helix flake as an input to our own <code>flake.nix</code> we can
+now forward or extend Helix's <code>devShells</code> like this:</p>
+<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay, ... }: {
+    devShells = helix.devShells;
+  };
+</code></pre>
+<p>Or if you want to pick a specific system:</p>
+<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay ... }:
+    let
+      system = "x86_64-linux";
+    in {
+      devShells.${system} = helix.devShells.${system};
+    };
+</code></pre>
+<p><strong>Optional: Combine with your own</strong> <code>devShell</code></p>
+<p>You can also extend or merge it with your own shell like so:</p>
+<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+    in {
+      devShells.${system} = {
+        default = pkgs.mkShell {
+          name = "my-shell";
+          inputsFrom = [ helix.devShells.${system}.default ];
+          buildInputs = [ pkgs.git ];
+        };
+      };
+    };
+</code></pre>
 
                     </main>
 
