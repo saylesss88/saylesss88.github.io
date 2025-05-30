@@ -202,6 +202,46 @@ Language. These derivations can describe anything from individual software
 packages to complete system configurations. The Nix package manager then
 deterministically "realizes" (builds) these derivations, ensuring consistency
 because they rely solely on a predefined set of inputs.</p>
+<p>Example, the classic Hello derivation:</p>
+<pre><code class="language-nix"># hello.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+in
+derivation {
+  name = "hello";
+  builder = "${pkgs.bash}/bin/bash";
+  args = [ ./hello_builder.sh ];
+  inherit (pkgs)
+    gnutar
+    gzip
+    gnumake
+    gcc
+    coreutils
+    gawk
+    gnused
+    gnugrep
+    ;
+  bintools = pkgs.binutils.bintools;
+  src = ./hello-2.12.1.tar.gz;
+  system = builtins.currentSystem;
+}
+</code></pre>
+<ul>
+<li>As you can see, this isn't the only required file but is a recipe outlining
+how to build the <code>hello</code> package. The <code>tar.gz</code> package can be found <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a>
+You would just place the tarball in the same directory as the derivation along
+with the following <code>hello_builder.sh</code>:</li>
+</ul>
+<pre><code class="language-bash">export PATH="$gnutar/bin:$gcc/bin:$gnumake/bin:$coreutils/bin:$gawk/bin:$gzip/bin:$gnugrep/bin:$gnused/bin:$bintools/bin"
+tar -xzf $src
+cd hello-2.12.1
+./configure --prefix=$out
+make
+make install
+</code></pre>
+<p>And build it with:</p>
+<pre><code class="language-bash">nix-build hello.nix
+</code></pre>
 <ul>
 <li>Most things in NixOS are built around derivations. Your NixOS system is
 described by such a single system derivation. When you want to apply a new
