@@ -181,6 +181,10 @@
 <li><a href="#partial-application-using-functions-incrementally">Partial Application: Using Functions Incrementally</a></li>
 <li><a href="#nix-functions-being-first-class-citizens">Nix Functions being "first class citizens"</a></li>
 <li><a href="#the-function-nature-of-nixos-and-home-manager-modules">The Function Nature of NixOS and Home Manager Modules</a></li>
+</ul>
+</li>
+<li><a href="#understanding-passing-and-getting-back-arguments">Understanding passing and getting back arguments</a>
+<ul>
 <li><a href="#conclusion">Conclusion</a></li>
 <li><a href="#resources">Resources</a></li>
 </ul>
@@ -556,10 +560,171 @@ configuration, the NixOS module system calls this function with a specific
 attribute set. This attribute set contains the available packages (<code>pkgs</code>),
 and other relevant information. The module then uses these values to define
 parts of your system.</p>
+<h3 id="understanding-passing-and-getting-back-arguments"><a class="header" href="#understanding-passing-and-getting-back-arguments">Understanding passing and getting back arguments</a></h3>
+<p>For this example we will build the Hello derivation from the Nix Pills series.</p>
+<p>Create an <code>autotools.nix</code> with the following contents:</p>
+<pre><code class="language-nix">pkgs: attrs: let
+  defaultAttrs = {
+    builder = "${pkgs.bash}/bin/bash";
+    args = [./builder.sh];
+    baseInputs = with pkgs; [
+      gnutar
+      gzip
+      gnumake
+      gcc
+      coreutils
+      gawk
+      gnused
+      gnugrep
+      binutils.bintools
+    ];
+    buildInputs = [];
+    system = builtins.currentSystem;
+  };
+in
+  derivation (defaultAttrs // attrs)
+</code></pre>
+<p>Let's create the hello derivation:</p>
+<pre><code class="language-nix">let
+  pkgs = import &lt;nixpkgs&gt; {};
+  mkDerivation = import ./autotools.nix pkgs;
+in
+  mkDerivation {
+    name = "hello";
+    src = ./hello-2.12.1.tar.gz;
+  }
+</code></pre>
+<ul>
+<li>You can get the tarball <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a>,
+place it in the same directory as <code>autotools.nix</code></li>
+</ul>
+<p>And finally the <code>builder.sh</code> that <code>autotools.nix</code> declares for the <code>args</code>
+attribute:</p>
+<pre><code class="language-bash">!#/bin/bash
+set -e
+unset PATH
+for p in $buildInputs $baseInputs; do
+    export PATH=$p/bin${PATH:+:}$PATH
+done
+
+tar -xf $src
+
+for d in *; do
+    if [ -d "$d" ]; then
+        cd "$d"
+        break
+    fi
+done
+
+./configure --prefix=$out
+make
+make install
+</code></pre>
+<p>When you write:</p>
+<pre><code class="language-nix">mkDerivation = import ./autotools.nix pkgs;
+</code></pre>
+<ul>
+<li>
+<p><code>import ./autotools.nix</code>: This evaluates the <code>autotools.nix</code> file. Because
+it starts with <code>pkgs: attrs: ...</code>, it means that <code>autotools.nix</code> evaluates
+to a function that expects one argument named <code>pkgs</code>.</p>
+</li>
+<li>
+<p><code>... pkgs</code>: We are immediately calling that function (the one returned by
+<code>inport ./autotools.nix</code>) and passing it our <code>pkgs</code> variable (which is the result
+of <code>import &lt;nixpkgs&gt; {}</code>).</p>
+</li>
+</ul>
+<p><strong>This illustrates the concept of Currying in Nix</strong>:</p>
+<p>The function defined in <code>autotools.nix</code> (<code>pkgs: attrs: ...</code>) is a curried
+function. It's a function that, when given its first argument (<code>pkgs</code>), returns
+another function (which then expects <code>attrs</code>).</p>
+<p>The result of import <code>./autotools.nix pkgs</code> is that second, inner function:
+<code>attrs: derivation (defaultAttrs // attrs)</code>. This inner function is then bound
+to your <code>mkDerivation</code> variable, making it ready to be called with just the
+specific attributes for your package (like <code>name</code> and <code>src</code>).</p>
+<p><strong>Understanding the <code>attrs</code> Argument</strong></p>
+<p>Now let's focus on the second argument of our <code>autotools.nix</code> function: <code>attrs</code>.</p>
+<p>Recall the full function signature in <code>autotools.nix</code>:</p>
+<pre><code class="language-nix">pkgs: attrs: let
+  # ... defaultAttrs definition ...
+in
+  derivation (defaultAttrs // attrs)
+</code></pre>
+<ol>
+<li>What <code>attrs</code> Represents:</li>
+</ol>
+<ul>
+<li>
+<p>Once <code>autotools.nix</code> has received its <code>pkgs</code> argument (and returned the inner
+function), this inner function is waiting for its final argument, which we call
+<code>attrs</code>.</p>
+</li>
+<li>
+<p><code>attrs</code> is simply an attribute set (a key-value map in Nix). It's designed to
+receive all the specific properties of the individual package you want to build
+using this helper.</p>
+</li>
+</ul>
+<ol start="2">
+<li>How <code>attrs</code> is Used:</li>
+</ol>
+<ul>
+<li>
+<p>Look at the final line of <code>autotools.nix</code>: <code>derivation (defaultAttrs // attrs)</code>.</p>
+</li>
+<li>
+<p>The <code>//</code> operator in Nix performs an attribute set merge. It takes all
+attributes from <code>defaultAttrs</code> and combines them with all attributes from <code>attrs</code>.</p>
+</li>
+<li>
+<p>Crucially, if an attribute exists in both <code>defaultAttrs</code> and <code>attrs</code>, the value
+from <code>attrs</code> (the second operand) takes precedence and overrides the default
+value.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Applying attrs in the hello Derivation:</li>
+</ol>
+<ul>
+<li>In the <code>hello</code> derivation, we call <code>mkDerivation</code> like this:</li>
+</ul>
+<pre><code class="language-nix">        mkDerivation {
+          name = "hello";
+          src = ./hello-2.12.1.tar.gz;
+        }
+</code></pre>
+<ul>
+<li>
+<p>The attribute set <code>{ name = "hello"; src = ./hello-2.12.1.tar.gz; }</code> is
+precisely what gets passed as the <code>attrs</code> argument to the <code>mkDerivation</code>
+function (which, remember, is the inner function returned by <code>autotools.nix</code>).</p>
+</li>
+<li>
+<p>When derivation <code>(defaultAttrs // attrs)</code> is evaluated for "hello", the <code>name</code>
+and <code>src</code> provided in the <code>attrs</code> set will be merged with all the <code>defaultAttrs</code>
+(like <code>builder</code>, <code>args</code>, <code>baseInputs</code>, etc.).</p>
+</li>
+</ul>
+<p>In summary:</p>
+<ul>
+<li>
+<p>The <code>pkgs</code> argument configures the general environment and available tools for
+the builder.</p>
+</li>
+<li>
+<p>The <code>attrs</code> argument is where you provide the unique details for each specific
+package you intend to build using this <code>autotools.nix</code> helper. It allows you to
+specify things like the package's name, source code, version, and any custom
+build flags, while still benefiting from all the sensible defaults provided by
+<code>autotools.nix</code>. This separation makes <code>autotools.nix</code> a reusable and flexible
+"template" for creating derivations.</p>
+</li>
+</ul>
 <h4 id="conclusion"><a class="header" href="#conclusion">Conclusion</a></h4>
 <p>Having explored the fundamental nature of functions in Nix, we can now see
-this concept applies to more complex areas like NixOS configuration. In the next
-chapter, <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
+this concept applies to more complex areas like NixOS configuration and derivations.
+In the next chapter, <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
 <h4 id="resources"><a class="header" href="#resources">Resources</a></h4>
