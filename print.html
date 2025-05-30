@@ -4690,50 +4690,43 @@ are included.</p>
     (fs.fileFilter (file: file.hasExt "md") ./.)
     (fs.fileFilter (file: file.hasExt "nix") ./.)
   ]);
-</code></pre>
-<p><code>fs = lib.fileset;</code>: Aliases <code>lib.fileset</code> for convenience, which provides
-functions for working with file sets.</p>
-<p><code>src</code>: This is a crucial part. It defines the source files that will be used to
-build Helix.</p>
-<p><code>fs.gitTracked ./.</code>: This takes all files tracked by Git in the current
-directory.</p>
-<ul>
-<li>
-<p><code>fs.difference</code> and <code>fs.unions</code>: Excludes specific files (like <code>.envrc</code>, <code>.md</code>,
-<code>.nix</code>) from the Git-tracked source, keeping only relevant code for the build.
-This reduces build time and Nix store size.</p>
-<ul>
-<li>
-<p>It explicitly excludes configuration files (<code>.envrc</code>, <code>rustfmt.toml</code>),
-Nix-specific files (<code>flake.lock</code>, <code>.nix</code> files), and Git-related files.</p>
-</li>
-<li>
-<p>This filtering ensures only relevant source files are included in the build,
-reducing the Nix store size and preventing unnecessary rebuilds when
-non-source files (e.g., documentation) change.</p>
-</li>
-</ul>
-</li>
-</ul>
-<pre><code class="language-nix">grammars = callPackage ./grammars.nix {inherit grammarOverlays includeGrammarIf;};
+
+  grammars = callPackage ./grammars.nix { inherit grammarOverlays includeGrammarIf; };
   runtimeDir = runCommand "helix-runtime" {} ''
     mkdir -p $out
     ln -s ${./runtime}/* $out
     rm -r $out/grammars
     ln -s ${grammars} $out/grammars
   '';
+in
 </code></pre>
-<p><code>grammars</code>: This calls the <code>grammars.nix</code> file and passes along the <code>grammarOverlays</code>
-and <code>includeGrammarIf</code> arguments. This modularizes the grammar building process.</p>
-<p><code>runtimeDir</code>: This creates a custom runtime directory for Helix.</p>
-<p><code>mkdir -p $out</code>: Creates the output directory.</p>
-<p><code>ln -s ${./runtime}/* $out</code>: Symlinks the contents of the runtime directory
-from the Helix source into the output.</p>
-<p><code>rm -r $out/grammars</code>: Removes the original grammars directory from the
-symlinked <code>runtime</code> (as it might be empty or outdated).</p>
-<p><code>ln -s ${grammars} $out/grammars</code>: Replaces the grammars directory with a
-symlink to the built grammars derivation. This ensures Helix uses the grammars
-managed by Nix.</p>
+<p><code>fs = lib.fileset;</code>: Aliases <code>lib.fileset</code> for convenient file set operations.</p>
+<p><code>src</code>: This is a crucial part. It defines the source files that will be used to
+build Helix by:</p>
+<ul>
+<li>
+<p>Taking all Git-tracked files in the current directory (<code>fs.gitTracked ./.</code>).</p>
+</li>
+<li>
+<p>Excluding configuration files (e.g., .envrc, flake.lock), documentation (.md), images (.svg), and Nix files (.nix) using fs.difference and fs.unions. This ensures a clean build input, reducing Nix store size and avoiding unnecessary rebuilds.</p>
+</li>
+<li>
+<p><code>grammars</code>: Builds syntax grammars by calling <code>grammars.nix</code>, passing <code>grammarOverlays</code>
+(for customizing grammar builds) and <code>includeGrammarIf</code> (a filter for selecting grammars).</p>
+</li>
+<li>
+<p><code>runtimeDir</code>: Creates a runtime directory for Helix by:</p>
+<ul>
+<li>
+<p>Symlinking the <code>runtime</code> directory from the source.</p>
+</li>
+<li>
+<p>Replacing the <code>grammars</code> subdirectory with a symlink to the <code>grammars</code>
+derivation, ensuring Helix uses Nix-managed grammars.</p>
+</li>
+</ul>
+</li>
+</ul>
 <ol start="3">
 <li><strong>The Build Derivation</strong> (<code>rustPlatform.buildRustPackage</code>)</li>
 </ol>
