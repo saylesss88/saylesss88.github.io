@@ -4299,11 +4299,32 @@ and the base system options) and the settings from second (like <code>/etc/secon
 all without directly altering the first or second flakes. This demonstrates the
 incredible power of flake extensibility for building complex, modular, and
 composable systems.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="hack-the-helix-flake"><a class="header" href="#hack-the-helix-flake">Hack the Helix Flake</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-44"><a class="header" href="#chapter-44">Chapter 4.4</a></h1>
 <ul>
-<li>A cool feature of flakes is being able to make changes to source code with
-minimal effort.</li>
+<li><a href="flakes/helix_flake_4.4.html#understanding-the-helix-flake-and-modifying-its-behavior">Understanding the Helix Flake and Modifying its Behavior</a>
+<ul>
+<li><a href="flakes/helix_flake_4.4.html#understanding-the-helix-flakenix">Understanding the Helix flake.nix</a></li>
+<li><a href="flakes/helix_flake_4.4.html#top-level-metadata">Top-Level Metadata</a></li>
+<li><a href="flakes/helix_flake_4.4.html#inputs">Inputs</a></li>
+<li><a href="flakes/helix_flake_4.4.html#outputs-function">Outputs Function</a></li>
+<li><a href="flakes/helix_flake_4.4.html#common-setup">Common Setup</a>
+<ul>
+<li><a href="flakes/helix_flake_4.4.html#breaking-down-helixdefaultnix">Breaking Down <code>helix/default.nix</code></a></li>
+<li><a href="flakes/helix_flake_4.4.html#making-actual-changes">Making Actual Changes</a></li>
 </ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><img src="flakes/../images/helix.png" alt="Helix Logo" /></p>
+<h1 id="understanding-the-helix-flake-and-modifying-its-behavior"><a class="header" href="#understanding-the-helix-flake-and-modifying-its-behavior">Understanding the Helix Flake and Modifying its Behavior</a></h1>
+<p>As we've seen from previous examples, the helix editor repository includes a few
+<code>.nix</code> files including a <code>flake.nix</code>. Their flake uses a lot of idiomatic Nix
+code and advanced features. First I will break down their <code>flake.nix</code> and
+<code>default.nix</code> to understand why they do certain things. And finally, we will
+change the build to "debug" mode demonstrating how easily you can modify the
+behavior of a package defined within a Nix flake without changing the original
+source code or the upstream flake directly.</p>
 <ol>
 <li>Let's clone the Helix repository:</li>
 </ol>
@@ -4819,6 +4840,64 @@ for desktop integration for GUI environments.</p>
 <p><code>meta.mainProgram</code>: Specifies the primary executable provided by this package,
 allowing <code>nix run</code> to automatically execute <code>hx</code>.</p>
 <p>A lot going on in this derivation!</p>
+<h3 id="making-actual-changes"><a class="header" href="#making-actual-changes">Making Actual Changes</a></h3>
+<ol>
+<li>Locate the <code>packages</code> output section. It looks like this:</li>
+</ol>
+<pre><code class="language-nix">packages = eachSystem (system: {
+      inherit (pkgsFor.${system}) helix;
+      /*
+      The default Helix build. Uses the latest stable Rust toolchain, and unstable
+      nixpkgs.
+
+      The build inputs can be overridden with the following:
+
+      packages.${system}.default.override { rustPlatform = newPlatform; };
+
+      Overriding a derivation attribute can be done as well:
+
+      packages.${system}.default.overrideAttrs { buildType = "debug"; };
+      */
+      default = self.packages.${system}.helix;
+    });
+</code></pre>
+<ol start="2">
+<li>Modify the <code>default</code> package. The comments actually tell us exactly how to
+do this. We want to use <code>overrideAttrs</code> to change the <code>buildType</code></li>
+</ol>
+<p>Change this line:</p>
+<pre><code class="language-nix">default = self.packages.${system}.helix;
+</code></pre>
+<p>To this:</p>
+<pre><code class="language-nix">default = self.packages.${system}.helix.overrideAttrs { buildType = "debug"; };
+</code></pre>
+<ul>
+<li>This tells Nix to take the standard Helix package definition and override one
+of its internal attributes (<code>buildType</code>) to "debug" instead of "release".</li>
+</ul>
+<ol start="3">
+<li>Build the "Hacked" Helix:</li>
+</ol>
+<pre><code class="language-bash">nix build
+</code></pre>
+<ul>
+<li>Nix will now rebuild Helix, but this time, it will compile it in debug mode.
+You'll likely notice the build takes a bit longer, and the resulting binary
+will be larger due to the included debugging symbols.</li>
+</ul>
+<ol start="4">
+<li>Run the Debug Binary:</li>
+</ol>
+<pre><code class="language-bash">./result/bin/hx
+</code></pre>
+<ul>
+<li>You're now running your custom-built debug version of Helix! This is useful
+if you were, for example, attatching a debugger.</li>
+</ul>
+<p>This is a simple yet powerful "hack" that demonstrates how easily you can modify
+the behavior of a package defined within a Nix flake without changing the
+original source code or the upstream flake directly. You're simply telling Nix
+how you'd like your version of the package to be built.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-5"><a class="header" href="#chapter-5">Chapter 5</a></h1>
 <ul>
 <li><a href="Understanding_Top-Level_Attributes_5.html#understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules</a>
