@@ -5058,6 +5058,271 @@ now forward or extend Helix's <code>devShells</code> like this:</p>
       };
     };
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="extending-flakes-with-custom-packages-using-overlays"><a class="header" href="#extending-flakes-with-custom-packages-using-overlays">Extending Flakes with Custom Packages using Overlays</a></h1>
+<ul>
+<li><a href="flakes/overlays_4.5.html#adding-the-overlays-output-to-your-flake">Adding the overlays output to your Flake</a></li>
+<li><a href="flakes/overlays_4.5.html#the-actual-overlay">The Actual Overlay</a></li>
+<li><a href="flakes/overlays_4.5.html#the-pokego-package-definition">The pokego Package definition</a></li>
+<li><a href="flakes/overlays_4.5.html#adding-the-overlay-to-your-configuration">Adding the overlay to your configuration</a></li>
+<li><a href="flakes/overlays_4.5.html#installing-pokego">Installing Pokego</a>
+<ul>
+<li><a href="flakes/overlays_4.5.html#another-overlay-example">Another Overlay Example</a></li>
+</ul>
+</li>
+</ul>
+<p><img src="flakes/../images/pokego.png" alt="Pokego Logo" /></p>
+<p>It is very common to use overlays in Nix to install packages that aren't
+available in the standard Nixpkgs repository.</p>
+<p><strong>Overlays</strong> are one of the primary and recommended ways to extend and customize
+your Nix environment. It's important to remember that Nix overlays are made to
+allow you to modify or extend the package set provided by Nixpkgs (or other
+Nix sources) without directly altering the original package definitions. This
+is crucial for maintaining reproducibility and avoiding conflicts. Overlays
+are essentially functions that take the previous package set and allow you to
+add, modify, or remove packages.</p>
+<h2 id="adding-the-overlays-output-to-your-flake"><a class="header" href="#adding-the-overlays-output-to-your-flake">Adding the overlays output to your Flake</a></h2>
+<p>I'll show the process of adding the <code>pokego</code> package that is not in Nixpkgs:</p>
+<ol>
+<li>In my <code>flake.nix</code> I have a custom inputs variable within my let block of my flake like so just showing the necessary parts for berevity:</li>
+</ol>
+<pre><code class="language-nix"># flake.nix
+  outputs = my-inputs @ {
+    self,
+    nixpkgs,
+    treefmt-nix,
+    ...
+  }: let
+    system = "x86_64-linux";
+    host = "magic";
+    userVars = {
+      username = "jr";
+      gitUsername = "saylesss88";
+      editor = "hx";
+      term = "ghostty";
+      keys = "us";
+      browser = "firefox";
+      flake = builtins.getEnv "HOME" + "/flake";
+    };
+
+    inputs =
+      my-inputs
+      // {
+        pkgs = import inputs.nixpkgs {
+          inherit system;
+        };
+        lib = {
+          overlays = import ./lib/overlay.nix;
+          nixOsModules = import ./nixos;
+          homeModules = import ./home;
+          inherit system;
+        };
+      };
+      # ... snip ...
+</code></pre>
+<h2 id="the-actual-overlay"><a class="header" href="#the-actual-overlay">The Actual Overlay</a></h2>
+<ol start="2">
+<li>In the <code>overlay.nix</code> I have this helper function and the defined package:</li>
+</ol>
+<pre><code class="language-nix"># overlay.nix
+_final: prev: let
+  # Helper function to import a package
+  callPackage = prev.lib.callPackageWith (prev // packages);
+
+  # Define all packages
+  packages = {
+    # Additional packages
+    pokego = callPackage ./pac_defs/pokego.nix {};
+  };
+in
+  packages
+</code></pre>
+<ol>
+<li><code>_final: prev:</code>: This is the function definition of the overlay.</li>
+</ol>
+<ul>
+<li>
+<p><code>_final</code>: This argument represents the final, merged package set after all
+overlays have been applied. It's often unused within a single overlay, hence
+the <code>_</code> prefix (a Nix convention for unused variables).</p>
+</li>
+<li>
+<p><code>prev</code>: This is the crucial argument. It represents the package set before
+this overlay is applied. This allows you to refer to existing packages and
+functions from Nixpkgs.</p>
+</li>
+</ul>
+<ol start="2">
+<li>
+<p><code>let ... in packages</code>: This introduces a <code>let</code> expression, which defines
+local variables within the scope of this overlay function. The <code>in packages</code>
+part means that the overlay function will ultimately return the <code>packages</code>
+attribute set defined within the <code>let</code> block.</p>
+</li>
+<li>
+<p><code>callPackage = prev.lib.callPackageWith (prev // packages)</code>: This line
+defines a helper function called <code>callPackage</code>.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><code>prev.lib.callPackageWith</code> Is a function provided by Nixpkgs' <code>lib</code>.
+<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing
+of additional arguments that will then be passed to the package definition.</p>
+</li>
+<li>
+<p><code>(prev // packages)</code>: This is an attribute set merge operation. It takes the
+<code>prev</code> package set (Nixpkgs before this overlay) and merges it with the
+<code>packages</code> attribute set defined later in this overlay.</p>
+</li>
+<li>
+<p>By using <code>callPackageWith</code> with this merged attribute set, the <code>callPackage</code>
+function defined here is set up to correctly import package definitions,
+ensuring they have access to both the original Nixpkgs and any other packages
+defined within this overlay.</p>
+</li>
+</ul>
+<ol start="4">
+<li>
+<p><code>packages = { ... };</code>: This defines an attribute set named <code>packages</code>. This
+set will contain all the new or modified packages introduced by this overlay.</p>
+</li>
+<li>
+<p><code>pokego = callPackages ./pac_defs/pokego.nix { };</code>: This is the core of how
+the <code>pokego</code> package is added.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><code>pokego =</code>: This defines a new attribute named <code>pokego</code> within the packages
+attribute set. This name will be used to refer to the pokego package later.</p>
+</li>
+<li>
+<p><code>callPackage ./pac_defs/pokego.nix {}</code>: This calls the callPackage helper
+function defined earlier.</p>
+</li>
+<li>
+<p><code>./pac_defs/pokego.nix</code>: This is the path to another Nix file(<code>pokego.nix</code>)
+that contains the actual package definition for pokego. This file would
+define how to fetch, build, and install the pokego software</p>
+</li>
+<li>
+<p><code>{}</code>: This is an empty attribute set passed as additional arguments to the
+<code>pokego.nix</code> package definition. If <code>pokego.nix</code> expected any specific
+parameters (like versions or dependencies), you would provide them here.
+Since it's empty, it implies pokego.nix either has no required arguments or
+uses default values.</p>
+</li>
+</ul>
+<ol start="6">
+<li><code>in packages</code>: As mentioned earlier, the overlay function returns the
+packages attribute set. When this overlay is applied, the packages defined
+within this packages set (including pokego) will be added to the overall Nix
+package set.</li>
+</ol>
+<h2 id="the-pokego-package-definition"><a class="header" href="#the-pokego-package-definition">The pokego Package definition</a></h2>
+<p>The following is the <code>./pac_defs/pokego.nix</code>, it may be helpful to first read my
+<a href="https://saylesss88.github.io/posts/understanding_package_definitions/">PackageDefinition</a>
+post to better understand the following:</p>
+<pre><code class="language-nix"># pokego.nix
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
+buildGoModule rec {
+  pname = "pokego";
+  version = "0.3.0";
+
+  src = fetchFromGitHub {
+    owner = "rubiin";
+    repo = "pokego";
+    rev = "v${version}";
+    hash = "sha256-cFpEi8wBdCzAl9dputoCwy8LeGyK3UF2vyylft7/1wY=";
+  };
+
+  vendorHash = "sha256-7SoKHH+tDJKhUQDoVwAzVZXoPuKNJEHDEyQ77BPEDQ0=";
+
+  # Install shell completions
+  postInstall = ''
+    install -Dm644 completions/pokego.bash "$out/share/bash-completion/completions/pokego"
+    install -Dm644 completions/pokego.fish "$out/share/fish/vendor_completions.d/pokego.fish"
+    install -Dm644 completions/pokego.zsh "$out/share/zsh/site-functions/_pokego"
+  '';
+
+  meta = with lib; {
+    description = "Command-line tool that lets you display Pokémon sprites in color directly in your terminal";
+    homepage = "https://github.com/rubiin/pokego";
+    license = licenses.gpl3Only;
+    maintainers = with maintainers; [
+      rubiin
+      jameskim0987
+      vinibispo
+    ];
+    mainProgram = "pokego";
+    platforms = platforms.all;
+  };
+}
+</code></pre>
+<h2 id="adding-the-overlay-to-your-configuration"><a class="header" href="#adding-the-overlay-to-your-configuration">Adding the overlay to your configuration</a></h2>
+<p>There are a few places you could choose to put the following, I choose to use
+my <code>configuration.nix</code> because of my setup:</p>
+<pre><code class="language-nix"># configuration.nix
+nixpkgs.overlays = [inputs.lib.overlays]
+</code></pre>
+<h2 id="installing-pokego"><a class="header" href="#installing-pokego">Installing Pokego</a></h2>
+<ul>
+<li>If you are managing your entire system configuration with NixOS, you would
+typically add <code>pokego</code> to your <code>environment.systemPackages</code>.</li>
+</ul>
+<pre><code class="language-nix"># configuration.nix
+environment.systemPackages = with pkgs; [
+  pokego
+]
+</code></pre>
+<ul>
+<li>If you prefer home-manager you can install <code>pokego</code> with home-manager also:</li>
+</ul>
+<pre><code class="language-nix"># home.nix
+home.packages = [
+  pkgs.pokego
+]
+</code></pre>
+<h3 id="another-overlay-example"><a class="header" href="#another-overlay-example">Another Overlay Example</a></h3>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "https://flakehub.com/NixOS/nixpkgs/*.tar.gz";
+
+    nix.url = "https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz";
+  };
+
+  outputs = { self, nixpkgs, nix }:
+
+    let
+      system = "aarch64-darwin";
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          nix.overlays.default
+        ];
+      };
+    in
+    {
+     # `pkgs` is nixpkgs for the system, with nix's overlay applied
+    };
+}
+</code></pre>
+<ul>
+<li>
+<p>Normally, <code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments:  </code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}<code>.  This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin` system, with the overlay from the nix flake applied.</p>
+</li>
+<li>
+<p>Consequently, any packages built using this customized <code>pkgs</code> will now depend
+on or use the specific nix version (2.17.0) provided by the nix flake, instead
+of the version that comes with the fetched nixpkgs. This technique can be
+useful for ensuring a consistent environment or testing specific package
+versions.</p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-5"><a class="header" href="#chapter-5">Chapter 5</a></h1>
 <ul>
 <li><a href="Understanding_Top-Level_Attributes_5.html#understanding-top-level-attributes-in-nixos-modules">Understanding Top-Level Attributes in NixOS Modules</a>
