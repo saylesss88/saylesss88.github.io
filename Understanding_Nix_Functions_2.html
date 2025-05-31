@@ -172,6 +172,7 @@
 <li><a href="#understanding-nix-functions">Understanding Nix Functions</a></li>
 <li><a href="#what-are-nix-functions">What are Nix Functions?</a></li>
 <li><a href="#builtins">Builtins</a></li>
+<li><a href="#lamdas">Lamdas</a></li>
 <li><a href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a>
 <ul>
 <li><a href="#single-argument-functions-the-basics">Single-Argument Functions: The Basics</a></li>
@@ -230,6 +231,36 @@ multi-argument functions in a flexible and reusable way.</p>
 </li>
 </ul>
 </details>
+<h2 id="lamdas"><a class="header" href="#lamdas">Lamdas</a></h2>
+<p>Nix functions are anonymous (lambdas) (e.g., <code>x: x + 2</code>), and technically take a
+single parameter. However, that single parameter is very often an attribute set,
+allowing you to effectively pass multiple named inputs by destructuring (e.g.,
+<code>{ arg1, arg2 }: arg1 + arg2</code>).</p>
+<p>Type the parameter name, followed by a colon, and finally the body of the function.</p>
+<pre><code class="language-nix">nix-repl&gt; param: param * 2
+&lt;&lt;lambda @ &lt;&lt;string&gt;&gt;:1:1&gt;&gt;
+
+nix-repl&gt; (param: param * 2) 2
+4
+</code></pre>
+<p>The above example shows that everything in Nix returns a value. When you call a
+function directly (without first assigning the function itself to a variable),
+the result of that call is immediately evaluated and displayed/used.</p>
+<p>In order to make our function reusable and be able to pass different values at
+different times we have to assign our function to a variable:</p>
+<pre><code class="language-nix">nix-repl&gt; twoTimes = param: param * 2
+</code></pre>
+<p>Now, we can reference our function by it's name and pass our required parameter:</p>
+<pre><code class="language-nix">nix-repl&gt; twoTimes
+«lambda @ «string»:1:2»
+nix-repl&gt; twoTimes 2
+4
+nix-repl&gt; twoTimes 4
+8
+</code></pre>
+<p>We defined a function <code>param: param * 2</code> takes one parameter <code>param</code>, and returns
+<code>param * 2</code>. We then assigned this function to the variable <code>twoTimes</code>. Lastly,
+we called the function with a few different arguments showing it's reusability.</p>
 <h2 id="understanding-function-structure-the-role-of-the-colon"><a class="header" href="#understanding-function-structure-the-role-of-the-colon">Understanding Function Structure: The Role of the Colon</a></h2>
 <p>The colon (<code>:</code>) acts as a clear separator within a function definition:</p>
 <ul>
@@ -631,7 +662,7 @@ to a function that expects one argument named <code>pkgs</code>.</p>
 </li>
 <li>
 <p><code>... pkgs</code>: We are immediately calling that function (the one returned by
-<code>inport ./autotools.nix</code>) and passing it our <code>pkgs</code> variable (which is the result
+<code>import ./autotools.nix</code>) and passing it our <code>pkgs</code> variable (which is the result
 of <code>import &lt;nixpkgs&gt; {}</code>).</p>
 </li>
 </ul>
@@ -641,7 +672,7 @@ function. It's a function that, when given its first argument (<code>pkgs</code>
 another function (which then expects <code>attrs</code>).</p>
 <p>The result of import <code>./autotools.nix pkgs</code> is that second, inner function:
 <code>attrs: derivation (defaultAttrs // attrs)</code>. This inner function is then bound
-to your <code>mkDerivation</code> variable, making it ready to be called with just the
+to the <code>mkDerivation</code> variable, making it ready to be called with just the
 specific attributes for your package (like <code>name</code> and <code>src</code>).</p>
 <p><strong>Understanding the <code>attrs</code> Argument</strong></p>
 <p>Now let's focus on the second argument of our <code>autotools.nix</code> function: <code>attrs</code>.</p>
@@ -697,7 +728,7 @@ value.</p>
 <ul>
 <li>
 <p>The attribute set <code>{ name = "hello"; src = ./hello-2.12.1.tar.gz; }</code> is
-precisely what gets passed as the <code>attrs</code> argument to the <code>mkDerivation</code>
+what gets passed as the <code>attrs</code> argument to the <code>mkDerivation</code>
 function (which, remember, is the inner function returned by <code>autotools.nix</code>).</p>
 </li>
 <li>
