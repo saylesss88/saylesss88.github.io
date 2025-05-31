@@ -171,6 +171,7 @@
 <ul>
 <li><a href="#introduction-to-nix-derivations">Introduction to Nix Derivations</a></li>
 <li><a href="#creating-derivations-in-nix">Creating Derivations in Nix</a></li>
+<li><a href="#the-hello-world-derivation">The Hello World Derivation</a></li>
 <li><a href="#simple-rust-derivation">Simple Rust Derivation</a></li>
 <li><a href="#when-derivations-are-built">When Derivations are Built</a></li>
 <li><a href="#referring-to-other-derivations">Referring to other derivations</a></li>
@@ -202,65 +203,21 @@ Language. These derivations can describe anything from individual software
 packages to complete system configurations. The Nix package manager then
 deterministically "realizes" (builds) these derivations, ensuring consistency
 because they rely solely on a predefined set of inputs.</p>
-<p>Example, the classic Hello derivation:</p>
-<pre><code class="language-nix"># hello.nix
-let
-  pkgs = import &lt;nixpkgs&gt; { };
-in
-derivation {
-  name = "hello";
-  builder = "${pkgs.bash}/bin/bash";
-  args = [ ./hello_builder.sh ];
-  inherit (pkgs)
-    gnutar
-    gzip
-    gnumake
-    gcc
-    coreutils
-    gawk
-    gnused
-    gnugrep
-    ;
-  bintools = pkgs.binutils.bintools;
-  src = ./hello-2.12.1.tar.gz;
-  system = builtins.currentSystem;
-}
-</code></pre>
-<ul>
-<li>As you can see, this isn't the only required file but is a recipe outlining
-how to build the <code>hello</code> package. The <code>tar.gz</code> package can be found <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a>
-You would just place the tarball in the same directory as the derivation along
-with the following <code>hello_builder.sh</code>:</li>
-</ul>
-<pre><code class="language-bash">export PATH="$gnutar/bin:$gcc/bin:$gnumake/bin:$coreutils/bin:$gawk/bin:$gzip/bin:$gnugrep/bin:$gnused/bin:$bintools/bin"
-tar -xzf $src
-cd hello-2.12.1
-./configure --prefix=$out
-make
-make install
-</code></pre>
-<p>And build it with:</p>
-<pre><code class="language-bash">nix-build hello.nix
-</code></pre>
-<ul>
-<li>Most things in NixOS are built around derivations. Your NixOS system is
+<p>Most things in NixOS are built around derivations. Your NixOS system is
 described by such a single system derivation. When you want to apply a new
-configuration, <code>nixos-rebuild</code> handles the process:</li>
-</ul>
+configuration, <code>nixos-rebuild</code> handles the process:</p>
 <p>It first builds this derivation:</p>
 <pre><code class="language-bash">nix-build '&lt;nixpkgs/nixos&gt;' -A system
 </code></pre>
 <p>Then, once the build is complete, it switches to that new system:</p>
 <pre><code class="language-bash">result/bin/switch-to-configuration
 </code></pre>
-<ul>
-<li>After the build, <code>nixos-rebuild</code> updates a crucial symbolic link: <code>/run/current-system</code>
+<p>After the build, <code>nixos-rebuild</code> updates a crucial symbolic link: <code>/run/current-system</code>
 This symlink always points to the active, running version of your system in the
 Nix store. In essence, the <code>/run/current-system</code> path is the currently active
 system derivation. This design choice gives NixOS its powerful atomic upgrade
 and rollback capabilities: changing your system involves building a new system
-derivation and updating this symlink to point to the latest version.</li>
-</ul>
+derivation and updating this symlink to point to the latest version.</p>
 <blockquote>
 <pre><code class="language-nix"> ls -lsah /run/current-system
  0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/
@@ -330,6 +287,54 @@ At a minimum, you'll often encounter these essential attributes:</p>
 </ol>
 </li>
 </ul>
+<h2 id="the-hello-world-derivation"><a class="header" href="#the-hello-world-derivation">The Hello World Derivation</a></h2>
+<p>For this example, first create a <code>hello</code> directory and add the <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">Hello tarball</a>
+to said directory.</p>
+<p>Now lets create the classic Hello derivation:</p>
+<pre><code class="language-nix"># hello.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+in
+derivation {
+  name = "hello";
+  builder = "${pkgs.bash}/bin/bash";
+  args = [ ./hello_builder.sh ];
+  inherit (pkgs)
+    gnutar
+    gzip
+    gnumake
+    gcc
+    coreutils
+    gawk
+    gnused
+    gnugrep
+    ;
+  bintools = pkgs.binutils.bintools;
+  src = ./hello-2.12.1.tar.gz;
+  system = builtins.currentSystem;
+}
+</code></pre>
+<ul>
+<li>As you can see, this isn't the only required file but is a recipe outlining
+how to build the <code>hello</code> package. The <code>tar.gz</code> package can be found <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a>
+You would just place the tarball in the same directory as the derivation along
+with the following <code>hello_builder.sh</code>:</li>
+</ul>
+<pre><code class="language-bash"># hello_builder.sh
+export PATH="$gnutar/bin:$gcc/bin:$gnumake/bin:$coreutils/bin:$gawk/bin:$gzip/bin:$gnugrep/bin:$gnused/bin:$bintools/bin"
+tar -xzf $src
+cd hello-2.12.1
+./configure --prefix=$out
+make
+make install
+</code></pre>
+<p>And build it with:</p>
+<pre><code class="language-bash">nix-build hello.nix
+</code></pre>
+<p>Finally execute it with:</p>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
 <h2 id="simple-rust-derivation"><a class="header" href="#simple-rust-derivation">Simple Rust Derivation</a></h2>
 <p>Create a <code>simple.rs</code> with the following contents:</p>
 <pre><pre class="playground"><code class="language-rust">fn main() {
