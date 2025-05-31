@@ -2176,6 +2176,213 @@ time.</p>
 </li>
 </ul>
 </details>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="practical-nix-functions"><a class="header" href="#practical-nix-functions">Practical Nix Functions</a></h1>
+<details>
+<summary>
+✔️
+If you want to follow along with this example you'll have to place the following
+in your project directory. Section is collapsed to focus on functions:
+</summary>
+<ol>
+<li>
+<p><a href="https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/2.49.3/graphviz-2.49.3.tar.gz">graphviz</a></p>
+</li>
+<li>
+<p><a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">hello</a></p>
+</li>
+<li>
+<p><code>autotools.nix</code>:</p>
+</li>
+</ol>
+<pre><code class="language-nix"># autotools.nix
+pkgs: attrs:
+with pkgs; let
+  defaultAttrs = {
+    builder = "${bash}/bin/bash";
+    args = [./builder.sh];
+    setup = ./setup.sh;
+    baseInputs = [gnutar gzip gnumake gcc binutils-unwrapped coreutils gawk gnused gnugrep patchelf findutils];
+    buildInputs = [];
+    system = builtins.currentSystem;
+  };
+in
+  derivation (defaultAttrs // attrs)
+</code></pre>
+<ol start="4">
+<li><code>setup.sh</code>:</li>
+</ol>
+<pre><code class="language-bash"># setup.sh (This is a library of functions setting up the environment, not directly executable)
+unset PATH
+for p in $baseInputs $buildInputs; do
+  if [ -d $p/bin ]; then
+    export PATH="$p/bin${PATH:+:}$PATH"
+  fi
+  if [ -d $p/lib/pkgconfig ]; then
+    export PKG_CONFIG_PATH="$p/lib/pkgconfig${PKG_CONFIG_PATH:+:}$PKG_CONFIG_PATH"
+  fi
+done
+
+function unpackPhase() {
+  tar -xzf $src
+
+  for d in *; do
+    if [ -d "$d" ]; then
+      cd "$d"
+      break
+    fi
+  done
+}
+
+function configurePhase() {
+  ./configure --prefix=$out
+}
+
+function buildPhase() {
+  make
+}
+
+function installPhase() {
+  make install
+}
+
+function fixupPhase() {
+  find $out -type f -exec patchelf --shrink-rpath '{}' \; -exec strip '{}' \; 2&gt;/dev/null
+}
+
+function genericBuild() {
+  unpackPhase
+  configurePhase
+  buildPhase
+  installPhase
+  fixupPhase
+}
+</code></pre>
+<ol start="5">
+<li>And finally <code>builder.sh</code>:</li>
+</ol>
+<pre><code class="language-bash"># builder.sh (This is the actual builder script specified in the derivation and
+# what `nix-build` expects)
+set -e
+source $setup
+genericBuild
+</code></pre>
+</details>
+<p>This is another example from the Nix-Pill series shown in another way to show
+some powerful aspects of functions.</p>
+<p>If you have a <code>default.nix</code> like this:</p>
+<pre><code class="language-nix"># default.nix
+{
+  hello = import ./hello.nix;
+  graphviz = import ./graphviz.nix;
+}
+</code></pre>
+<p>It expects the files that it imports to look like this:</p>
+<pre><code class="language-nix"># graphviz.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+  mkDerivation = import ./autotools.nix pkgs;
+in
+mkDerivation {
+  name = "graphviz";
+  src = ./graphviz-2.49.3.tar.gz;
+}
+</code></pre>
+<p>And <code>hello.nix</code>:</p>
+<pre><code class="language-nix"># hello.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+  mkDerivation = import ./autotools.nix pkgs;
+in
+mkDerivation {
+  name = "hello";
+  src = ./hello-2.12.1.tar.gz;
+}
+</code></pre>
+<p>You would build these with:</p>
+<pre><code class="language-bash">nix-build -A hello
+nix-build -A graphviz
+</code></pre>
+<p>As you can see both derivations are dependendent on <code>nixpkgs</code> which they <strong>both</strong>
+import directly. To centralize our dependencies and avoid redundant imports,
+we'll refactor our individual package definitions (<code>hello.nix</code>, <code>graphviz.nix</code>)
+into functions. Our <code>default.nix</code> will then be responsible for setting up the
+common inputs (like <code>pkgs</code> and <code>mkDerivation</code>) and passing them as arguments when
+it imports and calls these package functions.</p>
+<p>Here is what our <code>default.nix</code> will look like:</p>
+<pre><code class="language-nix">let
+  pkgs = import &lt;nixpkgs&gt; { };
+  mkDerivation = import ./autotools.nix pkgs;
+in
+with pkgs;
+{
+  hello = import ./hello.nix { inherit mkDerivation; };
+  graphviz = import ./graphviz.nix {
+    inherit
+      mkDerivation
+      lib
+      gd
+      pkg-config
+      ;
+  };
+  graphvizCore = import ./graphviz.nix {
+    inherit
+      mkDerivation
+      lib
+      gd
+      pkg-config
+      ;
+    gdSupport = false;
+  };
+}
+</code></pre>
+<p>We define some local variables in the <code>let</code> expression and pass them around.</p>
+<p>The whole expression in the above <code>default.nix</code> returns an attribute set with
+the keys <code>hello</code>, <code>graphviz</code>, and <code>graphvizCore</code></p>
+<p>We import <code>hello.nix</code> and <code>graphviz.nix</code>, which both return a function. We call
+the functions, passing them a set of inputs with the <code>inherit</code> construct.</p>
+<p>Let's change <code>hello.nix</code> into a function to match what the <code>default.nix</code> now
+expects.</p>
+<pre><code class="language-nix"># hello.nix
+{mkDerivation}:
+mkDerivation {
+  name = "hello";
+  src = ./hello-2.12.1.tar.gz;
+}
+</code></pre>
+<p>Now our <code>graphviz</code> attribute expects <code>graphviz.nix</code> to be a function that takes
+the arguments listed in the above <code>default.nix</code>, here's what <code>graphviz.nix</code>
+will look like as a function:</p>
+<pre><code class="language-nix"># graphviz.nix
+{
+  mkDerivation,
+  lib,
+  gdSupport ? true,
+  gd,
+  pkg-config,
+}:
+mkDerivation {
+  name = "graphviz";
+  src = ./graphviz-2.49.3.tar.gz;
+  buildInputs =
+    if gdSupport
+    then [
+      pkg-config
+      (lib.getLib gd)
+      (lib.getDev gd)
+    ]
+    else [];
+}
+</code></pre>
+<p>We factorized the import of <code>nixpkgs</code> and <code>mkDerivation</code>, and also added a variant
+of <code>graphviz</code> with gd support disabled. The result is that both <code>hello.nix</code> and
+<code>graphviz.nix</code> are independent of the repository and customizable by passing
+specific inputs.</p>
+<p>Now, we can build the package with <code>gd</code> support disabled with the <code>graphvizCore</code>
+attribute:</p>
+<pre><code class="language-bash">nix-build -A graphvizCore
+# or we can still build the package that now defaults to gd support
+nix-build -A graphviz
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-3"><a class="header" href="#chapter-3">Chapter 3</a></h1>
 <ul>
 <li><a href="NixOS_Modules_Explained_3.html#nix-module-system-explained">Nix Module System Explained</a></li>
