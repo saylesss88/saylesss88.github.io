@@ -6384,32 +6384,22 @@ the result of a derivation being built (the system closure)</p>
 </li>
 </ul>
 </li>
-<li>
+</ul>
 <p>A Nix derivation encapsulates all this information, telling Nix what inputs
 to use, how to build it, and what the final output should be.</p>
-</li>
-<li>
 <p>Nix derivations run in <strong>pure</strong>, <strong>isolated environments</strong>, meaning they
 <strong>cannot</strong> access the internet during the build phase. This ensures that
 builds are reproducible -- they don't depend on external sources that might
 change over time.</p>
-<ul>
-<li>There are <code>Fixed-output-derivations</code> that allow fetching resources during
+<p>There are <code>Fixed-output-derivations</code> that allow fetching resources during
 the build process by explicitly specifying the expected hash upfront. Just
-keep this in mind that normal derivations don't have network access.</li>
-</ul>
-</li>
-</ul>
+keep this in mind that normal derivations don't have network access.</p>
 <h2 id="creating-derivations-in-nix"><a class="header" href="#creating-derivations-in-nix">Creating Derivations in Nix</a></h2>
-<ul>
-<li>
 <p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function,
 which is part of the standard environment (<code>stdenv</code>). While a
 lower-level <code>derivation</code> function exists for advanced use cases,
 <code>mkDerivation</code> simplifies the process by automatically managing dependencies
 and the build environment.</p>
-</li>
-<li>
 <p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument.
 At a minimum, you'll often encounter these essential attributes:</p>
 <ol>
@@ -6426,6 +6416,67 @@ At a minimum, you'll often encounter these essential attributes:</p>
 (e.g., <code>bash</code>).</p>
 </li>
 </ol>
+<p><strong>How do we pass these required attributes to the <code>derivation</code> function?</strong></p>
+<p>Functions in Nix often take a single argument which is an attribute set. For
+<code>derivation</code> and <code>mkDerivation</code>, this takes the form
+<code>functionName { attribute1 = value1; attribute2 = value2; ... }</code>, where the <code>{}</code>
+encloses the set of attributes being passed as the function's argument.</p>
+<p>Remember that <code>derivation</code> and <code>mkDerivation</code> take a set (i.e. <code>{}</code>) of attributes
+as its first argument. So, in order to pass the required attributes you would
+do something like this:</p>
+<pre><code class="language-nix">nix-repl&gt; pkgs = import &lt;nixpkgs&gt; {}
+
+nix-repl&gt; d = derivation {
+            name = "mydrv";
+            builder = "${pkgs.bash}/bin/bash";
+            args = [
+              "-c" # Tells bash to execute the following string as a command
+              ''
+                # Explicitly set PATH to include coreutils bin directory
+                export PATH="${pkgs.coreutils}/bin:$PATH"
+                mkdir $out
+              ''
+            ];
+            system = builtins.currentSystem;
+          }
+
+nix-repl&gt; :b d
+</code></pre>
+<ul>
+<li>When I was starting out, seeing the above written in the following format made
+it clearer in my mental map that we were passing these attributes as arguments
+but both accomplish the same thing.</li>
+</ul>
+<pre><code class="language-nix">d = derivation { name = "myname"; builder = "${coreutils}/bin/true"; system = builtins.currentSystem; }
+</code></pre>
+<ul>
+<li>When you write <code>pkgs = import &lt;nixpkgs&gt; {};</code>, you are importing the Nixpkgs
+<code>default.nix</code> file, which resolves to a function. Calling that function by
+passing it an empty attribute set <code>{}</code> as its argument. The function then
+evaluates and returns the entire <code>pkgs</code> attribute set. To specify a different
+system for example, you could do something like:</li>
+</ul>
+<pre><code class="language-nix">pkgsForAarch64 = import &lt;nixpkgs&gt; { system = "aarch64-linux"; };
+</code></pre>
+<p>So when you see:</p>
+<pre><code class="language-nix">import &lt;nixpkgs&gt; { overlays = []; config = {}; }
+</code></pre>
+<ul>
+<li>
+<p>Instead, these empty sets explicitly override any global or implicit
+overlays/configurations that Nix might otherwise pick up from environment
+variables (like <code>NIXPKGS_CONFIG</code>), default locations (like <code>~/.config/nixpkgs/config.nix</code>
+or <code>~/.config/nixpkgs/overlays</code>), or other mechanisms.</p>
+</li>
+<li>
+<p>This is to prevent accidental partial application from other parts of your
+configuration and is saying "Do not pass any custom configuration options for
+this particular import"</p>
+</li>
+<li>
+<p><code>derivation</code> is a pre-made, built-in function in the Nix language. Here, we are
+passing it an attribute set as argument with the three required attributes.
+(<code>name</code>, <code>builder</code>, <code>system</code>, and we added an extra argument <code>args</code>.)</p>
 </li>
 </ul>
 <h2 id="the-hello-world-derivation"><a class="header" href="#the-hello-world-derivation">The Hello World Derivation</a></h2>
