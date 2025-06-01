@@ -2419,9 +2419,12 @@ incredibly convenient as you don't need to import it in every module.</p>
 <p><code>lib</code>: The Nixpkgs utility library (<code>pkgs.lib</code>), providing helper functions
 for common tasks.</p>
 </li>
+<li>
+<p><code>specialArgs</code>: An attribute set of extra arguments to be passed to the module
+functions.</p>
+</li>
 </ul>
-<p>A typical module might start like this:
-Nix</p>
+<p>A typical module might start like this:</p>
 <pre><code class="language-nix"># Example NixOS module
 { config, pkgs, lib, ... }: # These arguments are passed automatically by the module system
 {
@@ -2446,8 +2449,8 @@ comes in.</p>
 <p><code>specialArgs</code> is an attribute you can pass to the <code>import</code> function when you load a
 module (or a set of modules). It's typically used to provide data that your
 modules need but isn't something Nixpkgs would normally manage.</p>
-<p>For example, in a <code>configuration.nix</code> or <code>flake.nix</code>:</p>
-<pre><code class="language-nix"># From your configuration.nix or flake.nix
+<p>For example, in a <code>configuration.nix</code>:</p>
+<pre><code class="language-nix"># From your configuration.nix
 { config, pkgs, lib, ... }: # Standard module arguments
 
 let
@@ -2493,6 +2496,81 @@ in
 one of the standard <code>config</code>, <code>pkgs</code>, <code>lib</code>, <code>options</code> (or <code>pkgs.callPackage</code>,
 etc., which are often implicit through <code>pkgs</code>) must be provided via <code>specialArgs</code>
 at the point where the modules are composed.</p>
+<p>Any values listed in a module that aren’t automatically passed via Nixpkgs must
+be explicitly provided through <code>specialArgs</code>.</p>
+<h3 id="specialargs-and-extraspecialargs-with-flakes"><a class="header" href="#specialargs-and-extraspecialargs-with-flakes"><code>specialArgs</code> and <code>extraSpecialArgs</code> with Flakes</a></h3>
+<p>NixOS modules use <code>specialArgs</code> and Home-Manager uses <code>extraSpecialArgs</code> to
+allow you to pass extra arguments.</p>
+<p>Or with Flakes it would look like this:</p>
+<pre><code class="language-nix">{
+  description = "My Flake";
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+   };
+
+  outputs = { self, nixpkgs, home-manager, ... }:
+    let
+      lib = nixpkgs.lib;
+      pkgs = nixpkgs.legacyPackages.${"x86_64-linux"};
+      system = "x86_64-linux";
+  host = "magic";
+  username = "jr";
+  userVars = {
+    timezone = "America/New_York";
+    locale = "en_US.UTF-8";
+    gitUsername = "TSawyer87";
+    dotfilesDir = "~/.dotfiles";
+    wm = "hyprland";
+    browser = "firefox";
+    term = "ghostty";
+    editor = "hx";
+    keyboardLayout = "us";
+  };
+    in {
+      nixosConfigurations = {
+        YOURHOSTNAME = lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [ ./configuration.nix ];
+          specialArgs = {
+            inherit userVars; # == userVars = userVars;
+            inherit host;
+            inherit username;
+          };
+        };
+      };
+      homeConfigurations = {
+        USERNAME = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home.nix ];
+          extraSpecialArgs = {
+            inherit userVars;
+            inherit host;
+            inherit username;
+            # or it can be written like this:
+            # inherit userVars host username;
+          };
+        };
+      };
+    };
+}
+</code></pre>
+<p>Now if I want to use any of these arguments in modules I can by any module file
+referenced by my configuration.</p>
+<p>For example, the following is a <code>git.nix</code> module that uses the variables from
+the flake passed from <code>extraSpecialArgs</code> in this case because it's a home-manager
+module:</p>
+<pre><code class="language-nix"># git.nix
+{ userVars, ... }: {
+  programs = {
+    git = {
+      enable = true;
+      userName = userVars.gitUsername;
+    };
+  };
+}
+</code></pre>
 <div class="table-wrapper"><table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Regular Nix Function (e.g., <code>hello.nix</code>)</th><th style="text-align: left">Nix Module (e.g., <code>my-config-module.nix</code>)</th></tr></thead><tbody>
 <tr><td style="text-align: left"><strong>Arguments</strong></td><td style="text-align: left"><strong>You must explicitly pass every single argument.</strong></td><td style="text-align: left"><strong>Automatically receives <code>config</code>, <code>pkgs</code>, <code>lib</code>, <code>options</code>, etc.</strong></td></tr>
 <tr><td style="text-align: left"><strong>Custom Args</strong></td><td style="text-align: left">Passed directly in the function call.</td><td style="text-align: left">Passed via <code>specialArgs</code> when the modules are composed.</td></tr>
