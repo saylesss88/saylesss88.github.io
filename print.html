@@ -2581,8 +2581,14 @@ module:</p>
 <ul>
 <li><a href="NixOS_Modules_Explained_3.html#nix-module-system-explained">Nix Module System Explained</a></li>
 <li><a href="NixOS_Modules_Explained_3.html#module-structure">Module Structure</a></li>
-<li><a href="NixOS_Modules_Explained_3.html#modularize-your-configurationnix">Modularize your configuration.nix</a></li>
-<li><a href="NixOS_Modules_Explained_3.html#declaring-options">Declaring Options</a>
+<li><a href="NixOS_Modules_Explained_3.html#modularize-your-configurationnix">Modularize your configuration.nix</a>
+<ul>
+<li><a href="NixOS_Modules_Explained_3.html#declaring-options">Declaring Options</a></li>
+<li><a href="NixOS_Modules_Explained_3.html#defining-values">Defining Values</a></li>
+<li><a href="NixOS_Modules_Explained_3.html#evaluating-modules">Evaluating Modules</a></li>
+</ul>
+</li>
+<li><a href="NixOS_Modules_Explained_3.html#checking-out-the-vim-module-provided-by-nixpkgs">Checking out the Vim module provided by Nixpkgs</a>
 <ul>
 <li><a href="NixOS_Modules_Explained_3.html#module-composition">Module Composition</a></li>
 <li><a href="NixOS_Modules_Explained_3.html#nixos-modules-and-dependency-locking-with-npins">NixOS Modules and Dependency Locking with npins</a></li>
@@ -2637,28 +2643,20 @@ or user environment. <code>config</code> is the same <code>config</code> you rec
 module argument (e.g. <code>{ pkgs, config, ... }:</code> at the top of your module
 function)</p>
 <p>Understanding <code>config</code>:</p>
-<ul>
-<li>
 <p><code>config</code> is the big constantly updated blueprint of your entire system.</p>
-</li>
-<li>
 <p>Every time you bring in a new module, it adds its own settings and options
 to this blueprint. So, when a module receives the <code>config</code> argument, it's
 getting the complete picture of everything you've asked NixOS to set up so far.</p>
-</li>
-<li>
 <p>This allows the module to:</p>
 <ul>
 <li>
 <p>See what other parts of your system are doing.</p>
 </li>
 <li>
-<p>Make smare decisions based on those settings.</p>
+<p>Make smart decisions based on those settings.</p>
 </li>
 <li>
 <p>Add its own pieces to the overall plan, building on what's already there.</p>
-</li>
-</ul>
 </li>
 <li>
 <p>Most modules are functions that take an attribute set and return an attribute
@@ -2882,7 +2880,49 @@ be set and used elsewhere.</p>
 or <a href="https://github.com/oxalica/nil">nil</a> with your editor of choice.
 This will allow your editor to warn you about missing arguments and
 dependencies as well as syntax errors.</p>
-<h2 id="declaring-options"><a class="header" href="#declaring-options">Declaring Options</a></h2>
+<h3 id="declaring-options"><a class="header" href="#declaring-options">Declaring Options</a></h3>
+<p>Options are declared under the top-level <code>options</code> attribute with <code>lib.mkOption</code>.</p>
+<p><a href="https://nixos.org/manual/nixpkgs/stable/#function-library-lib.options.mkOption">mkOption</a>
+Creates an Option attribute set. It accepts an attribute set with certain keys
+such as, <code>default</code>, <code>package</code>, and <code>example</code>.</p>
+<pre><code class="language-nix"># options.nix
+{ lib, ... }:
+{
+  options = {
+    name = lib.mkOption { type = lib.types.str; };
+  };
+}
+</code></pre>
+<blockquote>
+<p><code>lib</code> provides helper functions from <code>nixpkgs.lib</code> and the ellipsis (<code>...</code>) is
+for arbitrary arguments which means that this function is prepared to accept
+<strong>any additional arguments</strong> that the caller might provide, even if those
+arguments are not explicitly named or used within the module's body. They
+make the modules more flexible, without the <code>...</code> each module would have to
+explicitly list every possible argument it might receive, which would be
+cumbersome and error-prone. So <code>{lib, ... }:</code> means that "I need the <code>lib</code>
+argument" <strong>and</strong> I acknowledge that the module system might pass other
+arguments automatically (like <code>config</code>, <code>pkgs</code>, etc.) and I'm fine with them
+being there, even if I don't use them directly in this specific module file.</p>
+</blockquote>
+<h3 id="defining-values"><a class="header" href="#defining-values">Defining Values</a></h3>
+<p>Options are <strong>set</strong> or <strong>defined</strong> under the top-level <code>config</code> attribute:</p>
+<pre><code class="language-nix"># config.nix
+{ ... }:
+{
+  config = {
+    name = "Slick Jones";
+  };
+}
+</code></pre>
+<p>In this <strong>option declaration</strong>, we created an option <code>name</code> of type <em>string</em> and
+set that same option to a string.</p>
+<p><strong>Option Definitions</strong> can be in a separate file than <strong>Option Declarations</strong></p>
+<h3 id="evaluating-modules"><a class="header" href="#evaluating-modules">Evaluating Modules</a></h3>
+<p>Modules are <strong>evaluated</strong> with <a href="https://nixos.org/manual/nixpkgs/stable/#module-system-lib-evalModules">lib.evalModules</a>
+<code>lib.evalModules</code> evaluates a set of modules, typically once per application
+(e.g. once for NixOS and once for Home-Manager).</p>
+<h2 id="checking-out-the-vim-module-provided-by-nixpkgs"><a class="header" href="#checking-out-the-vim-module-provided-by-nixpkgs">Checking out the Vim module provided by Nixpkgs</a></h2>
 <p>The following is <code>nixpkgs/nixos/modules/programs/vim.nix</code>, a module that is
 included in the Nixpkgs collection:</p>
 <pre><code class="language-nix">{
@@ -2920,42 +2960,6 @@ in
 </code></pre>
 <p>It provides options to enable Vim, set it as the default editor, and specify
 the Vim package to use.</p>
-<p>Nixpkgs collection is a good place to see best practices and community norms.
-As you can see the above module avoids using a top-level <code>with lib;</code> that is
-suggested in the NixOS wiki. Modules, package definitions etc. often contain
-fairly detailed comments throughout the code explaining why they did certain
-things.</p>
-<p>NixOS Wiki example click the eye to see full example:</p>
-<pre><code class="language-nix">{ lib, pkgs, config, ... }:
-with lib;
-let
-  # Shorter name to access final settings a
-  # user of hello.nix module HAS ACTUALLY SET.
-  # cfg is a typical convention.
-  cfg = config.services.hello;
-in {
-<span class="boring">   # Declare what settings a user of this "hello.nix" module CAN SET.
-</span><span class="boring">   options.services.hello = {
-</span><span class="boring">     enable = mkEnableOption "hello service";
-</span><span class="boring">     greeter = mkOption {
-</span><span class="boring">       type = types.str;
-</span><span class="boring">       default = "world";
-</span><span class="boring">     };
-</span><span class="boring">   };
-</span><span class="boring">
-</span><span class="boring">   # Define what other settings, services and resources should be active IF
-</span><span class="boring">   # a user of this "hello.nix" module ENABLED this module
-</span><span class="boring">   # by setting "services.hello.enable = true;".
-</span><span class="boring">   config = mkIf cfg.enable {
-</span><span class="boring">     systemd.services.hello = {
-</span><span class="boring">       wantedBy = [ "multi-user.target" ];
-</span><span class="boring">       serviceConfig.ExecStart = "${pkgs.hello}/bin/hello -g'Hello, ${escapeShellArg cfg.greeter}!'";
-</span><span class="boring">     };
-</span><span class="boring">   };
-</span><span class="boring"> }
-</span></code></pre>
-<p>I showed you this example to let you know that Nixpkgs is a good resource for
-up to date best practices and community norms.</p>
 <details>
 <summary> ✔️ Breakdown of the vim module.(Click to Expand)</summary>
 1. Module Inputs and Structure:
