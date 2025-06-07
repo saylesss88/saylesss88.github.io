@@ -1550,6 +1550,575 @@ something like <code>/nix/store/your-hash-hello-world</code>).</p>
 <ul>
 <li>This will execute the <code>hello</code> file from the Nix store and print <code>"Hello, World!"</code>.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-btrfs-subvol-install-with-disko-and-flakes"><a class="header" href="#minimal-btrfs-subvol-install-with-disko-and-flakes">Minimal Btrfs-Subvol Install with Disko and Flakes</a></h1>
+<p>Disko allows you to declaratively partition and format your disks, and then mount
+them to your system. I recommend checking out the <a href="https://github.com/nix-community/disko/tree/master?tab=readme-ov-file">README</a>
+as it is a disk destroyer if used incorrectly.</p>
+<p>We will mainly be following the <a href="https://github.com/nix-community/disko/blob/master/docs/quickstart.md">disko quickstart guide</a></p>
+<ol>
+<li>
+<p>Get the <a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
+Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
+link to the <a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
+download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
+executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with <code>sudo bash Ventoy2Disk.sh</code>
+Follow the prompts to finish the install.</p>
+</li>
+<li>
+<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to enable
+networking run the following:</p>
+</li>
+</ol>
+<pre><code class="language-bash">sudo systemctl start wpa_supplicant
+wpa_cli
+</code></pre>
+<pre><code class="language-bash">&gt; add_network
+0
+
+&gt; set_network 0 ssid "myhomenetwork"
+OK
+
+&gt; set_network 0 psk "mypassword"
+OK
+
+&gt; enable_network 0
+OK
+</code></pre>
+<p>To exit type <code>quit</code>, then check your connection with <code>ping google.com</code>.</p>
+<p>Another option is to do the following, so either the above method or the below
+method after starting <code>wpa_supplicant</code>:</p>
+<pre><code class="language-bash"># Alternative for quick setup (less interactive, but often faster)
+sudo wpa_passphrase "myhomenetwork" "mypassword" &gt;&gt; /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+sudo systemctl restart wpa_supplicant@wlan0.service
+</code></pre>
+<ol start="3">
+<li>Get your Disk Name with <code>lsblk</code></li>
+</ol>
+<p>The output should be something like:</p>
+<pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+nvme0n1     259:0    0   1,8T  0 disk
+</code></pre>
+<ol start="4">
+<li>Copy the disk configuration to your machine. You can choose one from the
+<a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.
+I chose the btrfs-subvolumes layout so I ran the following:</li>
+</ol>
+<pre><code class="language-bash">cd /tmp
+curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/btrfs-subvolumes.nix -o /tmp/disk-config.nix
+</code></pre>
+<ol start="5">
+<li>Make Necessary changes, I set mine up for impermanence with the following:</li>
+</ol>
+<pre><code class="language-bash">nano /tmp/disk-config.nix
+</code></pre>
+<pre><code class="language-nix">{
+  disko.devices = {
+    disk = {
+      main = {
+        type = "disk";
+        device = "/dev/nvme0n1";
+        content = {
+          type = "gpt";
+          partitions = {
+            ESP = {
+              priority = 1;
+              name = "ESP";
+              start = "1M";
+              end = "512M";
+              type = "EF00";
+              content = {
+                type = "filesystem";
+                format = "vfat";
+                mountpoint = "/boot";
+                mountOptions = ["umask=0077"];
+              };
+            };
+            root = {
+              size = "100%";
+              content = {
+                type = "btrfs";
+                extraArgs = ["-f"]; # Override existing partition
+                # Subvolumes must set a mountpoint in order to be mounted,
+                # unless their parent is mounted
+                subvolumes = {
+                  # Subvolume name is different from mountpoint
+                  "/root" = {
+                    mountpoint = "/";
+                    mountOptions = ["subvol=root" "compress=zstd" "noatime"];
+                  };
+                  # Subvolume name is the same as the mountpoint
+                  "/home" = {
+                    mountOptions = ["subvol=home" "compress=zstd" "noatime"];
+                    mountpoint = "/home";
+                  };
+                  # Sub(sub)volume doesn't need a mountpoint as its parent is mounted
+                  "/home/user" = {};
+                  # Parent is not mounted so the mountpoint must be set
+                  "/nix" = {
+                    mountOptions = [
+                      "subvol=nix"
+                      "compress=zstd"
+                      "noatime"
+                    ];
+                    mountpoint = "/nix";
+                  };
+                  "/persist" = {
+                    mountpoint = "/persist";
+                    mountOptions = ["subvol=nix" "compress=zstd" "noatime"];
+                  };
+                  "/log" = {
+                    mountpoint = "/var/log";
+                    mountOptions = ["subvol=log" "compress=zstd" "noatime"];
+                  };
+                  "/lib" = {
+                    mountpoint = "/var/lib";
+                    mountOptions = ["subvol=lib" "compress=zstd" "noatime"];
+                  };
+                  # This subvolume will be created but not mounted
+                  "/test" = {};
+                };
+
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  fileSystems."/persist".neededForBoot = true;
+  fileSystems."/var/log".neededForBoot = true;
+  fileSystems."/var/lib".neededForBoot = true;
+}
+</code></pre>
+<ul>
+<li>You may choose to add a swapfile to the above <code>disk-config.nix</code>, I haven't
+included it here because I manage it with the impermanence module. If you were
+to add it here you could just add under say the <code>"/lib"</code> section add:</li>
+</ul>
+<pre><code class="language-nix"># Persistent subvolume for swapfile
+"/persist/swap" = {
+  mountpoint = "/persist/swap";
+  mountOptions = ["subvol=persist/swap" "noatime"]; # No compression for swap
+};
+fileSystems."/persist/swap".neededForBoot = true;
+</code></pre>
+<ol start="6">
+<li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
+wipe EVERYTHING on your disk. Disko doesn't work with dual boot.</li>
+</ol>
+<pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount /tmp/disk-config.nix
+</code></pre>
+<p>Check it with the following:</p>
+<pre><code class="language-bash">mount | grep /mnt
+</code></pre>
+<p>The output for an <code>nvme0n1</code> disk would be similar to the following:</p>
+<pre><code class="language-bash">/dev/nvme0n1p1 on /mnt type ext4 (rw,relatime,stripe=2)
+/dev/nvme0n1p2 on /mnt/boot type vfat (rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro)
+# ... snip ...
+</code></pre>
+<ol start="7">
+<li>Generate necessary files, here we use <code>--no-filesystems</code> because disko handles the
+<code>fileSystems</code> attribute for us.</li>
+</ol>
+<pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
+</code></pre>
+<pre><code class="language-bash">sudo mv /tmp/disk-config.nix /mnt/etc/nixos
+</code></pre>
+<ol start="8">
+<li>Create the flake in your home directory, then move it to <code>/mnt/etc/nixos</code></li>
+</ol>
+<pre><code class="language-bash">mkdir flake &amp;&amp; cd flake
+nix-shell -p git yazi helix
+export NIX_CONFIG='experimental-features = nix-command flakes'
+export EDITOR='hx'
+hx flake.nix
+</code></pre>
+<pre><code class="language-nix"># flake.nix
+{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    inputs.disko.url = "github:nix-community/disko/latest";
+    inputs.disko.inputs.nixpkgs.follows = "nixpkgs";
+    # impermanence.url = "github:nix-community/impermanence";
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          # inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p>Move all the files into your flake:</p>
+<pre><code class="language-bash">cd /mnt/etc/nixos/
+sudo mv disk-config.nix hardware-configuration.nix configuration.nix ~/flake
+</code></pre>
+<ol start="9">
+<li>Edit <code>configuration.nix</code> with what is required, the following is required, I
+clone my original flake repo and move the pieces into place but it's fairly
+easy to just type it all out:</li>
+</ol>
+<ul>
+<li>
+<p>Bootloader</p>
+</li>
+<li>
+<p>User</p>
+</li>
+<li>
+<p>Networking</p>
+</li>
+<li>
+<p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
+</li>
+<li>
+<p><code>initialHashedPassword</code>: Run <code>mkpasswd -M sha-512</code>, then enter your desired
+password. Example output,</p>
+</li>
+</ul>
+<pre><code class="language-bash">Password: your_secret_password
+Retype password: your_secret_password
+$6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
+</code></pre>
+<p>copy the hashed password and use it for the value of your <code>initialHashedPassword</code></p>
+<pre><code class="language-nix"># configuration.nix
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}: {
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./disk-config.nix
+  ];
+
+  networking.hostName = "magic"; # Define your hostname.
+
+  networking.networkmanager.enable = true;
+
+  boot.loader.systemd-boot.enable = true; # (for UEFI systems only)
+  # List packages installed in system profile.
+  # You can use https://search.nixos.org/ to find more packages (and options).
+  environment.systemPackages = with pkgs; [
+    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    #   wget
+    git
+  ];
+
+  time.timeZone = "America/New_York";
+
+  users.users.nixos = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
+     initialHashedPassword = "COPY_YOUR_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
+    # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
+  };
+
+  console.keyMap = "us";
+
+  nixpkgs.config.allowUnfree = true;
+
+  system.stateVersion = "25.05"; # Did you read the comment?
+}
+</code></pre>
+<ol start="10">
+<li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
+</ol>
+<pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
+sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
+</code></pre>
+<ul>
+<li>
+<p>You will be prompted to enter a new password if everything succeeds.</p>
+</li>
+<li>
+<p>If everything checks out, reboot the system and you should be prompted to enter
+your user and password to login to a shell to get started.</p>
+</li>
+<li>
+<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my
+home directory. Since the file was first in <code>/etc</code> you'll need to adjust the
+permissions with something like <code>sudo chmod username:users ~/flake</code> and then
+you can work on it without privilege esculation.</p>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted Btrfs Impermanence with Flakes</a></h1>
+<p>This guide is for an unencrypted setup, there are a few links at the end for
+encrypted setups.</p>
+<p>This section details how to set up impermanence on your NixOS system using Btrfs
+subvolumes. With impermanence, your operating system's root filesystem will
+reset to a pristine state on each reboot, while designated directories and
+files remain persistent. This provides a highly reliable and rollback-friendly
+system.</p>
+<h2 id="impermanence-the-concept-and-its-btrfs-implementation"><a class="header" href="#impermanence-the-concept-and-its-btrfs-implementation">Impermanence: The Concept and Its Btrfs Implementation</a></h2>
+<p>In a traditional Linux system, most of this state is stored on the disk and
+persists indefinitely unless manually deleted or modified. However, this can
+lead to configuration drift, where the system accumulates changes (e.g., log
+files, temporary files, or unintended configuration tweaks) that make it harder
+to reproduce or maintain.</p>
+<p>Impermanence, in the context of operating systems, refers to a setup where the
+majority of the system's root filesystem (<code>/</code>) is reset to a pristine state on
+every reboot. This means any changes made to the system (e.g., installing new
+packages, modifying system files outside of configuration management, creating
+temporary files) are discarded upon shutdown or reboot.</p>
+<h3 id="what-does-impermanence-do"><a class="header" href="#what-does-impermanence-do">What Does Impermanence Do?</a></h3>
+<p>Impermanence is a NixOS approach that makes the system stateless (or nearly
+stateless) by wiping the root filesystem (/) on each boot, ensuring a clean,
+predictable starting point. Only explicitly designated data (persistent state)
+is preserved across reboots, typically stored in specific locations like the
+<code>/persist</code> subvolume. This achieves:</p>
+<ol>
+<li>Clean Root Filesystem:</li>
+</ol>
+<ul>
+<li>
+<p>The root subvolume is deleted and recreated on each boot, erasing transient
+state (e.g., temporary files, runtime data).</p>
+</li>
+<li>
+<p>This ensures the system starts fresh, reducing clutter and making it behave
+closer to a declarative system defined by your NixOS configuration.</p>
+</li>
+</ul>
+<ol start="2">
+<li>Selective Persistence:</li>
+</ol>
+<ul>
+<li>
+<p>Critical state (e.g., user files, logs, system configuration) is preserved in
+designated persistent subvolumes (e.g., <code>/persist</code>, <code>/var/log</code>, <code>/var/lib</code>) or
+files.</p>
+</li>
+<li>
+<p>You control exactly what state persists by configuring <code>environment.persistence."/persist"</code>
+or other mechanisms.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Reproducibility and Security:</li>
+</ol>
+<ul>
+<li>
+<p>By wiping transient state, impermanence prevents unintended changes from
+accumulating, making the system more reproducible.</p>
+</li>
+<li>
+<p>It enhances security by ensuring sensitive temporary data (e.g., <code>/tmp</code>, runtime
+credentials) is erased on reboot.</p>
+</li>
+</ul>
+<h3 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h3>
+<ol>
+<li>Add impermanence to your <code>flake.nix</code></li>
+</ol>
+<pre><code class="language-nix"># flake.nix
+{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    disko.url = "github:nix-community/disko/latest";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
+    impermanence.url = "github:nix-community/impermanence";
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<ol start="2">
+<li>Discover where your root subvolume is located with <code>findmnt</code>:</li>
+</ol>
+<p>Before configuring impermanence, it's crucial to know the device path and
+subvolume path of your main Btrfs partition where the root filesystem (<code>/</code>) is
+located. This information is needed for the mount command within the
+impermanence script.</p>
+<pre><code class="language-bash">findmnt /
+TARGET   SOURCE         FSTYPE OPTIONS
+/        /dev/disk/by-partlabel/disk-main-root[/root]
+                        btrfs  rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=275,sub
+</code></pre>
+<p>From the SOURCE column, note the full path, including the device (e.g.,
+<code>/dev/disk/by-partlabel/disk-main-root</code>) and the subvolume in brackets (e.g.,
+<code>[/root]</code>). You will use the device path in the next step</p>
+<p><code>/dev/disk/by-partlabel/disk-main-root</code> is a symlink to the actual device path
+(e.g. <code>/dev/nvme0n1p2</code>), but using the partlabel is generally more robust for
+scripts.</p>
+<ol start="3">
+<li>Create an <code>impermanence.nix</code>:</li>
+</ol>
+<p>Now, create a new file named impermanence.nix in your configuration directory
+(<code>/mnt/etc/nixos/flake/</code> if you followed the previous steps). This file will
+contain all the specific settings for your impermanent setup, including Btrfs
+subvolume management and persistent data locations</p>
+<pre><code class="language-nix">{lib, ...}: {
+  # Reset root subvolume on boot
+  boot.initrd.postResumeCommands = lib.mkAfter ''
+    mkdir /btrfs_tmp
+    mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp # CONFIRM THIS IS CORRECT FROM findmnt
+    if [[ -e /btrfs_tmp/root ]]; then
+      mkdir -p /btrfs_tmp/old_roots
+      timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
+      mv /btrfs_tmp/root "/btrfs_tmp/old_roots/$timestamp"
+    fi
+
+    delete_subvolume_recursively() {
+      IFS=$'\n'
+      for i in $(btrfs subvolume list -o "$1" | cut -f 9- -d ' '); do
+        delete_subvolume_recursively "/btrfs_tmp/$i"
+      done
+      btrfs subvolume delete "$1"
+    }
+
+    for i in $(find /btrfs_tmp/old_roots/ -maxdepth 1 -mtime +30); do
+      delete_subvolume_recursively "$i"
+    done
+
+    btrfs subvolume create /btrfs_tmp/root
+    umount /btrfs_tmp
+  '';
+
+  # Use /persist as the persistence root, matching Disko's mountpoint
+  environment.persistence."/persist" = {
+    hideMounts = true;
+    directories = [
+      "/etc" # System configuration (Keep this here for persistence via bind-mount)
+      "/var/spool" # Mail queues, cron jobs
+      "/srv" # Web server data, etc.
+      "/root" # Root user's home
+      # "/var/log" # Persist logs for debugging (still commented out, good)
+    ];
+    files = [
+      "/swapfile" # Persist swapfile (impermanence manages this file)
+    ];
+  };
+
+  # Swapfile configuration (definition for Systemd)
+  swapDevices = [
+    {
+      device = "/persist/swapfile"; # Points to the persistent location of the swapfile
+      size = 8192; # 8 GB in MiB
+    }
+  ];
+
+  # --- SWAPFILE INITIALIZATION &amp; FORMATTING (CRITICAL for activation) ---
+  # 1. Ensure the swapfile exists at the specified size with correct permissions early via tmpfiles.
+  #    The ${toString (8 * 1024 * 1024 * 1024)} converts 8GB to bytes.
+  systemd.tmpfiles.rules = [
+    "f /persist/swapfile 0600 - - ${toString (8 * 1024 * 1024 * 1024)} -"
+  ];
+
+  # 2. Format the swapfile *only if it's not already formatted* during boot.
+  boot.initrd.postDeviceCommands = lib.mkAfter ''
+    if ! blkid -p /persist/swapfile | grep -q 'TYPE="swap"'; then
+      echo "NixOS: Formatting /persist/swapfile..."
+      mkswap /persist/swapfile
+    fi
+  '';
+  # --- END SWAPFILE INITIALIZATION &amp; FORMATTING ---
+}
+</code></pre>
+<h3 id="applying-your-impermanence-configuration"><a class="header" href="#applying-your-impermanence-configuration">Applying Your Impermanence Configuration</a></h3>
+<p>Once you have completed all the steps and created or modified the necessary files
+(<code>flake.nix</code>, <code>impermanence.nix</code>), you need to apply these changes to your NixOS
+system.</p>
+<ol>
+<li>Navigate to your NixOS configuration directory (where your <code>flake.nix</code> is
+located).</li>
+</ol>
+<pre><code class="language-bash">cd /path/to/your/nixos/flake
+</code></pre>
+<ol start="2">
+<li>Rebuild and Switch: Execute the nixos-rebuild switch command. This command will:</li>
+</ol>
+<ul>
+<li>
+<p>Evaluate your <code>flake.nix</code> and the modules it imports (including your new
+<code>impermanence.nix</code>).</p>
+</li>
+<li>
+<p>Build a new NixOS system closure based on your updated configuration.</p>
+</li>
+<li>
+<p>Activate the new system configuration, making it the current running system.</p>
+</li>
+</ul>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake .#hostname # Replace 'hostname' with your actual system hostname
+</code></pre>
+<ol start="3">
+<li>Perform an Impermanence Test (Before Reboot):</li>
+</ol>
+<ul>
+<li>Before you reboot, create a temporary directory and file in a non-persistent
+location. Since you haven't explicitly added <code>/imperm_test</code> to your
+<code>environment.persistence."/persist"</code> directories, this file should not survive a reboot.</li>
+</ul>
+<pre><code class="language-bash">mkdir /imperm_test
+echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
+ls -l /imperm_test/testfile # Verify the file exists
+cat /imperm_test/testfile # Verify content
+</code></pre>
+<ol start="4">
+<li>Reboot Your System: For the impermanence setup to take full effect and for
+your root filesystem to be reset for the first time, you must reboot your machine.</li>
+</ol>
+<pre><code class="language-bash">sudo reboot
+</code></pre>
+<ol start="5">
+<li>Verify Impermanence (After Reboot):</li>
+</ol>
+<ul>
+<li>After the system has rebooted, check if the test directory and file still exist:</li>
+</ul>
+<pre><code class="language-bash">ls -l /imperm_test/testfile
+</code></pre>
+<p>You should see an output like <code>ls: cannot access '/imperm_test/testfile'</code>: No
+such file or directory. This confirms that the <code>/imperm_test</code> directory and its
+contents were indeed ephemeral and were removed during the reboot process,
+indicating your impermanence setup is working correctly!</p>
+<p>Your system should now come up with a fresh root filesystem, and only the data
+specified in your <code>environment.persistence."/persist"</code> configuration will be
+persistent.</p>
+<h4 id="related-material"><a class="header" href="#related-material">Related Material</a></h4>
+<ul>
+<li>
+<p><a href="https://grahamc.com/blog/erase-your-darlings/">erase your darlings</a></p>
+</li>
+<li>
+<p><a href="https://haseebmajid.dev/posts/2024-07-30-how-i-setup-btrfs-and-luks-on-nixos-using-disko/">Guide for Btrfs with LUKS</a></p>
+</li>
+<li>
+<p><a href="https://notashelf.dev/posts/impermanence">notashelf impermanence</a></p>
+</li>
+<li>
+<p><a href="https://nixos.wiki/wiki/Impermanence">NixOS wiki Impermanence</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nix-community/impermanence">nix-community impermanence module</a></p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-2"><a class="header" href="#chapter-2">Chapter 2</a></h1>
 <ul>
 <li><a href="Understanding_Nix_Functions_2.html#understanding-nix-functions">Understanding Nix Functions</a></li>
