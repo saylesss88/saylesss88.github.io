@@ -4784,9 +4784,6 @@ provide either some kind of software or dependencies of software.</p>
 <p><a href="https://github.com/NixOS/templates">Nix templates</a></p>
 </li>
 <li>
-<p>and so on...</p>
-</li>
-<li>
 <p>The <code>outputs</code> top-level attribute is actually a function that takes an attribute
 set of inputs and returns an attribute set that is essentially a recipe for
 building the flake.</p>
@@ -4844,13 +4841,11 @@ and its return value dictates the outputs of the flake, following this schema:</
   templates.default = { path = "&lt;store-path&gt;"; description = ""; };
 }
 </code></pre>
-<ul>
-<li>The first line <code>{ self, nixpkgs, ... }@ inputs:</code> defines the functions parameters:
+<p>The first line <code>{ self, nixpkgs, ... }@ inputs:</code> defines the functions parameters:
 It's important to understand that within the scope of the <code>outputs</code> function
 <code>nixpkgs</code> is available at the top-level because we explicitly passed it as an
-argument but for individual modules outside of this flake the scope is lost
-and you need to use <code>inputs.nixpkgs</code> (or equivalent)</li>
-</ul>
+argument but for individual modules outside this flake the scope is lost,
+and you need to use <code>inputs.nixpkgs</code> (or equivalent)</p>
 <ol>
 <li>
 <p>It explicitly names the <code>self</code> attribute, making it directly accessible.
@@ -4863,7 +4858,7 @@ to list each one explicitly.</p>
 functions scope.</p>
 </li>
 <li>
-<p>It gives you a conveniente single variable, <code>inputs</code>, that refers to the
+<p>It gives you a convenient single variable, <code>inputs</code>, that refers to the
 entire attribute set passed to the <code>outputs</code> function. This allows you to
 access inputs either individually (e.g. <code>nixpkgs</code>) or through the <code>inputs</code>
 variable (e.g. <code>inputs.nixpkgs</code>).</p>
@@ -4946,6 +4941,13 @@ flake's output)</p>
 <li>
 <p>We're saying, My flakes <code>hello</code> package is exactly the same as the <code>hello</code>
 package found inside the <code>nixpkgs</code> input flake.</p>
+</li>
+<li>
+<p>It's important to understand that within the scope of the <code>outputs</code> function
+(i.e. within your flake), <code>nixpkgs</code> is available at the top-level (i.e. the
+<code>= nixpkgs</code> part) because we explicitly passed it as an argument but for
+individual modules outside of this flake the scope is lost, and <code>inputs.nixpkgs</code>
+is needed.</p>
 </li>
 </ul>
 </li>
@@ -5033,6 +5035,173 @@ outputs definition from manually listing each system to a more concise structure
 development environments across platforms, which can then be activated simply
 by running <code>nix develop</code> in the flake's directory.</li>
 </ul>
+<h3 id="adding-formatter-checks-and-devshell-outputs"><a class="header" href="#adding-formatter-checks-and-devshell-outputs">Adding Formatter, Checks, and Devshell Outputs</a></h3>
+<p>This is a minimal flake for demonstration with a hardcoded <code>system</code>, for more
+portability:</p>
+<pre><code class="language-nix">{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+   };
+
+  outputs = inputs@{ nixpkgs, home-manager, treefmt-nix, ... }: let
+
+    system = "x86_64-linux";
+    host = "your-hostname-goes-here";
+      # Define pkgs with allowUnfree
+    pkgs = import inputs.nixpkgs {
+      inherit system;
+      config.allowUnfree = true;
+    };
+
+        # Formatter configuration
+    treefmtEval = treefmt-nix.lib.evalModule pkgs ./lib/treefmt.nix;
+
+in {
+
+    formatter.${system} = treefmtEval.config.build.wrapper;
+
+    # Style check for CI
+    checks.${system}.style = treefmtEval.config.build.check self;
+
+    # Development shell
+    devShells.${system}.default = import ./lib/dev-shell.nix {
+      inherit inputs;
+    };
+
+
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.jdoe = ./home.nix;
+
+            # Optionally, use home-manager.extraSpecialArgs to pass
+            # arguments to home.nix
+          }
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p>And in <code>lib/treefmt.nix</code>:</p>
+<pre><code class="language-nix"># treefmt.nix
+{
+  projectRootFile = "flake.nix";
+  programs = {
+    alejandra.enable = true;
+    deadnix.enable = true;
+    # rustfmt.enable = true;
+    # shellcheck.enable = true;
+    # prettier.enable = true;
+    statix.enable = true;
+    keep-sorted.enable = true;
+    # nixfmt = {
+    #   enable = true;
+    #   # strict = true;
+    # };
+  };
+  settings = {
+    global.excludes = [
+      "LICENSE"
+      "README.md"
+      ".adr-dir"
+      "nu_scripts"
+      # unsupported extensions
+      "*.{gif,png,svg,tape,mts,lock,mod,sum,toml,env,envrc,gitignore,sql,conf,pem,*.so.2,key,pub,py,narHash}"
+      "data-mesher/test/networks/*"
+      "nss-datamesher/test/dns.json"
+      "*.age"
+      "*.jpg"
+      "*.nu"
+      "*.png"
+      ".jj/*"
+      "Cargo.lock"
+      "flake.lock"
+      "hive/moonrise/borg-key-backup"
+      "justfile"
+    ];
+    formatter = {
+      deadnix = {
+        priority = 1;
+      };
+      statix = {
+        priority = 2;
+      };
+      alejandra = {
+        priority = 3;
+      };
+    };
+  };
+}
+</code></pre>
+<p>Now we have a few commands available to us in our flake directory:</p>
+<ul>
+<li>
+<p><code>nix fmt</code>: Will format your whole configuration consistently</p>
+</li>
+<li>
+<p><code>nix flake check</code>: While this command was already available, it is now tied
+to treefmt's check which will check the style of your syntax and provide
+suggestions.</p>
+</li>
+</ul>
+<p>And this is <code>lib/dev-shell.nix</code>:</p>
+<pre><code class="language-nix">{
+  inputs,
+  system ? "x86_64-linux",
+}: let
+  # Instantiate nixpkgs with the given system and allow unfree packages
+  pkgs = import inputs.nixpkgs {
+    inherit system;
+    config.allowUnfree = true;
+    overlays = [
+      # Add overlays if needed, e.g., inputs.neovim-nightly-overlay.overlays.default
+    ];
+  };
+in
+  pkgs.mkShell {
+    name = "nixos-dev";
+    packages = with pkgs; [
+      # Nix tools
+      nixfmt-rfc-style # Formatter
+      deadnix # Dead code detection
+      nixd # Nix language server
+      nil # Alternative Nix language server
+      nh # Nix helper
+      nix-diff # Compare Nix derivations
+      nix-tree # Visualize Nix dependencies
+
+      # Code editing
+      helix # Your editor
+
+      # General utilities
+      git
+      ripgrep
+      jq
+      tree
+    ];
+
+    shellHook = ''
+      echo "Welcome to the NixOS development shell!"
+      echo "System: ${system}"
+      echo "Tools available: nixfmt, deadnix, nixd, nil, nh, nix-diff, nix-tree, helix, git, ripgrep, jq, tree"
+    '';
+  }
+</code></pre>
+<p>Now you can run <code>nix develop</code> in the flake directory and if successfull, you'll
+see the <code>echo</code> commands above and you will have all the tools available in your
+environment without having to explicitly install them.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-flake-examples"><a class="header" href="#nix-flake-examples">Nix Flake Examples</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
