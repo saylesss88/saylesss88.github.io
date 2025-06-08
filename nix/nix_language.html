@@ -312,9 +312,7 @@ session:</p>
 6
 </code></pre>
 <ul>
-<li>Since <code>a</code> isn't used in the final result, there's no division by zero error.
-Values are only evaluated as needed by nix allowing us to bring all of the
-attributes within <code>nixpkgs</code> into scope without performance loss.</li>
+<li>Since <code>a</code> isn't used in the final result, there's no division by zero error.</li>
 </ul>
 <h3 id="strings-and-string-interpolation"><a class="header" href="#strings-and-string-interpolation">Strings and String Interpolation</a></h3>
 <p><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
@@ -328,15 +326,15 @@ nix-repl&gt; ''
 ''
 "This is a\nmulti-line\nstring.\n"
 </code></pre>
-<p>Is a language feature where a string, path, or attribute name can contain
-expressions enclosed in <code>${ }</code>. This construct is called <em>interpolated string</em>,
+<p>Is a language feature where a string, path, or attribute name can contain an
+expressions enclosed in <code>${ }</code>. This construct is called an <em>interpolated string</em>,
 and the expression inside is an <em>interpolated expression</em>.</p>
 <p><a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.</p>
 <p>Rather than writing:</p>
 <pre><code class="language-nix">let path = "/usr/local"; in "--prefix=${path}"
 </code></pre>
 <p>This evaluates to <code>"--prefix=/usr/local"</code>. Interpolated expressions must
-evaluate to a string, path, or an attribute set with an outPath or
+evaluate to a string, path, or an attribute set with an <code>outPath</code> or
 <code>__toString</code> attribute.</p>
 <h3 id="attribute-sets"><a class="header" href="#attribute-sets">Attribute Sets</a></h3>
 <p><strong>Attribute sets</strong> are all over Nix code and deserve their own section, they
@@ -346,10 +344,8 @@ are name-value pairs wrapped in curly braces, where the names must be unique:</p
   int = 8;
 }
 </code></pre>
-<ul>
-<li>Attribute names usually don't need quotes.</li>
-</ul>
-<p>You can access attributes using dot notation:</p>
+<p>Attribute names usually don't need quotes.</p>
+<p>You can access attributes using <em>dot notation</em>:</p>
 <pre><code class="language-nix">let person = { name = "Alice"; age = 30; }; in person.name
 "Alice"
 </code></pre>
@@ -388,9 +384,7 @@ to attributes within the set:</p>
   y = x;
 }.x
 </code></pre>
-<ul>
-<li>Will crash with an <code>infinite recursion encountered</code> error message.</li>
-</ul>
+<p>Will crash with an <code>infinite recursion encountered</code> error message.</p>
 <p>The <a href="https://nix.dev/manual/nix/2.24/language/operators.html#update">attribute set update operator</a>
 merges two attribute sets.</p>
 <p><strong>Example</strong>:</p>
@@ -399,19 +393,15 @@ merges two attribute sets.</p>
 <p><strong>Output</strong>:</p>
 <pre><code class="language-nix">{ a = 1; b = 3; c = 4; }
 </code></pre>
-<ul>
-<li>However, names on the right take precedence, and updates are shallow.</li>
-</ul>
+<p>However, names on the right take precedence, and updates are shallow.</p>
 <p><strong>Example</strong>:</p>
 <pre><code class="language-nix">{ a = { b = 1; }; } // { a = { c = 3; }; }
 </code></pre>
 <p><strong>Output</strong>:</p>
 <pre><code class="language-nix">{ a = { c = 3; }; }
 </code></pre>
-<ul>
-<li>Above, key <code>b</code> was completely removed, because the whole <code>a</code> value was
-replaced.</li>
-</ul>
+<p>Above, key <code>b</code> was completely removed, because the whole <code>a</code> value was
+replaced.</p>
 <p><strong>Inheriting Attributes</strong></p>
 <ul>
 <li>Click to see Output:</li>
@@ -453,10 +443,8 @@ and how to use them but I will touch on them here.</p>
 1:</p>
 <pre><code class="language-nix">x: x + 1   # lambda function, not bound to a variable
 </code></pre>
-<ul>
-<li>The pattern tells us what the argument of the function has to look like, and
-binds variables in the body to (parts of) the argument.</li>
-</ul>
+<p>The pattern tells us what the argument of the function has to look like, and
+binds variables in the body to (parts of) the argument.</p>
 <pre><code class="language-nix">(x: x + 5) 200
 205
 </code></pre>
@@ -476,13 +464,11 @@ into the function:</p>
 my_value
 5
 </code></pre>
-<ul>
-<li>The body of the function automatically returns the result of the function.
+<p>The body of the function automatically returns the result of the function.
 Functions are called by spaces between it and its parameters. No commas are
-needed to separate parameters.</li>
-</ul>
+needed to separate parameters.</p>
 <p>The following is a function that expects an attribute set with required
-attributes <code>a</code> and <code>b</code> and concatenates (adds) them:</p>
+attributes <code>a</code> and <code>b</code> and concatenates them:</p>
 <pre><code class="language-nix">{ a, b }: a + b
 </code></pre>
 <p><strong>Default Values in Functions</strong>:</p>
@@ -527,27 +513,23 @@ nix-repl&gt; b = 10
 nix-repl&gt; if a &gt; b then "yes" else "no"
 "no"
 </code></pre>
-<ul>
-<li>Here, <code>"no"</code> is the result because <code>a</code>(6) is not greater than <code>b</code>(10). Notice
+<p>Here, <code>"no"</code> is the result because <code>a</code>(6) is not greater than <code>b</code>(10). Notice
 that there's no separate conditional statement -- the entire construct evaluates
-to a value.</li>
-</ul>
+to a value.</p>
 <p>Another example, integrating built-in functions:</p>
 <pre><code class="language-nix">{
   key = if builtins.pathExists ./path then "YES" else "NO!";
 }
 </code></pre>
-<ul>
-<li>If <code>./path</code> exists it will evaluate to the value <code>"YES"</code> or else it will
-evaluate to <code>"NO!"</code>.</li>
-</ul>
+<p>If <code>./path</code> exists it will evaluate to the value <code>"YES"</code> or else it will
+evaluate to <code>"NO!"</code>.</p>
 <p>Thus, the final result of the expression would be:</p>
 <pre><code class="language-nix">{ key = "YES"; }
 # or
 { key = "NO!"; }
 </code></pre>
-<p>Since Nix does not have statements, <code>if</code> statements <strong>must always return a value</strong>,
-making them behave more like <a href="https://en.wikipedia.org/wiki/Ternary_conditional_operator">ternary operators</a>
+<p>Since Nix does not have statements, Nix's <code>if</code> statements behave more like
+<a href="https://en.wikipedia.org/wiki/Ternary_conditional_operator">ternary operators</a>
 (<code>condition ? value_if_true : value_if_false</code>) in other languages.</p>
 <p><strong>Let expressions</strong>:</p>
 <p>Let expressions in Nix is primarily a mechanism for local variable binding
@@ -561,14 +543,12 @@ code clean and avoiding repitition.</p>
 in a + b
 "foofighter"
 </code></pre>
-<ul>
-<li>Here, <code>a</code> and <code>b</code> are defined inside the <code>let</code> block, and their values are
+<p>Here, <code>a</code> and <code>b</code> are defined inside the <code>let</code> block, and their values are
 used in the <code>in</code> expression. Since everything in Nix is an expression, <code>a + b</code>
-evaluates to <code>"foofighter"</code></li>
-</ul>
+evaluates to <code>"foofighter"</code></p>
 <p><strong>Using Let Expressions Inside Attribute Sets</strong></p>
 <p>Let expressions are commonly used when defining attribute sets
-(key-value mappings) (Click for output):</p>
+(Click for output):</p>
 <pre><code class="language-nix">let
   appName = "nix-app";
   version = "1.0";
@@ -581,10 +561,8 @@ in {
 </span><span class="boring">  fullName = "nix-app-1.0";
 </span><span class="boring">}
 </span></code></pre>
-<ul>
-<li>This allows you to reuse values within an attribute set, making the code more
-modular and preventing duplication.</li>
-</ul>
+<p>This allows you to reuse values within an attribute set, making the code more
+modular and preventing duplication.</p>
 <p><strong>Let Expressions in Function Arguments</strong></p>
 <p>You can also use let expressions within function arguments to define
 intermediate values before returning an output:</p>
@@ -603,10 +581,8 @@ in
   otherVar = "world";
 }
 </code></pre>
-<ul>
-<li>Here, inherit brings pkgs and lib into the resulting attribute set, alongside
-the locally defined variables someVar and otherVar.</li>
-</ul>
+<p>Here, <code>inherit</code> brings <code>pkgs</code> and <code>lib</code> into the resulting attribute set, alongside
+the locally defined variables <code>someVar</code> and <code>otherVar</code>.</p>
 <p><strong>Key Takeaways</strong>:</p>
 <ul>
 <li>
@@ -621,7 +597,7 @@ in block. They also help avoid repitition and improve readability.</p>
 </li>
 </ul>
 <p><strong>With expressions</strong>:</p>
-<p>A with expression in Nix is primarily used to simplify access to attributes
+<p>A <code>with</code> expression in Nix is primarily used to simplify access to attributes
 within an attribute set. Instead of repeatedly referring to a long attribute
 path, with temporarily brings the attributes into scope, allowing direct
 access without prefixing them.</p>
@@ -631,26 +607,22 @@ access without prefixing them.</p>
 nix-repl&gt; longName.a + longName.b
 7
 </code></pre>
-<ul>
-<li>Here, we must explicitly reference <code>longName.a</code> and <code>longName.b</code>. Using a
-<code>with</code> expression simplifies this:</li>
-</ul>
+<p>Here, we must explicitly reference <code>longName.a</code> and <code>longName.b</code>. Using a
+<code>with</code> expression simplifies this:</p>
 <pre><code class="language-nix">nix-repl&gt; with longName; a + b
 7
 </code></pre>
-<ul>
-<li>Now, within the scope of the with expression, a and b are accessible without
-prefixing them with <code>longName</code>.</li>
-</ul>
+<p>Now, within the scope of the with expression, <code>a</code> and <code>b</code> are accessible without
+prefixing them with <code>longName</code>.</p>
 <p><strong>Practical Use Case: Working with <code>pkgs</code></strong></p>
 <p>One of the most common uses of <code>with</code> that you'll see is when dealing with
-packages from <code>nixpkgs</code>:</p>
+packages from <code>nixpkgs</code> is writing the following:</p>
 <pre><code class="language-nix">{ pkgs }:
 with pkgs; {
   myPackages = [ vim git neofetch ];
 }
 </code></pre>
-<p>Instead of writing:</p>
+<p>Instead of writing this:</p>
 <pre><code class="language-nix">{ pkgs }:
 {
   myPackages = [ pkgs.vim pkgs.git pkgs.neofetch ];
@@ -675,19 +647,15 @@ nix-repl&gt; with pkgs; x
 nix-repl&gt; with pkgs; let x = 4; in x
 4
 </code></pre>
-<ul>
-<li>This shows us that the <code>let</code> binding overrides the <code>with</code> binding.</li>
-</ul>
+<p>This shows us that the <code>let</code> binding overrides the <code>with</code> binding.</p>
 <pre><code class="language-nix">let x = 4; in with pkgs; x
 4
 </code></pre>
-<ul>
-<li>Still returns <code>4</code>, but the reasoning is different. The <code>with</code> expression doesn't
+<p>Still returns <code>4</code>, but the reasoning is different. The <code>with</code> expression doesn't
 define new bindings; it simply makes attributes from <code>pkgs</code> available as
 unqualified names. However, because <code>let x = 4</code> is <strong>outside</strong> the <code>with</code>, it
 already extablished <code>x = 4</code>, so when <code>with pkgs; x</code> is evaluated inside, <code>x</code>
-still refers to the <strong>outer</strong> <code>let</code> binding, not the one from <code>pkgs</code>.</li>
-</ul>
+still refers to the <strong>outer</strong> <code>let</code> binding, not the one from <code>pkgs</code>.</p>
 <ol start="2">
 <li>Default values aren't bound in <code>@-patterns</code></li>
 </ol>
@@ -708,15 +676,9 @@ will produce an empty attribute set <code>inputs</code> rather than the desired
 nix-repl&gt; f { }
 6
 </code></pre>
-<ul>
-<li>
 <p>The function <code>f</code> takes an attribute set with default values (<code>x = 2</code>, <code>y = 4</code>)</p>
-</li>
-<li>
 <p>When called with <code>{}</code> (an empty set), it falls back to the default values
 (<code>2 + 4</code> -&gt; <code>6</code>)</p>
-</li>
-</ul>
 <p>Using <code>@args</code> to capture the entire input set:</p>
 <p>The <code>@args</code> syntax allows us to retain access to the full attribute set, even
 after destructuring:</p>
@@ -725,20 +687,12 @@ after destructuring:</p>
 nix-repl&gt; f { z = 3; }
 6
 </code></pre>
-<ul>
-<li>
 <p>The <code>{ x ? 1, y ? 2, ... }</code> syntax means <code>x</code> and <code>y</code> have defaults, while <code>...</code>
 allows additional attributes.</p>
-</li>
-<li>
 <p><code>@args</code> binds the entire attribute set (<code>args</code>) so that we can access <code>z</code>,
 which wouldn't be destructured by default.</p>
-</li>
-<li>
 <p>When calling <code>f { z = 3; }</code>, we pass an extra attribute (<code>z = 3</code>), making
 <code>x + y + z</code> → <code>1 + 2 + 3 = 6</code>.</p>
-</li>
-</ul>
 <ol start="4">
 <li>Imports and namespaces</li>
 </ol>
@@ -749,16 +703,10 @@ which wouldn't be destructured by default.</p>
 in
   pkgs.runCommand (lib.strings.removePrefix "....
 </code></pre>
-<ul>
-<li>
 <p>consider using <code>import</code> here as using <code>qualified import ...</code> in Haskell or
 <code>import ...</code> in Python.</p>
-</li>
-<li>
 <p>Another way of importing is with <code>import ...;</code>, which corresponds to Python
 <code>from ... import *</code>.</p>
-</li>
-</ul>
 <p>But because of not very great IDE support in Nix, <code>with import ...;</code> is
 discouraged. Rather use inherit, especially if you are targeting source code
 for Nix newcomers:</p>
