@@ -1775,7 +1775,7 @@ be your username) and then you can work on it without privilege escalation.</p>
 <p>To continue following along and set up impermanence <a href="https://saylesss88.github.io/nix/impermanence.html">Click Here</a></p>
 </li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted Btrfs Impermanence with Flakes</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted BTRFS Impermanence with Flakes</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -1786,12 +1786,12 @@ be your username) and then you can work on it without privilege escalation.</p>
 <p>This guide is for an unencrypted setup, there are a few links at the end for
 encrypted setups. This guide follows the previous <a href="https://saylesss88.github.io/nix/impermanence.html">minimal install guide</a>
 but you should be able to adjust it carefully to meet your needs.</p>
-<p>This section details how to set up impermanence on your NixOS system using Btrfs
+<p>This section details how to set up impermanence on your NixOS system using BTRFS
 subvolumes. With impermanence, your operating system's root filesystem will
 reset to a pristine state on each reboot, while designated directories and
 files remain persistent. This provides a highly reliable and rollback-friendly
 system.</p>
-<h2 id="impermanence-the-concept-and-its-btrfs-implementation"><a class="header" href="#impermanence-the-concept-and-its-btrfs-implementation">Impermanence: The Concept and Its Btrfs Implementation</a></h2>
+<h2 id="impermanence-the-concept-and-its-btrfs-implementation"><a class="header" href="#impermanence-the-concept-and-its-btrfs-implementation">Impermanence: The Concept and Its BTRFS Implementation</a></h2>
 <p>In a traditional Linux system, most of this state is stored on the disk and
 persists indefinitely unless manually deleted or modified. However, this can
 lead to configuration drift, where the system accumulates changes (e.g., log
@@ -1804,7 +1804,7 @@ packages, modifying system files outside of configuration management, creating
 temporary files) are discarded upon shutdown or reboot.</p>
 <h3 id="what-does-impermanence-do"><a class="header" href="#what-does-impermanence-do">What Does Impermanence Do?</a></h3>
 <p>Impermanence is a NixOS approach that makes the system stateless (or nearly
-stateless) by wiping the root filesystem (/) on each boot, ensuring a clean,
+stateless) by wiping the root filesystem (<code>/</code>) on each boot, ensuring a clean,
 predictable starting point. Only explicitly designated data (persistent state)
 is preserved across reboots, typically stored in specific locations like the
 <code>/persist</code> subvolume. This achieves:</p>
@@ -1850,7 +1850,8 @@ credentials) is erased on reboot.</p>
 </ul>
 <h3 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h3>
 <ol>
-<li>Add impermanence to your <code>flake.nix</code></li>
+<li>Add impermanence to your <code>flake.nix</code>. You will change the <code>hostname</code> in the
+flake to match your <code>networking.hostName</code>.</li>
 </ol>
 <pre><code class="language-nix"># flake.nix
 {
@@ -1881,7 +1882,7 @@ credentials) is erased on reboot.</p>
 <li>Discover where your root subvolume is located with <code>findmnt</code>:</li>
 </ol>
 <p>Before configuring impermanence, it's crucial to know the device path and
-subvolume path of your main Btrfs partition where the root filesystem (<code>/</code>) is
+subvolume path of your main BTRFS partition where the root filesystem (<code>/</code>) is
 located. This information is needed for the mount command within the
 impermanence script.</p>
 <pre><code class="language-bash">findmnt /
@@ -1898,10 +1899,10 @@ scripts.</p>
 <ol start="3">
 <li>Create an <code>impermanence.nix</code>:</li>
 </ol>
-<p>Now, create a new file named impermanence.nix in your configuration directory
-(<code>/mnt/etc/nixos/flake/</code> if you followed the previous steps). This file will
-contain all the specific settings for your impermanent setup, including Btrfs
-subvolume management and persistent data locations</p>
+<p>Now, create a new file named <code>impermanence.nix</code> in your configuration directory
+(i.e. your flake directory). This file will contain all the specific settings
+for your impermanent setup, including BTRFS subvolume management and persistent
+data locations</p>
 <pre><code class="language-nix">{lib, ...}: {
   # Reset root subvolume on boot
   boot.initrd.postResumeCommands = lib.mkAfter ''
@@ -1937,7 +1938,7 @@ subvolume management and persistent data locations</p>
       "/var/spool" # Mail queues, cron jobs
       "/srv" # Web server data, etc.
       "/root" # Root user's home
-      # "/var/log" # Persist logs for debugging (still commented out, good)
+      # "/var/log" # Persist logs are handled by disko
     ];
     files = [
       "/swapfile" # Persist swapfile (impermanence manages this file)
@@ -1980,7 +1981,7 @@ located).</li>
 <pre><code class="language-bash">cd /path/to/your/nixos/flake
 </code></pre>
 <ol start="2">
-<li>Rebuild and Switch: Execute the nixos-rebuild switch command. This command will:</li>
+<li>Rebuild and Switch: Execute the <code>nixos-rebuild switch</code> command. This command will:</li>
 </ol>
 <ul>
 <li>
@@ -2002,7 +2003,8 @@ located).</li>
 <ul>
 <li>Before you reboot, create a temporary directory and file in a non-persistent
 location. Since you haven't explicitly added <code>/imperm_test</code> to your
-<code>environment.persistence."/persist"</code> directories, this file should not survive a reboot.</li>
+<code>environment.persistence."/persist"</code> directories, this file should not survive
+a reboot.</li>
 </ul>
 <pre><code class="language-bash">mkdir /imperm_test
 echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
