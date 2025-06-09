@@ -3845,28 +3845,30 @@ valuable insights and information.</p>
 <p>If you're completely new, take a look at
 <a href="https://nixos.wiki/wiki/flakes#Installing_flakes">this</a> to get flakes on your
 system.</p>
+<p>For the Nix Flake man page type <code>man nix3 flake</code> and for a specific feature,
+type something like <code>man nix3 flake-lock</code>.</p>
 <p>Flakes replace stateful channels (which cause much confusion among novices) and
 introduce a more intuitive and consistent CLI, making them a perfect opportunity
 to start using Nix. -- Alexander Bantyev
 <a href="https://serokell.io/blog/practical-nix-flakes">Practical Nix Flakes</a></p>
-<p>The "state" being remembered and updated by channels is the specific revision
-of the Nixpkgs repository that your local Nix installation considers "current"
-for a given channel. When this state changes on your machine, your builds
-diverge from others whose machines have a different, independently updated
-channel state.</p>
-<p>Channels are also constantly updated on the remote servers. So,
-"nixos-unstable" today refers to a different set of packages and versions
-than "nixos-unstable" did yesterday or will tomorrow.</p>
+<p>The "state" being remembered and updated by channels is the specific revision of
+the Nixpkgs repository that your local Nix installation considers "current" for
+a given channel. When this state changes on your machine, your builds diverge
+from others whose machines have a different, independently updated channel
+state.</p>
+<p>Channels are also constantly updated on the remote servers. So, "nixos-unstable"
+today refers to a different set of packages and versions than "nixos-unstable"
+did yesterday or will tomorrow.</p>
 <p>Flakes solve this by making the exact revision of <code>nixpkgs</code> (and other
 dependencies) an explicit input within your <code>flake.nix</code> file, pinned in the
 <code>flake.lock</code>. This means the state is explicitly defined in the configuration
 itself, not implicitly managed by a global system setting.</p>
-<p>Evaluation time is notoriously slow on NixOS, the problem was that in the
-past Nix evaluation wasn't hermetic preventing effective evaluation caching.
-A <code>.nix</code> file can import other Nix files or by looking them up in the Nix
-search path (<code>$NIX_PATH</code>). This causes a cached result to be inconsistent
-unless every file is perfectly kept track of. Flakes solve this problem by
-ensuring fully hermetic evaluation.</p>
+<p>Evaluation time is notoriously slow on NixOS, the problem was that in the past
+Nix evaluation wasn't hermetic preventing effective evaluation caching. A <code>.nix</code>
+file can import other Nix files or by looking them up in the Nix search path
+(<code>$NIX_PATH</code>). This causes a cached result to be inconsistent unless every file
+is perfectly kept track of. Flakes solve this problem by ensuring fully hermetic
+evaluation.</p>
 <p>"Hermetic" means that the output of an evaluation (the derivation itself)
 depends <em>only</em> on the explicit inputs provided, not on anything external like
 environment variables or pulling in files only on your system. This is the
@@ -3880,13 +3882,13 @@ other flakes to use.</p>
 making all project inputs explicit for greater reproducibility and
 self-containment.</p>
 <p>At its core, a flake is a source tree (like a Git repository) that contains a
-<code>flake.nix</code> file in its root directory. This file provides a standardized way
-to access Nix artifacts such as packages and modules.</p>
-<p>Flakes provide a standard way to write Nix expressions (and therefore
-packages) whose dependencies are version-pinned in a lock file, improving
-reproducibility of Nix installations. -- NixOS Wiki</p>
-<p>Think of <code>flake.nix</code> as the central entry point of a flake. It not only
-defines what the flake produces but also declares its dependencies.</p>
+<code>flake.nix</code> file in its root directory. This file provides a standardized way to
+access Nix artifacts such as packages and modules.</p>
+<p>Flakes provide a standard way to write Nix expressions (and therefore packages)
+whose dependencies are version-pinned in a lock file, improving reproducibility
+of Nix installations. -- NixOS Wiki</p>
+<p>Think of <code>flake.nix</code> as the central entry point of a flake. It not only defines
+what the flake produces but also declares its dependencies.</p>
 <h3 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h3>
 <p><code>flake.nix</code>: <strong>The Heart of a Flake</strong></p>
 <p>The <code>flake.nix</code> file is mandatory for any flake. It must contain an attribute
@@ -3900,9 +3902,9 @@ include <code>description</code> and <code>inputs</code>.</p>
   nixConfig = { /* Advanced configuration options */ };
 }
 </code></pre>
-<p>I typically see <code>nixConfig</code> used for extra-substituters for cachix. This is
-a general-purpose way to define Nix configuration oprions that apply when
-this flake is evaluated or built. It ties into your <code>/etc/nix/nix.conf</code> or
+<p>I typically see <code>nixConfig</code> used for extra-substituters for cachix. This is a
+general-purpose way to define Nix configuration oprions that apply when this
+flake is evaluated or built. It ties into your <code>/etc/nix/nix.conf</code> or
 <code>~/.config/nix/nix.conf</code>.</p>
 <p>For example, create a directory and add a <code>flake.nix</code> with the following
 contents, yes this is a complete <code>flake.nix</code> demonstrating <em>outputs</em> being the
@@ -3917,17 +3919,15 @@ only required attribute:</p>
 4
 </code></pre>
 <p>In the <code>outputs = _: { ... };</code> line, the <code>_</code> (underscore) is a placeholder
-argument. It represents the inputs that the outputs function could receive
-(like <code>inputs</code>, <code>self</code>, <code>pkgs</code>, etc.), but in this specific case, we're not
-using any of them to define the multiply attribute. It's a common convention
-in Nix to use <code>_</code> when an argument is required by a function but intentionally
-ignored.</p>
+argument. It represents the inputs that the outputs function could receive (like
+<code>inputs</code>, <code>self</code>, <code>pkgs</code>, etc.), but in this specific case, we're not using any
+of them to define the multiply attribute. It's a common convention in Nix to use
+<code>_</code> when an argument is required by a function but intentionally ignored.</p>
 <p>In the command <code>nix eval .#multiply</code>:</p>
 <ul>
 <li>
-<p>the <code>.</code> signifies the current directory,
-indicating that Nix should look for a <code>flake.nix</code> file in the directory where
-you're running the command.</p>
+<p>the <code>.</code> signifies the current directory, indicating that Nix should look for a
+<code>flake.nix</code> file in the directory where you're running the command.</p>
 </li>
 <li>
 <p>The <code>#</code> is used to select a specific attribute from the <code>outputs</code> of the
@@ -3937,8 +3937,8 @@ flake. In this case, it's telling Nix to evaluate the <code>multiply</code> attr
 <p>In the next example we will create a <code>devShells</code> output as well as a <code>packages</code>
 output.</p>
 <p><strong><code>flake.lock</code> auto-generated lock file</strong></p>
-<p>All flake inputs are pinned to specific revisions in a lockfile called <code>flake.lock</code>
-This file stores the revision info as JSON.</p>
+<p>All flake inputs are pinned to specific revisions in a lockfile called
+<code>flake.lock</code> This file stores the revision info as JSON.</p>
 <p>The <code>flake.lock</code> file ensures that Nix flakes have purely deterministic outputs.
 A <code>flake.nix</code> file without an accompanying <code>flake.lock</code> should be considered
 incomplete and a kind of proto-flake. Any Nix CLI command that is run against
@@ -3977,14 +3977,15 @@ revision:</p>
   "version": 5
 }
 </code></pre>
-<p>Any future build of this flake will use the version of <code>nixpkgs</code> recorded in
-the lock file. If you add new inputs, they will be automatically added when
-you run a nix flake command like <code>nix flake show</code>. But it won't replace
-existing locks.</p>
+<p>Any future build of this flake will use the version of <code>nixpkgs</code> recorded in the
+lock file. If you add new inputs, they will be automatically added when you run
+a nix flake command like <code>nix flake show</code>. But it won't replace existing locks.</p>
 <p>If you need to update a locked input to the latest version:</p>
 <pre><code class="language-bash">nix flake lock --update-input nixpkgs
 nix build
 </code></pre>
+<p>The above command allows you to update individual inputs, and <code>nix flake update</code>
+will update the whole lock file.</p>
 <h3 id="helper-functions-that-are-good-to-know-for-working-with-flakes"><a class="header" href="#helper-functions-that-are-good-to-know-for-working-with-flakes">Helper functions that are good to know for working with Flakes</a></h3>
 <p><code>lib.genAttrs</code>: A function, given the name of the attribute, returns the
 attribute's value</p>
@@ -4012,8 +4013,8 @@ nix-repl&gt; lib.genAttrs [ "boom" "bash" ] (name: "sonic" + namd)
 <pre><code class="language-nix">eachSystem = lib.genAttrs systems;
 </code></pre>
 <p>The above command creates an attribute set by mapping over a list of system
-strings. If you notice, you provide it a list (i.e. [ 1 2 3 ]) and the
-function returns a set (i.e. <code>{ ... }</code>)</p>
+strings. If you notice, you provide it a list (i.e. [ 1 2 3 ]) and the function
+returns a set (i.e. <code>{ ... }</code>)</p>
 <p>Why <code>genAttrs</code> is useful:</p>
 <ul>
 <li>
@@ -4095,8 +4096,8 @@ installing them globally on your system.</p>
 pkgs listed under <code>mkShell</code>.</p>
 </li>
 <li>
-<p>Or more explicitly <code>nix develop .#devShells.x86_64-linux.default</code>, does the same
-thing as the command above.</p>
+<p>Or more explicitly <code>nix develop .#devShells.x86_64-linux.default</code>, does the
+same thing as the command above.</p>
 </li>
 </ul>
 <h4 id="flake-references"><a class="header" href="#flake-references">Flake References</a></h4>
@@ -4180,8 +4181,8 @@ revisions and that Flakes have purely deterministic outputs.</li>
 <pre><code class="language-bash">nix shell nixpkgs#ponysay --command ponysay "Flakes Rock!"
 </code></pre>
 <p>This works because of the [flake registry] that maps symbolic identifiers like
-<code>nixpkgs</code> to actual locations such as <code>https://github.com/NixOS/nixpkgs</code>. So
-the following are equivalent:</p>
+<code>nixpkgs</code> to actual locations such as <code>https://github.com/NixOS/nixpkgs</code>. So the
+following are equivalent:</p>
 <pre><code class="language-bash">nix shell nixpkgs#ponysay --command ponysay Flakes Rock!
 nix shell github:NixOS/nixpkgs#ponysay --command ponysay Flakes Rock!
 </code></pre>
@@ -4217,7 +4218,8 @@ depends on.</p>
 value is a reference to that flake (usually a URL or a Git Repo).</p>
 <p>To access something from a dependency, you generally go through the <code>inputs</code>
 attribute (e.g., <code>inputs.helix.packages</code>).</p>
-<p>See <a href="https://saylesss88.github.io/flakes/flake_inputs_4.1.html">Nix Flake inputs</a>
+<p>See
+<a href="https://saylesss88.github.io/flakes/flake_inputs_4.1.html">Nix Flake inputs</a>
 for a flake inputs deep dive.</p>
 <p><strong>Example:</strong> This declares dependencies on the <code>nixpkgs</code> and <code>import-cargo</code>
 flakes:</p>
@@ -4227,10 +4229,10 @@ flakes:</p>
 };
 </code></pre>
 <p>When Nix evaluates your flake, it fetches and evaluates each input. These
-evaluated inputs are then passed as an attribute set to the outputs
-function, with the keys matching the names you gave them in the inputs set.</p>
-<p>The special input <code>self</code> is a reference to the <code>outputs</code> and the source tree
-of the current flake itself.</p>
+evaluated inputs are then passed as an attribute set to the outputs function,
+with the keys matching the names you gave them in the inputs set.</p>
+<p>The special input <code>self</code> is a reference to the <code>outputs</code> and the source tree of
+the current flake itself.</p>
 <p><strong><code>outputs</code>: Defining What Your Flake Provides</strong></p>
 <p>The <strong><code>outputs</code></strong> attribute defines what your flake makes available. This can
 include packages, NixOS modules, development environments (<code>devShells</code>) and
@@ -4248,22 +4250,23 @@ showing the attribute paths and their corresponding types.</p>
 </blockquote>
 <p><strong>Understanding the <code>outputs</code> Function</strong></p>
 <p>Beginners often mistakenly think that self and nixpkgs within
-<code>outputs = { self, nixpkgs, ... }: { ... }</code> are the outputs themselves.
-Instead, they are the <em>input arguments</em> (often called <em>output arguments</em>) to
-the outputs function.</p>
-<p>The outputs function in <code>flake.nix</code> always takes a single argument, which is
-an attribute set. The syntax <code>{ self, nixpkgs, ... }</code> is Nix's way of
-destructuring this single input attribute set to extract the values associated
-with the keys self and nixpkgs.</p>
-<p>Flakes output your whole system configuration, packages, and also Nix
-functions for use elsewhere.</p>
+<code>outputs = { self, nixpkgs, ... }: { ... }</code> are the outputs themselves. Instead,
+they are the <em>input arguments</em> (often called <em>output arguments</em>) to the outputs
+function.</p>
+<p>The outputs function in <code>flake.nix</code> always takes a single argument, which is an
+attribute set. The syntax <code>{ self, nixpkgs, ... }</code> is Nix's way of destructuring
+this single input attribute set to extract the values associated with the keys
+self and nixpkgs.</p>
+<p>Flakes output your whole system configuration, packages, and also Nix functions
+for use elsewhere.</p>
 <ul>
 <li>
 <p>For example, the <code>nixpkgs</code> repository has its own <code>flake.nix</code> file that
 outputs many helper functions via the <code>lib</code> attribute.</p>
 </li>
 <li>
-<p>For a deep dive into flake outputs, see <a href="https://saylesss88.github.io/flakes/flake_outputs_4.2.html">Nix Flake Outputs</a></p>
+<p>For a deep dive into flake outputs, see
+<a href="https://saylesss88.github.io/flakes/flake_outputs_4.2.html">Nix Flake Outputs</a></p>
 </li>
 </ul>
 <blockquote>
@@ -4273,12 +4276,12 @@ however, to output functions via whichever attribute you prefer. --
 <a href="https://zero-to-nix.com/concepts/flakes/#inputs">Zero to Nix Flakes</a></p>
 </blockquote>
 <p>Some flake outputs are required to be system specific (i.e. "x86_64-linux" for
-(64-bit AMD/Intel Linux) including packages, development environments, and
-NixOS configurations)</p>
+(64-bit AMD/Intel Linux) including packages, development environments, and NixOS
+configurations)</p>
 <p><strong>Variadic Attributes (...) and @-patterns</strong></p>
 <p>The <code>...</code> syntax in the input arguments of the outputs function indicates
-variadic attributes, meaning the input attribute set can contain more
-attributes than just those explicitly listed (like <code>lib</code> and <code>nixpkgs</code>).</p>
+variadic attributes, meaning the input attribute set can contain more attributes
+than just those explicitly listed (like <code>lib</code> and <code>nixpkgs</code>).</p>
 <p><strong>Example:</strong></p>
 <pre><code class="language-nix">mul = { a, b, ... }: a * b;
 mul { a = 3; b = 4; c = 2; } # 'c' is an extra attribute
@@ -4331,16 +4334,15 @@ packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
 </code></pre>
 <p><strong>Platform Specificity in Outputs</strong></p>
 <p>Flakes ensure that their outputs are consistent across different evaluation
-environments. Therefore, any package-related output must explicitly specify
-the target platform (a combination of architecture and OS, <code>x86_64-linux</code>).</p>
+environments. Therefore, any package-related output must explicitly specify the
+target platform (a combination of architecture and OS, <code>x86_64-linux</code>).</p>
 <p><strong>legacyPackages Explained</strong></p>
 <p><code>legacyPackages</code> is a way for flakes to interact with the traditional, less
 structured package organization of nixpkgs. Instead of packages being directly
 at the top level (e.g., <code>pkgs.hello</code>), <code>legacyPackages</code> provides a
 platform-aware way to access them within the flake's structured output format
-(e.g., <code>nixpkgs.legacyPackages.x86_64-linux.hello</code>). It acts as a bridge
-between the flake's expected output structure and nixpkgs's historical
-organization.</p>
+(e.g., <code>nixpkgs.legacyPackages.x86_64-linux.hello</code>). It acts as a bridge between
+the flake's expected output structure and nixpkgs's historical organization.</p>
 <p><strong>The Sole Argument of outputs</strong></p>
 <p>It's crucial to remember that the outputs function accepts only one argument,
 which is an attribute set. The <code>{ self, nixpkgs, ... }</code> syntax is simply
@@ -4365,17 +4367,18 @@ expression from a specified path.</p>
 </li>
 <li>
 <p><code>&lt;nixpkgs&gt;</code> is a flake reference. When you use <code>import &lt;nixpkgs&gt;</code>, Nix
-evaluates the <code>default.nix</code> file (or sometimes <code>lib/default.nix</code>) found
-at that location.</p>
+evaluates the <code>default.nix</code> file (or sometimes <code>lib/default.nix</code>) found at
+that location.</p>
 </li>
 <li>
 <p>The <code>default.nix</code> in <code>nixpkgs</code> evaluates to a function. This function is
 designed to be configurable, allowing you to pass arguments like <code>system</code>,
-<code>config</code>, etc. to customize how <code>nixpkgs</code> behaves and what packages it provides.</p>
+<code>config</code>, etc. to customize how <code>nixpkgs</code> behaves and what packages it
+provides.</p>
 </li>
 <li>
-<p>So, <code>import &lt;nixpkgs&gt;</code> doesn't give you the <code>nixpkgs</code> package set directly;
-it gives you the function that generates the <code>nixpkgs</code> package set derivation.</p>
+<p>So, <code>import &lt;nixpkgs&gt;</code> doesn't give you the <code>nixpkgs</code> package set directly; it
+gives you the function that generates the <code>nixpkgs</code> package set derivation.</p>
 </li>
 </ul>
 <ol start="2">
@@ -4390,9 +4393,9 @@ it gives you the function that generates the <code>nixpkgs</code> package set de
 that function and passing the attribute set as its single argument.</p>
 </li>
 </ul>
-<p>So, the <code>{}</code> after <code>import &lt;nixpkgs&gt;</code> is not part of the <code>import</code> function iteself.
-It's the argument being passed to the function that <code>import &lt;nixpkgs&gt;</code> just
-returned.</p>
+<p>So, the <code>{}</code> after <code>import &lt;nixpkgs&gt;</code> is not part of the <code>import</code> function
+iteself. It's the argument being passed to the function that <code>import &lt;nixpkgs&gt;</code>
+just returned.</p>
 <p>You can also pass an attribute set as an argument to the Nix expression being
 imported:</p>
 <pre><code class="language-nix">let
@@ -4400,8 +4403,8 @@ myHelpers = import ./lib/my-helpers.nix { pkgs = nixpkgs; };
 in
 # ... use myHelpers
 </code></pre>
-<p>In this case, the Nix expression in <code>./lib/my-helpers.nix</code> is likely a
-function that expects an argument (often named <code>pkgs</code> by convention):</p>
+<p>In this case, the Nix expression in <code>./lib/my-helpers.nix</code> is likely a function
+that expects an argument (often named <code>pkgs</code> by convention):</p>
 <pre><code class="language-nix"># ./lib/my-helpers.nix
 
 { pkgs }:
@@ -4413,15 +4416,16 @@ in
 myPackage
 </code></pre>
 <p>By passing <code>{ pkgs = nixpkgs; }</code> during the import, you are providing the
-nixpkgs value from your current <code>flake.nix</code> scope to the pkgs parameter
-expected by the code in <code>./lib/my-helpers.nix</code>.</p>
+nixpkgs value from your current <code>flake.nix</code> scope to the pkgs parameter expected
+by the code in <code>./lib/my-helpers.nix</code>.</p>
 <p><strong>Importing Directories (<code>default.nix</code>)</strong></p>
 <p>When you use import with a path that points to a directory, Nix automatically
 looks for a file named <code>default.nix</code> within that directory. If found, Nix
-evaluates the expressions within <code>default.nix</code> as if you had specified its
-path directly in the import statement.</p>
+evaluates the expressions within <code>default.nix</code> as if you had specified its path
+directly in the import statement.</p>
 <ul>
-<li>For more advanced examples see <a href="https://saylesss88.github.io/flakes/flake_examples_4.3.html">Nix Flake Examples</a></li>
+<li>For more advanced examples see
+<a href="https://saylesss88.github.io/flakes/flake_examples_4.3.html">Nix Flake Examples</a></li>
 </ul>
 <h5 id="conclusion-unifying-your-nix-experience-with-flakes"><a class="header" href="#conclusion-unifying-your-nix-experience-with-flakes">Conclusion: Unifying Your Nix Experience with Flakes</a></h5>
 <p>For some examples of more advanced outputs like <code>devShells</code> and <code>checks</code>, check
@@ -4665,8 +4669,8 @@ writing <code>attributeName = sourceAttrset.attributeName;</code>.</p>
 <p>So, <code>inherit (pkgsFor.${system}) helix;</code> is equivalent to:</p>
 <pre><code class="language-nix">helix = pkgsFor.${system}.helix;
 </code></pre>
-<p>Therefore, because of <code>inherit (pkgsFor.${system}) helix;``, the helix attribute is explicitly defined under </code>packages.${system}``. This is why you access it
-as <code>inputs.helix.packages.${pkgs.system}.helix;</code>.</p>
+<p>Therefore, because of <code>inherit (pkgsFor.${system}) helix;</code>, the helix attribute
+is explicitly defined under <code>packages.${system}``. This is why you access it as </code>inputs.helix.packages.${pkgs.system}.helix;`.</p>
 <h2 id="yazi-flakenix"><a class="header" href="#yazi-flakenix">Yazi <code>flake.nix</code></a></h2>
 <p>Now this is yazi's <code>flake.nix</code>, yazi's documentation tells you to use <code>.default</code>
 but lets examine the flake and see why:</p>
@@ -5417,11 +5421,16 @@ source code or the upstream flake directly.</p>
 <pre><code class="language-bash">git clone https://github.com/helix-editor/helix.git
 cd helix
 </code></pre>
+<p>When you enter the <code>helix</code> directory, <code>direnv</code> is setup for you already. All you
+would have to do is <code>direnv allow</code> and it will ask you a few questions then you
+are good to go. Looking at their <code>.envrc</code> it mentions "try to use flakes, if it
+fails use normal nix (i.e., shell.nix)". If it's successful you'll see a long
+list of environment variables displayed.</p>
 <ol start="2">
 <li>Enter the Development Shell:</li>
 </ol>
-<p>The Helix project's <code>flake.nix</code> includes a <code>devShells.default</code> output, specifically
-designed for development.</p>
+<p>The Helix project's <code>flake.nix</code> includes a <code>devShells.default</code> output,
+specifically designed for development.</p>
 <pre><code class="language-bash">nix develop
 </code></pre>
 <ol start="3">
@@ -5434,7 +5443,8 @@ don’t have to manually install or manage tools like Rust, Cargo, or Clang—it
 all handled declaratively through Nix.</li>
 </ul>
 <p>You can now build and run the project using its standard tooling:</p>
-<pre><code class="language-bash">cargo build
+<pre><code class="language-bash">cargo check
+cargo build
 cargo run
 </code></pre>
 <ol start="4">
@@ -5447,8 +5457,8 @@ contributor or device you work on.</p>
 <ol start="5">
 <li>Run Just the Binary</li>
 </ol>
-<p>If you only want to run the compiled program without entering the shell, use
-the nix run command:</p>
+<p>If you only want to run the compiled program without entering the shell, use the
+nix run command:</p>
 <pre><code class="language-bash">nix run
 </code></pre>
 <p>This builds and runs the default package defined by the flake. In the case of
@@ -5463,14 +5473,14 @@ Helix, this launches the <code>hx</code> editor directly.</p>
 <ol start="7">
 <li>Pinning and Reproducing</li>
 </ol>
-<p>Because the project uses a flake, you can ensure full reproducibility by
-pinning the inputs. For example, you can clone with --recurse-submodules
-and copy the flake.lock to ensure you're using the same dependency versions
-as upstream. This is great for debugging or sharing exact builds.</p>
+<p>Because the project uses a flake, you can ensure full reproducibility by pinning
+the inputs. For example, you can clone with --recurse-submodules and copy the
+flake.lock to ensure you're using the same dependency versions as upstream. This
+is great for debugging or sharing exact builds.</p>
 <p>✅ Recap:</p>
-<p>With flakes, projects like Helix provide everything you need for development
-and running in a single flake.nix. You can nix develop to get started hacking,
-nix run to quickly try it out, and nix build to produce binaries—all without
+<p>With flakes, projects like Helix provide everything you need for development and
+running in a single <code>flake.nix</code>. You can nix develop to get started hacking, nix
+run to quickly try it out, and nix build to produce binaries—all without
 installing or polluting your system.</p>
 <h2 id="understanding-the-helix-flakenix"><a class="header" href="#understanding-the-helix-flakenix">Understanding the Helix flake.nix</a></h2>
 <p>The helix flake is full of idiomatic Nix code and displays some of the more
@@ -5624,11 +5634,11 @@ inputs.</p>
 <p><code>eachSystem</code>: A Helper to map over all platforms.</p>
 </li>
 </ul>
-<pre><code class="language-nix">  pkgsFor = eachSystem (system:
-    import nixpkgs {
-      localSystem.system = system;
-      overlays = [(import rust-overlay) self.overlays.helix];
-    });
+<pre><code class="language-nix">pkgsFor = eachSystem (system:
+  import nixpkgs {
+    localSystem.system = system;
+    overlays = [(import rust-overlay) self.overlays.helix];
+  });
 </code></pre>
 <ul>
 <li>This imports <code>nixpkgs</code> for each system and applies overlays</li>
@@ -5776,8 +5786,8 @@ files.</p>
 argument, defaulting to null. This is passed in from the main <code>flake.nix</code>.</p>
 <p><code>grammarOverlays ? []</code>: An optional list of overlays for grammars, allowing
 customization.</p>
-<p><code>includeGrammarIf ? _: true</code>: An optional function to control which grammars
-are included.</p>
+<p><code>includeGrammarIf ? _: true</code>: An optional function to control which grammars are
+included.</p>
 <ol start="2">
 <li><strong>Local Variables</strong> (<code>let ... in</code>)</li>
 </ol>
@@ -5815,11 +5825,15 @@ build Helix by:</p>
 <p>Taking all Git-tracked files in the current directory (<code>fs.gitTracked ./.</code>).</p>
 </li>
 <li>
-<p>Excluding configuration files (e.g., .envrc, flake.lock), documentation (.md), images (.svg), and Nix files (.nix) using fs.difference and fs.unions. This ensures a clean build input, reducing Nix store size and avoiding unnecessary rebuilds.</p>
+<p>Excluding configuration files (e.g., <code>.envrc</code>, <code>flake.lock</code>), documentation
+(<code>.md</code>), images (<code>.svg</code>), and Nix files (<code>.nix</code>) using <code>fs.difference</code> and
+<code>fs.unions</code>. This ensures a clean build input, reducing Nix store size and
+avoiding unnecessary rebuilds.</p>
 </li>
 <li>
-<p><code>grammars</code>: Builds syntax grammars by calling <code>grammars.nix</code>, passing <code>grammarOverlays</code>
-(for customizing grammar builds) and <code>includeGrammarIf</code> (a filter for selecting grammars).</p>
+<p><code>grammars</code>: Builds syntax grammars by calling <code>grammars.nix</code>, passing
+<code>grammarOverlays</code> (for customizing grammar builds) and <code>includeGrammarIf</code> (a
+filter for selecting grammars).</p>
 </li>
 <li>
 <p><code>runtimeDir</code>: Creates a runtime directory for Helix by:</p>
@@ -5837,8 +5851,8 @@ derivation, ensuring Helix uses Nix-managed grammars.</p>
 <ol start="3">
 <li><strong>The Build Derivation</strong> (<code>rustPlatform.buildRustPackage</code>)</li>
 </ol>
-<p>The core of this <code>default.nix</code> is the <code>rustPlatform.buildRustPackage</code> call, which
-is a specialized builder for Rust projects:</p>
+<p>The core of this <code>default.nix</code> is the <code>rustPlatform.buildRustPackage</code> call,
+which is a specialized builder for Rust projects:</p>
 <pre><code class="language-nix">in
   rustPlatform.buildRustPackage (self: {
     cargoLock = {
@@ -5848,7 +5862,8 @@ is a specialized builder for Rust projects:</p>
     };
 </code></pre>
 <p><code>cargoLock</code>: Specifies how Cargo dependencies are handled.</p>
-<p><code>lockFile = ./Cargo.lock;</code> Points to the <code>Cargo.lock</code> file for reproducible builds.</p>
+<p><code>lockFile = ./Cargo.lock;</code> Points to the <code>Cargo.lock</code> file for reproducible
+builds.</p>
 <p><code>allowBuiltinFetchGit = true</code>: Allows Cargo to fetch Git dependencies directly
 from repositories specified in <code>Cargo.lock</code>. This is discouraged in Nixpkgs
 because it can break build reproducibility, but it’s used here for convenience
@@ -5859,8 +5874,8 @@ Git dependencies.</p>
       git
     ];
 </code></pre>
-<p><code>nativeBuildInputs</code>: Are tools needed during the build process but not necessarily
-at runtime.</p>
+<p><code>nativeBuildInputs</code>: Are tools needed during the build process but not
+necessarily at runtime.</p>
 <pre><code class="language-nix">buildType = "release";
 </code></pre>
 <p><code>buildType</code>: Specifies that Helix should be built in "release" mode (optimized).</p>
@@ -5870,7 +5885,8 @@ at runtime.</p>
       fileset = src;
     };
 </code></pre>
-<p><code>name</code>: Dynamically sets the package name by reading it from the <code>Cargo.toml</code> file.</p>
+<p><code>name</code>: Dynamically sets the package name by reading it from the <code>Cargo.toml</code>
+file.</p>
 <p><code>src</code>: Uses the <code>src</code> file set defined earlier as the source for the build.</p>
 <pre><code class="language-nix"># Helix attempts to reach out to the network and get the grammars. Nix doesn't allow this.
     HELIX_DISABLE_AUTO_GRAMMAR_BUILD = "1";
@@ -5885,41 +5901,39 @@ access. Instead, grammars are provided via the <code>runtimeDir</code> derivatio
 <p><code>HELIX_NIX_BUILD_REV = gitRev</code>: Embeds the specified Git revision (or <code>null</code> if
 unspecified) into the Helix binary, allowing Helix to display its version or
 commit hash.</p>
-<pre><code class="language-nix"> doCheck = false;
-    strictDeps = true;
+<pre><code class="language-nix">doCheck = false;
+   strictDeps = true;
 </code></pre>
 <p><code>doCheck = false;</code>: Skips running tests during the build. This is common for
 faster builds, especially in CI/CD, but tests are often run in a separate
 <code>checks</code> output (as seen in the <code>flake.nix</code>).</p>
 <p><code>strictDeps = true;</code>: Ensures that all dependencies are explicitly declared.</p>
-<pre><code class="language-nix">    # Sets the Helix runtime dir to the grammars
-    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+<pre><code class="language-nix"># Sets the Helix runtime dir to the grammars
+env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
 </code></pre>
-<pre><code class="language-nix">    # Sets the Helix runtime dir to the grammars
-    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+<pre><code class="language-nix"># Sets the Helix runtime dir to the grammars
+env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
 </code></pre>
 <p><code>env.HELIX_DEFAULT_RUNTIME</code>: Tells Helix where to find its runtime files
 (including the Nix-managed grammars).</p>
-<pre><code class="language-nix">
-    # Get all the application stuff in the output directory.
-    postInstall = ''
-      mkdir -p $out/lib
-      installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
-      mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
-      cp ${./contrib/Helix.desktop} $out/share/applications/Helix.desktop
-      cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/helix.svg
-      cp ${./contrib/helix.png} $out/share/icons/hicolor/256x256/apps/helix.png
-    '';
+<pre><code class="language-nix"># Get all the application stuff in the output directory.
+postInstall = ''
+  mkdir -p $out/lib
+  installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
+  mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
+  cp ${./contrib/Helix.desktop} $out/share/applications/Helix.desktop
+  cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/helix.svg
+  cp ${./contrib/helix.png} $out/share/icons/hicolor/256x256/apps/helix.png
+'';
 </code></pre>
 <p><code>postInstall</code>: A shell script that runs after the main build is complete. This
 is used for installing additional files that are part of the Helix distribution
 but not directly built by Cargo.</p>
 <p>Installs shell completion files (<code>hx.bash</code>, <code>hx.fish</code>, <code>hx.zsh</code>). This enables
 tab completion.</p>
-<p>Installs desktop entry files (<code>Helix.desktop</code>) and icons (<code>logo.svg</code>, <code>helix.png</code>)
-for desktop integration for GUI environments.</p>
-<pre><code class="language-nix">
-    meta.mainProgram = "hx";
+<p>Installs desktop entry files (<code>Helix.desktop</code>) and icons (<code>logo.svg</code>,
+<code>helix.png</code>) for desktop integration for GUI environments.</p>
+<pre><code class="language-nix">    meta.mainProgram = "hx";
 
 })
 </code></pre>
@@ -5948,8 +5962,8 @@ allowing <code>nix run</code> to automatically execute <code>hx</code>.</p>
     });
 </code></pre>
 <ol start="2">
-<li>Modify the <code>default</code> package. The comments actually tell us exactly how to
-do this. We want to use <code>overrideAttrs</code> to change the <code>buildType</code></li>
+<li>Modify the <code>default</code> package. The comments actually tell us exactly how to do
+this. We want to use <code>overrideAttrs</code> to change the <code>buildType</code></li>
 </ol>
 <p>Change this line:</p>
 <pre><code class="language-nix">default = self.packages.${system}.helix;
@@ -5977,8 +5991,8 @@ will be larger due to the included debugging symbols.</li>
 <pre><code class="language-bash">./result/bin/hx
 </code></pre>
 <ul>
-<li>You're now running your custom-built debug version of Helix! This is useful
-if you were, for example, attatching a debugger.</li>
+<li>You're now running your custom-built debug version of Helix! This is useful if
+you were, for example, attatching a debugger.</li>
 </ul>
 <p>This is a simple yet powerful "hack" that demonstrates how easily you can modify
 the behavior of a package defined within a Nix flake without changing the
@@ -5986,8 +6000,8 @@ original source code or the upstream flake directly. You're simply telling Nix
 how you'd like your version of the package to be built.</p>
 <h3 id="another-way-to-modify-behavior"><a class="header" href="#another-way-to-modify-behavior">Another way to Modify Behavior</a></h3>
 <p>Since we are already familiar with the structure and behavior of Helix’s
-<code>flake.nix</code>, we can leverage that understanding to create our own Nix flake.
-By analyzing how Helix organizes its <code>inputs</code>, <code>outputs</code>, and package definitions,
+<code>flake.nix</code>, we can leverage that understanding to create our own Nix flake. By
+analyzing how Helix organizes its <code>inputs</code>, <code>outputs</code>, and package definitions,
 we gain the confidence to modify and extend a flake’s functionality to suit our
 specific needs—whether that’s customizing builds, adding overlays, or
 integrating with home-manager.</p>
@@ -6067,16 +6081,16 @@ path:/home/jr/world?lastModified=1748612128&amp;narHash=sha256-WEYtptarRrrm0Jb/0
 </code></pre>
 <ul>
 <li>
-<p>The <code>└───packages</code> line indicates that our flake exposes a top-level <code>packages</code>
-attribute.</p>
+<p>The <code>└───packages</code> line indicates that our flake exposes a top-level
+<code>packages</code> attribute.</p>
 </li>
 <li>
 <p><code>└───x86_64-linux</code>: System architecture specificity</p>
 </li>
 <li>
 <p><code>└───default: package 'helix-term'</code> Signifies that within the <code>x86_64-linux</code>
-packages, there's a package named <code>default</code>. This is a special name that allows
-you to omit the package name when using commands like <code>nix build</code>.</p>
+packages, there's a package named <code>default</code>. This is a special name that
+allows you to omit the package name when using commands like <code>nix build</code>.</p>
 </li>
 <li>
 <p><code>package 'helix-term'</code> This is the most direct confirmation of our "hack". It
@@ -6096,7 +6110,8 @@ rewriting everything.</p>
 <p><code>buildType = "debug"</code> enables debug builds.</p>
 </li>
 <li>
-<p><code>cargoBuildFlags</code> adds extra features passed to Cargo, e.g., <code>--features tokio-console</code></p>
+<p><code>cargoBuildFlags</code> adds extra features passed to Cargo, e.g.,
+<code>--features tokio-console</code></p>
 </li>
 <li>
 <p><code>RUSTFLAGS</code> gives you even more control over compiler behavior, optimization
@@ -6115,33 +6130,33 @@ levels, etc.</p>
 <p><strong>Adding the <code>devShells</code> output</strong>:</p>
 <p>Since we already have the helix flake as an input to our own <code>flake.nix</code> we can
 now forward or extend Helix's <code>devShells</code> like this:</p>
-<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay, ... }: {
-    devShells = helix.devShells;
-  };
+<pre><code class="language-nix">outputs = { self, nixpkgs, helix, rust-overlay, ... }: {
+  devShells = helix.devShells;
+};
 </code></pre>
 <p>Or if you want to pick a specific system:</p>
-<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay ... }:
-    let
-      system = "x86_64-linux";
-    in {
-      devShells.${system} = helix.devShells.${system};
-    };
+<pre><code class="language-nix">outputs = { self, nixpkgs, helix, rust-overlay ... }:
+  let
+    system = "x86_64-linux";
+  in {
+    devShells.${system} = helix.devShells.${system};
+  };
 </code></pre>
 <p><strong>Optional: Combine with your own</strong> <code>devShell</code></p>
 <p>You can also extend or merge it with your own shell like so:</p>
-<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
-    in {
-      devShells.${system} = {
-        default = pkgs.mkShell {
-          name = "my-shell";
-          inputsFrom = [ helix.devShells.${system}.default ];
-          buildInputs = [ pkgs.git ];
-        };
+<pre><code class="language-nix">outputs = { self, nixpkgs, helix, rust-overlay, ... }:
+  let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
+  in {
+    devShells.${system} = {
+      default = pkgs.mkShell {
+        name = "my-shell";
+        inputsFrom = [ helix.devShells.${system}.default ];
+        buildInputs = [ pkgs.git ];
       };
     };
+  };
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="extending-flakes-with-custom-packages-using-overlays"><a class="header" href="#extending-flakes-with-custom-packages-using-overlays">Extending Flakes with Custom Packages using Overlays</a></h1>
 <details>
@@ -9238,9 +9253,19 @@ your specific needs.</p>
 <p><img src="images/gruv18.png" alt="gruv18" /></p>
 <h2 id="working-with-nixpkgs-locally-benefits-and-best-practices"><a class="header" href="#working-with-nixpkgs-locally-benefits-and-best-practices">Working with Nixpkgs Locally: Benefits and Best Practices</a></h2>
 <ul>
-<li>Nixpkgs, the package repository for NixOS, is a powerful resource for building and customizing software.</li>
-<li>Working with a local copy enhances development, debugging, and contribution workflows.</li>
-<li>This post covers setting up a local Nixpkgs repository, searching for dependencies, and leveraging its advantages, incorporating tips from the Nix community.</li>
+<li>
+<p>Nixpkgs, the package repository for NixOS, is a powerful resource for building
+and customizing software.</p>
+</li>
+<li>
+<p>Working with a local copy enhances development, debugging, and contribution
+workflows.</p>
+</li>
+<li>
+<p>This post covers setting up a local Nixpkgs repository, searching for
+dependencies, and leveraging its advantages, incorporating tips from the Nix
+community.</p>
+</li>
 </ul>
 <h1 id="i-why-work-with-nixpkgs-locally"><a class="header" href="#i-why-work-with-nixpkgs-locally">I. Why Work with Nixpkgs Locally?</a></h1>
 <ul>
@@ -9248,49 +9273,91 @@ your specific needs.</p>
 <p>A local Nixpkgs repository offers significant advantages for Nix developers:</p>
 <h2 id="a-faster-development-cycle"><a class="header" href="#a-faster-development-cycle">A. Faster Development Cycle</a></h2>
 <ul>
-<li>Local searches for packages and dependencies are significantly quicker than querying remote repositories or channels.</li>
-<li>This speedup is crucial for efficient debugging and rapid prototyping of Nix expressions.</li>
+<li>
+<p>Local searches for packages and dependencies are significantly quicker than
+querying remote repositories or channels.</p>
+</li>
+<li>
+<p>This speedup is crucial for efficient debugging and rapid prototyping of Nix
+expressions.</p>
+</li>
 </ul>
 <h2 id="b-enhanced-version-control"><a class="header" href="#b-enhanced-version-control">B. Enhanced Version Control</a></h2>
 <ul>
-<li>By pinning your local repository to specific commits or branches (e.g., <code>nixos-unstable</code>), you ensure build reproducibility.</li>
-<li>This prevents unexpected issues arising from upstream changes in Nixpkgs.</li>
+<li>
+<p>By pinning your local repository to specific commits or branches (e.g.,
+<code>nixos-unstable</code>), you ensure build reproducibility.</p>
+</li>
+<li>
+<p>This prevents unexpected issues arising from upstream changes in Nixpkgs.</p>
+</li>
 </ul>
 <h2 id="c-flexible-debugging-capabilities"><a class="header" href="#c-flexible-debugging-capabilities">C. Flexible Debugging Capabilities</a></h2>
 <ul>
-<li>You can directly test and modify package derivations within your local copy.</li>
-<li>This allows for quick fixes to issues like missing dependencies without waiting for upstream updates or releases.</li>
+<li>
+<p>You can directly test and modify package derivations within your local copy.</p>
+</li>
+<li>
+<p>This allows for quick fixes to issues like missing dependencies without
+waiting for upstream updates or releases.</p>
+</li>
 </ul>
 <h2 id="d-streamlined-contribution-workflow"><a class="header" href="#d-streamlined-contribution-workflow">D. Streamlined Contribution Workflow</a></h2>
 <ul>
-<li>Developing and testing new packages or patches locally is essential before submitting them as pull requests to Nixpkgs.</li>
-<li>A local setup provides an isolated environment for experimentation.</li>
+<li>
+<p>Developing and testing new packages or patches locally is essential before
+submitting them as pull requests to Nixpkgs.</p>
+</li>
+<li>
+<p>A local setup provides an isolated environment for experimentation.</p>
+</li>
 </ul>
 <h2 id="e-up-to-date-documentation-source"><a class="header" href="#e-up-to-date-documentation-source">E. Up-to-Date Documentation Source</a></h2>
 <ul>
-<li>The source code and comments within the Nixpkgs repository often contain the most current information about packages.</li>
+<li>The source code and comments within the Nixpkgs repository often contain the
+most current information about packages.</li>
 <li>This can sometimes be more up-to-date than official, external documentation.</li>
 </ul>
 <h2 id="f-optimized-storage-and-performance"><a class="header" href="#f-optimized-storage-and-performance">F. Optimized Storage and Performance</a></h2>
 <ul>
-<li>Employing efficient cloning strategies (e.g., shallow clones) and avoiding unnecessary practices (like directly using Nixpkgs as a flake for local development) minimizes disk usage and build times.</li>
+<li>Employing efficient cloning strategies (e.g., shallow clones) and avoiding
+unnecessary practices (like directly using Nixpkgs as a flake for local
+development) minimizes disk usage and build times.</li>
 </ul>
 </li>
 </ul>
 <h1 id="ii-flake-vs-non-flake-syntax-for-local-nixpkgs"><a class="header" href="#ii-flake-vs-non-flake-syntax-for-local-nixpkgs">II. Flake vs. Non-Flake Syntax for Local Nixpkgs</a></h1>
 <ul>
 <li>
-<p>When working with Nixpkgs locally, the choice between Flake and non-Flake syntax has implications for performance and storage:</p>
+<p>When working with Nixpkgs locally, the choice between Flake and non-Flake
+syntax has implications for performance and storage:</p>
 <h2 id="a-flake-syntax-nix-build-package"><a class="header" href="#a-flake-syntax-nix-build-package">A. Flake Syntax (<code>nix build .#&lt;package&gt;</code>)</a></h2>
 <ul>
-<li>Treats the current directory as a flake, requiring evaluation of <code>flake.nix</code>.</li>
-<li>For local Nixpkgs, this evaluates the flake definition in the repository root.</li>
-<li><strong>Performance and Storage Overhead:</strong> Flakes copy the entire working directory (including Git history if present) to <code>/nix/store</code> for evaluation. This can be slow and storage-intensive for large repositories like Nixpkgs.</li>
+<li>
+<p>Treats the current directory as a flake, requiring evaluation of
+<code>flake.nix</code>.</p>
+</li>
+<li>
+<p>For local Nixpkgs, this evaluates the flake definition in the repository
+root.</p>
+</li>
+<li>
+<p><strong>Performance and Storage Overhead:</strong> Flakes copy the entire working
+directory (including Git history if present) to <code>/nix/store</code> for evaluation.
+This can be slow and storage-intensive for large repositories like Nixpkgs.</p>
+</li>
 </ul>
 <h2 id="b-non-flake-syntax-nix-build--f--package-or-nix-build--f--package"><a class="header" href="#b-non-flake-syntax-nix-build--f--package-or-nix-build--f--package">B. Non-Flake Syntax (<code>nix-build -f . &lt;package&gt;</code> or <code>nix build -f . &lt;package&gt;</code>)</a></h2>
 <ul>
-<li><code>-f .</code> specifies the Nix expression (e.g., <code>default.nix</code> or a specific file) in the current directory.</li>
-<li><strong>Efficiency:</strong> Evaluates the Nix expression directly <em>without</em> copying the entire worktree to <code>/nix/store</code>. This is significantly faster and more storage-efficient for local development on large repositories.</li>
+<li>
+<p><code>-f .</code> specifies the Nix expression (e.g., <code>default.nix</code> or a specific file)
+in the current directory.</p>
+</li>
+<li>
+<p><strong>Efficiency:</strong> Evaluates the Nix expression directly <em>without</em> copying the
+entire worktree to <code>/nix/store</code>. This is significantly faster and more
+storage-efficient for local development on large repositories.</p>
+</li>
 </ul>
 </li>
 </ul>
@@ -9301,13 +9368,53 @@ your specific needs.</p>
 <li>Cloning Nixpkgs requires careful consideration due to its size.</li>
 </ul>
 <h2 id="a-initial-clone-shallow-cloning"><a class="header" href="#a-initial-clone-shallow-cloning">A. Initial Clone: Shallow Cloning</a></h2>
+<p>It is common to place your local clone in the <code>/src</code> directory:</p>
+<pre><code class="language-bash">mkdir src &amp;&amp; cd src
+</code></pre>
+<blockquote>
+<p>❗ Warning, A shallow clone (<code>--depth 1</code>) is not recommended for general
+development or contributing changes back to Nixpkgs via pull requests. It's
+primarily suitable for:</p>
 <ul>
-<li>To avoid downloading the entire history, perform a shallow clone:
+<li>Quick checks or builds: If you only need to verify a package's current state
+or build a specific version without needing historical context.</li>
+<li>CI/CD environments: Where disk space and clone time are critical, and only
+the latest commit is needed for automated tests or builds.</li>
+</ul>
+</blockquote>
+<ul>
+<li>
+<p>With that said, to avoid downloading the entire history, perform a shallow
+clone:</p>
 <pre><code class="language-bash">git clone [https://github.com/NixOS/nixpkgs](https://github.com/NixOS/nixpkgs) --depth 1
 cd nixpkgs
 </code></pre>
+<ul>
+<li>While in the <code>nixpkgs</code> directory, you can check the version of a package:</li>
+</ul>
 </li>
 </ul>
+<pre><code class="language-bash">nix-instantiate --eval -A openssl.version
+"3.4.1"
+</code></pre>
+<h2 id="a1-full-fork-and-clone-of-nixpkgs"><a class="header" href="#a1-full-fork-and-clone-of-nixpkgs">A.1 Full Fork and Clone of Nixpkgs</a></h2>
+<p>If you want to contribute to Nixpkgs, you need to set up a local version
+following the
+<a href="https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md">Contributing guide</a></p>
+<p>You'll need to, this is directly from the <code>Contributing.md</code>:</p>
+<ol>
+<li>
+<p><a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#forking-a-repository">Fork</a>
+the <a href="https://github.com/nixos/nixpkgs/">Nixpkgs repository</a></p>
+</li>
+<li>
+<p><a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#cloning-your-forked-repository">Clone the forked repo</a>
+into a local <code>nixpkgs</code> directory.</p>
+</li>
+<li>
+<p><a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#configuring-git-to-sync-your-fork-with-the-upstream-repository">Configure the upstream Nixpkgs repo</a></p>
+</li>
+</ol>
 <h2 id="b-managing-branches-with-worktrees"><a class="header" href="#b-managing-branches-with-worktrees">B. Managing Branches with Worktrees</a></h2>
 <ul>
 <li>
@@ -9317,10 +9424,13 @@ git worktree add -b nixos-unstable nixos-unstable # For just unstable
 </code></pre>
 </li>
 <li>
-<p><strong>Explanation of <code>git worktree</code>:</strong> Allows multiple working directories attached to the same <code>.git</code> directory, sharing history and objects but with separate checked-out files.</p>
+<p><strong>Explanation of <code>git worktree</code>:</strong> Allows multiple working directories
+attached to the same <code>.git</code> directory, sharing history and objects but with
+separate checked-out files.</p>
 </li>
 <li>
-<p><code>git worktree add</code>: Creates a new working directory for the specified branch (<code>nixos-unstable</code> in this case).</p>
+<p><code>git worktree add</code>: Creates a new working directory for the specified branch
+(<code>nixos-unstable</code> in this case).</p>
 </li>
 </ul>
 </details>
@@ -9328,24 +9438,29 @@ git worktree add -b nixos-unstable nixos-unstable # For just unstable
 <details>
 <summary> Click to see icat Example </summary>
 <ul>
-<li>Let's say you're trying to build <code>icat</code> locally and encounter a missing dependency error:</li>
+<li>Let's say you're trying to build <code>icat</code> locally and encounter a missing
+dependency error:</li>
 </ul>
 <pre><code class="language-nix">nix-build -A icat
 # ... (Error log showing "fatal error: X11/Xlib.h: No such file or directory")
 </code></pre>
 <ul>
-<li>The error <code>fatal error: X11/Xlib.h: No such file or directory</code> indicates a missing X11 dependency.</li>
+<li>The error <code>fatal error: X11/Xlib.h: No such file or directory</code> indicates a
+missing X11 dependency.</li>
 </ul>
 <h2 id="a-online-search-with-searchnixosorg"><a class="header" href="#a-online-search-with-searchnixosorg">A. Online Search with <code>search.nixos.org</code></a></h2>
 <ul>
-<li>The Nixpkgs package search website (<a href="https://search.nixos.org/packages">https://search.nixos.org/packages</a>) is a valuable first step.</li>
+<li>The Nixpkgs package search website
+(<a href="https://search.nixos.org/packages">https://search.nixos.org/packages</a>) is a
+valuable first step.</li>
 <li>However, broad terms like "x11" can yield many irrelevant results.</li>
 <li><strong>Tip:</strong> Utilize the left sidebar to filter by package sets (e.g., "xorg").</li>
 </ul>
 <h2 id="b-local-source-code-search-with-rg-ripgrep"><a class="header" href="#b-local-source-code-search-with-rg-ripgrep">B. Local Source Code Search with <code>rg</code> (ripgrep)</a></h2>
 <ul>
 <li>
-<p>Familiarity with searching the Nixpkgs source code is crucial for finding dependencies.</p>
+<p>Familiarity with searching the Nixpkgs source code is crucial for finding
+dependencies.</p>
 </li>
 <li>
 <p>Navigate to your local <code>nixpkgs/</code> directory and use <code>rg</code>:</p>
@@ -9381,38 +9496,46 @@ pkgs/applications/graphics/imv/default.nix
 <p><code>nix-locate</code> (from the <code>nix-index</code> package) allows searching for derivations
 on the command line.</p>
 <blockquote>
-<p><strong>Note:</strong> Install <code>nix-index</code> and run <code>nix-index</code> to create the initial index.</p>
+<p><strong>Note:</strong> Install <code>nix-index</code> and run <code>nix-index</code> to create the initial
+index.</p>
 </blockquote>
 <pre><code class="language-bash">nix-locate libx11
 # ... (Output showing paths related to libx11)
 </code></pre>
 </li>
 <li>
-<p>Combining online and local search tools (<code>search.nixos.org</code>, <code>rg</code>, <code>nix-locate</code>)
-provides a comprehensive approach to finding dependencies.</p>
+<p>Combining online and local search tools (<code>search.nixos.org</code>, <code>rg</code>,
+<code>nix-locate</code>) provides a comprehensive approach to finding dependencies.</p>
 </li>
 </ul>
 </details>
 <h1 id="vi-key-benefits-of-working-with-nixpkgs-locally-recap"><a class="header" href="#vi-key-benefits-of-working-with-nixpkgs-locally-recap">VI. Key Benefits of Working with Nixpkgs Locally (Recap)</a></h1>
 <ul>
-<li><strong>Speed:</strong> Faster searches and builds compared to remote operations.</li>
-<li><strong>Control:</strong> Full control over the Nixpkgs version.</li>
-<li><strong>Up-to-Date Information:</strong> Repository source often has the latest details.</li>
+<li>
+<p><strong>Speed:</strong> Faster searches and builds compared to remote operations.</p>
+</li>
+<li>
+<p><strong>Control:</strong> Full control over the Nixpkgs version.</p>
+</li>
+<li>
+<p><strong>Up-to-Date Information:</strong> Repository source often has the latest details.</p>
+</li>
 </ul>
 <h1 id="vii-best-practices-and-tips-from-the-community"><a class="header" href="#vii-best-practices-and-tips-from-the-community">VII. Best Practices and Tips from the Community</a></h1>
 <details>
-<summary>Click To Expand Best Practices and Tips from the community</summary>
+<summary> ✔️ Click To Expand Best Practices and Tips from the community</summary>
 <ul>
 <li>
-<p><strong>Rebasing over Merging:</strong> Never merge upstream changes into your local branch.
-Always rebase your branch onto the upstream (e.g., <code>master</code> or <code>nixos-unstable</code>)
-to avoid accidental large-scale pings in pull requests (Tip from <code>soulsssx3</code> on
-Reddit).</p>
+<p><strong>Rebasing over Merging:</strong> Never merge upstream changes into your local
+branch. Always rebase your branch onto the upstream (e.g., <code>master</code> or
+<code>nixos-unstable</code>) to avoid accidental large-scale pings in pull requests (Tip
+from <code>soulsssx3</code> on Reddit).</p>
 </li>
 <li>
-<p><strong>Tip from <code>ElvishJErrico</code>:</strong> Avoid using Nixpkgs directly as a flake for local
-development due to slow copying to <code>/nix/store</code> and performance issues with
-garbage collection on large numbers of small files. Use <code>nix build -f . &lt;package&gt;</code> instead of <code>nix build .#&lt;package&gt;</code>.</p>
+<p><strong>Tip from <code>ElvishJErrico</code>:</strong> Avoid using Nixpkgs directly as a flake for
+local development due to slow copying to <code>/nix/store</code> and performance issues
+with garbage collection on large numbers of small files. Use
+<code>nix build -f . &lt;package&gt;</code> instead of <code>nix build .#&lt;package&gt;</code>.</p>
 </li>
 <li>
 <p><strong>Edge Cases for Flake Syntax:</strong> Flake syntax might be necessary in specific
@@ -9425,10 +9548,10 @@ changes on the <code>nixos-unstable</code> branch instead of <code>master</code>
 merge-base for staging branches as well.</p>
 </li>
 <li>
-<p><strong>Consider <code>jujutsu</code>:</strong> Explore <a href="https://github.com/jj-vcs/jj">jj-vcs</a>,
-a Git-compatible alternative that can offer a more intuitive workflow,
-especially for large monorepos like Nixpkgs. While it has a learning curve,
-it can significantly improve parallel work and branch management.</p>
+<p><strong>Consider <code>jujutsu</code>:</strong> Explore <a href="https://github.com/jj-vcs/jj">jj-vcs</a>, a
+Git-compatible alternative that can offer a more intuitive workflow,
+especially for large monorepos like Nixpkgs. While it has a learning curve, it
+can significantly improve parallel work and branch management.</p>
 </li>
 <li>
 <p><a href="https://tsawyer87.github.io/posts/intro_to_jujutsu/">Intro-To-Jujutsu</a></p>

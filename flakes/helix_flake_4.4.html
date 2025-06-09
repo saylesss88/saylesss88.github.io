@@ -187,11 +187,16 @@ source code or the upstream flake directly.</p>
 <pre><code class="language-bash">git clone https://github.com/helix-editor/helix.git
 cd helix
 </code></pre>
+<p>When you enter the <code>helix</code> directory, <code>direnv</code> is setup for you already. All you
+would have to do is <code>direnv allow</code> and it will ask you a few questions then you
+are good to go. Looking at their <code>.envrc</code> it mentions "try to use flakes, if it
+fails use normal nix (i.e., shell.nix)". If it's successful you'll see a long
+list of environment variables displayed.</p>
 <ol start="2">
 <li>Enter the Development Shell:</li>
 </ol>
-<p>The Helix project's <code>flake.nix</code> includes a <code>devShells.default</code> output, specifically
-designed for development.</p>
+<p>The Helix project's <code>flake.nix</code> includes a <code>devShells.default</code> output,
+specifically designed for development.</p>
 <pre><code class="language-bash">nix develop
 </code></pre>
 <ol start="3">
@@ -204,7 +209,8 @@ don’t have to manually install or manage tools like Rust, Cargo, or Clang—it
 all handled declaratively through Nix.</li>
 </ul>
 <p>You can now build and run the project using its standard tooling:</p>
-<pre><code class="language-bash">cargo build
+<pre><code class="language-bash">cargo check
+cargo build
 cargo run
 </code></pre>
 <ol start="4">
@@ -217,8 +223,8 @@ contributor or device you work on.</p>
 <ol start="5">
 <li>Run Just the Binary</li>
 </ol>
-<p>If you only want to run the compiled program without entering the shell, use
-the nix run command:</p>
+<p>If you only want to run the compiled program without entering the shell, use the
+nix run command:</p>
 <pre><code class="language-bash">nix run
 </code></pre>
 <p>This builds and runs the default package defined by the flake. In the case of
@@ -233,14 +239,14 @@ Helix, this launches the <code>hx</code> editor directly.</p>
 <ol start="7">
 <li>Pinning and Reproducing</li>
 </ol>
-<p>Because the project uses a flake, you can ensure full reproducibility by
-pinning the inputs. For example, you can clone with --recurse-submodules
-and copy the flake.lock to ensure you're using the same dependency versions
-as upstream. This is great for debugging or sharing exact builds.</p>
+<p>Because the project uses a flake, you can ensure full reproducibility by pinning
+the inputs. For example, you can clone with --recurse-submodules and copy the
+flake.lock to ensure you're using the same dependency versions as upstream. This
+is great for debugging or sharing exact builds.</p>
 <p>✅ Recap:</p>
-<p>With flakes, projects like Helix provide everything you need for development
-and running in a single flake.nix. You can nix develop to get started hacking,
-nix run to quickly try it out, and nix build to produce binaries—all without
+<p>With flakes, projects like Helix provide everything you need for development and
+running in a single <code>flake.nix</code>. You can nix develop to get started hacking, nix
+run to quickly try it out, and nix build to produce binaries—all without
 installing or polluting your system.</p>
 <h2 id="understanding-the-helix-flakenix"><a class="header" href="#understanding-the-helix-flakenix">Understanding the Helix flake.nix</a></h2>
 <p>The helix flake is full of idiomatic Nix code and displays some of the more
@@ -394,11 +400,11 @@ inputs.</p>
 <p><code>eachSystem</code>: A Helper to map over all platforms.</p>
 </li>
 </ul>
-<pre><code class="language-nix">  pkgsFor = eachSystem (system:
-    import nixpkgs {
-      localSystem.system = system;
-      overlays = [(import rust-overlay) self.overlays.helix];
-    });
+<pre><code class="language-nix">pkgsFor = eachSystem (system:
+  import nixpkgs {
+    localSystem.system = system;
+    overlays = [(import rust-overlay) self.overlays.helix];
+  });
 </code></pre>
 <ul>
 <li>This imports <code>nixpkgs</code> for each system and applies overlays</li>
@@ -546,8 +552,8 @@ files.</p>
 argument, defaulting to null. This is passed in from the main <code>flake.nix</code>.</p>
 <p><code>grammarOverlays ? []</code>: An optional list of overlays for grammars, allowing
 customization.</p>
-<p><code>includeGrammarIf ? _: true</code>: An optional function to control which grammars
-are included.</p>
+<p><code>includeGrammarIf ? _: true</code>: An optional function to control which grammars are
+included.</p>
 <ol start="2">
 <li><strong>Local Variables</strong> (<code>let ... in</code>)</li>
 </ol>
@@ -585,11 +591,15 @@ build Helix by:</p>
 <p>Taking all Git-tracked files in the current directory (<code>fs.gitTracked ./.</code>).</p>
 </li>
 <li>
-<p>Excluding configuration files (e.g., .envrc, flake.lock), documentation (.md), images (.svg), and Nix files (.nix) using fs.difference and fs.unions. This ensures a clean build input, reducing Nix store size and avoiding unnecessary rebuilds.</p>
+<p>Excluding configuration files (e.g., <code>.envrc</code>, <code>flake.lock</code>), documentation
+(<code>.md</code>), images (<code>.svg</code>), and Nix files (<code>.nix</code>) using <code>fs.difference</code> and
+<code>fs.unions</code>. This ensures a clean build input, reducing Nix store size and
+avoiding unnecessary rebuilds.</p>
 </li>
 <li>
-<p><code>grammars</code>: Builds syntax grammars by calling <code>grammars.nix</code>, passing <code>grammarOverlays</code>
-(for customizing grammar builds) and <code>includeGrammarIf</code> (a filter for selecting grammars).</p>
+<p><code>grammars</code>: Builds syntax grammars by calling <code>grammars.nix</code>, passing
+<code>grammarOverlays</code> (for customizing grammar builds) and <code>includeGrammarIf</code> (a
+filter for selecting grammars).</p>
 </li>
 <li>
 <p><code>runtimeDir</code>: Creates a runtime directory for Helix by:</p>
@@ -607,8 +617,8 @@ derivation, ensuring Helix uses Nix-managed grammars.</p>
 <ol start="3">
 <li><strong>The Build Derivation</strong> (<code>rustPlatform.buildRustPackage</code>)</li>
 </ol>
-<p>The core of this <code>default.nix</code> is the <code>rustPlatform.buildRustPackage</code> call, which
-is a specialized builder for Rust projects:</p>
+<p>The core of this <code>default.nix</code> is the <code>rustPlatform.buildRustPackage</code> call,
+which is a specialized builder for Rust projects:</p>
 <pre><code class="language-nix">in
   rustPlatform.buildRustPackage (self: {
     cargoLock = {
@@ -618,7 +628,8 @@ is a specialized builder for Rust projects:</p>
     };
 </code></pre>
 <p><code>cargoLock</code>: Specifies how Cargo dependencies are handled.</p>
-<p><code>lockFile = ./Cargo.lock;</code> Points to the <code>Cargo.lock</code> file for reproducible builds.</p>
+<p><code>lockFile = ./Cargo.lock;</code> Points to the <code>Cargo.lock</code> file for reproducible
+builds.</p>
 <p><code>allowBuiltinFetchGit = true</code>: Allows Cargo to fetch Git dependencies directly
 from repositories specified in <code>Cargo.lock</code>. This is discouraged in Nixpkgs
 because it can break build reproducibility, but it’s used here for convenience
@@ -629,8 +640,8 @@ Git dependencies.</p>
       git
     ];
 </code></pre>
-<p><code>nativeBuildInputs</code>: Are tools needed during the build process but not necessarily
-at runtime.</p>
+<p><code>nativeBuildInputs</code>: Are tools needed during the build process but not
+necessarily at runtime.</p>
 <pre><code class="language-nix">buildType = "release";
 </code></pre>
 <p><code>buildType</code>: Specifies that Helix should be built in "release" mode (optimized).</p>
@@ -640,7 +651,8 @@ at runtime.</p>
       fileset = src;
     };
 </code></pre>
-<p><code>name</code>: Dynamically sets the package name by reading it from the <code>Cargo.toml</code> file.</p>
+<p><code>name</code>: Dynamically sets the package name by reading it from the <code>Cargo.toml</code>
+file.</p>
 <p><code>src</code>: Uses the <code>src</code> file set defined earlier as the source for the build.</p>
 <pre><code class="language-nix"># Helix attempts to reach out to the network and get the grammars. Nix doesn't allow this.
     HELIX_DISABLE_AUTO_GRAMMAR_BUILD = "1";
@@ -655,41 +667,39 @@ access. Instead, grammars are provided via the <code>runtimeDir</code> derivatio
 <p><code>HELIX_NIX_BUILD_REV = gitRev</code>: Embeds the specified Git revision (or <code>null</code> if
 unspecified) into the Helix binary, allowing Helix to display its version or
 commit hash.</p>
-<pre><code class="language-nix"> doCheck = false;
-    strictDeps = true;
+<pre><code class="language-nix">doCheck = false;
+   strictDeps = true;
 </code></pre>
 <p><code>doCheck = false;</code>: Skips running tests during the build. This is common for
 faster builds, especially in CI/CD, but tests are often run in a separate
 <code>checks</code> output (as seen in the <code>flake.nix</code>).</p>
 <p><code>strictDeps = true;</code>: Ensures that all dependencies are explicitly declared.</p>
-<pre><code class="language-nix">    # Sets the Helix runtime dir to the grammars
-    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+<pre><code class="language-nix"># Sets the Helix runtime dir to the grammars
+env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
 </code></pre>
-<pre><code class="language-nix">    # Sets the Helix runtime dir to the grammars
-    env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
+<pre><code class="language-nix"># Sets the Helix runtime dir to the grammars
+env.HELIX_DEFAULT_RUNTIME = "${runtimeDir}";
 </code></pre>
 <p><code>env.HELIX_DEFAULT_RUNTIME</code>: Tells Helix where to find its runtime files
 (including the Nix-managed grammars).</p>
-<pre><code class="language-nix">
-    # Get all the application stuff in the output directory.
-    postInstall = ''
-      mkdir -p $out/lib
-      installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
-      mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
-      cp ${./contrib/Helix.desktop} $out/share/applications/Helix.desktop
-      cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/helix.svg
-      cp ${./contrib/helix.png} $out/share/icons/hicolor/256x256/apps/helix.png
-    '';
+<pre><code class="language-nix"># Get all the application stuff in the output directory.
+postInstall = ''
+  mkdir -p $out/lib
+  installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
+  mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
+  cp ${./contrib/Helix.desktop} $out/share/applications/Helix.desktop
+  cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/helix.svg
+  cp ${./contrib/helix.png} $out/share/icons/hicolor/256x256/apps/helix.png
+'';
 </code></pre>
 <p><code>postInstall</code>: A shell script that runs after the main build is complete. This
 is used for installing additional files that are part of the Helix distribution
 but not directly built by Cargo.</p>
 <p>Installs shell completion files (<code>hx.bash</code>, <code>hx.fish</code>, <code>hx.zsh</code>). This enables
 tab completion.</p>
-<p>Installs desktop entry files (<code>Helix.desktop</code>) and icons (<code>logo.svg</code>, <code>helix.png</code>)
-for desktop integration for GUI environments.</p>
-<pre><code class="language-nix">
-    meta.mainProgram = "hx";
+<p>Installs desktop entry files (<code>Helix.desktop</code>) and icons (<code>logo.svg</code>,
+<code>helix.png</code>) for desktop integration for GUI environments.</p>
+<pre><code class="language-nix">    meta.mainProgram = "hx";
 
 })
 </code></pre>
@@ -718,8 +728,8 @@ allowing <code>nix run</code> to automatically execute <code>hx</code>.</p>
     });
 </code></pre>
 <ol start="2">
-<li>Modify the <code>default</code> package. The comments actually tell us exactly how to
-do this. We want to use <code>overrideAttrs</code> to change the <code>buildType</code></li>
+<li>Modify the <code>default</code> package. The comments actually tell us exactly how to do
+this. We want to use <code>overrideAttrs</code> to change the <code>buildType</code></li>
 </ol>
 <p>Change this line:</p>
 <pre><code class="language-nix">default = self.packages.${system}.helix;
@@ -747,8 +757,8 @@ will be larger due to the included debugging symbols.</li>
 <pre><code class="language-bash">./result/bin/hx
 </code></pre>
 <ul>
-<li>You're now running your custom-built debug version of Helix! This is useful
-if you were, for example, attatching a debugger.</li>
+<li>You're now running your custom-built debug version of Helix! This is useful if
+you were, for example, attatching a debugger.</li>
 </ul>
 <p>This is a simple yet powerful "hack" that demonstrates how easily you can modify
 the behavior of a package defined within a Nix flake without changing the
@@ -756,8 +766,8 @@ original source code or the upstream flake directly. You're simply telling Nix
 how you'd like your version of the package to be built.</p>
 <h3 id="another-way-to-modify-behavior"><a class="header" href="#another-way-to-modify-behavior">Another way to Modify Behavior</a></h3>
 <p>Since we are already familiar with the structure and behavior of Helix’s
-<code>flake.nix</code>, we can leverage that understanding to create our own Nix flake.
-By analyzing how Helix organizes its <code>inputs</code>, <code>outputs</code>, and package definitions,
+<code>flake.nix</code>, we can leverage that understanding to create our own Nix flake. By
+analyzing how Helix organizes its <code>inputs</code>, <code>outputs</code>, and package definitions,
 we gain the confidence to modify and extend a flake’s functionality to suit our
 specific needs—whether that’s customizing builds, adding overlays, or
 integrating with home-manager.</p>
@@ -837,16 +847,16 @@ path:/home/jr/world?lastModified=1748612128&amp;narHash=sha256-WEYtptarRrrm0Jb/0
 </code></pre>
 <ul>
 <li>
-<p>The <code>└───packages</code> line indicates that our flake exposes a top-level <code>packages</code>
-attribute.</p>
+<p>The <code>└───packages</code> line indicates that our flake exposes a top-level
+<code>packages</code> attribute.</p>
 </li>
 <li>
 <p><code>└───x86_64-linux</code>: System architecture specificity</p>
 </li>
 <li>
 <p><code>└───default: package 'helix-term'</code> Signifies that within the <code>x86_64-linux</code>
-packages, there's a package named <code>default</code>. This is a special name that allows
-you to omit the package name when using commands like <code>nix build</code>.</p>
+packages, there's a package named <code>default</code>. This is a special name that
+allows you to omit the package name when using commands like <code>nix build</code>.</p>
 </li>
 <li>
 <p><code>package 'helix-term'</code> This is the most direct confirmation of our "hack". It
@@ -866,7 +876,8 @@ rewriting everything.</p>
 <p><code>buildType = "debug"</code> enables debug builds.</p>
 </li>
 <li>
-<p><code>cargoBuildFlags</code> adds extra features passed to Cargo, e.g., <code>--features tokio-console</code></p>
+<p><code>cargoBuildFlags</code> adds extra features passed to Cargo, e.g.,
+<code>--features tokio-console</code></p>
 </li>
 <li>
 <p><code>RUSTFLAGS</code> gives you even more control over compiler behavior, optimization
@@ -885,33 +896,33 @@ levels, etc.</p>
 <p><strong>Adding the <code>devShells</code> output</strong>:</p>
 <p>Since we already have the helix flake as an input to our own <code>flake.nix</code> we can
 now forward or extend Helix's <code>devShells</code> like this:</p>
-<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay, ... }: {
-    devShells = helix.devShells;
-  };
+<pre><code class="language-nix">outputs = { self, nixpkgs, helix, rust-overlay, ... }: {
+  devShells = helix.devShells;
+};
 </code></pre>
 <p>Or if you want to pick a specific system:</p>
-<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay ... }:
-    let
-      system = "x86_64-linux";
-    in {
-      devShells.${system} = helix.devShells.${system};
-    };
+<pre><code class="language-nix">outputs = { self, nixpkgs, helix, rust-overlay ... }:
+  let
+    system = "x86_64-linux";
+  in {
+    devShells.${system} = helix.devShells.${system};
+  };
 </code></pre>
 <p><strong>Optional: Combine with your own</strong> <code>devShell</code></p>
 <p>You can also extend or merge it with your own shell like so:</p>
-<pre><code class="language-nix">  outputs = { self, nixpkgs, helix, rust-overlay, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
-    in {
-      devShells.${system} = {
-        default = pkgs.mkShell {
-          name = "my-shell";
-          inputsFrom = [ helix.devShells.${system}.default ];
-          buildInputs = [ pkgs.git ];
-        };
+<pre><code class="language-nix">outputs = { self, nixpkgs, helix, rust-overlay, ... }:
+  let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
+  in {
+    devShells.${system} = {
+      default = pkgs.mkShell {
+        name = "my-shell";
+        inputsFrom = [ helix.devShells.${system}.default ];
+        buildInputs = [ pkgs.git ];
       };
     };
+  };
 </code></pre>
 
                     </main>
