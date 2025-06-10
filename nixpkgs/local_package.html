@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Build a local package - nix-book</title>
+        <title>Build a local package within a Nixpkgs Clone - nix-book</title>
 
 
         <!-- Custom HTML head -->
@@ -167,9 +167,17 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="build-a-local-package"><a class="header" href="#build-a-local-package">Build a local package</a></h1>
+                        <h1 id="creating-and-building-a-local-package-within-a-nixpkgs-clone"><a class="header" href="#creating-and-building-a-local-package-within-a-nixpkgs-clone">Creating and Building a Local Package within a Nixpkgs Clone</a></h1>
+<p>While an actual submission to Nixpkgs involves more steps, this chapter
+demonstrates the fundamental pattern for creating a package. Every package
+recipe is a file that declares a function. This function takes the packages
+dependencies as argument.</p>
 <p>In this example we'll make a simple package with <code>coreutils</code> and build it.
 Demonstrating the process of building and testing a local package.</p>
+<h2 id="clone-nixpkgs"><a class="header" href="#clone-nixpkgs">Clone Nixpkgs</a></h2>
+<p>First, we'll clone Nixpkgs and try to find a good spot to put our package. We're
+just building a test package so <code>nixpkgs/pkgs/misc</code> could be a good place to
+start. We'll call our package <code>testPackage</code>.</p>
 <pre><code class="language-bash">cd ~
 mkdir src &amp;&amp; cd src
 git clone git@github.com:NixOS/nixpkgs.git
@@ -199,6 +207,9 @@ ls # Try to find a catagory that your pkg fits in
 │ 18 │ top-level      │ dir  │  2.3 kB │ 2 hours ago │
 ╰────┴────────────────┴──────┴─────────┴─────────────╯
 </code></pre>
+<p>Ad-hoc semi-regular structure, if you need to make a new package we first make a
+directory with the name of the package and a <code>default.nix</code> in said directory:</p>
+<h2 id="create-your-package-directory-and-a-defaultnix"><a class="header" href="#create-your-package-directory-and-a-defaultnix">Create your Package directory and a <code>default.nix</code></a></h2>
 <pre><code class="language-bash">cd misc
 mkdir testPackage &amp;&amp; cd testPackage
 hx default.nix
@@ -217,6 +228,7 @@ runCommand "testPackage" {
   echo 'This is a Test' &gt; $out
 ''
 </code></pre>
+<h2 id="tie-it-in-with-nixpkgs-top-level-package-bundle"><a class="header" href="#tie-it-in-with-nixpkgs-top-level-package-bundle">Tie it in with Nixpkgs top-level package bundle</a></h2>
 <p>Now we need to add our <code>testPackage</code> to <code>all-packages.nix</code></p>
 <pre><code class="language-bash">cd pkgs/top-level
 hx all-packages.nix
@@ -236,7 +248,20 @@ testPackage = callPackage ../misc/testPackage { };
 tfk8s = callPackage ../applications/misc/tfk8s { };
 # snip ...
 </code></pre>
-<p>Move to the root directory of Nixpkgs</p>
+<blockquote>
+<p><code>callPackage</code> is a core utility in Nixpkgs. It takes a Nix expression (like
+our <code>default.nix</code> file, which defines a function) and automatically provides
+the function with any arguments it declares, by looking them up within the
+<code>pkgs</code> set (or the scope where <code>callPackage</code> is invoked). This means you only
+need to list the dependencies your package needs in its <code>default.nix</code> function
+signature, and <code>callPackage</code> will "inject" the correct versions of those
+packages. This is what the <code>callPackage</code> Nix Pill demonstrates at a lower
+level.</p>
+</blockquote>
+<h2 id="try-building-the-package"><a class="header" href="#try-building-the-package">Try Building the Package</a></h2>
+<p>Move to the root directory of Nixpkgs:</p>
+<pre><code class="language-bash">cd ~/src/nixpkgs
+</code></pre>
 <p>Try building it:</p>
 <pre><code class="language-bash">nix-build -A testPackage
 this derivation will be built:
@@ -258,6 +283,37 @@ run.</p>
 <pre><code class="language-bash">nix-instantiate --eval -A testPackage.meta.position
 "/home/jr/src/nixpkgs/pkgs/misc/testPackage/default.nix:6"
 </code></pre>
+<p>Tools like <code>nix search</code> and the Nixpkgs website use the <code>meta</code> information for
+documentation and discoverability. It can also be useful for debugging and helps
+to provide better error messages. The above command shows that the
+<code>meta.position</code> attribute points to the file and line where the package
+definition begins, which is very useful for debugging.</p>
+<p>Typically a file will have a <code>meta</code> attribute that looks similar to the
+following:</p>
+<pre><code class="language-nix">meta = with lib; {
+    homepage = "https://www.openssl.org/";
+    description = "A cryptographic library that implements the SSL and TLS protocols";
+    license = licenses.openssl;
+    platforms = platforms.all;
+} // extraMeta;
+</code></pre>
+<p>For example, the following shows how Nix is able to discover different parts of
+your configuration:</p>
+<p>Launch the <code>nix repl</code> and load your local flake:</p>
+<pre><code class="language-bash">cd /src
+nix repl
+nix-repl&gt; :lf nixpkgs
+nix-repl&gt; outputs.legacyPackages.x86_64-linux.openssl.meta.position
+"/nix/store/syvnmj3hhckkbncm94kfkbl76qsdqqj3-source/pkgs/development/libraries/openssl/default.nix:303"
+nix-repl&gt; builtins.unsafeGetAttrPos "description" outputs.legacyPackages.x86_64-linux.openssl.meta
+{
+  column = 9;
+  file = "/nix/store/syvnmj3hhckkbncm94kfkbl76qsdqqj3-source/pkgs/development/libraries/openssl/default.nix";
+  line = 303;
+}
+</code></pre>
+<p>Lets create just the <code>meta.description</code> for demonstration purposes.</p>
+<h2 id="adding-the-meta-attribute"><a class="header" href="#adding-the-meta-attribute">Adding the meta attribute</a></h2>
 <p>Since we don't have a <code>meta</code> attribute this points to a default value that's
 incorrect.</p>
 <p>Let's add the <code>meta</code> attribute and try it again:</p>
@@ -282,10 +338,10 @@ runCommand "testPackage" {
 <pre><code class="language-nix">nix-instantiate --eval -A testPackage.meta.position
 "/home/jr/src/nixpkgs/pkgs/misc/testPackage/default.nix:11"
 </code></pre>
-<p>Now it points us to the 11'th line, right where our meta description is.</p>
+<p>Now it points us to the 11'th line, right where our <code>meta.description</code> is.</p>
 <p>Let's stage our package so nix recognises it:</p>
 <pre><code class="language-bash">cd ~/nixpkgs
-git add .
+git add pkgs/misc/testPackage/
 nix edit .#testPackage
 </code></pre>
 <p>The <code>default.nix</code> that we've been working on should open in your <code>$EDITOR</code></p>
