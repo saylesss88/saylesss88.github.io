@@ -188,13 +188,17 @@ the <code>stdenv.mkDerivation</code> block like so:</p>
 </code></pre>
 <p>When we use the above <code>src</code> block in our overlay we'll need to add
 <code>src = self.fetchurl</code> for our overlay to have access to <code>fetchurl</code>.</p>
-<p>We will replace the version with our desired version number.</p>
+<p>We will replace the version with our desired version number. To find another
+version that actually exists we need to check their github repos
+<a href="https://github.com/kdave/btrfs-progs/releases">btrfs-progs Releases</a>. I can see
+that the previous version was <code>v6.13</code>, lets try that.</p>
 <pre><code class="language-bash">cd ~/src/nixpkgs
 hx overlay.nix
 </code></pre>
 <p>We will change the version to <code>6.13</code> for demonstration purposes. All that is
 really required is changing the version and 1 character in the <code>hash</code> which
-would cause a refetch. We will use an empty string to follow convention:</p>
+would cause a refetch and recalculation of the hash. We will use an empty string
+to follow convention:</p>
 <pre><code class="language-nix"># overlay.nix
 self: super: {
   btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
@@ -221,7 +225,6 @@ got:    sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=
 so the <code>overlay.nix</code> would look like this:</p>
 <pre><code class="language-nix">self: super: {
   btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
-    pname = "btrfs-progs";
     version = "6.13";
 
     src = self.fetchurl {
