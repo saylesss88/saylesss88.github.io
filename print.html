@@ -1526,7 +1526,73 @@ nix-repl&gt; builtins.getContext (builtins.storePath "/nix/store/29mhfr5g4dsv07d
 {
   "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2" = { ... };
 }
+nix-repl&gt; :p builtins.getContext (builtins.storePath "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2")
+{
+  "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2" = { path = true; };
+}
 </code></pre>
+<pre><code class="language-bash">nix-repl&gt; :l .
+warning: Nix search path entry '/nix/var/nix/profiles/per-user/root/channels' does not exist, ignoring
+Added 24878 variables.
+
+nix-repl&gt; hello.outPath
+# this is the output path of the hello derivation
+"/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2"
+nix-repl&gt; :p builtins.getContext hello.outPath
+# we see that this is a `.drv`, this is because derivations can have multiple outputs
+{
+  "/nix/store/ljxsxdy1syy03b9kfnnh8x7zsk21fdcq-hello-2.12.2.drv" = {
+    outputs = [ "out" ];
+  };
+}
+# for example
+nix-repl&gt; openssl.outputs
+[
+  "bin"
+  "dev"
+  "out"
+  "man"
+  "doc"
+  "debug"
+]
+nix-repl&gt; openssl.all
+# a list of all the derivations
+[
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+]
+nix-repl&gt; lib.concatStringsSep " " openssl.all
+"/nix/store/rjzx8v679rwd6dsb6s08iy3j2rrax72s-openssl-3.4.1-bin /nix/store/kcgqglb4iax0zh5jlrxmjdik93wlgsrq-openssl-3.4.1-dev /nix/store/8pviily4fgsl02ijm65binz236717wfs-openssl-3.4.1 /nix/store/1l5b31cnswnbcdcac9rzs9xixnc2n9r5-openssl-3.4.1-man /nix/store/9fz5qmj0z70cbzy7mapml0sbi8z6ap0a-openssl-3.4.1-doc /nix/store/yk2g2gfcj2fy1ffyi1g91q7jmp4h8pxa-openssl-3.4.1-debug"
+nix-repl&gt; :p builtins.getContext (builtins.unsafeDiscardOutputDependency (lib.concatStringsSep " " openssl.all))
+{
+  "/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv" = {
+    outputs = [
+      "bin"
+      "debug"
+      "dev"
+      "doc"
+      "man"
+      "out"
+    ];
+  };
+}
+nix-repl&gt; :p builtins.getContext openssl.drvPath
+{
+  "/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv" = { allOutputs = true; };
+}
+# useful if you need to create a derivation that copies this derivation to another machine
+# remote builders usually take care of this but you may need it occasionally
+nix-repl&gt; :p builtins.getContext (builtins.unsafeDiscardOutputDependency openssl.drvPath)
+{
+  "/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv" = { path = true; };
+}
+</code></pre>
+<p>Relying on paths outside of the nix store is generally not recommended because
+of garbage collection and it's considered unsafe.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-package-manager"><a class="header" href="#nix-package-manager">Nix Package Manager</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
@@ -10383,6 +10449,139 @@ git add pkgs/misc/testPackage/
 nix edit .#testPackage
 </code></pre>
 <p>The <code>default.nix</code> that we've been working on should open in your <code>$EDITOR</code></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="nixpkgs-overlays"><a class="header" href="#nixpkgs-overlays">Nixpkgs Overlays</a></h1>
+<p>The following is done with a local clone of Nixpkgs located at <code>~/src/nixpkgs</code>.</p>
+<p>In this example, we will create an overlay to override the version of
+<code>btrfs-progs</code>. In the root directory of our local clone of Nixpkgs
+(i.e.<code>~/src/nixpkgs</code>) we can run the following command to locate <code>btrfs-progs</code>
+within Nixpkgs:</p>
+<pre><code class="language-bash">fd 'btrfs-progs' .
+./pkgs/by-name/bt/btrfs-progs/
+</code></pre>
+<p>Now navigate to where they have <code>src =</code> defined and copy that code block, in
+this case it is the following:</p>
+<pre><code class="language-nix">  pname = "btrfs-progs";
+  version = "6.14";
+
+  src = fetchurl {
+    url = "mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz";
+    hash = "sha256-31q4BPyzbikcQq2DYfgBrR4QJBtDvTBP5Qzj355+PaE=";
+  };
+</code></pre>
+<p>When we use the above <code>src</code> block in our overlay we'll need to add
+<code>src = self.fetchurl</code> for our overlay to have access to it.</p>
+<p>I yanked the above block because we can use the <code>pname</code> and <code>version</code> in our
+overlay. Now we'll create our overlay and paste the above section below the
+overlay like so:</p>
+<pre><code class="language-bash">cd ~/src/nixpkgs
+hx overlay.nix
+</code></pre>
+<p>We will change the version to <code>6.13</code> for demonstration purposes. All that is
+really required is changing the version and 1 character in the <code>hash</code> which
+would cause a refetch. We will use an empty string to follow convention:</p>
+<pre><code class="language-nix"># overlay.nix
+self: super: {
+  btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
+      pname = "btrfs-progs";
+      version = "6.13";
+
+      # Notice the `self` added here
+      src = self.fetchurl {
+        url = "mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz";
+        hash = "";
+      };
+    };
+  });
+}
+</code></pre>
+<p>To build this with the file right from the root of the local Nixpkgs (i.e.
+<code>~/src/nixpkgs</code>) you could run the following:</p>
+<pre><code class="language-bash">nix-build -A btrfs-progs --arg overlays '[ (import ./overlay.nix) ]'
+</code></pre>
+<p>The compiler will give you back the correct <code>hash</code>:</p>
+<pre><code class="language-bash">specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+got:    sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=
+</code></pre>
+<p>Replace the empty <code>hash</code> with the new hash value we just got from the compiler
+so the <code>overlay.nix</code> would look like this:</p>
+<pre><code class="language-nix">self: super: {
+  btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
+    pname = "btrfs-progs";
+    version = "6.13";
+
+    src = self.fetchurl {
+      url = "mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz";
+      hash = "sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=";
+    };
+  });
+}
+</code></pre>
+<p>Try building it again:</p>
+<pre><code class="language-bash">nix-build -A btrfs-progs --arg overlays '[ (import ./overlay.nix) ]'
+checking for references to /build/ in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13...
+gzipping man pages under /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/share/man/
+patching script interpreter paths in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin/fsck.btrfs: interpreter directive changed from "#!/bin/sh -f" to "/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/sh -f"
+stripping (with command strip and flags -S -p) in  /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/lib /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+</code></pre>
+<p>We can see that we were successful by the <code>6.13</code> in the store path. Now, we can
+move and rename the file so <code>nixpkgs</code> automatically picks it up:</p>
+<pre><code class="language-bash">mv overlay.nix ~/.config/nixpkgs/overlays/btrfs-progs.nix
+cd ~/src/nixpkgs
+nix-build -A btrfs-progs
+checking for references to /build/ in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13...
+gzipping man pages under /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/share/man/
+patching script interpreter paths in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin/fsck.btrfs: interpreter directive changed from "#!/bin/sh -f" to "/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/sh -f"
+stripping (with command strip and flags -S -p) in  /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/lib /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+</code></pre>
+<h2 id="overlays-with-flakes"><a class="header" href="#overlays-with-flakes">Overlays with Flakes</a></h2>
+<p>In a flake, overlays are defined in the <code>outputs.overlays</code> attribute set of the
+<code>flake.nix</code>.</p>
+<p>They are then applied to <code>nixpkgs</code> inputs using
+<code>inputs.nixpkgs.follows = "nixpkgs";</code> (or similar) and the overlays attribute on
+the input.</p>
+<p>Example of flake usage:</p>
+<pre><code class="language-nix"># flake.nix
+{
+  description = "My NixOS flake with custom overlays";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
+
+  outputs = { self, nixpkgs, ... }: {
+
+    overlays.myCustomOverlay = final: prev: {
+      btrfs-progs = prev.btrfs-progs.overrideAttrs (old: rec {
+        version = "6.13";
+        src = self.fetchurl {
+          url = "mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz";
+          hash = "sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=";
+        };
+      });
+    };
+
+    nixosConfigurations.my-system = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        # Apply the overlay
+        { nixpkgs.overlays = [ self.overlays.myCustomOverlay ]; }
+        ./configuration.nix
+      ];
+    };
+  };
+}
+</code></pre>
+<pre><code class="language-bash">nix flake show
+path:/home/jr/btrfs-progs?lastModified=1749655369&amp;narHash=sha256-ln6dLiqo7TxStQSXgcIwfbdt7STGw4ZHftZRfWpY/JQ%3D
+├───nixosConfigurations
+│   └───my-system: NixOS configuration
+└───overlays
+    └───myCustomOverlay: Nixpkgs overlay
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-11"><a class="header" href="#chapter-11">Chapter 11</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
