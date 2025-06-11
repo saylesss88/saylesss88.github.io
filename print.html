@@ -1497,7 +1497,7 @@ nix derivation show /nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv | jq
 }
 </code></pre>
 <p>You see the <code>"inputDrvs"</code>, they are the derivations that we depend on and it
-doesnt know about the hello.drv. In Nix for the builder sandbox it creates a
+doesn't know about the <code>hello.drv</code>. In Nix for the builder sandbox it creates a
 sandbox that only contains the derivations that you depend on which ensures that
 you can't depend on any derivation that you haven't explicitly decalred.</p>
 <p>Nix does have <code>builtins.storePath</code> that allows you to do this, otherwise it's
@@ -10458,9 +10458,9 @@ within Nixpkgs:</p>
 <pre><code class="language-bash">fd 'btrfs-progs' .
 ./pkgs/by-name/bt/btrfs-progs/
 </code></pre>
-<p>Now navigate to where they have <code>src =</code> defined and copy that code block, in
-this case it is the following:</p>
-<pre><code class="language-nix">  pname = "btrfs-progs";
+<p>Open the <code>package.nix</code> in the above directory and copy the <code>src</code> block within
+the <code>stdenv.mkDerivation</code> block like so:</p>
+<pre><code class="language-nix"># package.nix
   version = "6.14";
 
   src = fetchurl {
@@ -10469,10 +10469,8 @@ this case it is the following:</p>
   };
 </code></pre>
 <p>When we use the above <code>src</code> block in our overlay we'll need to add
-<code>src = self.fetchurl</code> for our overlay to have access to it.</p>
-<p>I yanked the above block because we can use the <code>pname</code> and <code>version</code> in our
-overlay. Now we'll create our overlay and paste the above section below the
-overlay like so:</p>
+<code>src = self.fetchurl</code> for our overlay to have access to <code>fetchurl</code>.</p>
+<p>We will replace the version with our desired version number.</p>
 <pre><code class="language-bash">cd ~/src/nixpkgs
 hx overlay.nix
 </code></pre>
@@ -10482,7 +10480,6 @@ would cause a refetch. We will use an empty string to follow convention:</p>
 <pre><code class="language-nix"># overlay.nix
 self: super: {
   btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
-      pname = "btrfs-progs";
       version = "6.13";
 
       # Notice the `self` added here
