@@ -10284,7 +10284,7 @@ just building a test package so <code>nixpkgs/pkgs/misc</code> could be a good p
 start. We'll call our package <code>testPackage</code>.</p>
 <pre><code class="language-bash">cd ~
 mkdir src &amp;&amp; cd src
-git clone git@github.com:NixOS/nixpkgs.git
+git clone https://github.com/NixOS/nixpkgs.git
 cd nixpkgs/pkgs
 ls # Try to find a catagory that your pkg fits in
 ╭────┬────────────────┬──────┬─────────┬─────────────╮
@@ -10313,6 +10313,10 @@ ls # Try to find a catagory that your pkg fits in
 </code></pre>
 <p>Ad-hoc semi-regular structure, if you need to make a new package we first make a
 directory with the name of the package and a <code>default.nix</code> in said directory:</p>
+<blockquote>
+<p>❗ NOTE: In this example we will use the <code>misc</code> directory, it is now
+recommended to use the <code>by-name</code> directory. Explained further down.</p>
+</blockquote>
 <h2 id="create-your-package-directory-and-a-defaultnix"><a class="header" href="#create-your-package-directory-and-a-defaultnix">Create your Package directory and a <code>default.nix</code></a></h2>
 <pre><code class="language-bash">cd misc
 mkdir testPackage &amp;&amp; cd testPackage
@@ -10332,7 +10336,6 @@ runCommand "testPackage" {
   echo 'This is a Test' &gt; $out
 ''
 </code></pre>
-<h2 id="tie-it-in-with-nixpkgs-top-level-package-bundle"><a class="header" href="#tie-it-in-with-nixpkgs-top-level-package-bundle">Tie it in with Nixpkgs top-level package bundle</a></h2>
 <p>Now we need to add our <code>testPackage</code> to <code>all-packages.nix</code></p>
 <pre><code class="language-bash">cd pkgs/top-level
 hx all-packages.nix
@@ -10362,6 +10365,61 @@ signature, and <code>callPackage</code> will "inject" the correct versions of th
 packages. This is what the <code>callPackage</code> Nix Pill demonstrates at a lower
 level.</p>
 </blockquote>
+<h2 id="understanding-pkgsby-name-and-other-locations"><a class="header" href="#understanding-pkgsby-name-and-other-locations">Understanding <code>pkgs/by-name/</code> and other locations</a></h2>
+<p>Nixpkgs uses different conventions for package placement:</p>
+<ul>
+<li>
+<p><strong>Older categories (e.g., <code>pkgs/misc/</code>, <code>pkgs/applications/</code>):</strong> Packages
+within these directories typically use <code>default.nix</code> as their definition file
+(e.g., <code>pkgs/misc/testPackage/default.nix</code>). <strong>These packages are NOT
+automatically included</strong> in the top-level <code>pkgs</code> set; they <em>must</em> be
+explicitly added via a <code>callPackage</code> entry in
+<code>pkgs/top-level/all-packages.nix</code>. This is the method demonstrated in this
+chapter for our <code>testPackage</code>.</p>
+</li>
+<li>
+<p><strong>The new <code>pkgs/by-name/</code> convention:</strong> This is the <em>preferred location for
+new packages</em>.</p>
+<ul>
+<li>
+<p>Packages here are placed in a directory structure like
+<code>pkgs/by-name/&lt;first-two-letters&gt;/&lt;package-name&gt;/</code>.</p>
+</li>
+<li>
+<p>Crucially, their main definition file is named <code>package.nix</code> (e.g.,
+<code>pkgs/by-name/te/testPackage/package.nix</code>).</p>
+</li>
+<li>
+<p><strong>Packages placed within <code>pkgs/by-name/</code> are automatically discovered and
+exposed</strong> by Nixpkgs' top-level <code>pkgs</code> set. They <strong>do not</strong> require a manual
+<code>callPackage</code> entry in <code>all-packages.nix</code>. This results in a more modular
+and scalable approach, reducing manual maintenance.</p>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>❗ : While this example uses <code>pkgs/misc/</code> to demonstrate explicit
+<code>callPackage</code> usage, when contributing a <em>new</em> package to Nixpkgs, you should
+nearly always place it within <code>pkgs/by-name/</code> and name its definition file
+<code>package.nix</code>.</p>
+</blockquote>
+<ul>
+<li>
+<p><a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md">pkgs/by-name/README</a></p>
+</li>
+<li>
+<p>There are some
+<a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md#limitations">Limitations</a>
+to this approach.</p>
+</li>
+<li>
+<p><a href="https://github.com/NixOS/nixpkgs-vet">nixpkgs-vet</a></p>
+</li>
+</ul>
+<p>Previously, packages were manually added to <code>all-packages.nix</code>. While this is no
+longer needed in most cases, understanding the old method provides useful
+context for troubleshooting legacy configurations or custom integrations.</p>
 <h2 id="try-building-the-package"><a class="header" href="#try-building-the-package">Try Building the Package</a></h2>
 <p>Move to the root directory of Nixpkgs:</p>
 <pre><code class="language-bash">cd ~/src/nixpkgs
