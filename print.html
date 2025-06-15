@@ -1903,39 +1903,45 @@ something like <code>/nix/store/your-hash-hello-world</code>).</p>
 </li>
 </ul>
 </details>
-<p>Figure 1: <strong>BTRFS Logo</strong>: Image of the BTRFS logo. Sourced from the <a href="https://github.com/btrfs">BTRFS repo</a>
-<img src="nix/../images/btrfs1.png" alt="BTRFS logo" /></p>
+<p>Figure 1: <strong>BTRFS Logo</strong>: Image of the BTRFS logo. Sourced from the
+<a href="https://github.com/btrfs">BTRFS repo</a> <img src="nix/../images/btrfs1.png" alt="BTRFS logo" /></p>
 <h2 id="why-i-chose-btrfs"><a class="header" href="#why-i-chose-btrfs">Why I Chose BTRFS</a></h2>
 <p>I chose BTRFS because I was already familiar with it from using it with Arch
 Linux and I found it to be very easy to use. From what I've read, there are
 licensing issues between the Linux Kernel and ZFS which means that ZFS is not
 part of the Linux Kernel; it's maintained by the OpenZFS project and available
-as a separate kernel module. This can cause issues and make you think more
-about your filesystem than I personally want to at this point.</p>
-<p>While ZFS is a solid choice and offers some benefits over BTRFS, I recommend looking into
-it before making your own decision.</p>
+as a separate kernel module. This can cause issues and make you think more about
+your filesystem than I personally want to at this point.</p>
+<p>While ZFS is a solid choice and offers some benefits over BTRFS, I recommend
+looking into it before making your own decision.</p>
 <p>If you have a ton of RAM you could most likely skip the minimal install and just
-set your system up as needed or just use <a href="https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/">tmpfs as root</a></p>
+set your system up as needed or just use
+<a href="https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/">tmpfs as root</a></p>
 <h2 id="getting-started-with-disko"><a class="header" href="#getting-started-with-disko">Getting Started with Disko</a></h2>
-<p>Disko allows you to declaratively partition and format your disks, and then mount
-them to your system. I recommend checking out the <a href="https://github.com/nix-community/disko/tree/master?tab=readme-ov-file">README</a>
+<p>Disko allows you to declaratively partition and format your disks, and then
+mount them to your system. I recommend checking out the
+<a href="https://github.com/nix-community/disko/tree/master?tab=readme-ov-file">README</a>
 as it is a <strong>disk destroyer</strong> if used incorrectly.</p>
-<p>We will mainly be following the <a href="https://github.com/nix-community/disko/blob/master/docs/quickstart.md">disko quickstart guide</a></p>
+<p>We will mainly be following the
+<a href="https://github.com/nix-community/disko/blob/master/docs/quickstart.md">disko quickstart guide</a></p>
 <p>Figure 2: <strong>Disko Logo</strong>: Image of the logo for Disko, the NixOS declarative
-disk partitioning tool. Sourced from the <a href="https://github.com/nix-community/disko">Disko project</a>
+disk partitioning tool. Sourced from the
+<a href="https://github.com/nix-community/disko">Disko project</a>
 <img src="nix/../images/disko1.png" alt="disko logo" /></p>
 <ol>
 <li>
-<p>Get the <a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
+<p>Get the
+<a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
 Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
-link to the <a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
+link to the
+<a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
 download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
-executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with <code>sudo bash Ventoy2Disk.sh</code>
-Follow the prompts to finish the install.</p>
+executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
+<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p>
 </li>
 <li>
-<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to enable
-networking run the following:</p>
+<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
+enable networking run the following:</p>
 </li>
 </ol>
 <pre><code class="language-bash">sudo systemctl start wpa_supplicant
@@ -2059,10 +2065,18 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
   fileSystems."/var/lib".neededForBoot = true;
 }
 </code></pre>
+<blockquote>
+<p>❗ NOTE: While <code>"/persist"</code> is perfectly functional and valid,
+<code>"/nix/persist"</code> (or often <code>/var/lib/impermanence</code> with tools like
+<code>impermanence</code>) has emerged as a very common and somewhat "standard" location
+in the NixOS community for the persistent data. If you choose to go for
+<code>"/nix/persist"</code> here, make sure to match
+<code>  environment.persistence."/nix/persist" = {</code> in your <code>impermanence.nix</code></p>
+</blockquote>
 <ul>
-<li>You may choose to add a swapfile to the above <code>disk-config.nix</code>, I haven't
-included it here because I manage it with the impermanence module. If you were
-to add it here you could just add under say the <code>"/lib"</code> section add:</li>
+<li>You may also choose to add a swapfile to the above <code>disk-config.nix</code>, I
+haven't included it here because I manage it with the impermanence module. If
+you were to add it here you could just add under say the <code>"/lib"</code> section add:</li>
 </ul>
 <pre><code class="language-nix"># Persistent subvolume for swapfile
 "/persist/swap" = {
@@ -2092,8 +2106,8 @@ wipe <strong>EVERYTHING</strong> on your disk. Disko doesn't work with dual boot
 # ... snip ...
 </code></pre>
 <ol start="7">
-<li>Generate necessary files, here we use <code>--no-filesystems</code> because disko handles the
-<code>fileSystems</code> attribute for us.</li>
+<li>Generate necessary files, here we use <code>--no-filesystems</code> because disko
+handles the <code>fileSystems</code> attribute for us.</li>
 </ol>
 <pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
 </code></pre>
@@ -2112,8 +2126,8 @@ hx flake.nix
 <blockquote>
 <p>You'll change <code>hostname = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
 (e.g. <code>magic = nixpkgs.lib.nixosSystem</code>). This will be the same as your
-<code>networking.hostName = "magic";</code> in your <code>configuration.nix</code> that we will
-set up shortly.</p>
+<code>networking.hostName = "magic";</code> in your <code>configuration.nix</code> that we will set
+up shortly.</p>
 </blockquote>
 <pre><code class="language-nix"># flake.nix
 {
@@ -2172,7 +2186,8 @@ password. Example output,</p>
 Retype password: your_secret_password
 $6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
 </code></pre>
-<p>copy the hashed password and use it for the value of your <code>initialHashedPassword</code></p>
+<p>copy the hashed password and use it for the value of your
+<code>initialHashedPassword</code></p>
 <pre><code class="language-nix"># configuration.nix
 {
   config,
@@ -2227,17 +2242,19 @@ sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
 <p>You will be prompted to enter a new password if everything succeeds.</p>
 </li>
 <li>
-<p>If everything checks out, reboot the system and you should be prompted to enter
-your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
+<p>If everything checks out, reboot the system and you should be prompted to
+enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
 </li>
 <li>
-<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my
-home directory. Since the file was first in <code>/etc</code> you'll need to adjust the
-permissions with something like <code>sudo chown username:users ~/flake</code>(<code>username</code> will
-be your username) and then you can work on it without privilege escalation.</p>
+<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
+directory. Since the file was first in <code>/etc</code> you'll need to adjust the
+permissions with something like <code>sudo chown username:users ~/flake</code>(<code>username</code>
+will be your username) and then you can work on it without privilege
+escalation.</p>
 </li>
 <li>
-<p>To continue following along and set up impermanence <a href="https://saylesss88.github.io/nix/impermanence.html">Click Here</a></p>
+<p>To continue following along and set up impermanence
+<a href="https://saylesss88.github.io/nix/impermanence.html">Click Here</a></p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted BTRFS Impermanence with Flakes</a></h1>
@@ -2448,6 +2465,14 @@ data locations</p>
   # --- END SWAPFILE INITIALIZATION &amp; FORMATTING ---
 }
 </code></pre>
+<blockquote>
+<p>❗ NOTE: While <code>"/persist"</code> is perfectly functional and valid,
+<code>"/nix/persist"</code> (or often <code>/var/lib/impermanence</code> with tools like
+<code>impermanence</code>) has emerged as a very common and somewhat "standard" location
+in the NixOS community for the persistent data. If you choose to go for
+<code>"/nix/persist"</code> here, make sure to match
+<code>  environment.persistence."/nix/persist" = {</code> in your <code>impermanence.nix</code></p>
+</blockquote>
 <h3 id="applying-your-impermanence-configuration"><a class="header" href="#applying-your-impermanence-configuration">Applying Your Impermanence Configuration</a></h3>
 <p>Once you have completed all the steps and created or modified the necessary
 files (<code>flake.nix</code>, <code>impermanence.nix</code>), you need to apply these changes to your
