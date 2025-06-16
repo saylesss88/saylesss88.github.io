@@ -196,6 +196,10 @@ you should be able to adjust it carefully to meet your needs.</p>
 subvolumes. With impermanence, your operating system's root filesystem will
 reset to a pristine state on each reboot, while designated directories and files
 remain persistent. This provides a highly reliable and rollback-friendly system.</p>
+<p>In NixOS, "state" is any data or condition of the system that isn't defined in
+your declarative configuration. The impermanence approach aims to make this
+state temporary (ephemeral) or easily resettable, so your system always matches
+your configuration and can recover from unwanted changes or corruption.</p>
 <h2 id="impermanence-the-concept-and-its-btrfs-implementation"><a class="header" href="#impermanence-the-concept-and-its-btrfs-implementation">Impermanence: The Concept and Its BTRFS Implementation</a></h2>
 <p>In a traditional Linux system, most of this state is stored on the disk and
 persists indefinitely unless manually deleted or modified. However, this can
@@ -212,7 +216,8 @@ temporary files) are discarded upon shutdown or reboot.</p>
 stateless) by wiping the root filesystem (<code>/</code>) on each boot, ensuring a clean,
 predictable starting point. Only explicitly designated data (persistent state)
 is preserved across reboots, typically stored in specific locations like the
-<code>/persist</code> subvolume. This achieves:</p>
+<code>/nix/persist</code> subvolume. This is possible because NixOS can boot with only the
+<code>/boot</code>, and <code>/nix</code> directories. This achieves:</p>
 <ol>
 <li>Clean Root Filesystem:</li>
 </ol>
@@ -232,12 +237,12 @@ closer to a declarative system defined by your NixOS configuration.</p>
 <ul>
 <li>
 <p>Critical state (e.g., user files, logs, system configuration) is preserved in
-designated persistent subvolumes (e.g., <code>/persist</code>, <code>/var/log</code>, <code>/var/lib</code>) or
-files.</p>
+designated persistent subvolumes (e.g., <code>/nix/persist</code>, <code>/var/log</code>,
+<code>/var/lib</code>) or files.</p>
 </li>
 <li>
 <p>You control exactly what state persists by configuring
-<code>environment.persistence."/persist"</code> or other mechanisms.</p>
+<code>environment.persistence."/nix/persist"</code> or other mechanisms.</p>
 </li>
 </ul>
 <ol start="3">
@@ -385,8 +390,8 @@ will:</li>
 <ul>
 <li>Before you reboot, create a temporary directory and file in a non-persistent
 location. Since you haven't explicitly added <code>/imperm_test</code> to your
-<code>environment.persistence."/persist"</code> directories, this file should not survive
-a reboot.</li>
+<code>environment.persistence."/nix/persist"</code> directories, this file should not
+survive a reboot.</li>
 </ul>
 <pre><code class="language-bash">mkdir /imperm_test
 echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
@@ -414,7 +419,7 @@ such file or directory. This confirms that the <code>/imperm_test</code> directo
 contents were indeed ephemeral and were removed during the reboot process,
 indicating your impermanence setup is working correctly!</p>
 <p>Your system should now come up with a fresh root filesystem, and only the data
-specified in your <code>environment.persistence."/persist"</code> configuration will be
+specified in your <code>environment.persistence."/nix/persist"</code> configuration will be
 persistent.</p>
 <h4 id="related-material"><a class="header" href="#related-material">Related Material</a></h4>
 <ul>
