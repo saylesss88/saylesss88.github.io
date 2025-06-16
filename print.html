@@ -2037,8 +2037,8 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
                     ];
                     mountpoint = "/nix";
                   };
-                  "/persist" = {
-                    mountpoint = "/persist";
+                  "/nix/persist" = {
+                    mountpoint = "/nix/persist";
                     mountOptions = ["subvol=persist" "compress=zstd" "noatime"];
                   };
                   "/log" = {
@@ -2051,8 +2051,15 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
                   };
                   # This subvolume will be created but not mounted
                   "/test" = {};
+                  # Subvolume for the swapfile
+                  "/nix/persist/swap" = {
+                    mountpoint = "/nix/persist/swap";
+                    mountOptions = ["subvol=swap" "noatime" "nodatacow"];
+                    swap = {
+                      swapfile.size = "8G";
+                    };
+                  };
                 };
-
               };
             };
           };
@@ -2060,31 +2067,45 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
       };
     };
   };
-  fileSystems."/persist".neededForBoot = true;
+  fileSystems."/nix/persist".neededForBoot = true;
   fileSystems."/var/log".neededForBoot = true;
   fileSystems."/var/lib".neededForBoot = true;
 }
 </code></pre>
 <blockquote>
-<p>❗ NOTE: While <code>"/persist"</code> is perfectly functional and valid,
-<code>"/nix/persist"</code> (or often <code>/var/lib/impermanence</code> with tools like
-<code>impermanence</code>) has emerged as a very common and somewhat "standard" location
-in the NixOS community for the persistent data. If you choose to go for
-<code>"/nix/persist"</code> here, make sure to match
-<code>  environment.persistence."/nix/persist" = {</code> in your <code>impermanence.nix</code></p>
+<p>❗ NOTE: It may be unnecessary and even redundant having disko manage your
+swap. Especially if you use <code>zram</code> as it will take priority over the swap:</p>
 </blockquote>
-<ul>
-<li>You may also choose to add a swapfile to the above <code>disk-config.nix</code>, I
-haven't included it here because I manage it with the impermanence module. If
-you were to add it here you could just add under say the <code>"/lib"</code> section add:</li>
-</ul>
-<pre><code class="language-nix"># Persistent subvolume for swapfile
-"/persist/swap" = {
-  mountpoint = "/persist/swap";
-  mountOptions = ["subvol=persist/swap" "noatime"]; # No compression for swap
-};
-fileSystems."/persist/swap".neededForBoot = true;
+<blockquote>
+<pre><code class="language-nix">{
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.zram;
+in {
+  options.custom.zram = {
+    enable = lib.mkEnableOption "Enable utils module";
+  };
+
+  config = lib.mkIf cfg.enable {
+    zramSwap = {
+      enable = true;
+      # one of "lzo", "lz4", "zstd"
+      algorithm = "zstd";
+&gt;       priority = 5;
+&gt;       memoryPercent = 50;
+    };
+  };
+}
 </code></pre>
+<p>And in your <code>configuration.nix</code> you would add:</p>
+<pre><code class="language-nix"># configuration.nix
+custom = {
+    zram.enable = true;
+};
+</code></pre>
+</blockquote>
 <ol start="6">
 <li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
 wipe <strong>EVERYTHING</strong> on your disk. Disko doesn't work with dual boot.</li>
@@ -2111,6 +2132,10 @@ handles the <code>fileSystems</code> attribute for us.</li>
 </ol>
 <pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
 </code></pre>
+<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now,
+rebuild and then move on. Such as, your hostname, git, an editor of your choice.
+After your additions run <code>sudo nixos-rebuild switch</code> to apply the changes. If
+you do this, you can skip the <code>nix-shell -p</code> command coming up.</p>
 <pre><code class="language-bash">sudo mv /tmp/disk-config.nix /mnt/etc/nixos
 </code></pre>
 <h3 id="setting-a-flake-for-your-minimal-install"><a class="header" href="#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></h3>
@@ -2239,6 +2264,8 @@ $6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
 </ol>
 <pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
 sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
+# if the above command doesn't work try this:
+sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
 </code></pre>
 <ul>
 <li>
@@ -2343,11 +2370,7 @@ accumulating, making the system more reproducible.</p>
 </li>
 <li>
 <p>It enhances security by ensuring sensitive temporary data (e.g., <code>/tmp</code>,
-╭───┬────────────╮
-│ 0 │ x1b[?1049h │
-│ 1 │ &gt;          │
-│ 2 │ /dev/tty   │
-╰───┴────────────╯  runtime credentials) is erased on reboot.</p>
+runtime credentials) is erased on reboot.</p>
 </li>
 </ul>
 <h3 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h3>
@@ -2406,80 +2429,48 @@ scripts.</p>
 for your impermanent setup, including BTRFS subvolume management and persistent
 data locations</p>
 <pre><code class="language-nix">{lib, ...}: {
-  # Reset root subvolume on boot
+  #  Reset root subvolume on boot
   boot.initrd.postResumeCommands = lib.mkAfter ''
     mkdir /btrfs_tmp
-    mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp # CONFIRM THIS IS CORRECT FROM findmnt
-    if [[ -e /btrfs_tmp/root ]]; then
-      mkdir -p /btrfs_tmp/old_roots
-      timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
-      mv /btrfs_tmp/root "/btrfs_tmp/old_roots/$timestamp"
-    fi
+      mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp # CONFIRM THIS IS CORRECT FROM findmnt
+      if [[ -e /btrfs_tmp/root ]]; then
+        mkdir -p /btrfs_tmp/old_roots
+        timestamp=$(date --date="@$(stat -c %Y /btrfs_tmp/root)" "+%Y-%m-%-d_%H:%M:%S")
+        mv /btrfs_tmp/root "/btrfs_tmp/old_roots/$timestamp"
+      fi
 
-    delete_subvolume_recursively() {
-      IFS=$'\n'
-      for i in $(btrfs subvolume list -o "$1" | cut -f 9- -d ' '); do
-        delete_subvolume_recursively "/btrfs_tmp/$i"
+      delete_subvolume_recursively() {
+        IFS=$'\n'
+        for i in $(btrfs subvolume list -o "$1" | cut -f 9- -d ' '); do
+          delete_subvolume_recursively "/btrfs_tmp/$i"
+        done
+        btrfs subvolume delete "$1"
+      }
+
+      for i in $(find /btrfs_tmp/old_roots/ -maxdepth 1 -mtime +30); do
+        delete_subvolume_recursively "$i"
       done
-      btrfs subvolume delete "$1"
-    }
 
-    for i in $(find /btrfs_tmp/old_roots/ -maxdepth 1 -mtime +30); do
-      delete_subvolume_recursively "$i"
-    done
-
-    btrfs subvolume create /btrfs_tmp/root
-    umount /btrfs_tmp
+      btrfs subvolume create /btrfs_tmp/root
+      umount /btrfs_tmp
   '';
 
   # Use /persist as the persistence root, matching Disko's mountpoint
-  environment.persistence."/persist" = {
+  environment.persistence."/nix/persist" = {
     hideMounts = true;
     directories = [
       "/etc" # System configuration (Keep this here for persistence via bind-mount)
       "/var/spool" # Mail queues, cron jobs
       "/srv" # Web server data, etc.
-      "/root" # Root user's home
-      # "/var/log" # Persist logs are handled by disko
+      "/root"
     ];
     files = [
-      #"/persist/swapfile" # Persist swapfile (impermanence manages this file)
     ];
   };
-
-  # Swapfile configuration (definition for Systemd)
-  swapDevices = [
-    {
-      device = "/persist/swapfile"; # Points to the persistent location of the swapfile
-      size = 8192; # 8 GB in MiB
-    }
-  ];
-
-  # --- SWAPFILE INITIALIZATION &amp; FORMATTING (CRITICAL for activation) ---
-  # 1. Ensure the swapfile exists at the specified size with correct permissions early via tmpfiles.
-  #    The ${toString (8 * 1024 * 1024 * 1024)} converts 8GB to bytes.
-  systemd.tmpfiles.rules = [
-    "f /persist/swapfile 0600 - - ${toString (8 * 1024 * 1024 * 1024)} -"
-  ];
-
-  # 2. Format the swapfile *only if it's not already formatted* during boot.
-  boot.initrd.postDeviceCommands = lib.mkAfter ''
-    if ! blkid -p /persist/swapfile | grep -q 'TYPE="swap"'; then
-      echo "NixOS: Formatting /persist/swapfile..."
-      mkswap /persist/swapfile
-    fi
-  '';
-  # --- END SWAPFILE INITIALIZATION &amp; FORMATTING ---
 }
 </code></pre>
-<blockquote>
-<p>❗ NOTE: While <code>"/persist"</code> is perfectly functional and valid,
-<code>"/nix/persist"</code> (or often <code>/var/lib/impermanence</code> with tools like
-<code>impermanence</code>) has emerged as a very common and somewhat "standard" location
-in the NixOS community for the persistent data. If you choose to go for
-<code>"/nix/persist"</code> here, make sure to match
-<code>  environment.persistence."/nix/persist" = {</code> in your <code>impermanence.nix</code></p>
-</blockquote>
+<p>With btrfs subvolumes since each directory is its own subvolume, when the root
+is wiped on reboot the subvolumes are untouched.</p>
 <h3 id="applying-your-impermanence-configuration"><a class="header" href="#applying-your-impermanence-configuration">Applying Your Impermanence Configuration</a></h3>
 <p>Once you have completed all the steps and created or modified the necessary
 files (<code>flake.nix</code>, <code>impermanence.nix</code>), you need to apply these changes to your

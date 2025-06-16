@@ -313,8 +313,8 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
                     ];
                     mountpoint = "/nix";
                   };
-                  "/persist" = {
-                    mountpoint = "/persist";
+                  "/nix/persist" = {
+                    mountpoint = "/nix/persist";
                     mountOptions = ["subvol=persist" "compress=zstd" "noatime"];
                   };
                   "/log" = {
@@ -327,8 +327,15 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
                   };
                   # This subvolume will be created but not mounted
                   "/test" = {};
+                  # Subvolume for the swapfile
+                  "/nix/persist/swap" = {
+                    mountpoint = "/nix/persist/swap";
+                    mountOptions = ["subvol=swap" "noatime" "nodatacow"];
+                    swap = {
+                      swapfile.size = "8G";
+                    };
+                  };
                 };
-
               };
             };
           };
@@ -336,31 +343,45 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
       };
     };
   };
-  fileSystems."/persist".neededForBoot = true;
+  fileSystems."/nix/persist".neededForBoot = true;
   fileSystems."/var/log".neededForBoot = true;
   fileSystems."/var/lib".neededForBoot = true;
 }
 </code></pre>
 <blockquote>
-<p>❗ NOTE: While <code>"/persist"</code> is perfectly functional and valid,
-<code>"/nix/persist"</code> (or often <code>/var/lib/impermanence</code> with tools like
-<code>impermanence</code>) has emerged as a very common and somewhat "standard" location
-in the NixOS community for the persistent data. If you choose to go for
-<code>"/nix/persist"</code> here, make sure to match
-<code>  environment.persistence."/nix/persist" = {</code> in your <code>impermanence.nix</code></p>
+<p>❗ NOTE: It may be unnecessary and even redundant having disko manage your
+swap. Especially if you use <code>zram</code> as it will take priority over the swap:</p>
 </blockquote>
-<ul>
-<li>You may also choose to add a swapfile to the above <code>disk-config.nix</code>, I
-haven't included it here because I manage it with the impermanence module. If
-you were to add it here you could just add under say the <code>"/lib"</code> section add:</li>
-</ul>
-<pre><code class="language-nix"># Persistent subvolume for swapfile
-"/persist/swap" = {
-  mountpoint = "/persist/swap";
-  mountOptions = ["subvol=persist/swap" "noatime"]; # No compression for swap
-};
-fileSystems."/persist/swap".neededForBoot = true;
+<blockquote>
+<pre><code class="language-nix">{
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.zram;
+in {
+  options.custom.zram = {
+    enable = lib.mkEnableOption "Enable utils module";
+  };
+
+  config = lib.mkIf cfg.enable {
+    zramSwap = {
+      enable = true;
+      # one of "lzo", "lz4", "zstd"
+      algorithm = "zstd";
+&gt;       priority = 5;
+&gt;       memoryPercent = 50;
+    };
+  };
+}
 </code></pre>
+<p>And in your <code>configuration.nix</code> you would add:</p>
+<pre><code class="language-nix"># configuration.nix
+custom = {
+    zram.enable = true;
+};
+</code></pre>
+</blockquote>
 <ol start="6">
 <li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
 wipe <strong>EVERYTHING</strong> on your disk. Disko doesn't work with dual boot.</li>
@@ -387,6 +408,10 @@ handles the <code>fileSystems</code> attribute for us.</li>
 </ol>
 <pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
 </code></pre>
+<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now,
+rebuild and then move on. Such as, your hostname, git, an editor of your choice.
+After your additions run <code>sudo nixos-rebuild switch</code> to apply the changes. If
+you do this, you can skip the <code>nix-shell -p</code> command coming up.</p>
 <pre><code class="language-bash">sudo mv /tmp/disk-config.nix /mnt/etc/nixos
 </code></pre>
 <h3 id="setting-a-flake-for-your-minimal-install"><a class="header" href="#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></h3>
@@ -515,6 +540,8 @@ $6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
 </ol>
 <pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
 sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
+# if the above command doesn't work try this:
+sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
 </code></pre>
 <ul>
 <li>
