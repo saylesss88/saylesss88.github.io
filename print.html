@@ -2572,6 +2572,171 @@ persistent.</p>
 <p><a href="https://github.com/nix-community/impermanence">nix-community impermanence module</a></p>
 </li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sops-nix-encrypted-secrets"><a class="header" href="#sops-nix-encrypted-secrets">Sops-Nix encrypted secrets</a></h1>
+<ol>
+<li>Add sops to your <code>flake.nix</code>:</li>
+</ol>
+<pre><code class="language-nix">{
+  inputs.sops-nix.url = "github:Mic92/sops-nix";
+  inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = { self, nixpkgs, sops-nix }: {
+    # change `yourhostname` to your actual hostname
+    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
+      # customize to your system
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        sops-nix.nixosModules.sops
+      ];
+    };
+  };
+}
+</code></pre>
+<ol start="2">
+<li>Add <code>sops</code> and <code>age</code> to your <code>environment.systemPackages</code>:</li>
+</ol>
+<pre><code class="language-nix">environment.systemPackages = [
+    pkgs.sops
+    pkgs.age
+];
+</code></pre>
+<ol start="3">
+<li>Generate a key (This is your <strong>private key</strong> and <strong>MUST NEVER BE COMMITTED TO
+GIT OR SHARED</strong>):</li>
+</ol>
+<pre><code class="language-bash">mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+</code></pre>
+<p>Copy the Public Keys Value, it will look something like this:</p>
+<pre><code class="language-bash">age-keygen -y ~/.config/sops/age/keys.txt
+age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
+</code></pre>
+<ol start="4">
+<li>Create a <code>.sops.yaml</code> in the same directory as your <code>flake.nix</code>:</li>
+</ol>
+<pre><code class="language-yaml"># .sops.yaml
+keys:
+  # Your personal age public key (from age-keygen -y ~/.config/sops/age/keys.txt)
+  - &amp;personal_age_key age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
+
+  # You can also use PGP keys if you prefer, but age is often simpler
+  # - &amp;personal_pgp_key 0xDEADBEEFCAFE0123
+
+creation_rules:
+  # This rule applies to any file named 'secrets.yaml' directly in the 'secrets/' directory
+  # or 'secrets/github-deploy-key.yaml' etc.
+  - path_regex: "secrets/.*\\.yaml$"
+    key_groups:
+      - age:
+          - *personal_age_key
+        # Add host keys for decryption on the target system
+        # sops-nix will automatically pick up the system's SSH host keys
+        # as decryption keys if enabled in your NixOS config.
+        # So you typically don't list them explicitly here unless you
+        # want to restrict it to specific fingerprints, which is rare.
+        # This part ensures your *personal* key can decrypt it.
+</code></pre>
+<p>Save it and move on.</p>
+<ol start="5">
+<li>sops-nix's automatic decryption feature using system SSH host keys only works
+with ed25519 host keys for deriving Age decryption keys. Therefore, for
+system decryption, ensure your using ed25519 not rsa keys:</li>
+</ol>
+<pre><code class="language-bash">ssh-keygen -t ed25519 -C "your_email@example.com"
+# for multiple keys run something like
+ssh-keygen -t ed25519 -f ~/nix-book-deploy-key -C "deploy-key-nix-book-repo"
+</code></pre>
+<ol start="5">
+<li>Copy the <strong>PRIVATE</strong> key for each and add them to your secrets directory:</li>
+</ol>
+<p>While in your flake directory:</p>
+<pre><code class="language-bash">mkdir secrets
+sops secrets/github-deploy-key.yaml  # For your github ssh key
+</code></pre>
+<p>The above command will open a default sops <code>github-deploy-key.yaml</code> in your
+<code>$EDITOR</code>:</p>
+<pre><code class="language-yaml">github_deploy_key_ed25519: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  ...
+  -----END OPENSSH PRIVATE KEY-----
+
+github_deploy_key_ed25519: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  ...
+  -----END OPENSSH PRIVATE KEY-----
+</code></pre>
+<p>Ensure sops can decrypt it:</p>
+<pre><code class="language-bash">sops -d secrets/github-deploy-key.yaml
+</code></pre>
+<p>The <code>-----BEGIN</code> and the rest of the private key <strong>must</strong> be indented 2 spaces</p>
+<p>Generate a hashedPassword:</p>
+<pre><code class="language-bash">mkpasswd -m SHA-512 -s
+# Enter your chosen password and copy it
+</code></pre>
+<pre><code class="language-bash">sops secrets/password-hash.yaml      # For your `hashedPasswordFile`
+</code></pre>
+<pre><code class="language-yaml">password_hash: PasteGeneratedPasswordHere
+</code></pre>
+<pre><code class="language-bash">sops -d secrets/password-hash.yaml
+</code></pre>
+<ol start="6">
+<li>Create a <code>sops.nix</code> and import it or add this directly to your
+<code>configuration.nix</code>:</li>
+</ol>
+<p>My <code>sops.nix</code> is located at <code>~/flake/hosts/hostname/sops.nix</code> and the secrets
+directory is located at <code>~/flake/secrets</code> so the path from <code>sops.nix</code> to
+<code>secrets/pasword-hash.yaml</code> would be <code>../../secrets/password-hash.yaml</code></p>
+<pre><code class="language-nix"># ~/flake/hosts/magic/sops.nix  # magic is my hostname
+# hosts/magic/ is also where my configuration.nix is
+{...}: {
+  sops = {
+    defaultSopsFile = ../../.sops.yaml; # Or the correct path to your .sops.yaml
+    age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+
+    secrets = {
+      "password_hash" = {
+        sopsFile = ../../secrets/password-hash.yaml; # &lt;-- Points to your password hash file
+        owner = "root";
+        group = "root";
+        mode = "0400";
+      };
+      "github_deploy_key_ed25519_nix-book" = {
+        sopsFile = ../../secrets/github-deploy-key.yaml;
+        key = "github_deploy_key_ed25519_nix-book";
+        owner = "root";
+        group = "root";
+        mode = "0400";
+      };
+      "github_deploy_key_ed25519" = {
+        sopsFile = ../../secrets/github-deploy-key.yaml;
+        key = "github_deploy_key_ed25519";
+        owner = "root";
+        group = "root";
+        mode = "0400";
+      };
+    };
+  };
+}
+</code></pre>
+<p>And finally use the password-hash for your <code>hashedPasswordFile</code> for your user,
+my user is <code>jr</code> so I added this:</p>
+<pre><code class="language-nix">    users.users = {
+      # ${username} = {
+      jr = {
+        homeMode = "755";
+        isNormalUser = true;
+        # description = userVars.gitUsername;
+        hashedPasswordFile = config.sops.secrets.password_hash.path;
+
+</code></pre>
+<ol start="7">
+<li>Rebuild your configuration and you should see something like this:</li>
+</ol>
+<pre><code class="language-bash">sops-install-secrets: Imported /etc/ssh/ssh_host_ed25519_key as age key with fingerprint age1smamkzrwpdxw63hrxxcq8kmejsm4olknsrg72vd0qtfpmlzlvnf8uws38mzuj
+</code></pre>
+<p>If all goes well you should now have a more reproducible setup that doesn't rely
+on file paths for your secrets.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-2"><a class="header" href="#chapter-2">Chapter 2</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
