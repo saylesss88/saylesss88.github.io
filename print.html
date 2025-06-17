@@ -1979,10 +1979,8 @@ nvme0n1     259:0    0   1,8T  0 disk
 </ol>
 <ul>
 <li><strong>Option A</strong>: (Simpler for new users) I also created a starter repo containing
-much of what's needed, you should still follow the step to generate your own
-<code>hardware-configuration.nix</code> but most everything else should work after you
-change a few things labeled <code># Change me!</code>. If you clone the repo you can skip
-the next curl command.</li>
+much of what's needed. If you choose this option follow the <code>README.md</code>
+included with the repo.</li>
 </ul>
 <pre><code class="language-bash">cd ~
 git clone https://github.com/saylesss88/my-flake.git
@@ -1991,11 +1989,6 @@ git clone https://github.com/saylesss88/my-flake.git
 <p>Make sure to change line 7 in <code>disk-config.nix</code> to what you got from step 3
 <code>device = "/dev/nvme0n1";</code></p>
 </blockquote>
-<p>After cloning the repo, follow step 7 to generate your configuration and replace
-the repos <code>hardware-configuration.nix</code> with your newly generated one. I
-recommend making all the necessary changes (changing the <code>#Change me!</code>
-locations) while in your home directory, then moving the flake to
-<code>/mnt/etc/nixos/</code> and installing from there.</p>
 <ul>
 <li><strong>Option B</strong>: (More flexible, more manual steps) Skip cloning the repo above
 and for the btrfs-subvolume default layout, run the following:</li>
@@ -2073,14 +2066,6 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
                   };
                   # This subvolume will be created but not mounted
                   "/test" = {};
-                  # Subvolume for the swapfile
-                  "/nix/persist/swap" = {
-                    mountpoint = "/nix/persist/swap";
-                    mountOptions = ["subvol=swap" "noatime" "nodatacow"];
-                    swap = {
-                      swapfile.size = "8G";
-                    };
-                  };
                 };
               };
             };
@@ -2094,10 +2079,11 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
   fileSystems."/var/lib".neededForBoot = true;
 }
 </code></pre>
-<blockquote>
-<p>❗ NOTE: It may be unnecessary and even redundant having disko manage your
-swap. Especially if you use <code>zram</code> as it will take priority over the swap:</p>
-</blockquote>
+<ul>
+<li>For <code>/tmp</code> on RAM use something like the following. I've found that having
+disko manage swaps causes unnecessary issues. Using zram follows the ephemeral
+route:</li>
+</ul>
 <blockquote>
 <pre><code class="language-nix">{
   lib,
@@ -2128,6 +2114,11 @@ custom = {
 };
 </code></pre>
 </blockquote>
+<p>After adding the above module, you can see it with:</p>
+<pre><code class="language-bash">swapon --show
+NAME       TYPE      SIZE USED PRIO
+/dev/zram0 partition 7.5G   0B    5
+</code></pre>
 <ol start="6">
 <li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
 wipe <strong>EVERYTHING</strong> on your disk. Disko doesn't work with dual boot.</li>
