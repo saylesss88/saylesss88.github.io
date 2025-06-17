@@ -2670,6 +2670,18 @@ github_deploy_key_ed25519_nix-book: |
 <pre><code class="language-bash">sops -d secrets/github-deploy-key.yaml
 </code></pre>
 <p>The <code>-----BEGIN</code> and the rest of the private key <strong>must</strong> be indented 2 spaces</p>
+<blockquote>
+<p>❗ WARNING: Only ever enter your private keys through the <code>sops</code> command. If
+you forget and paste them in without the <code>sops</code> command then run <code>git add</code> at
+any point, your git history will have contained an unencrypted secret which is
+a nono. Always use the <code>sops</code> command when dealing with files in the <code>secrets</code>
+directory, save the file and inspect that it is encrypted on save. If not
+something went wrong with the <code>sops</code> process, <strong>do not add it to Git</strong>. If you
+do, you will be required to rewrite your entire history which can be bad if
+you're collaborating with others. <code>git-filter-repo</code> is one such solution that
+rewrites your history. Just keep this in mind. This happens because Git has a
+protection that stops you from doing stupid things.</p>
+</blockquote>
 <p>Generate a hashedPassword:</p>
 <pre><code class="language-bash">mkpasswd -m SHA-512 -s
 # Enter your chosen password and copy it
@@ -2721,14 +2733,15 @@ directory is located at <code>~/flake/secrets</code> so the path from <code>sops
 </code></pre>
 <p>And finally use the password-hash for your <code>hashedPasswordFile</code> for your user,
 my user is <code>jr</code> so I added this:</p>
-<pre><code class="language-nix">    users.users = {
+<pre><code class="language-nix"># ... snip ...
+    users.users = {
       # ${username} = {
       jr = {
         homeMode = "755";
         isNormalUser = true;
         # description = userVars.gitUsername;
         hashedPasswordFile = config.sops.secrets.password_hash.path;
-
+  # ...snip...
 </code></pre>
 <ol start="7">
 <li>Rebuild your configuration and you should see something like this:</li>
