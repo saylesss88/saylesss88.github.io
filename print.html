@@ -2922,6 +2922,7 @@ directory is located at <code>~/flake/secrets</code> so the path from <code>sops
   sops = {
     defaultSopsFile = ../../.sops.yaml; # Or the correct path to your .sops.yaml
     age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+    age.keyFile = "/home/jr/sops/age/keys.txt";
 
     secrets = {
       "password_hash" = {
@@ -12673,6 +12674,48 @@ configurations, etc here.</p>
 </li>
 </ul>
 </details>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="nixos-containers"><a class="header" href="#nixos-containers">NixOS Containers</a></h1>
+<p>NixOS containers are lightweight <code>systemd-nspawn</code> containers managed
+declaratively through your NixOS configuration. They allow you to run separate,
+minimal NixOS instances on the same machine, each with its own services,
+packages, and (optionally) network stack.</p>
+<p><strong>Common Use Cases</strong></p>
+<ul>
+<li>
+<p>Isolating services: Run a web server, database, or any service in its own
+container, so it can’t interfere with the main system or other services</p>
+</li>
+<li>
+<p>Testing and development: Try out new configurations, packages, or services in
+a sandboxed environment.</p>
+</li>
+<li>
+<p>Reproducible deployments: Because containers are defined declaratively, you
+can reproduce the exact same environment anywhere.</p>
+</li>
+<li>
+<p>Running multiple versions of a service: For example, testing different
+versions of Git or HTTP servers side by side.</p>
+</li>
+</ul>
+<h2 id="hosting-an-mdbook-or-offline-git-server"><a class="header" href="#hosting-an-mdbook-or-offline-git-server">Hosting an mdBook or Offline Git Server</a></h2>
+<p>Let’s say you want to host your mdBook or run a Git server for offline use. You
+can define a NixOS container that runs only the necessary service, isolated from
+your main system:</p>
+<pre><code class="language-nix">containers.mdbook = {
+  ephemeral = true;         # Container resets on restart (optional)
+  autoStart = true;         # Starts automatically at boot
+  config = { config, pkgs, ... }: {
+    # Example: Serve static files with httpd (Apache)
+    services.httpd.enable = true;
+    services.httpd.adminAddr = "you@example.org";
+    networking.firewall.allowedTCPPorts = [ 80 ];
+    # You could also use nginx, or run the mdbook server directly
+    # Or, for a git server:
+    # services.gitDaemon.enable = true;
+  };
+};
+</code></pre>
 
                     </main>
 
