@@ -2790,6 +2790,10 @@ relevant).</p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sops-nix-encrypted-secrets"><a class="header" href="#sops-nix-encrypted-secrets">Sops-Nix encrypted secrets</a></h1>
+<p><a href="https://github.com/getsops/sops?ref=blog.gitguardian.com">SOPS</a>, short for
+<strong>S</strong>ecrets<strong>OP</strong>eration<strong>S</strong>, is an editor of encrypted files that supports
+quite a few BINARY formats and encrypts with AWS KMS, GCP KMS, Azure Key Vault,
+age, and PGP.</p>
 <p>Managing secrets—like API keys, SSH deploy keys, and password hashes is a
 critical part of system configuration, but it’s also one of the trickiest to do
 securely and reproducibly. Traditionally, secrets might be stored in ad hoc
@@ -2813,8 +2817,7 @@ protection fundamentally relies on using <strong>strong, secret keys</strong> an
 <strong>diligent security practices</strong>. If your PGP passphrase is weak, your Age
 private key is easily guessable, or the cleartext secret itself is very short
 and has low entropy (e.g., "12345", "true", "admin"), an attacker might be
-able to compromise your secrets regardless of the encryption. Advances in
-technology or poor key management can significantly weaken this defense.</p>
+able to compromise your secrets regardless of the encryption.</p>
 </blockquote>
 <ol>
 <li>Add sops to your <code>flake.nix</code>:</li>
@@ -2843,16 +2846,6 @@ technology or poor key management can significantly weaken this defense.</p>
     pkgs.sops
     pkgs.age
 ];
-</code></pre>
-<p>Also add the following to your <code>.gitignores</code> in your git config:</p>
-<pre><code class="language-nix">programs.git = {
-    enabled = true;
-    ignores = [
-        "secrets/"
-        ".key"
-        ".pem"
-    ];
-}
 </code></pre>
 <ol start="3">
 <li>Generate a key (This is your <strong>private key</strong> and <strong>MUST NEVER BE COMMITTED TO
@@ -2908,6 +2901,10 @@ ssh-keygen -t ed25519 -f ~/nix-book-deploy-key -C "deploy-key-nix-book-repo"
 <pre><code class="language-bash">mkdir secrets
 sops secrets/github-deploy-key.yaml  # For your github ssh key
 </code></pre>
+<p>When you call a <code>sops</code> command, it will handle the encryption/decryption
+transparently and open the cleartext file in an editor.</p>
+<p>Editing will happen in the editor that <code>$SOPS_EDITOR</code> or <code>$EDITOR</code> is set to,
+sops will wait for the editor to exit, and then try to reencrypt the file.</p>
 <p>The above command will open a default sops <code>github-deploy-key.yaml</code> in your
 <code>$EDITOR</code>:</p>
 <pre><code class="language-yaml">github_deploy_key_ed25519: |
@@ -2920,10 +2917,10 @@ github_deploy_key_ed25519_nix-book: |
   ...
   -----END OPENSSH PRIVATE KEY-----
 </code></pre>
+<p>The <code>-----BEGIN</code> and the rest of the private key <strong>must</strong> be indented 2 spaces</p>
 <p>Ensure sops can decrypt it:</p>
 <pre><code class="language-bash">sops -d secrets/github-deploy-key.yaml
 </code></pre>
-<p>The <code>-----BEGIN</code> and the rest of the private key <strong>must</strong> be indented 2 spaces</p>
 <blockquote>
 <p>❗ WARNING: Only ever enter your private keys through the <code>sops</code> command. If
 you forget and paste them in without the <code>sops</code> command then run <code>git add</code> at
@@ -2936,14 +2933,18 @@ you're collaborating with others. <code>git-filter-repo</code> is one such solut
 rewrites your history. Just keep this in mind. This happens because Git has a
 protection that stops you from doing stupid things.</p>
 </blockquote>
-<p>Generate a hashedPassword:</p>
+<p>Generate an encrypted password hash with:</p>
 <pre><code class="language-bash">mkpasswd -m SHA-512 -s
-# Enter your chosen password and copy it
+# Enter your chosen password and copy the encrypted hash it gives you back
 </code></pre>
 <pre><code class="language-bash">sops secrets/password-hash.yaml      # For your `hashedPasswordFile`
 </code></pre>
-<pre><code class="language-yaml">password_hash: PasteGeneratedPasswordHere
+<p>The above command will open your <code>$EDITOR</code> with the file <code>password-hash.yaml</code>,
+add the following content to it. Replace <code>PasteEncryptedHashHere</code> with the
+output of the <code>mkpasswd</code> command above:</p>
+<pre><code class="language-yaml">password_hash: PasteEncryptedHashHere
 </code></pre>
+<p>Ensure sops can decrypt it:</p>
 <pre><code class="language-bash">sops -d secrets/password-hash.yaml
 </code></pre>
 <ol start="7">
@@ -3004,6 +3005,15 @@ wiped on reboot. Adding <code>neededForUsers = true;</code> tells <code>sops-nix
 and make that secret available earlier in the boot process--specifically,
 before user and group accounts are created.</p>
 </blockquote>
+<p>You typically use <code>age.sshKeyPaths</code> for <strong>system-level secrets</strong> with a
+persistent SSH host key</p>
+<p>For <strong>user-level secrets</strong>, use <code>age.keyFile</code> pointing to your Age private key,
+stored in a safe persistent location.</p>
+<p>For reproducibility, keep your key files in a persistent, predictable path and
+document which keys are used for which secrets in your <code>.sops.yaml</code>.</p>
+<p>If you don't need both <code>age.keyFile</code> and <code>age.sshKeyPaths</code> it can reduce
+complexity to use one or the other. Although most people may choose one, it's
+not bad to use both it just adds complexity.</p>
 <p>And finally use the password-hash for your <code>hashedPasswordFile</code> for your user,
 my user is <code>jr</code> so I added this:</p>
 <pre><code class="language-nix"># ... snip ...
@@ -3019,10 +3029,13 @@ my user is <code>jr</code> so I added this:</p>
 <ol start="8">
 <li>Rebuild your configuration and you should see something like this:</li>
 </ol>
-<pre><code class="language-bash">sops-install-secrets: Imported /etc/ssh/ssh_host_ed25519_key as age key with fingerprint age1smamkzrwpdxw63hrxxcq8kmejsm4olknsrg72vd0qtfpmlzlvnf8uws38mzuj
+<pre><code class="language-bash">sops-install-secrets: Imported /etc/ssh/ssh_host_ed25519_key as age key with fingerprint age1smamdkzrwpdxw63hrxxcq8kmejsm4olknsrg72vd0qtfpmlzlvnf8uws38mzuj
 </code></pre>
-<p>If all goes well you should now have a more reproducible setup that doesn't rely
-on file paths for your secrets.</p>
+<p>By integrating SOPS with NixOS through <code>sops-nix</code>, you gain a modern, secure,
+and reproducible way to manage sensitive secrets. Unlike traditional
+approaches—where secrets are often scattered in ad hoc locations, referenced by
+absolute paths, or managed outside version control—sops-nix keeps your secrets
+encrypted, declarative, and version-control friendly.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="secure-boot-with-lanzaboote"><a class="header" href="#secure-boot-with-lanzaboote">Secure Boot with Lanzaboote</a></h1>
 <p>⚠️ <strong>Warning: This can easily brick your system</strong> ⚠️</p>
 <p>We will mainly follow the lanzaboote
