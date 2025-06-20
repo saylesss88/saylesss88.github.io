@@ -2790,6 +2790,23 @@ relevant).</p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sops-nix-encrypted-secrets"><a class="header" href="#sops-nix-encrypted-secrets">Sops-Nix encrypted secrets</a></h1>
+<p>Managing secrets—like API keys, SSH deploy keys, and password hashes is a
+critical part of system configuration, but it’s also one of the trickiest to do
+securely and reproducibly. Traditionally, secrets might be stored in ad hoc
+locations, referenced by absolute paths, or managed manually outside of version
+control. This approach makes it hard to share, rebuild, or audit your
+configuration, and increases the risk of accidental leaks or inconsistencies
+between systems.</p>
+<p><code>sops-nix</code> solves these problems by integrating Mozilla SOPS directly into your
+NixOS configuration. Instead of relying on hardcoded file paths or copying
+secrets around, you declare your secrets in your Nix code, encrypt them with
+strong keys, and let <code>sops-nix</code> handle decryption and placement at activation
+time.</p>
+<p>Encryption with strong keys, as used by sops-nix, makes brute force attacks
+computationally unfeasible with current technology—the time and resources
+required to try every possible key would be astronomically high. However, this
+protection relies on using strong, secret keys and good security practices;
+advances in technology or poor key management can weaken this defense.</p>
 <ol>
 <li>Add sops to your <code>flake.nix</code>:</li>
 </ol>
@@ -2818,6 +2835,16 @@ relevant).</p>
     pkgs.age
 ];
 </code></pre>
+<p>Also add the following to your <code>.gitignores</code> in your git config:</p>
+<pre><code class="language-nix">programs.git = {
+    enabled = true;
+    ignores = [
+        "secrets/"
+        ".key"
+        ".pem"
+    ];
+}
+</code></pre>
 <ol start="3">
 <li>Generate a key (This is your <strong>private key</strong> and <strong>MUST NEVER BE COMMITTED TO
 GIT OR SHARED</strong>):</li>
@@ -2825,10 +2852,11 @@ GIT OR SHARED</strong>):</li>
 <pre><code class="language-bash">mkdir -p ~/.config/sops/age
 age-keygen -o ~/.config/sops/age/keys.txt
 </code></pre>
-<p>Copy the Public Keys Value, it will look something like this:</p>
+<p>To get the Public Keys Value, run the following command:</p>
 <pre><code class="language-bash">age-keygen -y ~/.config/sops/age/keys.txt
 age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
 </code></pre>
+<p>Copy the <code>age</code> value it gives you back.</p>
 <ol start="4">
 <li>Create a <code>.sops.yaml</code> in the same directory as your <code>flake.nix</code>:</li>
 </ol>
@@ -2854,7 +2882,7 @@ creation_rules:
         # want to restrict it to specific fingerprints, which is rare.
         # This part ensures your *personal* key can decrypt it.
 </code></pre>
-<p>Save it and move on.</p>
+<p>Save it and move on, this file and <code>sops.nix</code> are safe to version control.</p>
 <ol start="5">
 <li>sops-nix's automatic decryption feature using system SSH host keys only works
 with ed25519 host keys for deriving Age decryption keys. Therefore, for
@@ -2864,7 +2892,7 @@ system decryption, ensure your using ed25519 not rsa keys:</li>
 # for multiple keys run something like
 ssh-keygen -t ed25519 -f ~/nix-book-deploy-key -C "deploy-key-nix-book-repo"
 </code></pre>
-<ol start="5">
+<ol start="6">
 <li>Copy the <strong>PRIVATE</strong> key for each and add them to your secrets directory:</li>
 </ol>
 <p>While in your flake directory:</p>
@@ -2909,7 +2937,7 @@ protection that stops you from doing stupid things.</p>
 </code></pre>
 <pre><code class="language-bash">sops -d secrets/password-hash.yaml
 </code></pre>
-<ol start="6">
+<ol start="7">
 <li>Create a <code>sops.nix</code> and import it or add this directly to your
 <code>configuration.nix</code>:</li>
 </ol>
@@ -2950,16 +2978,22 @@ directory is located at <code>~/flake/secrets</code> so the path from <code>sops
   };
 }
 </code></pre>
+<p>Import <code>sops.nix</code> into your <code>configuration.nix</code> or equivalent:</p>
+<pre><code class="language-nix"># configuration.nix
+imports = [
+  ./sops.nix # Assuming sops.nix is in the same directory as configuration.nix, adjust path as needed
+  # ... other imports
+];
+</code></pre>
 <blockquote>
 <p>❗ NOTE: You may see in the sops quickstart guide that if you're using
-impermanence, the key used for secret decryption (<code>sops.age.keyFile</code> or
-<code>age.sshKeyPaths</code>, you can't use both) must be in a persistent directory,
-loaded early enough during the boot process. If you are using the btrfs
-subvolume layout you don't need to worry about this because your home will be
-on its own partition when only the root partition is wiped on reboot. Adding
-<code>neededForUsers = true;</code> tells sops-nix to decrypt and make that secret
-available earlier in the boot process--specifically, before user and group
-accounts are created.</p>
+impermanence, the key used for secret decryption (<code>sops.age.keyFile</code>) must be
+in a persistent directory, loaded early enough during the boot process. If you
+are using the btrfs subvolume layout you don't need to worry about this
+because your home will be on its own partition when only the root partition is
+wiped on reboot. Adding <code>neededForUsers = true;</code> tells <code>sops-nix</code> to decrypt
+and make that secret available earlier in the boot process--specifically,
+before user and group accounts are created.</p>
 </blockquote>
 <p>And finally use the password-hash for your <code>hashedPasswordFile</code> for your user,
 my user is <code>jr</code> so I added this:</p>
@@ -2973,7 +3007,7 @@ my user is <code>jr</code> so I added this:</p>
         hashedPasswordFile = config.sops.secrets.password_hash.path;
   # ...snip...
 </code></pre>
-<ol start="7">
+<ol start="8">
 <li>Rebuild your configuration and you should see something like this:</li>
 </ol>
 <pre><code class="language-bash">sops-install-secrets: Imported /etc/ssh/ssh_host_ed25519_key as age key with fingerprint age1smamkzrwpdxw63hrxxcq8kmejsm4olknsrg72vd0qtfpmlzlvnf8uws38mzuj
