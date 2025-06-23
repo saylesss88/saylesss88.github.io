@@ -2567,20 +2567,13 @@ can be deleted or rolled back as needed.</p>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-luks-encrypted-install-with-btrfs-subvolumes"><a class="header" href="#minimal-luks-encrypted-install-with-btrfs-subvolumes">Minimal LUKS Encrypted Install with Btrfs Subvolumes</a></h1>
 <p>Follow this guide to set up a minimal NixOS install with LUKS, Btrfs, and
-encrypted secrets.</p>
+encrypted secrets. This guide aims for a manually entered LUKS passphrase at
+boot and uses SOPS for other system/user secrets.</p>
 <ol>
 <li>Prepare the Minimal ISO and Networking</li>
 </ol>
-<ul>
-<li>
-<p>Download the NixOS minimal ISO and boot it.</p>
-</li>
-<li>
-<p>Set up networking:</p>
-</li>
-</ul>
-<pre><code class="language-bash">sudo systemctl start wpa_supplicant wpa_cli
-wpa_cli
+<pre><code class="language-bash">sudo systemctl start wpa_supplicant.service # Ensure wpa_supplicant is running
+sudo wpa_cli
 &gt; add_network
 0
 &gt; set_network 0 ssid "myhomenetwork"
@@ -2591,117 +2584,198 @@ OK
 OK
 &gt; quit
 </code></pre>
-<p>Or, use:</p>
-<pre><code class="language-bash">sudo wpa_passphrase "myhomenetwork" "mypassword" &gt;&gt;
-/etc/wpa_supplicant/wpa_supplicant-wlan0.conf
-sudo systemctl restart wpa_supplicant@wlan0.service
-</code></pre>
-<p>Test your connection:</p>
+<p>Test your connection: Bash</p>
 <pre><code class="language-bash">ping google.com
 </code></pre>
 <ol start="2">
-<li>Enable Experimental Nix Features</li>
+<li>Enable Experimental Nix Features Bash</li>
 </ol>
 <pre><code class="language-bash">export NIX_CONFIG='experimental-features = nix-command flakes'
 </code></pre>
 <ol start="3">
-<li>Install Essential Tools</li>
+<li>Install Initial Essential Tools &amp; Clone Repo</li>
 </ol>
-<pre><code class="language-bash">nix-shell -p git helix yazi age sops mkpasswd
-export EDITOR='hx'
+<p>These tools are needed for the initial configuration and running disko. Bash</p>
+<pre><code class="language-bash">sudo nix-env -iA nixos.{git,helix,yazi} # Install globally for the installer environment
+export EDITOR='hx' #  Set your preferred editor for this session
 git config --global user.name "YourUsername"
 git config --global user.email "YourGitEmail"
-```
-
-4. Clone the Configuration Repository
-
-```bash
-git clone https://github.com/saylesss88/my-flake.git
 </code></pre>
-<ol start="5">
-<li>Customize Configuration Files</li>
+<h1 id="clone-the-starter-repo"><a class="header" href="#clone-the-starter-repo">Clone the Starter Repo</a></h1>
+<pre><code class="language-bash">git clone https://github.com/saylesss88/my-flake.git
+</code></pre>
+<ol start="4">
+<li>Customize Configuration Files (Pre-Disko)</li>
 </ol>
+<ul>
+<li>Navigate into your cloned flake:</li>
+</ul>
+<pre><code class="language-bash">cd ~/my-flake
+</code></pre>
 <ul>
 <li>
 <p>Modify <code>flake.nix</code>, <code>users.nix</code>, and <code>configuration.nix</code> to set your desired
-<code>hostname</code> and <code>username</code>.</p>
-<p>Check your disk device with <code>lsblk</code> and update line 5 of <code>disk-config2.nix</code>
-accordingly. (i.e. the <code>device</code> needs to match your device)</p>
+hostname and username.</p>
 </li>
-</ul>
-<ol start="6">
 <li>
-<p>Generate Hashed Passwords and LUKS Passphrase</p>
-<p>Generate a hashed password:</p>
+<p>Check your disk device with <code>lsblk</code> and update <code>disk-config2.nix</code> accordingly
+(i.e., the device needs to match your actual disk device, e.g., <code>/dev/nvme0n1</code>
+or <code>/dev/sda</code>).</p>
 </li>
+</ul>
+<ol start="5">
+<li>Apply Initial Configuration &amp; Prepare Disko</li>
 </ol>
-<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/user_hashed_pass.txt
+<p>This step builds a temporary NixOS system in the installer's RAM disk that
+includes your disko configuration.</p>
+<ul>
+<li>Generate your <code>hardware-configuration.nix</code> based on the installer's view of
+your hardware.</li>
+</ul>
+<pre><code class="language-bash">sudo nixos-generate-config --no-filesystems --root /mnt
+sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake/hardware-configuration.nix
 </code></pre>
-<ol start="7">
-<li>Set Up Age Key for SOPS</li>
-</ol>
-<pre><code class="language-bash">mkdir -p ~/.config/sops/age age-keygen -o ~/.config/sops/age/keys.txt
+<p>Run Disko to wipe, partition, and format your disk (WARNING: This destroys ALL
+data on the target disk!) Bash</p>
+<pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount ~/my-flake/disk-config2.nix
 </code></pre>
 <ul>
-<li>Copy the public key and add it to .sops.yaml in your repo:</li>
+<li>Crucial: You will be prompted for your LUKS passphrase. This is the password
+you will use to unlock your disk every time you boot. Choose a strong,
+memorable passphrase.</li>
 </ul>
+<p>Verify your partitions are mounted to <code>/mnt</code>:</p>
+<pre><code class="language-bash">mount | grep /mnt
+</code></pre>
+<ol start="6">
+<li>Install SOPS-Related Tools &amp; Generate Secrets (Post-Disko)</li>
+</ol>
+<p>Now that your disk is formatted and mounted to <code>/mnt</code>, we can generate and
+encrypt your secrets directly onto the target filesystem. This ensures the Age
+key is located where the installed system can always find it.</p>
+<p>Change into the mounted flake directory:</p>
+<pre><code class="language-bash">sudo mv ~/my-flake /mnt/etc/nixos/
+cd /mnt/etc/nixos/my-flake
+</code></pre>
+<p>Install SOPS-related tools:</p>
+<pre><code class="language-bash">sudo nix-env -iA nixos.{age,sops,mkpasswd} # Install these into the installer environment
+</code></pre>
+<p>6.1. Set Up Age Key for SOPS</p>
+<p>This generates your Age private key directly on the target root partition.</p>
+<p>Create the directory for your Age key and generate the key pair:</p>
+<pre><code class="language-bash">sudo mkdir -p /mnt/root/.config/sops/age
+sudo age-keygen -o /mnt/root/.config/sops/age/keys.txt
+</code></pre>
+<p>The above location will persist after the install and reboot.</p>
+<p>Display your Public Key and Manually Transcribe:</p>
+<pre><code class="language-bash">sudo age-keygen -y /mnt/root/.config/sops/age/keys.txt
+</code></pre>
+<p>Carefully read and manually type the <code>age1...</code> public key string into your
+<code>.sops.yaml</code> file within your flake directory
+(<code>/mnt/etc/nixos/my-flake/.sops.yaml</code>).</p>
+<p>Example <code>.sops.yaml</code> (after editing):</p>
 <pre><code class="language-yaml">keys:
-
-- &amp;personal_age_key
-  age1yuvx83vtxr8rf6t8vmwjeymt9u83h4cwktnqvmn49rhy36chj3tqlgunhz creation_rules:
-- path_regex: "secrets/.\*\\.yaml$" key_groups:
-
-  - age:
-    - \*personal_age_key
+  - &amp;personal_age_key age1yuvx83vtxr8rf6t8vmwjeymt9u83h4cwktnqvmn49rhy36chj3tqlgunhz # &lt;-- Your public key goes here
+creation_rules:
+  - path_regex: "secrets/.*\\.yaml$"
+    key_groups:
+      - age:
+          - *personal_age_key
 </code></pre>
-<ul>
-<li>Add <code>.sops.yaml</code> to git:</li>
-</ul>
+<p>Add <code>.sops.yaml</code> to Git</p>
 <pre><code class="language-bash">git add .sops.yaml
 </code></pre>
 <ul>
-<li>If using Git and you forget to add the <code>.sops.yaml</code>, sops won't be able to
-decrypt your secrets.</li>
+<li>
+<p>Note: If you forget to add the <code>.sops.yaml</code> to Git, sops won't be able to
+decrypt your secrets after reboot.</p>
+<p>6.2. Generate SSH Key &amp; Add to SOPS</p>
+</li>
+<li>
+<p>Generate your SSH key and save the private key to a temporary file:</p>
+</li>
 </ul>
-<ol start="8">
-<li>Generate SSH Key</li>
-</ol>
-<pre><code class="language-bash">ssh-keygen -t ed25519 -C "your_email@example.com" &gt; /tmp/ssh_key.txt
+<pre><code class="language-bash">ssh-keygen -t ed25519 -C "your_email@example.com" -f /tmp/ssh_key
 </code></pre>
 <ul>
-<li>Copy the private key into <code>secrets/github-deploy-key.yaml</code> using SOPS:</li>
+<li>Encrypt the private key into <code>secrets/github-deploy-key.yaml</code> using SOPS:</li>
 </ul>
 <pre><code class="language-bash">sops secrets/github-deploy-key.yaml
 </code></pre>
-<p>Inside, paste:</p>
-<pre><code class="language-yaml">github_deploy_key_ed25519: |
-  -----BEGIN OPENSSH PRIVATE KEY----- ...
-  -----END OPENSSH PRIVATE KEY-----
+<p>Inside the editor (e.g., <code>helix</code>, <code>vim</code>, <code>nano</code>):</p>
+<ol>
+<li>
+<p>Add the YAML key: <code>github_deploy_key_ed25519: |</code></p>
+</li>
+<li>
+<p>Move your cursor to the line below, indented by 2 spaces.</p>
+</li>
+<li>
+<p>To read the content from <code>/tmp/ssh_key</code>:</p>
+</li>
+</ol>
+<ul>
+<li>
+<p>For vim: In Normal mode, type <code>:r /tmp/ssh_key</code> and press Enter.</p>
+</li>
+<li>
+<p>For nano: Press <code>Ctrl+R</code>, type <code>/tmp/ssh_key</code>, and press Enter.</p>
+</li>
+</ul>
+<ol start="4">
+<li>Save and exit the editor.</li>
+</ol>
+<ul>
+<li>Securely delete the temporary file:</li>
+</ul>
+<pre><code class="language-bash">shred -u /tmp/ssh_key
+</code></pre>
+<p>6.3. Add Hashed Password to SOPS</p>
+<ul>
+<li>Generate your hashed password for the user and save it to a temporary file:</li>
+</ul>
+<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/user_hashed_pass.txt
 </code></pre>
 <ul>
-<li>Indent the key content by 2 spaces.</li>
+<li>Encrypt the hashed password into <code>secrets/password-hash.yaml</code> using SOPS:</li>
 </ul>
-<ol start="9">
-<li>Add Hashed Password to SOPS</li>
-</ol>
 <pre><code class="language-bash">sops secrets/password-hash.yaml
 </code></pre>
-<p>Inside, paste:</p>
-<pre><code class="language-yaml">password_hash:
-</code></pre>
-<ul>
-<li>Read in your hashed password:</li>
-</ul>
-<pre><code class="language-yaml">:r /tmp/user_hashed_pass.txt
-</code></pre>
-<ol start="10">
-<li>Configure SOPS in Nix</li>
+<p>Inside the editor:</p>
+<ol>
+<li>
+<p>Add the YAML key: password_hash:</p>
+</li>
+<li>
+<p>Move your cursor to the end of that line (or the line below, if your editor
+prefers).</p>
+</li>
+<li>
+<p>To read the content from <code>/tmp/user_hashed_pass.txt</code>:</p>
+</li>
 </ol>
-<p>Ensure your sops.nix looks like this (adjust paths as needed):</p>
-<pre><code class="language-nix">{...}: {
-sops = { defaultSopsFile = ./sops.yaml;
-    age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
-    age.keyFile = "/home/jr/sops/age/keys.txt";
+<ul>
+<li>
+<p>For vim: In Normal mode, type <code>:r /tmp/user_hashed_pass.txt</code> and press Enter.
+(You may need to join the lines using Shift+J and add 2 spaces of indentation
+if it pastes on a new line).</p>
+</li>
+<li>
+<p>For nano: Press <code>Ctrl+R</code>, type <code>/tmp/user_hashed_pass.txt</code>, and press Enter.
+Save and exit the editor.</p>
+</li>
+</ul>
+<p>Securely delete the temporary file:</p>
+<pre><code class="language-bash">shred -u /tmp/user_hashed_pass.txt
+</code></pre>
+<ol start="7">
+<li>Configure SOPS in Nix (sops.nix)</li>
+</ol>
+<p>Ensure your <code>sops.nix</code> looks like this, adjusting <code>age.keyFile</code> to the new path
+(which is on your root filesystem).</p>
+<pre><code class="language-nix">{ config, ... }: { sops = { defaultSopsFile = ./sops.yaml; # If your host's SSH key is Ed25519 and you want SOPS to use it for decryption, # you can add:
+age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+age.keyFile = "/root/.config/sops/age/keys.txt"; # Crucial: This path is now on your installed system's root
 
     secrets = {
       "password_hash" = {
@@ -2709,11 +2783,11 @@ sops = { defaultSopsFile = ./sops.yaml;
         owner = "root";
         group = "root";
         mode = "0400";
-        neededForUsers = true;
+        neededForUsers = true; # Ensures it's available for user creation/login
       };
       "github_deploy_key_ed25519" = {
         sopsFile = ./secrets/github-deploy-key.yaml;
-        key = "github_deploy_key_ed25519";
+        key = "github_deploy_key_ed25519"; # Specifies the key within the YAML file
         owner = "root";
         group = "root";
         mode = "0400";
@@ -2722,77 +2796,41 @@ sops = { defaultSopsFile = ./sops.yaml;
 
 }; }
 </code></pre>
-<ol start="11">
-<li>Apply Configuration</li>
-</ol>
-<p>First generate your <code>hardware-configuration.nix</code> and replace the repos existing
-<code>hardware-configuration.nix</code> with the freshly generated one:</p>
-<pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
-sudo mv /tmp/etc/nixos/hardware-configuration.nix ~/my-flake
-</code></pre>
-<p>Now you can rebuild to apply the changes:</p>
-<pre><code class="language-bash">sudo nixos-rebuild switch --flake ~/my-flake#your-hostname
-</code></pre>
-<ol start="12">
-<li>Prepare Disko for Partitioning and Formatting</li>
+<ol start="8">
+<li>Final Configuration &amp; Apply</li>
 </ol>
 <ul>
-<li>Run Disko to wipe, partition, and format your disk (WARNING: this destroys
-data):</li>
+<li>Update <code>configuration.nix</code>: Review and update your <code>configuration.nix</code> with
+your hostname, desired packages, services, etc.</li>
 </ul>
-<pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount ~/my-flake/disk-config2.nix
+<p>Final rebuild to apply all changes:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake .#your-hostname # Use . since you are in the flake directory
 </code></pre>
-<ul>
-<li>You will be prompted for your LUKS passphrase.</li>
-</ul>
-<p>Check mounts:</p>
-<pre><code class="language-bash">mount | grep /mnt
-</code></pre>
-<ol start="13">
-<li>Update and Apply Configuration</li>
+<ol start="9">
+<li>Install NixOS</li>
 </ol>
-<ul>
-<li>
-<p>Update <code>configuration.nix</code> with your hostname, packages, etc.</p>
-</li>
-<li>
-<p>Replace your flake's <code>hardware-configuration.nix</code> with the newly generated
-one:</p>
-</li>
-</ul>
-<pre><code class="language-bash">rm ~/my-flake/hardware-configuration.nix
-sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake
-</code></pre>
-<ol start="14">
-<li>Move Flake and Install NixOS</li>
-</ol>
-<pre><code class="language-bash">sudo mv ~/my-flake /mnt/etc/nixos/
-sudo nixos-install --flake /mnt/etc/nixos/my-flake#hostname
+<p>Execute the installation command:</p>
+<pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/my-flake#your-hostname
 </code></pre>
 <ul>
-<li>You will be prompted to set a new password and reboot.</li>
+<li>You will be prompted to set a new password. This is for the root user on your
+newly installed system.</li>
 </ul>
-<ol start="15">
+<ol start="10">
 <li>Post-Installation</li>
 </ol>
-<ul>
-<li>After reboot, you will be asked to enter your encryption password for the boot
-process to continue. Enter the passphrase you used for the <code>disko</code> command.</li>
-</ul>
-<pre><code class="language-bash">sudo mv /etc/nixos/my-flake ~
-sudo chown -R $USER:users ~/my-flake
+<p>First Boot: After reboot, your system will pause to ask for your encryption
+password (the LUKS passphrase you set during the Disko command in Step 5). Enter
+it to proceed with booting. Move your flake to your user's home directory (if
+desired) and fix permissions:</p>
+<pre><code class="language-bash">sudo mv /etc/nixos/my-flake ~ sudo chown -R $USER:users ~/my-flake
 </code></pre>
-<ul>
-<li>
-<p>It is possible to use sops to auto decrypt your luks partition but it negates
-many of the benefits in my opinion. It's something you could look into if you
-wanted, as it still does provide some benefits.</p>
-</li>
-<li>
-<p>I'm working on the impermanence guide for this setup, had quite a few
-headaches so far. I'm open to suggestions.</p>
-</li>
-</ul>
+<p>Optional: It is possible to use sops to auto-decrypt your LUKS partition, but
+this guide focuses on manual entry for enhanced security awareness at boot. If
+you're interested, you could explore that option, but it negates some of the
+benefits of manually entering your passphrase. I'm currently working on an
+impermanence guide for this setup, which has presented some challenges. I'm open
+to suggestions!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted BTRFS Impermanence with Flakes</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
