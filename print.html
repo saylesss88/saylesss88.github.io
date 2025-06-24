@@ -2352,29 +2352,32 @@ where each package has its own unique subdirectory such as:</p>
 <pre><code class="language-bash">/nix/store/y53c0lamag5wpx7vsiv7wmnjdgq97yd6-yazi-25.5.14pre20250526_74a8ea9
 </code></pre>
 <p>You can use the Nix on most Linux distributions and Mac OS also has good support
-for Nix. It should work on most platforms that support POSIX threads
-and have a C++11 compiler.</p>
+for Nix. It should work on most platforms that support POSIX threads and have a
+C++11 compiler.</p>
 <p>When I install Nix on a distro like Arch Linux I usually use the Zero to Nix
 installer as it automates several steps, such as enabling flakes by default:</p>
 <pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 </code></pre>
 <p>If you have concerns about the "curl to Bash" approach you could examine the
-installation script <a href="https://raw.githubusercontent.com/DeterminateSystems/nix-installer/main/nix-installer.sh">here</a>
+installation script
+<a href="https://raw.githubusercontent.com/DeterminateSystems/nix-installer/main/nix-installer.sh">here</a>
 then download and run it:</p>
 <pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix &gt; nix-installer.sh
 chmod +x nix-installer.sh
 ./nix-installer.sh install
 </code></pre>
-<p>I got the above commands from <a href="https://zero-to-nix.com/start/install/">zero-to-nix</a></p>
-<p>The main difference between using the nix package manager on another distribution
-and NixOS is that NixOS uses Nix not just for package management but also to
-manage the system configuration (e.g., to build config files in <code>/etc</code>).</p>
+<p>I got the above commands from
+<a href="https://zero-to-nix.com/start/install/">zero-to-nix</a></p>
+<p>The main difference between using the nix package manager on another
+distribution and NixOS is that NixOS uses Nix not just for package management
+but also to manage the system configuration (e.g., to build config files in
+<code>/etc</code>).</p>
 <p><a href="https://nix-community.github.io/home-manager/">Home Manager</a> is a Nix-powered
 tool for reproducible management of the contents of the users' home directories.
-This includes programs, configuration files, environment variables, and arbitrary
-files. Home manager uses the same module system as NixOS.</p>
-<p>Now that we've discussed some of the basics of the Nix package manager, lets
-see how it is used to build and manage software in NixOS.</p>
+This includes programs, configuration files, environment variables, and
+arbitrary files. Home manager uses the same module system as NixOS.</p>
+<p>Now that we've discussed some of the basics of the Nix package manager, lets see
+how it is used to build and manage software in NixOS.</p>
 <h2 id="channels"><a class="header" href="#channels">Channels</a></h2>
 <p>Nix packages are distributed through Nix channels; mechanisms for distributing
 Nix expressions and the associated binary caches for them. Channels are what
@@ -2389,17 +2392,17 @@ channel like <code>nixos-unstable</code> is constantly updated, fetching package
 today might give you a different set of package versions than fetching from it
 tomorrow, even if your configuration remains unchanged. This "rolling release"
 nature at a global level can make it harder to share and reproduce exact
-development environments or system configurations across different machines
-or at different points in time.</p>
+development environments or system configurations across different machines or
+at different points in time.</p>
 <h2 id="channels-vs-flakes-enhancing-reproducibility"><a class="header" href="#channels-vs-flakes-enhancing-reproducibility">Channels vs. Flakes Enhancing Reproducibility</a></h2>
-<p>Before the introduction of <strong>Nix Flakes</strong>, channels were the primary mechanism for
-sourcing <code>Nixpkgs</code>. While functional, they posed a challenge for exact
+<p>Before the introduction of <strong>Nix Flakes</strong>, channels were the primary mechanism
+for sourcing <code>Nixpkgs</code>. While functional, they posed a challenge for exact
 reproducibility because they point to a moving target (the latest commit on a
 branch). This meant that a <code>nix-build</code> command run yesterday might produce a
 different result than one run today, simply because the channel updated.</p>
-<p>Nix Flakes were introduced to address this. Flakes bring a built-in, standardized
-way to define the exact inputs to a Nix build, including the precise Git
-revision of <code>Nixpkgs</code> or any other dependency.</p>
+<p>Nix Flakes were introduced to address this. Flakes bring a built-in,
+standardized way to define the exact inputs to a Nix build, including the
+precise Git revision of <code>Nixpkgs</code> or any other dependency.</p>
 <p>Here's a quick comparison:</p>
 <div class="table-wrapper"><table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Nix Channels (traditional)</th><th style="text-align: left">Nix Flakes (modern approach)</th></tr></thead><tbody>
 <tr><td style="text-align: left"><strong>Input Source</strong></td><td style="text-align: left">Global system configuration (<code>nix-channel --update</code>)</td><td style="text-align: left">Explicitly defined in <code>flake.nix</code> (e.g., <code>github:NixOS/nixpkgs/nixos-23.11</code>)</td></tr>
@@ -2411,18 +2414,19 @@ revision of <code>Nixpkgs</code> or any other dependency.</p>
 </div>
 <p>The ability of Flakes to "lock" the exact version of all dependencies in a
 <code>flake.lock</code> file is a game-changer for collaboration and long-term
-reproducibility, ensuring that your Nix configuration builds the same way,
-every time, everywhere.</p>
+reproducibility, ensuring that your Nix configuration builds the same way, every
+time, everywhere.</p>
 <h2 id="nixpkgs"><a class="header" href="#nixpkgs">Nixpkgs</a></h2>
 <p><strong>Nixpkgs</strong> is the largest repository of Nix packages and NixOS modules.</p>
-<p>For <strong>NixOS</strong> users, <code>nixos-unstable</code> channel branch is the rolling release, where
-the packages are tested and must pass integration tests.</p>
+<p>For <strong>NixOS</strong> users, <code>nixos-unstable</code> channel branch is the rolling release,
+where the packages are tested and must pass integration tests.</p>
 <p>For <strong>standalone Nix</strong> users, <code>nixpkgs-unstable</code> channel branch is the rolling
 release, where packages pass only basic build tests and are upgraded often.</p>
-<p>For Flakes, as mentioned above they don't use channels so <code>nixpkgs</code> will be listed
-as an <code>input</code> to your flake. (e.g., <code>inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";</code>)
-When using flakes you can actually disable channels and actually recommended to
-avoid conflicts between traditional channel-based workflows and the flake system.</p>
+<p>For Flakes, as mentioned above they don't use channels so <code>nixpkgs</code> will be
+listed as an <code>input</code> to your flake. (e.g.,
+<code>inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";</code>) When using flakes
+you can actually disable channels and actually recommended to avoid conflicts
+between traditional channel-based workflows and the flake system.</p>
 <h3 id="updates"><a class="header" href="#updates">Updates</a></h3>
 <p>The mechanism for updating your Nix environment differs fundamentally between
 channels and flakes, directly impacting reproducibility and control.</p>
@@ -2433,10 +2437,10 @@ specific branch.</p>
 commit from the channels you've subscribed to. For instance,
 <code>sudo nix-channel --update nixos</code> (for NixOS) or <code>nix-channel --update nixpkgs</code>
 (for <code>nix-env</code> on other Linux distributions).</p>
-<p><strong>Implication</strong>: This command updates your local system's understanding of
-what "nixos" or "nixpkgs-unstable" means. From that point on, any <code>nixos-rebuild switch</code>,
-<code>nix-env -iA</code>, or <code>nix-build</code> commands that implicitly or explicitly refer to
-<code>nixpkgs</code> will use this newly updated version.</p>
+<p><strong>Implication</strong>: This command updates your local system's understanding of what
+"nixos" or "nixpkgs-unstable" means. From that point on, any
+<code>nixos-rebuild switch</code>, <code>nix-env -iA</code>, or <code>nix-build</code> commands that implicitly
+or explicitly refer to <code>nixpkgs</code> will use this newly updated version.</p>
 <p><strong>Reproducibility Challenge</strong>: The update itself is not recorded in your
 configuration files. If you share your <code>configuration.nix</code> with someone, they
 might run <code>nix-channel --update</code> on a different day and get a different set of
@@ -2448,9 +2452,9 @@ your channels.</p>
 <p><strong>Flakes</strong>, by contrast, use a more explicit and localized update mechanism tied
 to your <code>flake.lock</code> file.</p>
 <p><strong>How it works</strong>: When you define a <code>flake.nix</code>, you specify the exact URL
-(e.g., a Git repository with a specific branch or tag) for each input. When
-you first use a flake, Nix resolves these URLs to a precise Git commit hash
-and records this hash, along with a content hash, in a <code>flake.lock</code> file.</p>
+(e.g., a Git repository with a specific branch or tag) for each input. When you
+first use a flake, Nix resolves these URLs to a precise Git commit hash and
+records this hash, along with a content hash, in a <code>flake.lock</code> file.</p>
 <p>To update your flake inputs, you run <code>nix flake update</code>.</p>
 <p><strong>Implication</strong>: This command goes to each input's specified URL (e.g.,
 <code>github:NixOS/nixpkgs/nixos-unstable</code>) and fetches the latest commit for that
@@ -2463,12 +2467,12 @@ exact dependency versions.</p>
 anyone using it will fetch precisely the same Git commit hashes recorded in the
 <code>flake.lock</code>, guaranteeing identical inputs and thus, identical builds (assuming
 the same system architecture).</p>
-<p><strong>Updating Selectively</strong>: You can update individual inputs within your flake
-by specifying them: <code>nix flake update nixpkgs</code>. This provides fine-grained
-control over which parts of your dependency graph you want to advance.</p>
-<p><strong>Rolling Back</strong>: Because the <code>flake.lock</code> explicitly records the versions,
-you can easily revert to a previous state by checking out an older <code>flake.lock</code>
-from your version control system.</p>
+<p><strong>Updating Selectively</strong>: You can update individual inputs within your flake by
+specifying them: <code>nix flake update nixpkgs</code>. This provides fine-grained control
+over which parts of your dependency graph you want to advance.</p>
+<p><strong>Rolling Back</strong>: Because the <code>flake.lock</code> explicitly records the versions, you
+can easily revert to a previous state by checking out an older <code>flake.lock</code> from
+your version control system.</p>
 <p><strong>In essence</strong>: Channels involve a global "pull" of the latest branch state,
 making reproducibility harder to guarantee across time and machines. Flakes,
 however, explicitly pin all inputs in <code>flake.lock</code>, and updates involve
@@ -2477,15 +2481,16 @@ control out of the box.</p>
 <h3 id="managing-software-with-nix"><a class="header" href="#managing-software-with-nix">Managing software with Nix</a></h3>
 <p><strong>Derivation Overview</strong></p>
 <p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
-These are files written in the Nix language that describe how a particular
-piece of software should be built. These package definitions, when processed
-by Nix, are translated into derivations.</p>
+These are files written in the Nix language that describe how a particular piece
+of software should be built. These package definitions, when processed by Nix,
+are translated into derivations.</p>
 <p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
 to build a specific software package or any other kind of file or directory.
 It's a declarative specification of:</p>
 <ul>
 <li>
-<p><strong>Inputs</strong>: What existing files or other derivations are needed as dependencies.</p>
+<p><strong>Inputs</strong>: What existing files or other derivations are needed as
+dependencies.</p>
 </li>
 <li>
 <p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
@@ -2617,476 +2622,10 @@ something like <code>/nix/store/your-hash-hello-world</code>).</p>
 <pre><code class="language-bash">./result/bin/hello
 </code></pre>
 <ul>
-<li>This will execute the <code>hello</code> file from the Nix store and print <code>"Hello, World!"</code>.</li>
+<li>This will execute the <code>hello</code> file from the Nix store and print
+<code>"Hello, World!"</code>.</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-btrfs-subvol-install-with-disko-and-flakes-1"><a class="header" href="#minimal-btrfs-subvol-install-with-disko-and-flakes-1">Minimal BTRFS-Subvol Install with Disko and Flakes</a></h1>
-<details>
-<summary> ✔️ Click to Expand Table of Contents</summary>
-<ul>
-<li><a href="nix/minimal_install.html#why-i-chose-btrfs">Why I Chose BTRFS</a></li>
-<li><a href="nix/minimal_install.html#getting-started-with-disko">Getting Started with Disko</a>
-<ul>
-<li><a href="nix/minimal_install.html#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></li>
-</ul>
-</li>
-</ul>
-</details>
-<p>Figure 1: <strong>BTRFS Logo</strong>: Image of the BTRFS logo. Sourced from the
-<a href="https://github.com/btrfs">BTRFS repo</a> <img src="nix/../images/btrfs1.png" alt="BTRFS logo" /></p>
-<h2 id="why-i-chose-btrfs-1"><a class="header" href="#why-i-chose-btrfs-1">Why I Chose BTRFS</a></h2>
-<p>I chose BTRFS because I was already familiar with it from using it with Arch
-Linux and I found it to be very easy to use. From what I've read, there are
-licensing issues between the Linux Kernel and ZFS which means that ZFS is not
-part of the Linux Kernel; it's maintained by the OpenZFS project and available
-as a separate kernel module. This can cause issues and make you think more about
-your filesystem than I personally want to at this point.</p>
-<details>
-<summary> ✔️ Click for BTRFS Subvolume Overview </summary>
-<p>A <strong>Btrfs subvolume</strong> is essentially a distinct section within a Btrfs
-filesystem that maintains its own set of files and directories, along with a
-separate inode numbering system. Unlike block-level partitions (such as LVM
-logical volumes), Btrfs subvolumes operate at the file level and are based on
-file extents.</p>
-<p><strong>Extents</strong> in Btrfs are contiguous blocks of data on disk that store the actual
-contents of files. When files are created or modified, Btrfs manages these
-extents efficiently, allowing features like deduplication and snapshots.
-Multiple subvolumes can reference the same extents, meaning that identical data
-is not duplicated on disk, which saves space and improves performance.</p>
-<p>A <strong>snapshot</strong> in Btrfs is a special kind of subvolume that starts with the same
-content as another subvolume at the time the snapshot is taken. Snapshots are
-typically writable by default, so you can make changes in the snapshot without
-affecting the original subvolume. This is possible because Btrfs tracks changes
-at the extent level, only creating new extents when files are modified (a
-technique called copy-on-write).</p>
-<p>Subvolumes in Btrfs behave much like regular directories from a user’s
-perspective, but they support additional operations such as renaming, moving,
-and nesting (placing subvolumes within other subvolumes). There are no
-restrictions on nesting, though it can affect how snapshots are created and
-managed. Each subvolume is assigned a unique and unchangeable numeric ID
-(subvolid or rootid).</p>
-<p>You can access a Btrfs subvolume in two main ways:</p>
-<ul>
-<li>
-<p>As a normal directory within the filesystem.</p>
-</li>
-<li>
-<p>By mounting it directly as if it were a separate filesystem, using the subvol
-or subvolid mount options. When mounted this way, you only see the contents of
-that subvolume, similar to how a bind mount works.</p>
-</li>
-</ul>
-<p>When a new Btrfs filesystem is created, it starts with a "top-level" subvolume
-(with an internal ID of 5). This subvolume is always present and cannot be
-deleted or replaced, and it is the default mount point unless changed with btrfs
-subvolume set-default.</p>
-<p>Subvolumes can also have storage quotas set using Btrfs’s quota groups
-(qgroups), but otherwise, they all draw from the same underlying storage pool.
-Thanks to features like deduplication and snapshots, subvolumes can share data
-efficiently at the extent level.While ZFS is a solid choice and offers some
-benefits over BTRFS, I recommend looking into it before making your own
-decision.</p>
-</details>
-<p>If you have a ton of RAM you could most likely skip the minimal install and just
-set your system up as needed or just use
-<a href="https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/">tmpfs as root</a></p>
-<h2 id="getting-started-with-disko-1"><a class="header" href="#getting-started-with-disko-1">Getting Started with Disko</a></h2>
-<p>Disko allows you to declaratively partition and format your disks, and then
-mount them to your system. I recommend checking out the
-<a href="https://github.com/nix-community/disko/tree/master?tab=readme-ov-file">README</a>
-as it is a <strong>disk destroyer</strong> if used incorrectly.</p>
-<p>We will mainly be following the
-<a href="https://github.com/nix-community/disko/blob/master/docs/quickstart.md">disko quickstart guide</a></p>
-<p>Figure 2: <strong>Disko Logo</strong>: Image of the logo for Disko, the NixOS declarative
-disk partitioning tool. Sourced from the
-<a href="https://github.com/nix-community/disko">Disko project</a>
-<img src="nix/../images/disko1.png" alt="disko logo" /></p>
-<ol>
-<li>
-<p>Get the
-<a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
-Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
-link to the
-<a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
-download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
-executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
-<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p>
-</li>
-<li>
-<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
-enable networking run the following:</p>
-</li>
-</ol>
-<pre><code class="language-bash">sudo systemctl start wpa_supplicant
-wpa_cli
-</code></pre>
-<pre><code class="language-bash">&gt; add_network
-0
-
-&gt; set_network 0 ssid "myhomenetwork"
-OK
-
-&gt; set_network 0 psk "mypassword"
-OK
-
-&gt; enable_network 0
-OK
-</code></pre>
-<p>To exit type <code>quit</code>, then check your connection with <code>ping google.com</code>.</p>
-<p>Another option is to do the following, so either the above method or the below
-method after starting <code>wpa_supplicant</code>:</p>
-<pre><code class="language-bash"># Alternative for quick setup (less interactive, but often faster)
-sudo wpa_passphrase "myhomenetwork" "mypassword" &gt;&gt; /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
-sudo systemctl restart wpa_supplicant@wlan0.service
-</code></pre>
-<ol start="3">
-<li>Get your Disk Name with <code>lsblk</code></li>
-</ol>
-<p>The output should be something like:</p>
-<pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-nvme0n1     259:0    0   1,8T  0 disk
-</code></pre>
-<ol start="4">
-<li>Copy the disk configuration to your machine. You can choose one from the
-<a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.</li>
-</ol>
-<ul>
-<li><strong>Option A</strong>: (Simpler for new users) I also created a starter repo containing
-much of what's needed. If you choose this option follow the <code>README.md</code>
-included with the repo.</li>
-</ul>
-<pre><code class="language-bash">cd ~
-git clone https://github.com/saylesss88/my-flake.git
-</code></pre>
-<blockquote>
-<p>Make sure to change line 7 in <code>disk-config.nix</code> to what you got from step 3
-<code>device = "/dev/nvme0n1";</code></p>
-</blockquote>
-<ul>
-<li><strong>Option B</strong>: (More flexible, more manual steps) Skip cloning the repo above
-and for the btrfs-subvolume default layout, run the following:</li>
-</ul>
-<pre><code class="language-bash">cd /tmp
-curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/btrfs-subvolumes.nix -o /tmp/disk-config.nix
-</code></pre>
-<ol start="5">
-<li>Make Necessary changes, I set mine up for impermanence with the following:</li>
-</ol>
-<pre><code class="language-bash">nano /tmp/disk-config.nix
-</code></pre>
-<pre><code class="language-nix">{
-  disko.devices = {
-    disk = {
-      main = {
-        type = "disk";
-        device = "/dev/nvme0n1";
-        content = {
-          type = "gpt";
-          partitions = {
-            ESP = {
-              priority = 1;
-              name = "ESP";
-              start = "1M";
-              end = "512M";
-              type = "EF00";
-              content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot";
-                mountOptions = ["umask=0077"];
-              };
-            };
-            root = {
-              size = "100%";
-              content = {
-                type = "btrfs";
-                extraArgs = ["-f"]; # Override existing partition
-                # Subvolumes must set a mountpoint in order to be mounted,
-                # unless their parent is mounted
-                subvolumes = {
-                  # Subvolume name is different from mountpoint
-                  "/root" = {
-                    mountpoint = "/";
-                    mountOptions = ["subvol=root" "compress=zstd" "noatime"];
-                  };
-                  # Subvolume name is the same as the mountpoint
-                  "/home" = {
-                    mountOptions = ["subvol=home" "compress=zstd" "noatime"];
-                    mountpoint = "/home";
-                  };
-                  # Sub(sub)volume doesn't need a mountpoint as its parent is mounted
-                  "/home/user" = {};
-                  # Parent is not mounted so the mountpoint must be set
-                  "/nix" = {
-                    mountOptions = [
-                      "subvol=nix"
-                      "compress=zstd"
-                      "noatime"
-                    ];
-                    mountpoint = "/nix";
-                  };
-                  "/nix/persist" = {
-                    mountpoint = "/nix/persist";
-                    mountOptions = ["subvol=persist" "compress=zstd" "noatime"];
-                  };
-                  "/log" = {
-                    mountpoint = "/var/log";
-                    mountOptions = ["subvol=log" "compress=zstd" "noatime"];
-                  };
-                  "/lib" = {
-                    mountpoint = "/var/lib";
-                    mountOptions = ["subvol=lib" "compress=zstd" "noatime"];
-                  };
-                  # This subvolume will be created but not mounted
-                  "/test" = {};
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-  fileSystems."/nix/persist".neededForBoot = true;
-  fileSystems."/var/log".neededForBoot = true;
-  fileSystems."/var/lib".neededForBoot = true;
-}
-</code></pre>
-<ul>
-<li>For <code>/tmp</code> on RAM use something like the following. I've found that having
-disko manage swaps causes unnecessary issues. Using zram follows the ephemeral
-route:</li>
-</ul>
-<blockquote>
-<pre><code class="language-nix">{
-  lib,
-  config,
-  ...
-}: let
-  cfg = config.custom.zram;
-in {
-  options.custom.zram = {
-    enable = lib.mkEnableOption "Enable utils module";
-  };
-
-  config = lib.mkIf cfg.enable {
-    zramSwap = {
-      enable = true;
-      # one of "lzo", "lz4", "zstd"
-      algorithm = "zstd";
-       priority = 5;
-       memoryPercent = 50;
-    };
-  };
-}
-</code></pre>
-<p>And in your <code>configuration.nix</code> you would add:</p>
-<pre><code class="language-nix"># configuration.nix
-custom = {
-    zram.enable = true;
-};
-</code></pre>
-</blockquote>
-<p>After adding the above module, you can see it with:</p>
-<pre><code class="language-bash">swapon --show
-NAME       TYPE      SIZE USED PRIO
-/dev/zram0 partition 7.5G   0B    5
-</code></pre>
-<ol start="6">
-<li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
-wipe <strong>EVERYTHING</strong> on your disk. Disko doesn't work with dual boot.</li>
-</ol>
-<pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount /tmp/disk-config.nix
-</code></pre>
-<p>Check it with the following:</p>
-<pre><code class="language-bash">mount | grep /mnt
-</code></pre>
-<p>The output for an <code>nvme0n1</code> disk would be similar to the following:</p>
-<pre><code class="language-bash">#... snip ...
-/dev/nvme0n1p2 on /mnt type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=285,subvol=/root)
-/dev/nvme0n1p2 on /mnt/persist type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=261,subvol=/persist)
-/dev/nvme0n1p2 on /mnt/etc type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=261,subvol=/persist)
-/dev/nvme0n1p2 on /mnt/nix type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=260,subvol=/nix)
-/dev/nvme0n1p2 on /mnt/var/lib type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=258,subvol=/lib)
-/dev/nvme0n1p2 on /mnt/var/log type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=259,subvol=/log)
-/dev/nvme0n1p2 on /mnt/nix/store type btrfs (ro,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=260,subvol=/nix)
-# ... snip ...
-</code></pre>
-<ol start="7">
-<li>Generate necessary files, here we use <code>--no-filesystems</code> because disko
-handles the <code>fileSystems</code> attribute for us.</li>
-</ol>
-<pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
-</code></pre>
-<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now,
-rebuild and then move on. Such as, your hostname, git, an editor of your choice.
-After your additions run <code>sudo nixos-rebuild switch</code> to apply the changes. If
-you do this, you can skip the <code>nix-shell -p</code> command coming up.</p>
-<pre><code class="language-bash">sudo mv /tmp/disk-config.nix /mnt/etc/nixos
-</code></pre>
-<h3 id="setting-a-flake-for-your-minimal-install-1"><a class="header" href="#setting-a-flake-for-your-minimal-install-1">Setting a Flake for your minimal Install</a></h3>
-<ol start="8">
-<li>Create the flake in your home directory, then move it to <code>/mnt/etc/nixos</code>.
-This avoids needing to use <code>sudo</code> for every command while in the
-<code>/mnt/etc/nixos</code> directory.</li>
-</ol>
-<pre><code class="language-bash">cd ~
-mkdir flake &amp;&amp; cd flake
-nix-shell -p git yazi helix
-export NIX_CONFIG='experimental-features = nix-command flakes'
-export EDITOR='hx'
-hx flake.nix
-</code></pre>
-<blockquote>
-<p>You'll change <code>hostname = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
-(e.g. <code>magic = nixpkgs.lib.nixosSystem</code>). This will be the same as your
-<code>networking.hostName = "magic";</code> in your <code>configuration.nix</code> that we will set
-up shortly.</p>
-</blockquote>
-<pre><code class="language-nix"># flake.nix
-{
-  description = "NixOS configuration";
-
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    disko.url = "github:nix-community/disko/latest";
-    disko.inputs.nixpkgs.follows = "nixpkgs";
-    # impermanence.url = "github:nix-community/impermanence";
-  };
-
-  outputs = inputs@{ nixpkgs, ... }: {
-    nixosConfigurations = {
-      hostname = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          ./configuration.nix
-          inputs.disko.nixosModules.disko
-          # inputs.impermanence.nixosModules.impermanence
-        ];
-      };
-    };
-  };
-}
-</code></pre>
-<p>Move all the files into your flake:</p>
-<pre><code class="language-bash">cd /mnt/etc/nixos/
-sudo mv disk-config.nix hardware-configuration.nix configuration.nix ~/flake
-</code></pre>
-<ol start="9">
-<li>Edit <code>configuration.nix</code> with what is required, the following is required, I
-clone my original flake repo and move the pieces into place but it's fairly
-easy to just type it all out:</li>
-</ol>
-<ul>
-<li>
-<p>Bootloader, (e.g., <code>boot.loader.systemd-boot.enable = true;</code>)</p>
-</li>
-<li>
-<p>User, the example uses <code>username</code> change this to your chosen username. If you
-don't set your hostname it will be <code>nixos</code>.</p>
-</li>
-<li>
-<p>Networking, <code>networking.networkmanager.enable = true;</code></p>
-</li>
-<li>
-<p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
-</li>
-<li>
-<p><code>initialHashedPassword</code>: Run <code>mkpasswd -m SHA-512 -s</code>, then enter your desired
-password. Example output,</p>
-</li>
-</ul>
-<pre><code class="language-bash">Password: your_secret_password
-Retype password: your_secret_password
-$6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
-</code></pre>
-<p>copy the hashed password and use it for the value of your
-<code>initialHashedPassword</code></p>
-<pre><code class="language-nix"># configuration.nix
-{
-  config,
-  lib,
-  pkgs,
-  inputs,
-  ...
-}: {
-  imports = [
-    # Include the results of the hardware scan.
-    ./hardware-configuration.nix
-    ./disk-config.nix
-  ];
-
-  networking.hostName = "magic"; # This will match the `hostname` of your flake
-
-  networking.networkmanager.enable = true;
-
-  boot.loader.systemd-boot.enable = true; # (for UEFI systems only)
-  # List packages installed in system profile.
-  # You can use https://search.nixos.org/ to find more packages (and options).
-  environment.systemPackages = with pkgs; [
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    #   wget
-    git
-  ];
-
-  time.timeZone = "America/New_York";
-
-  users.users.nixos = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
-    initialHashedPassword = "COPY_YOUR_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
-    # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
-  };
-
-  console.keyMap = "us";
-
-  nixpkgs.config.allowUnfree = true;
-
-  system.stateVersion = "25.05";
-}
-</code></pre>
-<ol start="10">
-<li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
-</ol>
-<pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
-sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
-# if the above command doesn't work try this:
-sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
-</code></pre>
-<ul>
-<li>
-<p>You will be prompted to enter a new password if everything succeeds.</p>
-</li>
-<li>
-<p>If everything checks out, reboot the system and you should be prompted to
-enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
-</li>
-<li>
-<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
-directory. Since the file was first in <code>/etc</code> you'll need to adjust the
-permissions with something like <code>sudo chown username:users ~/flake</code>(<code>username</code>
-will be your username) and then you can work on it without privilege
-escalation.</p>
-</li>
-<li>
-<p>You can check the layout of your btrfs system with:</p>
-</li>
-</ul>
-<pre><code class="language-bash">sudo btrfs subvolume list /
-</code></pre>
-<ul>
-<li>
-<p>You may notice some <code>old_roots</code> in the output, which are snapshots, which are
-likely created before system upgrades or reboots for rollback purposes. They
-can be deleted or rolled back as needed.</p>
-</li>
-<li>
-<p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
-</li>
-<li>
-<p>To continue following along and set up impermanence
-<a href="https://saylesss88.github.io/nix/impermanence.html">Click Here</a></p>
-</li>
-</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-btrfs-subvol-install-with-disko-and-flakes-1"><a class="header" href="#minimal-btrfs-subvol-install-with-disko-and-flakes-1">Minimal Btrfs-Subvol Install with Disko and Flakes</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted BTRFS Impermanence with Flakes</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
@@ -3516,6 +3055,13 @@ relevant).</p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="encrypted-setups"><a class="header" href="#encrypted-setups">Encrypted Setups</a></h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<ul>
+<li><a href="installation/encrypted.html#minimal-luks-encrypted-install-with-btrfs-subvolumes">Minimal LUKS Encrypted Install with Btrfs Subvolumes</a></li>
+<li><a href="installation/encrypted.html#clone-the-starter-repo">Clone the Starter Repo</a></li>
+</ul>
+</details>
 <h1 id="minimal-luks-encrypted-install-with-btrfs-subvolumes"><a class="header" href="#minimal-luks-encrypted-install-with-btrfs-subvolumes">Minimal LUKS Encrypted Install with Btrfs Subvolumes</a></h1>
 <p>Follow this guide to set up a minimal NixOS install with LUKS, Btrfs, and
 encrypted secrets. This guide aims for a manually entered LUKS passphrase at
@@ -3815,6 +3361,9 @@ benefits of manually entering your passphrase. I'm currently working on an
 impermanence guide for this setup, which has presented some challenges. I'm open
 to suggestions!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sops-nix-encrypted-secrets"><a class="header" href="#sops-nix-encrypted-secrets">Sops-Nix encrypted secrets</a></h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+</details>
 <p><a href="https://github.com/getsops/sops?ref=blog.gitguardian.com">SOPS</a>, short for
 <strong>S</strong>ecrets<strong>OP</strong>eration<strong>S</strong>, is an editor of encrypted files that supports
 quite a few BINARY formats and encrypts with AWS KMS, GCP KMS, Azure Key Vault,
@@ -4062,6 +3611,22 @@ approaches—where secrets are often scattered in ad hoc locations, referenced b
 absolute paths, or managed outside version control—sops-nix keeps your secrets
 encrypted, declarative, and version-control friendly.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="secure-boot-with-lanzaboote"><a class="header" href="#secure-boot-with-lanzaboote">Secure Boot with Lanzaboote</a></h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<ul>
+<li><a href="nix/lanzaboote.html#requirements">Requirements</a></li>
+<li><a href="nix/lanzaboote.html#why-use-lanzaboote-secure-boot-on-a-non-encrypted-system">Why Use Lanzaboote (Secure Boot) on a Non-Encrypted System?</a></li>
+<li><a href="nix/lanzaboote.html#security-requirements">Security Requirements</a></li>
+<li><a href="nix/lanzaboote.html#preparation">Preparation</a></li>
+<li><a href="nix/lanzaboote.html#configuring-lanzaboote-with-flakes">Configuring Lanzaboote With Flakes</a>
+<ul>
+<li><a href="nix/lanzaboote.html#ensure-your-machine-is-ready-for-secure-boot-enforcement">Ensure Your Machine is Ready for Secure Boot enforcement</a></li>
+<li><a href="nix/lanzaboote.html#enabling-secure-boot-and-entering-setup-mode">Enabling Secure Boot and Entering Setup Mode</a></li>
+</ul>
+</li>
+<li><a href="nix/lanzaboote.html#what-lanzaboote-secure-boot-actually-secures-on-nixos-and-limitations">What Lanzaboote (Secure Boot) Actually Secures on NixOS and Limitations</a></li>
+</ul>
+</details>
 <p>⚠️ <strong>Warning: This can easily brick your system</strong> ⚠️</p>
 <p>We will mainly follow the lanzaboote
 <a href="https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md">Quick Start Guide</a></p>
@@ -13049,8 +12614,8 @@ of Nixpkgs.</p>
 <h2 id="intro-to-nushell-on-nixos"><a class="header" href="#intro-to-nushell-on-nixos">Intro to Nushell on NixOS</a></h2>
 <ul>
 <li>
-<p><strong>TL;DR</strong>:I recently switched default shells from zsh to nushell, this post
-is about some of the challenges and advantages of using nushell with NixOS.</p>
+<p><strong>TL;DR</strong>:I recently switched default shells from zsh to nushell, this post is
+about some of the challenges and advantages of using nushell with NixOS.</p>
 </li>
 <li>
 <p>While the average user might not immediately see significant advantages, those
@@ -13084,7 +12649,8 @@ consistency is helpful when creating cross-platform code.</p>
 <li>
 <p>When internal Nushell commands (like <code>ls</code>, <code>open</code>, <code>where</code>, <code>get</code>, <code>sort-by</code>,
 etc.) produce output, they generally do so in Nushell's structured data format
-(tables or records). This is the shell's native way of representing information.</p>
+(tables or records). This is the shell's native way of representing
+information.</p>
 </li>
 <li>
 <p>Beyond these foundational strengths, Nushell offers a range of unique features
@@ -13095,14 +12661,16 @@ data-heavy tasks. Here are some highlights that showcase its versatility.</p>
 <p><strong>Some Unique Features</strong>:</p>
 <ul>
 <li>
-<p>Besides the built-in commands, Nushell has a <a href="https://www.nushell.sh/book/standard_library.html">standard library</a>
-Nushell operates on <em>structured data</em>. You could call it a "data-first" shell
-and programming language.</p>
+<p>Besides the built-in commands, Nushell has a
+<a href="https://www.nushell.sh/book/standard_library.html">standard library</a> Nushell
+operates on <em>structured data</em>. You could call it a "data-first" shell and
+programming language.</p>
 </li>
 <li>
 <p>Also included, is a full-featured dataframe processing engine using
 <a href="https://github.com/pola-rs/polars">Polars</a> if you want to process large data
-efficiently directly in your shell, check out the <a href="https://www.nushell.sh/book/dataframes.html">Dataframes-Docs</a></p>
+efficiently directly in your shell, check out the
+<a href="https://www.nushell.sh/book/dataframes.html">Dataframes-Docs</a></p>
 </li>
 <li>
 <p><strong>Multi-Line Editing</strong>:</p>
@@ -13120,14 +12688,15 @@ mv ...$in ./backups/
 <ul>
 <li>
 <p>This allows you to cycle through the entire multi-line command using the up
-and down arrow keys and then customize different lines or sections of the command.</p>
+and down arrow keys and then customize different lines or sections of the
+command.</p>
 </li>
 <li>
 <p>You can manually insert a newline using <code>Alt+Enter</code> or <code>Shift+Enter</code>.</p>
 </li>
 <li>
-<p>The <a href="https://www.nushell.sh/book/line_editor.html">Reedline-Editor</a> is powerful
-and provides good <code>vi-mode</code> or <code>emacs</code> support built in.</p>
+<p>The <a href="https://www.nushell.sh/book/line_editor.html">Reedline-Editor</a> is
+powerful and provides good <code>vi-mode</code> or <code>emacs</code> support built in.</p>
 </li>
 <li>
 <p>It's default <code>Ctrl+r</code> history command is nice to work with out of the box.</p>
@@ -13145,8 +12714,9 @@ nu's version of a table pager, just like <code>less</code> but for table structu
 </li>
 <li>
 <p>These features demonstrate Nushell’s user-friendly interface, but what truly
-sets it apart is its underlying design as a structured data scripting language.
-This “language-first” approach powers many of its distinctive capabilities.</p>
+sets it apart is its underlying design as a structured data scripting
+language. This “language-first” approach powers many of its distinctive
+capabilities.</p>
 </li>
 </ul>
 <p><img src="images/explore.png" alt="explore" /></p>
@@ -13166,9 +12736,9 @@ structured data. Each command can understand and manipulate this structured
 data directly.</p>
 </li>
 <li>
-<p><strong>Consistent syntax</strong>: Its syntax is more consistent and predictable compared
-to the often quirky syntax of Bash and Zsh, drawing inspiration from
-other programming languages.</p>
+<p><strong>Consistent syntax</strong>: Its syntax is more consistent and predictable
+compared to the often quirky syntax of Bash and Zsh, drawing inspiration
+from other programming languages.</p>
 </li>
 <li>
 <p><strong>Strong typing</strong> Nushell has a type system, which helps catch errors early
@@ -13176,9 +12746,9 @@ and allows for more robust scripting.</p>
 </li>
 <li>
 <p><strong>First-class data types</strong>: It treats various data formats (like JSON, CSV,
-TOML) as native data types, making it easier to work with them. Because of this,
-Nushell aims to replace the need for external tools like <code>jq</code>, <code>awk</code>, <code>sed</code>,
-<code>cut</code>, and even some uses of <code>grep</code> and <code>curl</code>.</p>
+TOML) as native data types, making it easier to work with them. Because of
+this, Nushell aims to replace the need for external tools like <code>jq</code>, <code>awk</code>,
+<code>sed</code>, <code>cut</code>, and even some uses of <code>grep</code> and <code>curl</code>.</p>
 </li>
 </ul>
 </li>
@@ -13241,12 +12811,12 @@ its own commands.</p>
 ]
 </code></pre>
 <ul>
-<li>And create the following <code>filter.nu</code> that first converts <code>users.json</code> into
-its own internal structured data format with the <code>open</code> command, then to filters
-out people under <code>21</code> with the <code>where</code> control flow construct, then selects the
-<code>name</code> and <code>age</code> columns, sorts them by age, and finally converts them back to
-<code>json</code> and saves them to a file called <code>filtered_users.json</code>. A lot happening
-in a 6 line script.</li>
+<li>And create the following <code>filter.nu</code> that first converts <code>users.json</code> into its
+own internal structured data format with the <code>open</code> command, then to filters
+out people under <code>21</code> with the <code>where</code> control flow construct, then selects
+the <code>name</code> and <code>age</code> columns, sorts them by age, and finally converts them
+back to <code>json</code> and saves them to a file called <code>filtered_users.json</code>. A lot
+happening in a 6 line script.</li>
 </ul>
 <pre><code class="language-nu">open users.json           # Read JSON file into structured data
 | where age &gt; 21         # Filter users older than 21
@@ -13271,11 +12841,12 @@ a conversion to Nu's special structured format.</li>
 ╰───┴─────────┴─────╯
 </code></pre>
 <ul>
-<li>The <code>source</code> command in Nushell is used to execute the commands within a script
-file (like <code>filter.nu</code>) in the current Nushell environment. It's similar to
-running the script directly in the shell, but keeps the shell open for further
-use. In this example, <code>source filter.nu</code> runs the commands inside <code>filter.nu</code>,
-processing the <code>users.json</code> file and creating the <code>filtered_users.json</code> file:</li>
+<li>The <code>source</code> command in Nushell is used to execute the commands within a
+script file (like <code>filter.nu</code>) in the current Nushell environment. It's
+similar to running the script directly in the shell, but keeps the shell open
+for further use. In this example, <code>source filter.nu</code> runs the commands inside
+<code>filter.nu</code>, processing the <code>users.json</code> file and creating the
+<code>filtered_users.json</code> file:</li>
 </ul>
 <pre><code class="language-nu">source filter.nu
 bat filtered_users.json
@@ -13296,10 +12867,10 @@ bat filtered_users.json
 </code></pre>
 <ul>
 <li>As you can see, without needing any external tools, Nushell was able to read,
-filter, select, sort, and then re-serialize JSON data using a clear and concise
-pipeline. This demonstrates its power in handling structured data natively,
-making common data manipulation tasks within the shell significantly more
-streamlined and readable compared to traditional approaches.</li>
+filter, select, sort, and then re-serialize JSON data using a clear and
+concise pipeline. This demonstrates its power in handling structured data
+natively, making common data manipulation tasks within the shell significantly
+more streamlined and readable compared to traditional approaches.</li>
 </ul>
 <p><strong>In the filter.nu example:</strong></p>
 <pre><code class="language-nu">open users.json           # Read JSON file into structured data
@@ -13324,8 +12895,8 @@ column, and outputs a new, filtered table.</p>
 <code>age</code> columns, and outputs a table with fewer columns.</p>
 </li>
 <li>
-<p><code>| sort-by age</code>: Receives the table, sorts the rows based on the <code>age</code> column,
-and outputs a sorted table.</p>
+<p><code>| sort-by age</code>: Receives the table, sorts the rows based on the <code>age</code>
+column, and outputs a sorted table.</p>
 </li>
 <li>
 <p><code>| to json</code>: Receives the sorted table and converts it back into JSON text.</p>
@@ -13385,8 +12956,8 @@ these criticisms and actively working on improving job control.</p>
 <ul>
 <li>
 <p><strong>Lack of Full POSIX Job Control</strong>: Nushell's job control doesn't yet fully
-implement all the features and signals defined by POSIX job control (e.g., more
-nuanced signal handling, stopped jobs). While it covers the basics, users
+implement all the features and signals defined by POSIX job control (e.g.,
+more nuanced signal handling, stopped jobs). While it covers the basics, users
 accustomed to advanced Bash job control might find it lacking.</p>
 </li>
 <li>
@@ -13398,9 +12969,9 @@ jobs interacts with the terminal and potential issues with signal propagation.</
 <ul>
 <li>
 <p><strong>Interleaved Output</strong>: Managing the output of multiple backgrounded jobs can
-sometimes be messy, with output from different jobs potentially interleaving in
-the terminal. While Nushell tries to handle this, it's not always as clean as
-desired.</p>
+sometimes be messy, with output from different jobs potentially interleaving
+in the terminal. While Nushell tries to handle this, it's not always as clean
+as desired.</p>
 </li>
 <li>
 <p><strong>Redirection Complexity</strong>: Redirecting the input and output of backgrounded
@@ -13485,7 +13056,8 @@ commands that elevate Nushell for NixOS users.</li>
 <p><img src="images/nu4.png" alt="nu4" /></p>
 </li>
 <li>
-<p><code>Carapace</code> <a href="https://carapace-sh.github.io/carapace-bin/install.html">Carapace-Bin Install</a>:</p>
+<p><code>Carapace</code>
+<a href="https://carapace-sh.github.io/carapace-bin/install.html">Carapace-Bin Install</a>:</p>
 <p><img src="images/nu9.png" alt="nu9" /></p>
 </li>
 <li>
@@ -13543,8 +13115,8 @@ def nix-upgrade [
 <p><img src="images/nu5.png" alt="nu5" /></p>
 <ul>
 <li>The <code>ns</code> command is designed to search for Nix packages using <code>nix search</code> and
-present the results in a cleaner format, specifically removing the architecture
-and operating system prefix that nix search often includes.</li>
+present the results in a cleaner format, specifically removing the
+architecture and operating system prefix that nix search often includes.</li>
 </ul>
 <details>
 <summary> ✔️ Click To Expand</summary>
@@ -13653,8 +13225,8 @@ It's not perfect but works for my use case, take whats useful and leave the
 rest.</p>
 </li>
 <li>
-<p>You'll first need to install <a href="https://github.com/casey/just">just</a>
-to make use of <code>justfiles</code>.</p>
+<p>You'll first need to install <a href="https://github.com/casey/just">just</a> to make use
+of <code>justfiles</code>.</p>
 </li>
 </ul>
 <pre><code class="language-bash"># nix shell nixpkgs#just nixpkgs#nushell
@@ -13709,15 +13281,16 @@ justfile): <code>just</code></li>
 <p>A lot of the <code>.nu</code> files came from this repo by BlindFS:</p>
 <ul>
 <li>
-<p><a href="https://github.com/blindFS/modern-dot-files/tree/main">modern-dot-files</a>
-he uses Nix Darwin so there are a few changes for NixOS. I found this
-through <a href="https://github.com/nushell/this_week_in_nu">this_week_in_nu</a>.</p>
+<p><a href="https://github.com/blindFS/modern-dot-files/tree/main">modern-dot-files</a> he
+uses Nix Darwin so there are a few changes for NixOS. I found this through
+<a href="https://github.com/nushell/this_week_in_nu">this_week_in_nu</a>.</p>
 </li>
 <li>
 <p><a href="https://github.com/saylesss88/flake/tree/main/home/shells/nushell">my-nu-config</a></p>
 </li>
 <li>
-<p>The examples use this starship config<a href="https://github.com/Aylur/dotfiles/blob/main/home/starship.nix">Aylur-dotfiles</a>
+<p>The examples use this starship
+config<a href="https://github.com/Aylur/dotfiles/blob/main/home/starship.nix">Aylur-dotfiles</a>
 The logic on the bottom enables starship for Nushell, Zsh, and Bash!</p>
 </li>
 <li>
@@ -13727,8 +13300,8 @@ The logic on the bottom enables starship for Nushell, Zsh, and Bash!</p>
 </ul>
 </li>
 <li>
-<p>There are still situations where I need to switch to zsh or bash to get something
-to work i.e. <code>nix-shell</code> and a few others.</p>
+<p>There are still situations where I need to switch to zsh or bash to get
+something to work i.e. <code>nix-shell</code> and a few others.</p>
 </li>
 <li>
 <p>From custom commands to <code>justfile</code> integrations, Nushell offers a wealth of
