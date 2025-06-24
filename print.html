@@ -2601,6 +2601,19 @@ export EDITOR='hx' #  Set your preferred editor for this session
 git config --global user.name "YourUsername"
 git config --global user.email "YourGitEmail"
 </code></pre>
+<ul>
+<li>
+<p>You may be put off by the <code>nix-env</code> commands, the live installer runs from RAM
+and a read-only filesystem. Any packages you install with <code>nix-env</code> are only
+available while you're in the live environment. When you reboot, the system is
+discarded, and everything reverts to the original state.</p>
+</li>
+<li>
+<p>The only persistent changes are those you deliberately make to the mounted
+filesystem (e.g., <code>/mnt</code> during installation), which is the target for your
+new NixOS installation.</p>
+</li>
+</ul>
 <h1 id="clone-the-starter-repo"><a class="header" href="#clone-the-starter-repo">Clone the Starter Repo</a></h1>
 <pre><code class="language-bash">git clone https://github.com/saylesss88/my-flake.git
 </code></pre>
@@ -2636,7 +2649,7 @@ your hardware.</li>
 sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake/hardware-configuration.nix
 </code></pre>
 <p>Run Disko to wipe, partition, and format your disk (WARNING: This destroys ALL
-data on the target disk!) Bash</p>
+data on the target disk, disko doesn't work with dual boot!)</p>
 <pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount ~/my-flake/disk-config2.nix
 </code></pre>
 <ul>
@@ -2647,6 +2660,25 @@ memorable passphrase.</li>
 <p>Verify your partitions are mounted to <code>/mnt</code>:</p>
 <pre><code class="language-bash">mount | grep /mnt
 </code></pre>
+<p><code>/mnt</code> is a temporary mount point used during installation to access and
+configure the target filesystem. Disko uses <code>/mnt</code> to mount the filesystems it
+creates, but these mounts are only for the installation process. After
+installation and reboot, <code>/mnt</code> is no longer used unless you manually mount
+something there.</p>
+<p>After installation and reboot:</p>
+<ul>
+<li>
+<p>All files and directories under <code>/mnt</code> (for example, <code>/mnt/etc/nixos/</code>) are
+now accessible at their normal system locations.</p>
+</li>
+<li>
+<p>So, <code>/mnt/etc/nixos/</code> becomes <code>/etc/nixos/</code> on your new NixOS system.</p>
+</li>
+<li>
+<p><code>/mnt</code> itself is no longer used as a mount point unless you manually mount
+something there again.</p>
+</li>
+</ul>
 <ol start="6">
 <li>Install SOPS-Related Tools &amp; Generate Secrets (Post-Disko)</li>
 </ol>
