@@ -445,6 +445,17 @@ age.keyFile = "/root/.config/sops/age/keys.txt"; # Crucial: This path is now on 
 <li>Update <code>configuration.nix</code>: Review and update your <code>configuration.nix</code> with
 your hostname, desired packages, services, etc.</li>
 </ul>
+<p>Adding the following to your <code>configuration.nix</code> is a more robust way of
+defining your LUKS device and is recommended:</p>
+<pre><code class="language-nix"># configuration.nix
+  boot.initrd.luks.devices = {
+    cryptroot = {
+      device = "/dev/disk/by-partlabel/luks";
+      allowDiscards = true;
+      preLVM = true;
+    };
+  };
+</code></pre>
 <p>Final rebuild to apply all changes:</p>
 <pre><code class="language-bash">sudo nixos-rebuild switch --flake .#your-hostname # Use . since you are in the flake directory
 </code></pre>
