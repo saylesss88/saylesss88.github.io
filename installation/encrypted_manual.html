@@ -374,6 +374,7 @@ root   home  nix  persist  log  lib  ...
 <pre><code class="language-bash">sudo umount /mnt
 </code></pre>
 <h2 id="lets-copy-all-of-our-files-to-a-persistent-location"><a class="header" href="#lets-copy-all-of-our-files-to-a-persistent-location">Lets copy all of our files to a persistent location</a></h2>
+<p>The following is a one time operation, we're just getting it out of the way now.</p>
 <pre><code class="language-bash">sudo mkdir -p /persist/etc
 sudo mkdir -p /persist/var/lib
 sudo mkdir -p /persist/var/log
@@ -385,13 +386,10 @@ sudo cp -a /var/log/. /persist/var/log
 sudo cp -a /home/. /persist/home/
 sudo cp -a /root/. /persist/root/
 </code></pre>
-<h2 id="tmp-on-ram-with-zram"><a class="header" href="#tmp-on-ram-with-zram">/tmp on RAM with zram</a></h2>
-<ul>
-<li>For <code>/tmp</code> on RAM use something like the following. I've found that having
-disko manage swaps causes unnecessary issues. Also, with btrfs it's easy to
-create a swap after the fact if you choose to.</li>
-</ul>
-<p>Using zram follows the ephemeral route:</p>
+<h2 id="setting-up-zram-and-tmp-on-ram"><a class="header" href="#setting-up-zram-and-tmp-on-ram">Setting up zram and /tmp on RAM</a></h2>
+<p>While <code>/tmp</code> is handled by <code>tmpfs</code> (as shown the below <code>configuration.nix</code>), you
+can further enhance memory efficiency with <code>zram</code> for compressed swap, as shown
+below.</p>
 <blockquote>
 <pre><code class="language-nix">{
   lib,
@@ -493,7 +491,8 @@ up shortly.</p>
 
   outputs = inputs@{ nixpkgs, ... }: {
     nixosConfigurations = {
-      hostName = nixpkgs.lib.nixosSystem {
+      # Change `hostName` to your chosen host name
+      nixos = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           ./configuration.nix
@@ -551,7 +550,26 @@ file.</p>
     ./disk-config.nix
   ];
 
-  networking.hostName = "magic"; # This will match the `hostname` of your flake
+  # initrd encrypted disk setup
+    boot.initrd.luks.devices = {
+    cryptroot = {
+      device = "/dev/disk/by-partlabel/luks";
+      allowDiscards = true;
+      preLVM = true;
+    };
+  };
+
+  # This complements using zram, putting /tmp on RAM
+  boot = {
+    tmp = {
+      useTmpfs = true;
+      tmpfsSize = "50%";
+    };
+  };
+
+
+  # Change me!
+  networking.hostName = "nixos"; # This will match the `hostname` of your flake
 
   networking.networkmanager.enable = true;
 
@@ -566,6 +584,7 @@ file.</p>
 
   time.timeZone = "America/New_York";
 
+# Change me to your chosen username (i.e. change nixos to your username)
   users.users.nixos = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
@@ -579,6 +598,17 @@ file.</p>
 
   system.stateVersion = "25.05";
 }
+</code></pre>
+<p>Although, just adding the <code>disk-config.nix</code> works for prompting you for your
+encryption passphrase adding the following is a more robust way of ensuring Nix
+is aware of this:</p>
+<pre><code class="language-nix">    boot.initrd.luks.devices = {
+    cryptroot = {
+      device = "/dev/disk/by-partlabel/luks";
+      allowDiscards = true;
+      preLVM = true;
+    };
+  };
 </code></pre>
 <ol start="10">
 <li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
@@ -620,7 +650,7 @@ privilege escalation.</p>
 </li>
 <li>
 <p>To set up impermanence for this specific layout, follow the link
-<a href="">Encrypted Impermanence</a></p>
+<a href="https://saylesss88.github.io/nix/encrypted_impermanence.html">Encrypted Impermanence</a></p>
 </li>
 </ul>
 
