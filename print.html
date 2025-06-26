@@ -2103,6 +2103,126 @@ git commit -m "Describe the new feature or fix"
 </code></pre>
 <h3 id="basic-branching"><a class="header" href="#basic-branching">Basic Branching</a></h3>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-control-with-jj"><a class="header" href="#version-control-with-jj">Version Control with JJ</a></h1>
+<p><img src="vcs//images/jujutsu.png" alt="Jujutsu Logo" /></p>
+<ul>
+<li>
+<p>You can use jujutsu (jj) with existing Git repositories with one command.
+<code>jj git init --colocate</code> or <code>jj git init --git-repo /path/to/git_repository</code>.
+The native repository format for jj is still a work in progress so people
+typically use a <code>git</code> repository for backend.</p>
+</li>
+<li>
+<p>Unlike <code>git</code>, <code>jj</code> has no index "staging area". It treats the working copy as
+an actual commit. When you make changes to files, these changes are
+automatically recorded to the working commit. There's no need to explicitly
+stage changes because they are already part of the commit that represents your
+current working state.</p>
+<ul>
+<li>This means that you don't need to worry about making a change, running
+<code>git add .</code>, running <code>git commit -m "commit message"</code> because it's already
+done for you. This is handy with flakes by preventing a "dirty working tree"
+and can instantly be rebuilt after making a change.</li>
+</ul>
+</li>
+</ul>
+<h2 id="heres-an-example"><a class="header" href="#heres-an-example">Here's an example</a></h2>
+<p>Say I have my configuration flake in the <code>~/flakes/</code> directory that is an
+existing Git repository. To use JJ as the front-end I could do something like:</p>
+<pre><code class="language-bash">cd ~/flakes
+jj git init --colocate
+jj describe -m "first jj commit"
+jj commit
+</code></pre>
+<p><strong>Or</strong> to do this in a directory that isn't already a git repo you can do
+something like:</p>
+<pre><code class="language-bash">cargo new hello-world --vcs=none
+cd hello-world
+jj git init
+Initialized repo in "."
+</code></pre>
+<h3 id="jj-and-git-side-by-side"><a class="header" href="#jj-and-git-side-by-side">JJ and Git Side by Side</a></h3>
+<p>Or for example, with Git if you wanted to move to a different branch before
+running <code>nix flake update</code> to see if it introduced errors before merging with
+your main branch, you could do something like:</p>
+<pre><code class="language-bash">git checkout -b update-test
+
+nix flake update
+
+sudo nixos-rebuild test --flake .
+</code></pre>
+<p>If you're satisfied you can merge:</p>
+<pre><code class="language-bash">git checkout main
+git add . # Stage the change
+git commit -m "update"
+git branch -D update-test
+git merge update-test
+sudo nixos-rebuild switch --flake .
+</code></pre>
+<p>With JJ a similar workflow could be:</p>
+<pre><code class="language-bash">jj new  # Create a new child commit/start working on a new change
+nix flake update
+sudo nixos-rebuild test --flake .
+jj squash #  equivalent to `git commit -a --amend`
+jj describe -m "update" # Similar to git commit -m
+jj commit # Only needed if finalizing an explicit commit
+sudo nixos-rebuild switch --flake .
+</code></pre>
+<ul>
+<li>
+<p>With <code>jj</code> you're creating a new commit rather than a new branch.</p>
+</li>
+<li>
+<p>Amending vs. Squashing: Git's <code>git commit --amend</code> updates the last commit.
+<code>jj squash</code> combines the current commit with its parent, effectively doing the
+same thing in terms of history.</p>
+</li>
+<li>
+<p>Merging: Git's merge command is explicit. In <code>jj</code>, the concept is similar, but
+since there's no branch, you're "merging" by moving your working commit to
+include these changes. The <code>jj squash</code> here acts like merging the changes into
+the main line of development.</p>
+</li>
+<li>
+<p>No need to delete branches: Since there are no branches in <code>jj</code>, there's no
+equivalent to <code>git branch -D</code> to clean up. Instead commits that are no longer
+needed can be "abandoned" with <code>jj abandon</code> if you want to clean up your
+commit graph.</p>
+</li>
+<li>
+<p><code>jj describe</code> without a flag just opens <code>$EDITOR</code> where you can write your
+commit message save and exit.</p>
+</li>
+<li>
+<p>In <code>git</code>, we finish a set of changes to our code by committing, but in <code>jj</code> we
+start new work by creating a change, and <em>then</em> make changes to our code. It's
+more useful to write an initial description of your intended changes, and then
+refine it as you work, than it is creating a commit message after the fact.</p>
+</li>
+<li>
+<p>I have heard that jj can struggle with big repositories such as Nixpkgs and
+have noticed some issues here and there when using with NixOS. I'm hoping that
+as the project matures, it gets better on this front.</p>
+</li>
+<li>
+<p>This is just the start of what is possible, here are some resources about it
+if you're interested:</p>
+</li>
+</ul>
+<h3 id="resources-2"><a class="header" href="#resources-2">Resources</a></h3>
+<ul>
+<li>
+<p><a href="https://github.com/jj-vcs/jj">jj_github</a></p>
+</li>
+<li>
+<p><a href="https://jj-vcs.github.io/jj/latest/tutorial/">official_tutorial</a></p>
+</li>
+<li>
+<p><a href="https://v5.chriskrycho.com/essays/jj-init/">jj_init</a> # very good article</p>
+</li>
+<li>
+<p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="installation-guides"><a class="header" href="#installation-guides">Installation Guides</a></h1>
 <p>This section provides detailed guides for installing NixOS. You'll choose
 between an <strong>unencrypted</strong> or <strong>encrypted</strong> base setup. After your core
@@ -5193,7 +5313,7 @@ In the next chapter,
 <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
-<h4 id="resources-2"><a class="header" href="#resources-2">Resources</a></h4>
+<h4 id="resources-3"><a class="header" href="#resources-3">Resources</a></h4>
 <details>
 <summary> ✔️ Resources (Click to Expand) </summary>
 <ul>
@@ -9792,7 +9912,7 @@ we will delve deeper into the structure and components of these derivations.
 We will explore the attributes that define a build process, how dependencies
 are managed within a derivation, and how Nix ensures the reproducibility and
 isolation of your software builds through this fundamental concept.</p>
-<h2 id="resources-3"><a class="header" href="#resources-3">Resources</a></h2>
+<h2 id="resources-4"><a class="header" href="#resources-4">Resources</a></h2>
 <ul>
 <li><a href="https://nix.dev/tutorials/packaging-existing-software.html">Packaging Existing Software</a></li>
 </ul>
@@ -13968,7 +14088,7 @@ valuable resources to explore, from official documentation to community-driven
 configurations.</p>
 </li>
 </ul>
-<h4 id="resources-4"><a class="header" href="#resources-4">Resources</a></h4>
+<h4 id="resources-5"><a class="header" href="#resources-5">Resources</a></h4>
 <details>
 <summary> ✔️ Click to Expand Resources </summary>
 <ul>
