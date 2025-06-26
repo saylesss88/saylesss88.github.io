@@ -3584,6 +3584,21 @@ flake to match your <code>networking.hostName</code>.</li>
 <a href="https://saylesss88.github.io/installation/encrypted_manual.html">Encrypted Setups</a>
 guide, your encrypted subvolume should be located at:
 <code>/dev/mapper/cryptroot /mnt</code></p>
+<ul>
+<li>Your encrypted Btrfs partition, once unlocked by LUKS, will be available at
+<code>/dev/mapper/cryptroot</code> as configured here in the <code>disk-config.nix</code>:</li>
+</ul>
+<pre><code class="language-nix"># disk-config2.nix
+# ... snip ...
+            luks = {
+              size = "100%";
+              label = "luks";
+              content = {
+                type = "luks";
+                name = "cryptroot";
+                content = {
+# ... snip ...
+</code></pre>
 <p>Double check that the paths exist:</p>
 <pre><code class="language-bash">cd /dev/mapper/crypt&lt;TAB&gt;  # autocomplete should fill out /dev/mapper/cryptroot
 </code></pre>
@@ -3636,16 +3651,49 @@ you'll just add an <code>imports = [ ./impermanence.nix ]</code> to your
     ];
   };
 
+# optional quality of life setting
   security.sudo.extraConfig = ''
     Defaults lecture = never
   '';
 }
 </code></pre>
+<ul>
+<li><code>/mnt/rollback.log</code>: this log will be available during the boot process for
+debugging if the rollback fails, but won't persist.</li>
+</ul>
 <p>With the above impermanence script, the btrfs subvolumes are deleted recursively
 and replaced with the <code>root-blank</code> snapshot we took during the install.</p>
 <p>I have commented out <code>"/etc/machine-id"</code> because we already copied over all of
 the files to their persistent location and the above setting would work once and
 then cause a conflict.</p>
+<h2 id="configurationnix-changes"><a class="header" href="#configurationnix-changes">configuration.nix changes</a></h2>
+<pre><code class="language-nix"># configuration.nix
+  boot.initrd.luks.devices = {
+    cryptroot = {
+      device = "/dev/disk/by-partlabel/luks";
+      allowDiscards = true;
+      preLVM = true;
+    };
+  };
+</code></pre>
+<ul>
+<li>This defines how your system's initial ramdisk (<code>initrd</code>) should handle a
+specific encrypted disk during the boot process. It helps with timing and is a
+more robust way of telling Nix that we are using an encrypted disk.</li>
+</ul>
+<p>The following is optional to enable <code>autoScrub</code> for btrfs, the wiki shows
+<code>interval = "monthly";</code> FYI.</p>
+<pre><code class="language-nix"># configuration.nix
+  services.btrfs.autoScrub = {
+    enable = true;
+    interval = "weekly";
+    fileSystems = ["/"];
+  };
+</code></pre>
+<ul>
+<li>Remember to ensure that your <code>hostname</code> in your <code>configuration.nix</code> matches
+the <code>hostname</code> in your <code>flake.nix</code>.</li>
+</ul>
 <h3 id="applying-your-impermanence-configuration-1"><a class="header" href="#applying-your-impermanence-configuration-1">Applying Your Impermanence Configuration</a></h3>
 <p>Once you have completed all the steps and created or modified the necessary
 files (<code>flake.nix</code>, <code>impermanence.nix</code>), you need to apply these changes to your
