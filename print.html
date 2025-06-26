@@ -2729,8 +2729,12 @@ git clone https://github.com/saylesss88/my-flake.git
 </code></pre>
 <ul>
 <li>
-<p>I've moved away from trying to configure sops pre install, it adds unnecessary
-complexity to a minimal install in my opinion.</p>
+<p>I prefer <code>helix</code> here as it's defaults are great. (i.e., auto closing brackets
+and much more)</p>
+</li>
+<li>
+<p>I've moved away from trying to configure <code>sops</code> pre install, it adds
+unnecessary complexity to a minimal install in my opinion.</p>
 </li>
 <li>
 <p>If you click on the layout you want then click the <code>Raw</code> button near the top,
@@ -2744,8 +2748,15 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
 <li>The above curl command is to the <code>luks-btrfs-subvolumes.nix</code> layout.</li>
 </ul>
 <ol start="5">
-<li>Make Necessary changes, I set mine up for impermanence with the following:</li>
+<li>Make Necessary changes, I prepared mine for impermanence with the following:</li>
 </ol>
+<blockquote>
+<p>❗ Be careful if you do implement impermanence, it has caused nothing but
+issues thusfar for me. I have only been able to get it to work in the TTY or
+by using <code>sudo nixos-rebuild boot</code>, I believe because there are less running
+processes to interfere with each other in a TTY. I mention this here because I
+haven't found the solution yet.</p>
+</blockquote>
 <pre><code class="language-bash">hx /tmp/disk-config.nix
 </code></pre>
 <pre><code class="language-nix">{
@@ -2855,6 +2866,7 @@ root   home  nix  persist  log  lib  ...
 </ol>
 <pre><code class="language-bash">sudo umount /mnt
 </code></pre>
+<h2 id="tmp-on-ram-with-zram"><a class="header" href="#tmp-on-ram-with-zram">/tmp on RAM with zram</a></h2>
 <ul>
 <li>For <code>/tmp</code> on RAM use something like the following. I've found that having
 disko manage swaps causes unnecessary issues. Also, with btrfs it's easy to
@@ -2891,7 +2903,7 @@ custom = {
 };
 </code></pre>
 </blockquote>
-<p>After adding the above module, you can see it with:</p>
+<p>After adding the above module and rebuilding, you can see it with:</p>
 <pre><code class="language-bash">swapon --show
 NAME       TYPE      SIZE USED PRIO
 /dev/zram0 partition 7.5G   0B    5
@@ -2922,24 +2934,29 @@ handles the <code>fileSystems</code> attribute for us.</li>
 </ol>
 <pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
 </code></pre>
-<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now,
-rebuild and then move on. Such as, your hostname, git, an editor of your choice.
-After your additions run <code>sudo nixos-rebuild switch</code> to apply the changes. If
-you do this, you can skip the <code>nix-shell -p</code> command coming up.</p>
-<pre><code class="language-bash">sudo mv /tmp/disk-config.nix /mnt/etc/nixos
-</code></pre>
+<ul>
+<li>The above command will place a <code>configuration.nix</code> and
+<code>hardware-configuration.nix</code> in <code>/mnt/etc/nixos/</code></li>
+</ul>
+<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now, while
+it's in it's default location. You can just add what you want and rebuild once
+with <code>sudo nixos-rebuild switch</code> and move on. (i.e. <code>git</code>, an editor, etc.).</p>
 <h3 id="setting-a-flake-for-your-minimal-install-1"><a class="header" href="#setting-a-flake-for-your-minimal-install-1">Setting a Flake for your minimal Install</a></h3>
 <ol start="8">
-<li>Create the flake in your home directory, then move it to <code>/mnt/etc/nixos</code>.
-This avoids needing to use <code>sudo</code> for every command while in the
-<code>/mnt/etc/nixos</code> directory.</li>
+<li>Create the flake in your home directory to avoid needing to use sudo for
+every command:</li>
 </ol>
-<pre><code class="language-bash">cd ~
-mkdir flake &amp;&amp; cd flake
+<pre><code class="language-bash">cd   # Move to home directory
+mkdir flake
+cd /mnt/etc/nixos/
+sudo mv hardware-configuration.nix configuration.nix ~/flake/
+sudo mv /tmp/disk-config.nix ~/flake/
+</code></pre>
+<pre><code class="language-bash">cd flake
 hx flake.nix
 </code></pre>
 <blockquote>
-<p>You'll change <code>hostname = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
+<p>You'll change <code>hostName = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
 (e.g. <code>magic = nixpkgs.lib.nixosSystem</code>). This will be the same as your
 <code>networking.hostName = "magic";</code> in your <code>configuration.nix</code> that we will set
 up shortly.</p>
@@ -2957,7 +2974,7 @@ up shortly.</p>
 
   outputs = inputs@{ nixpkgs, ... }: {
     nixosConfigurations = {
-      hostname = nixpkgs.lib.nixosSystem {
+      hostName = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           ./configuration.nix
@@ -2969,12 +2986,8 @@ up shortly.</p>
   };
 }
 </code></pre>
-<p>Move all the files into your flake:</p>
-<pre><code class="language-bash">cd /mnt/etc/nixos/
-sudo mv disk-config.nix hardware-configuration.nix configuration.nix ~/flake
-</code></pre>
 <ol start="9">
-<li>Edit <code>configuration.nix</code> with what is required, the following is required, I
+<li>Edit <code>configuration.nix</code> with what is required, the following are required, I
 clone my original flake repo and move the pieces into place but it's fairly
 easy to just type it all out:</li>
 </ol>
@@ -2993,21 +3006,18 @@ don't set your hostname it will be <code>nixos</code>.</p>
 <p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
 </li>
 <li>
-<p><code>initialHashedPassword</code>: Run <code>mkpasswd -m SHA-512 -s</code>, then enter your desired
-password. Example output,</p>
-</li>
-<li>
 <p>If you type this out by hand and mess up a single character, you will have to
 start over completely. A fairly safe way to do this is with <code>vim</code> or <code>hx</code> and
-redirect the hashed pass to a <code>/tmp/hash</code>, you can then read it into your
+redirect the hashed pass to a <code>/tmp/pass.txt</code>, you can then read it into your
 <code>users.nix</code>:</p>
 </li>
 </ul>
 <pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/pass.txt
 # Enter your chosen password
 </code></pre>
-<p>And then when inside <code>users.nix</code>, move to the line where you want the hashed
-password and type <code>:r /tmp/pass.txt</code> to read the hash into your current file.</p>
+<p>And then when inside <code>configuration.nix</code>, move to the line where you want the
+hashed password and type <code>:r /tmp/pass.txt</code> to read the hash into your current
+file.</p>
 <pre><code class="language-nix"># configuration.nix
 {
   config,
@@ -3040,7 +3050,7 @@ password and type <code>:r /tmp/pass.txt</code> to read the hash into your curre
   users.users.nixos = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
-    initialHashedPassword = "COPY_YOUR_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
+    initialHashedPassword = "READ_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
     # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
   };
 
@@ -3055,9 +3065,14 @@ password and type <code>:r /tmp/pass.txt</code> to read the hash into your curre
 <li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
 </ol>
 <pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
-sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
-# if the above command doesn't work try this:
-sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
+</code></pre>
+<ul>
+<li>Give everything a quick once over, insuring your host is set in both your
+<code>flake.nix</code>, and <code>configuration.nix</code>. Ensure you changed the username in the
+<code>configuration.nix</code> from <code>nixos</code> to your chosen name, this is the name you'll
+use to login after you enter your encryption passphrase.</li>
+</ul>
+<pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
 </code></pre>
 <ul>
 <li>
@@ -3068,10 +3083,11 @@ sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
 enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
 </li>
 <li>
-<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
-directory. Since the file was first in <code>/etc</code> you'll need to adjust the
-permissions with something like <code>sudo chown $USER:users ~/flake</code> and then you
-can work on it without privilege escalation.</p>
+<p>The flake will be placed at <code>/etc/nixos/flake</code> after the install and reboot, I
+choose to move it to my home directory. Since the file was first in <code>/etc</code>
+you'll need to adjust the permissions with something like
+<code>sudo chown -R $USER:users ~/flake</code> and then you can work on it without
+privilege escalation.</p>
 </li>
 <li>
 <p>You can check the layout of your btrfs system with:</p>
@@ -3080,18 +3096,7 @@ can work on it without privilege escalation.</p>
 <pre><code class="language-bash">sudo btrfs subvolume list /
 </code></pre>
 <ul>
-<li>
-<p>You may notice some <code>old_roots</code> in the output, which are snapshots, which are
-likely created before system upgrades or reboots for rollback purposes. They
-can be deleted or rolled back as needed.</p>
-</li>
-<li>
-<p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
-</li>
-<li>
-<p>To continue following along and set up impermanence
-<a href="https://saylesss88.github.io/nix/impermanence.html">Click Here</a></p>
-</li>
+<li><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="unencrypted-btrfs-impermanence-with-flakes"><a class="header" href="#unencrypted-btrfs-impermanence-with-flakes">Unencrypted BTRFS Impermanence with Flakes</a></h1>
 <details>
