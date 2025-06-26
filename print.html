@@ -2801,7 +2801,7 @@ can be deleted or rolled back as needed.</p>
 <li><a href="installation/encrypted_manual.html#option-a-interactive-wpa_cli">Option A: Interactive <code>wpa_cli</code></a></li>
 <li><a href="installation/encrypted_manual.html#option-b-non-interactive-wpa_passphrase">Option B: Non-Interactive <code>wpa_passphrase</code></a></li>
 <li><a href="installation/encrypted_manual.html#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></li>
-<li><a href="installation/encrypted_manual.html#lets-copy-all-of-our-files-to-a-persistent-location">Lets copy all of our files to a persistent location</a></li>
+<li><a href="installation/encrypted_manual.html#persisting-critical-system-state">Persisting Critical System State</a></li>
 <li><a href="installation/encrypted_manual.html#setting-up-zram-and-tmp-on-ram">Setting up zram and /tmp on RAM</a>
 <ul>
 <li><a href="installation/encrypted_manual.html#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></li>
@@ -2809,11 +2809,15 @@ can be deleted or rolled back as needed.</p>
 </li>
 </ul>
 </details>
-<p>This guide walks you through a manual, encrypted NixOS installation using Disko
-for disk management and Btrfs for subvolumes. It is designed for users who want
-full disk encryption and a modern filesystem layout. If you prefer an
-unencrypted setup, you can skip the LUKS and encryption steps, but this guide
-focuses on security and flexibility.</p>
+<p>This guide walks you through an encrypted NixOS installation using Disko for
+disk management and Btrfs for subvolumes. It is designed for users who want full
+disk encryption and a modern filesystem layout. If you prefer an unencrypted
+setup, you can skip the LUKS and encryption steps, but this guide focuses on
+security and flexibility.</p>
+<ul>
+<li>For Unencrypted layout
+<a href="https://saylesss88.github.io/installation/unencrypted.html">Click Here</a></li>
+</ul>
 <p>If you choose to set up impermanence, ensure it matches your install. Encrypted
 Setup with Encrypted Impermanence and Unencrypted Setup with Unencrypted
 Impermanence.</p>
@@ -2874,10 +2878,8 @@ nvme0n1     259:0    0   1,8T  0 disk
 <li>Copy the disk configuration to your machine. You can choose one from the
 <a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.</li>
 </ol>
-<ul>
-<li>There is still a starter repo that can save you some typing, make sure to
-carefully review if you decide to use it:</li>
-</ul>
+<p>There is still a starter repo that can save you some typing, make sure to
+carefully review if you decide to use it:</p>
 <pre><code class="language-bash">export NIX_CONFIG='experimental-features = nix-command flakes'
 export EDITOR='hx' # or 'vi'
 nix-shell -p git yazi helix mkpasswd
@@ -2886,36 +2888,35 @@ git config --global user.email "gitEmail"
 # starter repo containing disk-config set up for impermanence
 git clone https://github.com/saylesss88/my-flake.git
 </code></pre>
-<ul>
-<li>
 <p>I prefer <code>helix</code> here as it's defaults are great. (i.e., auto closing brackets
 and much more)</p>
-</li>
-<li>
-<p>I've moved away from trying to configure <code>sops</code> pre install, it adds
-unnecessary complexity to a minimal install in my opinion.</p>
-</li>
-<li>
+<p>If you choose to use the starter repo you won't need to run the next command as
+it is already populated in the repo.</p>
 <p>If you click on the layout you want then click the <code>Raw</code> button near the top,
-then copy the url and use it in the following command:</p>
-</li>
-</ul>
+then copy the <code>url</code> and use it in the following command:</p>
 <pre><code class="language-bash">cd /tmp
 curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/luks-btrfs-subvolumes.nix -o /tmp/disk-config.nix
 </code></pre>
-<ul>
-<li>The above curl command is to the <code>luks-btrfs-subvolumes.nix</code> layout.</li>
-</ul>
+<p>The above curl command is to the <code>luks-btrfs-subvolumes.nix</code> layout.</p>
 <ol start="5">
 <li>Make Necessary changes, I prepared mine for impermanence with the following:</li>
 </ol>
 <pre><code class="language-bash">hx /tmp/disk-config.nix
 </code></pre>
+<p>Make sure you identify your system disk name with <code>lsblk</code> and change the
+<code>device</code> attribute below to match your disk.</p>
+<pre><code class="language-bash">lsblk
+nvme0n1       259:0    0 476.9G  0 disk
+├─nvme0n1p1   259:1    0   512M  0 part  /boot
+└─nvme0n1p2   259:2    0 476.4G  0 part
+</code></pre>
+<p>My disk is <code>nvme0n1</code>, change below to match yours:</p>
 <pre><code class="language-nix">{
   disko.devices = {
     disk = {
       nvme0n1 = {
         type = "disk";
+        # Make sure this is correct with `lsblk`
         device = "/dev/nvme0n1";
         content = {
           type = "gpt";
@@ -2997,7 +2998,7 @@ top-level.</p>
 <pre><code class="language-bash">sudo cryptsetup open /dev/disk/by-partlabel/luks cryptroot
 </code></pre>
 <ol start="2">
-<li>Mount the Btrfs top-level (subvolid=5):</li>
+<li>Mount the Btrfs top-level (<code>subvolid=5</code>):</li>
 </ol>
 <pre><code class="language-bash">sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
 </code></pre>
@@ -3018,8 +3019,10 @@ root   home  nix  persist  log  lib  ...
 </ol>
 <pre><code class="language-bash">sudo umount /mnt
 </code></pre>
-<h2 id="lets-copy-all-of-our-files-to-a-persistent-location"><a class="header" href="#lets-copy-all-of-our-files-to-a-persistent-location">Lets copy all of our files to a persistent location</a></h2>
-<p>The following is a one time operation, we're just getting it out of the way now.</p>
+<h2 id="persisting-critical-system-state"><a class="header" href="#persisting-critical-system-state">Persisting Critical System State</a></h2>
+<p>The following is a one time operation, we're just getting it out of the way now.
+This moves all of the important system state to a persistant location, further
+preparing for impermanence.</p>
 <pre><code class="language-bash">sudo mkdir -p /persist/etc
 sudo mkdir -p /persist/var/lib
 sudo mkdir -p /persist/var/log
@@ -3271,7 +3274,9 @@ is aware of this:</p>
 <code>configuration.nix</code> from <code>nixos</code> to your chosen name, this is the name you'll
 use to login after you enter your encryption passphrase.</li>
 </ul>
-<pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
+<p>The below command uses <code>#nixos</code> because that's what the defaults are, you'll
+change it to your chosen hostname.</p>
+<pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/flake#nixos
 </code></pre>
 <ul>
 <li>
