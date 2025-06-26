@@ -3642,6 +3642,9 @@ transparently and open the cleartext file in an editor.</p>
 sops will wait for the editor to exit, and then try to reencrypt the file.</p>
 <p>The above command will open a default sops <code>github-deploy-key.yaml</code> in your
 <code>$EDITOR</code>:</p>
+<p>Erase the default <code>sops</code> filler and type <code>github_deploy_key_ed25519: |</code>, move
+your cursor 1 line down and type <code>:r ~/.ssh/id_ed25519</code> to read the private key
+into the file and repeat as needed.</p>
 <pre><code class="language-yaml">github_deploy_key_ed25519: |
   -----BEGIN OPENSSH PRIVATE KEY-----
   ...
@@ -3669,7 +3672,7 @@ rewrites your history. Just keep this in mind. This happens because Git has a
 protection that stops you from doing stupid things.</p>
 </blockquote>
 <p>Generate an encrypted password hash with:</p>
-<pre><code class="language-bash">mkpasswd -m SHA-512 -s
+<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/password-hash.txt
 # Enter your chosen password and copy the encrypted hash it gives you back
 </code></pre>
 <pre><code class="language-bash">sops secrets/password-hash.yaml      # For your `hashedPasswordFile`
@@ -3677,6 +3680,8 @@ protection that stops you from doing stupid things.</p>
 <p>The above command will open your <code>$EDITOR</code> with the file <code>password-hash.yaml</code>,
 add the following content to it. Replace <code>PasteEncryptedHashHere</code> with the
 output of the <code>mkpasswd</code> command above:</p>
+<p>Delete the default <code>sops</code> filler, type <code>password_hash:</code> and leave your cursor
+after the <code>:</code> and type <code>:r /tmp/password-hash.txt</code></p>
 <pre><code class="language-yaml">password_hash: PasteEncryptedHashHere
 </code></pre>
 <p>Ensure sops can decrypt it:</p>
@@ -3689,6 +3694,13 @@ output of the <code>mkpasswd</code> command above:</p>
 <p>My <code>sops.nix</code> is located at <code>~/flake/hosts/hostname/sops.nix</code> and the secrets
 directory is located at <code>~/flake/secrets</code> so the path from <code>sops.nix</code> to
 <code>secrets/pasword-hash.yaml</code> would be <code>../../secrets/password-hash.yaml</code></p>
+<p>Another step you can take is to copy your key to a persistent location,
+preparing for impermanence:</p>
+<pre><code class="language-bash">sudo mkdir /persist/sops/age
+sudo cp ~/.config/sops/age/keys.txt /persist/sops/age/keys.txt
+</code></pre>
+<p>Then you would change the <code>age.keyFile = "/persist/sops/age/keys.txt"</code> to match
+this location below.</p>
 <pre><code class="language-nix"># ~/flake/hosts/magic/sops.nix  # magic is my hostname
 # hosts/magic/ is also where my configuration.nix is
 {...}: {
