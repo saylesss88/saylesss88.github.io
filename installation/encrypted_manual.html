@@ -231,8 +231,25 @@ nvme0n1     259:0    0   1,8T  0 disk
 <a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.</li>
 </ol>
 <ul>
-<li>If you click on the layout you want then click the <code>Raw</code> button near the top,
-then copy the url and use it in the following command:</li>
+<li>There is still a starter repo that can save you some typing, make sure to
+carefully review if you decide to use it:</li>
+</ul>
+<pre><code class="language-bash">export NIX_CONFIG='experimental-features = nix-command flakes'
+export EDITOR='hx' # or 'vi'
+nix-shell -p git yazi helix mkpasswd
+git config --global user.name "gitUsername"
+git config --global user.email "gitEmail"
+git clone https://github.com/saylesss88/my-flake.git
+</code></pre>
+<ul>
+<li>
+<p>I've moved away from trying to configure sops pre install, it adds unnecessary
+complexity to a minimal install in my opinion.</p>
+</li>
+<li>
+<p>If you click on the layout you want then click the <code>Raw</code> button near the top,
+then copy the url and use it in the following command:</p>
+</li>
 </ul>
 <pre><code class="language-bash">cd /tmp
 curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/luks-btrfs-subvolumes.nix -o /tmp/disk-config.nix
@@ -282,6 +299,9 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
                       mountpoint = "/";
                       mountOptions = ["subvol=root" "compress=zstd" "noatime"];
                     };
+                    "/root-blank" = {
+                      mountOptions = ["subvol=root-blank" "datanocow" "noatime"];
+                    };
                     "/home" = {
                       mountpoint = "/home";
                       mountOptions = ["subvol=home" "compress=zstd" "noatime"];
@@ -316,6 +336,38 @@ curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/exa
   fileSystems."/var/log".neededForBoot = true;
   fileSystems."/var/lib".neededForBoot = true;
 }
+</code></pre>
+<h2 id="create-a-blank-snapshot-of-root"><a class="header" href="#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></h2>
+<p>This will give us more options when it comes to impermanence. (i.e. being able
+to rollback to a fresh snapshot of root on reboot)</p>
+<p>To access all of the subvolumes, we have to mount the Btrfs partitions
+top-level.</p>
+<ol>
+<li>Unlock the LUKS device:</li>
+</ol>
+<pre><code class="language-bash">sudo cryptsetup open /dev/disk/by-partlabel/luks cryptroot
+</code></pre>
+<ol start="2">
+<li>Mount the Btrfs top-level (subvolid=5):</li>
+</ol>
+<pre><code class="language-bash">sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
+</code></pre>
+<ol start="3">
+<li>List the contents:</li>
+</ol>
+<pre><code class="language-bash">ls /mnt
+# you should see something like
+root   home  nix  persist  log  lib  ...
+</code></pre>
+<ol start="4">
+<li>Now we can take a snapshot of the <code>root</code> subvolume:</li>
+</ol>
+<pre><code class="language-bash">sudo btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
+</code></pre>
+<ol start="5">
+<li>Make sure to unmount:</li>
+</ol>
+<pre><code class="language-bash">sudo umount /mnt
 </code></pre>
 <ul>
 <li>For <code>/tmp</code> on RAM use something like the following. I've found that having
@@ -398,9 +450,6 @@ This avoids needing to use <code>sudo</code> for every command while in the
 </ol>
 <pre><code class="language-bash">cd ~
 mkdir flake &amp;&amp; cd flake
-nix-shell -p git yazi helix
-export NIX_CONFIG='experimental-features = nix-command flakes'
-export EDITOR='hx'
 hx flake.nix
 </code></pre>
 <blockquote>
@@ -461,21 +510,18 @@ don't set your hostname it will be <code>nixos</code>.</p>
 <p><code>initialHashedPassword</code>: Run <code>mkpasswd -m SHA-512 -s</code>, then enter your desired
 password. Example output,</p>
 </li>
-</ul>
-<pre><code class="language-bash">Password: your_secret_password
-Retype password: your_secret_password
-$6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
-</code></pre>
-<ul>
-<li>If you type this out by hand and mess up a single character, you will have to
+<li>
+<p>If you type this out by hand and mess up a single character, you will have to
 start over completely. A fairly safe way to do this is with <code>vim</code> or <code>hx</code> and
 redirect the hashed pass to a <code>/tmp/hash</code>, you can then read it into your
-<code>users.nix</code>:</li>
+<code>users.nix</code>:</p>
+</li>
 </ul>
-<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/hash
+<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/pass.txt
+# Enter your chosen password
 </code></pre>
-<p>And then when inside <code>users.nix</code> you type <code>:r /tmp/hash</code> to read the hash into
-your current file.</p>
+<p>And then when inside <code>users.nix</code>, move to the line where you want the hashed
+password and type <code>:r /tmp/pass.txt</code> to read the hash into your current file.</p>
 <pre><code class="language-nix"># configuration.nix
 {
   config,
