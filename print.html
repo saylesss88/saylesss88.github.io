@@ -2121,8 +2121,10 @@ git commit -m "Describe the new feature or fix"
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="vcs/jujutsu.html#what-is-the-jujutsu-working-copy">What is the Jujutsu Working Copy</a></li>
+<li><a href="vcs/jujutsu.html#example-jj-module">Example JJ Module</a></li>
 <li><a href="vcs/jujutsu.html#issues-ive-noticed">Issues I've Noticed</a></li>
-<li><a href="vcs/jujutsu.html#heres-an-example">Here's an example</a>
+<li><a href="vcs/jujutsu.html#heres-an-example-of-using-jj-in-an-existing-git-repo">Here's an example of using JJ in an existing Git repo</a>
 <ul>
 <li><a href="vcs/jujutsu.html#jj-and-git-side-by-side">JJ and Git Side by Side</a></li>
 </ul>
@@ -2150,7 +2152,7 @@ does a great job of explaining how to use jj with practical examples. It is
 recommended in the official JJ docs as a more up to date intro.</p>
 <p>If you haven't taken the time to deep dive Git, it may be a good time to learn
 about a new way of doing Version Control that is actually less complex and
-easier to menaally map out.</p>
+easier to mentally map out in my opinion.</p>
 <p>You can use jujutsu (jj) with existing Git repositories with one command.
 <code>jj git init --colocate</code> or <code>jj git init --git-repo /path/to/git_repository</code>.
 The native repository format for jj is still a work in progress so people
@@ -2160,17 +2162,35 @@ actual commit. When you make changes to files, these changes are automatically
 recorded to the working commit. There's no need to explicitly stage changes
 because they are already part of the commit that represents your current working
 state.</p>
+<h2 id="what-is-the-jujutsu-working-copy"><a class="header" href="#what-is-the-jujutsu-working-copy">What is the Jujutsu Working Copy</a></h2>
+<p>The <strong>working copy</strong> in Jujutsu is an actual <strong>commit</strong> that represents the
+current state of the files you're working on. Unlike Git, where the working copy
+is separate from commits and changes must be explicitly staged and committed, in
+JJ the working copy is a live commit that automatically records changes as you
+modify files.</p>
+<p>Adding or removing files in the working copy implicitly tracks or untracks them
+without needing explicit commands like <code>git add</code></p>
+<p>The working copy commit acts as a snapshot of your current workspace. When you
+run commands, Jujutsu first syncs the filesystem changes into this commit, then
+performs the requested operation, and finally updates the working copy if needed</p>
+<p>To finalize your current changes and start a new set of changes, you use the
+<code>jj new</code> command, which creates a new working-copy commit on top of the current
+one. This replaces the traditional Git workflow of staging and committing
+changes separately</p>
+<p>Conflicts in the working copy are represented by inserting conflict markers
+directly into the files. Jujutsu tracks the conflicting parts and can
+reconstruct the conflict state from these markers. You resolve conflicts by
+editing these markers and then committing the resolution in the working copy</p>
 <ul>
-<li>
-<p>This means that you don't need to worry about making a change, running
+<li>This means that you don't need to worry about making a change, running
 <code>git add .</code>, running <code>git commit -m "commit message"</code> because it's already
 done for you. This is handy with flakes by preventing a "dirty working tree"
-and can instantly be rebuilt after making a change.</p>
-</li>
-<li>
-<p>For <code>lazygit</code> fans, Nixpkgs has <code>lazyjj</code>. I've seen that it's recommended to
-use jj with <code>meld</code>. I'll share my <code>jj.nix</code> here for an example:</p>
-</li>
+and can instantly be rebuilt after making a change.</li>
+</ul>
+<h2 id="example-jj-module"><a class="header" href="#example-jj-module">Example JJ Module</a></h2>
+<ul>
+<li>For <code>lazygit</code> fans, Nixpkgs has <code>lazyjj</code>. I've seen that it's recommended to
+use jj with <code>meld</code>. I'll share my <code>jj.nix</code> here for an example:</li>
 </ul>
 <pre><code class="language-nix">{
   lib,
@@ -2270,7 +2290,7 @@ happen when you move your flake from one location to another.</p>
 <code>nix flake lock --recreate-lock-file</code> still works but is being depreciated.</p>
 <p>Sometimes the auto staging doesn't pick up the changes in your configuration so
 rebuilding changes nothing, this has been more rare but happens occasionally.</p>
-<h2 id="heres-an-example"><a class="header" href="#heres-an-example">Here's an example</a></h2>
+<h2 id="heres-an-example-of-using-jj-in-an-existing-git-repo"><a class="header" href="#heres-an-example-of-using-jj-in-an-existing-git-repo">Here's an example of using JJ in an existing Git repo</a></h2>
 <p>Say I have my configuration flake in the <code>~/flakes/</code> directory that is an
 existing Git repository. To use JJ as the front-end I could do something like:</p>
 <pre><code class="language-bash">cd ~/flakes
@@ -2283,6 +2303,14 @@ branches in Git. When you first run <code>jj git init --git-branch .</code> in a
 you will likely get a Hint saying "Run the following command to keep local
 bookmarks updated on future pulls":</p>
 <pre><code class="language-bash">jj bookmark track main@origin
+</code></pre>
+<p>To push you use <code>jj git push</code></p>
+<pre><code class="language-bash">jj git push
+# example output after pushing my flake repo
+Rebased 1 descendant commits onto updated working copy
+Changes to push to origin:
+  Move forward bookmark main from b48d4e9b361f to 6fb5e4c02617
+remote: Resolving deltas: 100% (25/25), completed with 12 local objects.
 </code></pre>
 <p>This command tells jj to track the remote bookmark <code>main@origin</code> with a local
 bookmark named <code>main</code>. It is similar to setting an upstream branch in Git. In
