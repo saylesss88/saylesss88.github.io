@@ -424,12 +424,25 @@ nvme0n1       259:0    0 476.9G  0 disk
   fileSystems."/var/lib".neededForBoot = true;
 }
 </code></pre>
-<p>If you wanted to add a swap for hibernation, you could add something like the
-following:</p>
+<p>If you want to add swap space for hibernation, you’ll need enough swap to store
+the contents of your system’s RAM. For example, if you have 16GB of RAM, your
+swapfile should be at least 16GB.</p>
+<p>To create a swap subvolume for hibernation, you could add something like the
+following to your configuration:</p>
 <pre><code class="language-nix">"/persist/swap" = {
-      mountpoint = "/swap";
-      swap.swapfile.size = "8G";
+      mountpoint = "/persist/swap";
+      swap.swapfile.size = "16G";
     };
+</code></pre>
+<p>or for a swapfile:</p>
+<pre><code class="language-nix">swapDevices = [
+  {
+    device = "/persist/swap/swapfile";
+    size = 16 * 1024; # Size in MB (16GB)
+    # or
+    # size = 16384; # Size in MB (16G);
+  }
+];
 </code></pre>
 <h2 id="create-a-blank-snapshot-of-root"><a class="header" href="#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></h2>
 <p>This will give us more options when it comes to impermanence. (i.e. being able
