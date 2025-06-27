@@ -174,6 +174,18 @@
 <li><a href="#heres-an-example">Here's an example</a>
 <ul>
 <li><a href="#jj-and-git-side-by-side">JJ and Git Side by Side</a></li>
+</ul>
+</li>
+<li><a href="#the-2-main-jj-workflows">The 2 main JJ Workflows</a>
+<ul>
+<li><a href="#the-squash-workflow">The Squash Workflow</a></li>
+<li><a href="#the-edit-workflow">The Edit Workflow</a></li>
+</ul>
+</li>
+<li><a href="#operation-log-and-undo">Operation Log and Undo</a></li>
+<li><a href="#conflict-resolution">Conflict Resolution</a></li>
+<li><a href="#revsets">Revsets</a>
+<ul>
 <li><a href="#resources">Resources</a></li>
 </ul>
 </li>
@@ -209,6 +221,23 @@ jj git init --colocate
 jj describe -m "first jj commit"
 jj commit
 </code></pre>
+<p><strong>Bookmarks</strong> in jj are named pointers to specific revisions, similar to
+branches in Git. When you first run <code>jj git init --git-branch .</code> in a git repo,
+you will likely get a Hint saying "Run the following command to keep local
+bookmarks updated on future pulls":</p>
+<pre><code class="language-bash">jj bookmark track main@origin
+</code></pre>
+<p>This command tells jj to track the remote bookmark <code>main@origin</code> with a local
+bookmark named <code>main</code>. It is similar to setting an upstream branch in Git. In
+JJ, there's no concept of a "current branch" -- commits are first-class, and
+bookmarks are optional pointers.</p>
+<p><strong>Remote bookmarks</strong> are bookmarks that exist on a remote (like <code>origin</code>). jj
+keeps track of the last-seen position of each remote bookmark (e.g.,
+<code>main@origin</code>), similar to Git's remote-tracking branches</p>
+<blockquote>
+<p>NOTE: JJ is designed for a "branchless" workflow, so bookmarks are more
+lightweight and flexible than Git branches.</p>
+</blockquote>
 <p><strong>Or</strong> to do this in a directory that isn't already a git repo you can do
 something like:</p>
 <pre><code class="language-bash">cargo new hello-world --vcs=none
@@ -279,11 +308,150 @@ refine it as you work, than it is creating a commit message after the fact.</p>
 have noticed some issues here and there when using with NixOS. I'm hoping that
 as the project matures, it gets better on this front.</p>
 </li>
-<li>
-<p>This is just the start of what is possible, here are some resources about it
-if you're interested:</p>
-</li>
 </ul>
+<h2 id="the-2-main-jj-workflows"><a class="header" href="#the-2-main-jj-workflows">The 2 main JJ Workflows</a></h2>
+<h3 id="the-squash-workflow"><a class="header" href="#the-squash-workflow">The Squash Workflow</a></h3>
+<p>This workflow is the most similar to Git and Git's index.</p>
+<p>The workflow:</p>
+<ol>
+<li>
+<p>Describe the work we want to do with <code>jj desc -m "message"</code></p>
+</li>
+<li>
+<p>We create a new empty change on top of that one with <code>jj new</code></p>
+</li>
+<li>
+<p>When we are done with a feature, we run <code>jj squash</code> to move the changes from
+<code>@</code> into the change we described in step 1. <code>@</code> is where your working copy is
+positioned currently.</p>
+</li>
+</ol>
+<p>For example, let's say we just ran <code>jj git init --colocate</code> in our configuration
+Flake directory making it a <code>jj</code> repo as well using git for backend.</p>
+<pre><code class="language-bash">cd flake
+jj git init --colocate
+jj log
+@  lnmmxwko saylesss87@proton.me 2025-06-27 10:14:57 1eac6aa0
+│  (empty) (no description set)
+○  qnknltto saylesss87@proton.me 2025-06-27 09:04:08 git_head() 5358483a
+│  (empty) jj
+</code></pre>
+<p>The above log output shows that running <code>jj git init</code> creates an empty working
+commit (<code>@</code>) on top of the <code>git_head()</code></p>
+<pre><code class="language-bash">jj desc -m "Switch from nixVim to NVF"
+jj new  # Create a new empty change
+jj log
+@  nmnmznmm saylesss87@proton.me 2025-06-27 10:16:30 52dd7ee0
+│  (empty) (no description set)
+○  lnmmxwko saylesss87@proton.me 2025-06-27 10:16:24 git_head() 3e8f9f3a
+│  (empty) Switch from nixVim to NVF
+○  qnknltto saylesss87@proton.me 2025-06-27 09:04:08 5358483a
+│  (empty) jj
+</code></pre>
+<p>The above log shows that running <code>jj desc</code> changes the current (<code>@</code>) commits
+description, and then <code>jj new</code> creates a new empty commit on top of it, moving
+(<code>@</code>) to this new empty commit.</p>
+<p>The "Switch from nixVim to NVF" commit is now the parent of (<code>@</code>).</p>
+<p>Now, we'd make the necessary changes and to add them to the commit we just
+described in the previous steps.</p>
+<p>The changes are automatically "staged" so theres no need to <code>git add</code> them, so
+we just make the changes and squash them.</p>
+<pre><code class="language-bash">jj squash  # Squash the commit into its parent commit (i.e., our named commit)
+jj log
+@  zsxsolsq saylesss87@proton.me 2025-06-27 10:18:01 2c35d83f
+│  (empty) (no description set)
+○  lnmmxwko saylesss87@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
+│  (empty) Switch from nixVim to NVF
+</code></pre>
+<p>This shows <code>jj squashes</code> effect, it merges the changes from the current (<code>@</code>)
+commit into its parent. The (<code>@</code>) then moves to this modified parent, and a new
+empty commit is created on top, ready for the next set of changes.</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake .
+</code></pre>
+<p>We're still in the nameless commit and can either continue working or run
+<code>jj desc -m ""</code> again describing our new change, then <code>jj new</code> and <code>jj squash</code>
+it's pretty simple. The nameless commit is used as an adhoc staging area.</p>
+<h3 id="the-edit-workflow"><a class="header" href="#the-edit-workflow">The Edit Workflow</a></h3>
+<p>This workflow adds a few new commands <code>jj edit</code>, and <code>jj next</code>.</p>
+<p>Heres the workflow:</p>
+<ol>
+<li>
+<p>Create a new change to work on the new feature with <code>jj new</code></p>
+</li>
+<li>
+<p>If everything works exactly as planned, we're done.</p>
+</li>
+<li>
+<p>If we realize we want to break this big change up into multiple smaller ones,
+we do it by making a new change before the current one, swapping to it, and
+making the necessary change.</p>
+</li>
+<li>
+<p>Lastly, we go back to the main change.</p>
+</li>
+</ol>
+<p>The squash workflow leaves <code>@</code> at an empty undescribed change, with this
+workflow, <code>@</code> will often be on the existing change.</p>
+<p>If <code>@</code> wasn't at an empty change, we would start this workflow with:</p>
+<pre><code class="language-bash">jj new -m "Switch from NVF to nixVim"
+</code></pre>
+<p>since our <code>@</code> is already at an empty change, we'll just describe it and get
+started:</p>
+<p>For this example, lets say we want to revert back to nixVim:</p>
+<pre><code class="language-bash">jj desc -m "Switch from NVF to nixVim"
+jj log
+@  zsxsolsq saylesss87@proton.me 2025-06-27 10:18:47 606abaa7
+│  (empty) Switch from NVF to nixVim
+○  lnmmxwko saylesss87@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
+│  (empty) Switch from nixVim to NVF
+○  qnknltto saylesss87@proton.me 2025-06-27 09:04:08 5358483a
+│  (empty) jj
+</code></pre>
+<p>Again, this shows <code>jj desc</code> renaming the current empty <code>@</code> commit.</p>
+<p>We make the changes, and it's pretty straightforward so we're done, every change
+is automatically staged so we can just run <code>sudo nixos-rebuild switch --flake .</code>
+now to apply the changes.</p>
+<p>If we wanted to make more changes that aren't described we can use <code>jj new -B</code>
+which is similar to <code>git add -a</code>.</p>
+<pre><code class="language-bash">jj new -B @ -m "Adding LSP to nixVim"
+Rebased 1 descendant commits
+Working copy  (@) now at: lpnxxxpo bf929946 (empty) Adding LSP to nixVim
+Parent commit (@-)      : lnmmxwko 485eaee9 (empty) Switch from nixVim to NVF
+</code></pre>
+<p>The <code>-B</code> tells jj to create the new change <em>before</em> the current one and it
+creates a rebase. We created a change before the one we're on, it automatically
+rebased our original change. This operation will <em>always</em> succeed with jj, we
+will have our working copy at the commit we've just inserted.</p>
+<p>You can see below that <code>@</code> moved down one commit:</p>
+<pre><code class="language-bash">jj log
+○  zsxsolsq saylesss87@proton.me 2025-06-27 10:22:03 ad0713b6
+│  (empty) Switch from NVF to nixVim
+@  lpnxxxpo saylesss87@proton.me 2025-06-27 10:22:03 bf929946
+│  (empty) Adding LSP to nixVim
+○  lnmmxwko saylesss87@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
+│  (empty) Switch from nixVim to NVF
+○  qnknltto saylesss87@proton.me 2025-06-27 09:04:08 5358483a
+│  (empty) jj
+○  qnknltto sayls87@proton.me 2025-06-27 09:04:08 git_head()
+</code></pre>
+<p>The "Adding LSP to nixVim" commit is directly above "Switch from nixVim to NVF"
+(the old <code>git_head()</code>)</p>
+<p>The "Switch from NVF to nixVim" commit (which was your <code>@</code> before <code>jj new -B</code>)
+is now above "Adding LSP to nixVim" in the log output, meaning "Adding LSP to
+nixVim" is its new parent.</p>
+<p><code>@</code> has moved to "Adding LSP to nixVim"</p>
+<h2 id="operation-log-and-undo"><a class="header" href="#operation-log-and-undo">Operation Log and Undo</a></h2>
+<p>JJ records every operation (commits, merges, rebases, etc.) in an operation log.
+You can view and undo previous operations, making it easy to recover from
+mistakes, a feature not present in Git’s core CLI</p>
+<h2 id="conflict-resolution"><a class="header" href="#conflict-resolution">Conflict Resolution</a></h2>
+<p>In JJ, conflicts live inside commits and can be resolved at any time, not just
+during a merge. This makes rebasing and history editing safer and more flexible</p>
+<h2 id="revsets"><a class="header" href="#revsets">Revsets</a></h2>
+<p>JJ includes a powerful query language for selecting commits. For example:</p>
+<pre><code class="language-bash">jj log -r "author(alice) &amp; file(*.py)"
+</code></pre>
+<p>This command lists all commits by Alice that touch Python files.</p>
 <h3 id="resources"><a class="header" href="#resources">Resources</a></h3>
 <ul>
 <li>
