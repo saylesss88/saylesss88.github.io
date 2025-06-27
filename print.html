@@ -2121,6 +2121,7 @@ git commit -m "Describe the new feature or fix"
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="vcs/jujutsu.html#issues-ive-noticed">Issues I've Noticed</a></li>
 <li><a href="vcs/jujutsu.html#heres-an-example">Here's an example</a>
 <ul>
 <li><a href="vcs/jujutsu.html#jj-and-git-side-by-side">JJ and Git Side by Side</a></li>
@@ -2142,27 +2143,36 @@ git commit -m "Describe the new feature or fix"
 </ul>
 </details>
 <p><img src="vcs/../images/jujutsu.png" alt="JJ Logo" /></p>
-<ul>
-<li>
+<p>You may want to check
+<a href="https://steveklabnik.github.io/jujutsu-tutorial/">Steve's Jujutsu Tutorial</a>, he
+does a great job of explaining how to use jj with practical examples. It is
+recommended in the official JJ docs as a more up to date intro.</p>
 <p>You can use jujutsu (jj) with existing Git repositories with one command.
 <code>jj git init --colocate</code> or <code>jj git init --git-repo /path/to/git_repository</code>.
 The native repository format for jj is still a work in progress so people
 typically use a <code>git</code> repository for backend.</p>
-</li>
-<li>
-<p>Unlike <code>git</code>, <code>jj</code> has no index "staging area". It treats the working copy as
-an actual commit. When you make changes to files, these changes are
-automatically recorded to the working commit. There's no need to explicitly
-stage changes because they are already part of the commit that represents your
-current working state.</p>
+<p>Unlike <code>git</code>, <code>jj</code> has no index "staging area". It treats the working copy as an
+actual commit. When you make changes to files, these changes are automatically
+recorded to the working commit. There's no need to explicitly stage changes
+because they are already part of the commit that represents your current working
+state.</p>
 <ul>
 <li>This means that you don't need to worry about making a change, running
 <code>git add .</code>, running <code>git commit -m "commit message"</code> because it's already
 done for you. This is handy with flakes by preventing a "dirty working tree"
 and can instantly be rebuilt after making a change.</li>
 </ul>
-</li>
-</ul>
+<h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
+<p>I have run into a few issues, such as every flake command reloading every single
+input every time. <strong>What I mean by this is what you see when you run a flake
+command for the first time, it adds all of your flakes inputs.</strong> I believe the
+fix for this is deleting and regenerating your <code>flake.lock</code>. The same thing can
+happen when you move your flake from one location to another.</p>
+<p>That said, I recommend doing just that after running something like
+<code>jj git init --colocate</code>. Delete your <code>flake.lock</code> and run <code>nix flake update</code>,
+<code>nix flake lock --recreate-lock-file</code> still works but is being depreciated.</p>
+<p>Sometimes the auto staging doesn't pick up the changes in your configuration so
+rebuilding changes nothing, this has been more rare but happens occasionally.</p>
 <h2 id="heres-an-example"><a class="header" href="#heres-an-example">Here's an example</a></h2>
 <p>Say I have my configuration flake in the <code>~/flakes/</code> directory that is an
 existing Git repository. To use JJ as the front-end I could do something like:</p>
@@ -2179,7 +2189,7 @@ bookmarks updated on future pulls":</p>
 </code></pre>
 <p>This command tells jj to track the remote bookmark <code>main@origin</code> with a local
 bookmark named <code>main</code>. It is similar to setting an upstream branch in Git. In
-JJ, there's no concept of a "current branch" -- commits are first-class, and
+JJ, there's no concept of a "current branch" commits are first-class, and
 bookmarks are optional pointers.</p>
 <p><strong>Remote bookmarks</strong> are bookmarks that exist on a remote (like <code>origin</code>). jj
 keeps track of the last-seen position of each remote bookmark (e.g.,
@@ -2394,9 +2404,48 @@ nixVim" is its new parent.</p>
 <p>JJ records every operation (commits, merges, rebases, etc.) in an operation log.
 You can view and undo previous operations, making it easy to recover from
 mistakes, a feature not present in Git’s core CLI</p>
+<pre><code class="language-bash">jj op log
+@  fbf6e626df22 jr@magic 15 minutes ago, lasted 9 milliseconds
+│  new empty commit
+│  args: jj new -B @ -m 'Adding LSP to nixVim'
+○  bde40b7c17cf jr@magic 19 minutes ago, lasted 8 milliseconds
+│  describe commit 2c35d83f75031dc582bf28b64d4af1c218177f90
+│  args: jj desc -m 'Switch from NVF to nixVim'
+○  3a2bfe1c0b0a jr@magic 19 minutes ago, lasted 8 milliseconds
+│  squash commits into 3e8f9f3a6a58fef86906e16e9b4375afb43e73e3
+│  args: jj squash
+○  80abcb58dcb6 jr@magic 21 minutes ago, lasted 8 milliseconds
+│  new empty commit
+│  args: jj new
+○  8c80314cbcd7 jr@magic 21 minutes ago, lasted 8 milliseconds
+│  describe commit 1eac6aa0b88ba014785ee9c1c2ad6e2abc6206e9
+│  args: jj desc -m 'Switch from nixVim to NVF'
+○  44b5789cb4d1 jr@magic 22 minutes ago, lasted 6 milliseconds
+│  track remote bookmark main@origin
+│  args: jj bookmark track main@origin
+○  dbefee04aa85 jr@magic 23 minutes ago, lasted 4 milliseconds
+│  import git head
+│  args: jj git init --git-repo .
+</code></pre>
+<pre><code class="language-bash">jj op undo &lt;operation-id&gt;
+# or
+jj op restore &lt;operation-id&gt;
+</code></pre>
 <h2 id="conflict-resolution"><a class="header" href="#conflict-resolution">Conflict Resolution</a></h2>
 <p>In JJ, conflicts live inside commits and can be resolved at any time, not just
 during a merge. This makes rebasing and history editing safer and more flexible</p>
+<p>JJ treats conflicts as first-class citizens: conflicts can exist inside commits,
+not just in the working directory. This means if a merge or rebase introduces a
+conflict, the conflicted state is saved in the commit itself, and you can
+resolve it at any time there’s no need to resolve conflicts immediately or use
+“<code>--continue</code>” commands as in Git</p>
+<p>Here's how it works:</p>
+<p>When you check out or create a commit with conflicts, JJ materializes the
+conflicts as markers in your files (similar to Git's conflict markers)</p>
+<p>You can resolve conflicts by editing the files to remove the markers, or by
+using:</p>
+<pre><code class="language-bash">jj resolve
+</code></pre>
 <h2 id="revsets"><a class="header" href="#revsets">Revsets</a></h2>
 <p>JJ includes a powerful query language for selecting commits. For example:</p>
 <pre><code class="language-bash">jj log -r "author(alice) &amp; file(*.py)"
@@ -2405,6 +2454,9 @@ during a merge. This makes rebasing and history editing safer and more flexible<
 <h3 id="resources-2"><a class="header" href="#resources-2">Resources</a></h3>
 <ul>
 <li>
+<p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
+</li>
+<li>
 <p><a href="https://github.com/jj-vcs/jj">jj_github</a></p>
 </li>
 <li>
@@ -2412,9 +2464,6 @@ during a merge. This makes rebasing and history editing safer and more flexible<
 </li>
 <li>
 <p><a href="https://v5.chriskrycho.com/essays/jj-init/">jj_init</a> # very good article</p>
-</li>
-<li>
-<p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="installation-guides"><a class="header" href="#installation-guides">Installation Guides</a></h1>
