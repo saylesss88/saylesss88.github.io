@@ -2135,7 +2135,8 @@ git commit -m "Describe the new feature or fix"
 </li>
 <li><a href="vcs/jujutsu.html#operation-log-and-undo">Operation Log and Undo</a></li>
 <li><a href="vcs/jujutsu.html#conflict-resolution">Conflict Resolution</a></li>
-<li><a href="vcs/jujutsu.html#revsets">Revsets</a>
+<li><a href="vcs/jujutsu.html#revsets">Revsets</a></li>
+<li><a href="vcs/jujutsu.html#filesets">Filesets</a>
 <ul>
 <li><a href="vcs/jujutsu.html#resources">Resources</a></li>
 </ul>
@@ -2147,6 +2148,9 @@ git commit -m "Describe the new feature or fix"
 <a href="https://steveklabnik.github.io/jujutsu-tutorial/">Steve's Jujutsu Tutorial</a>, he
 does a great job of explaining how to use jj with practical examples. It is
 recommended in the official JJ docs as a more up to date intro.</p>
+<p>If you haven't taken the time to deep dive Git, it may be a good time to learn
+about a new way of doing Version Control that is actually less complex and
+easier to menaally map out.</p>
 <p>You can use jujutsu (jj) with existing Git repositories with one command.
 <code>jj git init --colocate</code> or <code>jj git init --git-repo /path/to/git_repository</code>.
 The native repository format for jj is still a work in progress so people
@@ -2185,13 +2189,13 @@ in {
 
     userName = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      default = saylss88; # or "TSawyer87"; # Fallback to "TSawyer87" if userVars.gitUsername is undefined
+      default = "saylss88";  # you can use `or` statements here also
       description = "Jujutsu user name";
     };
 
     userEmail = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      default = "sayls87@proton.me";
+      default = "sayls88@proton.me";
       description = "Jujutsu user email";
     };
 
@@ -2241,7 +2245,8 @@ in {
 }
 </code></pre>
 <p>To be honest, I have only played around with jj and recently am giving it
-another shot. I'm not sure currently if the meld settings are correct FYI.</p>
+another shot. I'm not sure currently if the meld settings are correct FYI. They
+are filler names and email addresses also.</p>
 <p>In my <code>home.nix</code> I have this to enable it:</p>
 <pre><code class="language-nix">custom = {
     jj = {
@@ -2252,7 +2257,8 @@ another shot. I'm not sure currently if the meld settings are correct FYI.</p>
 };
 </code></pre>
 <p>The <code>custom.jj</code> module allows me to override the username, email, and whether jj
-is enabled from a single, centralized place within my Nix configuration.</p>
+is enabled from a single, centralized place within my Nix configuration. So only
+if jj is enabled, <code>lazyjj</code> and <code>meld</code> will be installed.</p>
 <h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
 <p>I have run into a few issues, such as every flake command reloading every single
 input every time. <strong>What I mean by this is what you see when you run a flake
@@ -2296,6 +2302,7 @@ cd hello-world
 jj git init
 Initialized repo in "."
 </code></pre>
+<hr />
 <h3 id="jj-and-git-side-by-side"><a class="header" href="#jj-and-git-side-by-side">JJ and Git Side by Side</a></h3>
 <p>Or for example, with Git if you wanted to move to a different branch before
 running <code>nix flake update</code> to see if it introduced errors before merging with
@@ -2360,6 +2367,7 @@ have noticed some issues here and there when using with NixOS. I'm hoping that
 as the project matures, it gets better on this front.</p>
 </li>
 </ul>
+<hr />
 <h2 id="the-2-main-jj-workflows"><a class="header" href="#the-2-main-jj-workflows">The 2 main JJ Workflows</a></h2>
 <h3 id="the-squash-workflow"><a class="header" href="#the-squash-workflow">The Squash Workflow</a></h3>
 <p>This workflow is the most similar to Git and Git's index.</p>
@@ -2422,6 +2430,7 @@ empty commit is created on top, ready for the next set of changes.</p>
 <p>We're still in the nameless commit and can either continue working or run
 <code>jj desc -m ""</code> again describing our new change, then <code>jj new</code> and <code>jj squash</code>
 it's pretty simple. The nameless commit is used as an adhoc staging area.</p>
+<hr />
 <h3 id="the-edit-workflow"><a class="header" href="#the-edit-workflow">The Edit Workflow</a></h3>
 <p>This workflow adds a few new commands <code>jj edit</code>, and <code>jj next</code>.</p>
 <p>Heres the workflow:</p>
@@ -2491,6 +2500,7 @@ will have our working copy at the commit we've just inserted.</p>
 is now above "Adding LSP to nixVim" in the log output, meaning "Adding LSP to
 nixVim" is its new parent.</p>
 <p><code>@</code> has moved to "Adding LSP to nixVim"</p>
+<hr />
 <h2 id="operation-log-and-undo"><a class="header" href="#operation-log-and-undo">Operation Log and Undo</a></h2>
 <p>JJ records every operation (commits, merges, rebases, etc.) in an operation log.
 You can view and undo previous operations, making it easy to recover from
@@ -2522,6 +2532,7 @@ mistakes, a feature not present in Git’s core CLI</p>
 # or
 jj op restore &lt;operation-id&gt;
 </code></pre>
+<hr />
 <h2 id="conflict-resolution"><a class="header" href="#conflict-resolution">Conflict Resolution</a></h2>
 <p>In JJ, conflicts live inside commits and can be resolved at any time, not just
 during a merge. This makes rebasing and history editing safer and more flexible</p>
@@ -2537,11 +2548,19 @@ conflicts as markers in your files (similar to Git's conflict markers)</p>
 using:</p>
 <pre><code class="language-bash">jj resolve
 </code></pre>
+<hr />
 <h2 id="revsets"><a class="header" href="#revsets">Revsets</a></h2>
+<p><a href="https://jj-vcs.github.io/jj/latest/revsets/">Jujutsu Revsets</a></p>
 <p>JJ includes a powerful query language for selecting commits. For example:</p>
 <pre><code class="language-bash">jj log -r "author(alice) &amp; file(*.py)"
 </code></pre>
 <p>This command lists all commits by Alice that touch Python files.</p>
+<h2 id="filesets"><a class="header" href="#filesets">Filesets</a></h2>
+<p><a href="https://jj-vcs.github.io/jj/latest/filesets/">Jujutsu Filesets</a></p>
+<p>Jujutsu supports a functional language for selecting a set of files. Expressions
+in this language are called "filesets" (the idea comes from Mercurial). The
+language consists of file patterns, operators, and functions. --JJ Docs</p>
+<hr />
 <h3 id="resources-2"><a class="header" href="#resources-2">Resources</a></h3>
 <ul>
 <li>
