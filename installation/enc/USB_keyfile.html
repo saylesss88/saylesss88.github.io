@@ -171,6 +171,7 @@
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="#keyfile-enrollment-methods">Keyfile Enrollment Methods</a></li>
 <li><a href="#instructions-for-using-a-usb-stick-with-existing-data">Instructions for Using a USB Stick with Existing Data</a></li>
 </ul>
 </details>
@@ -183,9 +184,21 @@ keyfile to a USB stick with existing data on it that you don't want to lose.</p>
 <p><strong>Generate the keyfile</strong></p>
 <pre><code class="language-bash">sudo dd if=/dev/urandom of=/root/usb-luks.key bs=4096 count=1
 </code></pre>
+<h2 id="keyfile-enrollment-methods"><a class="header" href="#keyfile-enrollment-methods">Keyfile Enrollment Methods</a></h2>
 <p>This is for a dedicated USB stick that we will wipe first then add the key.</p>
-<pre><code class="language-bash">sudo cryptsetup luksAddKey /dev/disk/by-partlabel/luks /root/usb-luks.key
+<p>Disko defaults to LUKS2, FYI.</p>
+<pre><code class="language-bash"># cryptsetup works for both LUKS1 and LUKS2 formats but doesn't work for
+# TPM2, FIDO2, and smartcards
+sudo cryptsetup luksAddKey /dev/disk/by-partlabel/luks /root/usb-luks.key
+# OR the following has support for TPM2, FIDO2, and smartcards
+sudo systemd-cryptenroll /dev/disk/by-partlabel/luks --key-file=/root/usb-luks.key
 </code></pre>
+<blockquote>
+<p>❗ Use <code>cryptsetup luksAddKey</code> for traditional setups or if you're using
+LUKS1.</p>
+<p>❗ Use <code>systemd-cryptenroll</code> if you want to leverage features like TPM2
+binding or FIDO2 tokens and your volume is LUKS2.</p>
+</blockquote>
 <ul>
 <li>
 <p><code>/dev/disk/by-partlabel/luks</code> refers to your encrypted partition by its
@@ -235,17 +248,49 @@ sudo shred -v -n 3 /dev/sda
 </ol>
 <pre><code class="language-bash">sudo fdisk /dev/sda
 </code></pre>
+<ol>
+<li>
+<p>Press <code>o</code> to create a new empty DOS partition table (if you are creating
+partitions on a fresh disk or want to wipe existing partitions and start
+over). Be very careful with this step as it will erase all existing
+partition information on the disk.</p>
+</li>
+<li>
+<p>Press <code>n</code> to create a new partition.</p>
+</li>
+</ol>
 <ul>
 <li>
-<p>Press <code>o</code> to create a new empty DOS partition table.</p>
+<p>You will then be prompted for the partition type:</p>
+<ul>
+<li>
+<p><code>p</code> for a primary partition (you can have up to 4 primary partitions)</p>
 </li>
 <li>
-<p>Press <code>n</code> to create the new partition</p>
-</li>
-<li>
-<p>Press <code>w</code> to write the changes.</p>
+<p><code>e</code> for an extended partition (which can contain logical partitions)</p>
 </li>
 </ul>
+</li>
+<li>
+<p>Next, you'll be asked for the partition number (e.g., 1, 2, 3, 4).</p>
+</li>
+<li>
+<p>Then, you'll be asked for the first sector (press Enter to accept the default,
+which is usually the first available sector after the previous partition or
+the beginning of the disk).</p>
+</li>
+<li>
+<p>Finally, you'll be asked for the last sector or size (you can specify a size
+like +10G for 10 Gigabytes, +512M for 512 Megabytes, or press Enter to use the
+rest of the available space).</p>
+</li>
+</ul>
+<ol start="3">
+<li>Press <code>w</code> to write the changes to the partition table and exit fdisk.</li>
+</ol>
+<p>After pressing <code>w</code>, the kernel needs to be aware of the new partition table.
+Sometimes this happens automatically, but if you encounter issues, a reboot or a
+command like <code>partprobe</code> (if available and needed) can help.</p>
 <p>Formats as FAT32:</p>
 <pre><code class="language-bash">sudo mkfs.vfat /dev/sda1
 # or as ext4
@@ -273,11 +318,6 @@ partition and filesystem.</p>
 sync
 </code></pre>
 <ol start="5">
-<li>Securely Remove the Keyfile from Your System</li>
-</ol>
-<pre><code class="language-bash">sudo shred --remove --zero /root/usb-luks.key
-</code></pre>
-<ol start="6">
 <li>Update your NixOS Configuration</li>
 </ol>
 <p>Note the output of <code>blkid /dev/sda1</code> and if you have a backup device list that
@@ -317,6 +357,11 @@ in {
 <p>If you have issues or just want to remove the key take note of the path used to
 add it so you don't have to enter the whole key:</p>
 <pre><code class="language-bash">sudo cryptsetup luksRemoveKey /dev/disk/by-partlabel/luks --key-file /root/usb-luks.key
+</code></pre>
+<ol start="6">
+<li>Securely Remove the Keyfile from Your System:</li>
+</ol>
+<pre><code class="language-bash">sudo shred --remove --zero /root/usb-luks.key
 </code></pre>
 <h2 id="instructions-for-using-a-usb-stick-with-existing-data"><a class="header" href="#instructions-for-using-a-usb-stick-with-existing-data">Instructions for Using a USB Stick with Existing Data</a></h2>
 <ol>
