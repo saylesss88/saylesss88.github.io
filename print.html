@@ -4976,6 +4976,7 @@ encrypted, declarative, and version-control friendly.</p>
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="enc/lanzaboote.html#important-considerations">Important Considerations</a></li>
 <li><a href="enc/lanzaboote.html#requirements">Requirements</a></li>
 <li><a href="enc/lanzaboote.html#why-use-lanzaboote-secure-boot-on-a-non-encrypted-system">Why Use Lanzaboote (Secure Boot) on a Non-Encrypted System?</a></li>
 <li><a href="enc/lanzaboote.html#security-requirements">Security Requirements</a></li>
@@ -4996,10 +4997,33 @@ encrypted, declarative, and version-control friendly.</p>
 recovery keys and confirm that they are correct. Refer to this
 <a href="https://support.microsoft.com/en-us/windows/find-your-bitlocker-recovery-key-6b71ad27-0b89-ea08-f143-056f5ab347d6">Microsoft support article</a></p>
 <blockquote>
-<p>❗ NOTE: There are some serious limitations to this setup, I'd say it could
-stop the average person. But an experienced hacker could easily bypass this
-without encryption if they had access to your computer. For more protection
-look into TPM2 Hardware Requirements and full disk encryption.</p>
+<p>❗ NOTE: There are some serious limitations to this setup when used without
+encryption, I'd say it could stop the average person. But an experienced
+hacker could easily bypass this without encryption if they had access to your
+computer. For more protection look into TPM2 Hardware Requirements, full disk
+encryption, and <code>boot.initrd.verify</code>.</p>
+</blockquote>
+<h2 id="important-considerations"><a class="header" href="#important-considerations">Important Considerations</a></h2>
+<p>I found
+<a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">This Article</a>
+fairly enlightening as far as the state of Authenticated Boot and Disk
+Encryption on Linux.</p>
+<p>Lanzaboote only secures the boot chain. The userspace remains unverified (i.e.,
+the nix store, etc.), to verify userspace you need to implement additional
+integrity checks.</p>
+<p>Secure boot doesn't verify the OS stored in the Nix store, it's common to rely
+on disk encryption to prevent tampering with and keep the Nix store safe but
+it's not always desirable. (i.e., unattended boot)</p>
+<p>Nix does have it's own signature verification system that can verify the system
+closure before moving on to stage two but it will add some time to your builds.</p>
+<ul>
+<li>Follow the
+<a href="https://discourse.nixos.org/t/boot-time-integrity-checks-for-the-nix-store/36793">Boot Time Integrety Checks for the nix store</a></li>
+</ul>
+<blockquote>
+<p>❗ NOTE: If you require unattended boot and choose to use Nix's own signature
+verification system, systemd-boot is required do not continue setting up
+lanzaboote.</p>
 </blockquote>
 <h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
 <p>To be able to setup Secure Boot on your device, NixOS needs to be installed in
