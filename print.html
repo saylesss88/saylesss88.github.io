@@ -1490,6 +1490,253 @@ something like <code>/nix/store/your-hash-hello-world</code>).</p>
 <li>This will execute the <code>hello</code> file from the Nix store and print
 <code>"Hello, World!"</code>.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cachix-and-the-devour-flake"><a class="header" href="#cachix-and-the-devour-flake">Cachix and the devour-flake</a></h1>
+<p>Using devour-flake to Cache All Your Flake Outputs to Cachix</p>
+<p>When working with Nix flakes, it’s common to have many outputs—packages, apps,
+dev shells, NixOS or Darwin configurations, and more. Efficiently building and
+caching all these outputs can be challenging, especially in CI or when
+collaborating. This is where devour-flake and Cachix shine. Why Use
+devour-flake?</p>
+<p>By default, building all outputs of a flake with <code>nix build .#a .#b ... .#z</code> can
+be slow and inefficient, as Nix will evaluate the flake multiple times—once for
+each output. devour-flake solves this by generating a "consumer" flake that
+depends on all outputs, allowing you to build everything in one go with a single
+evaluation</p>
+<h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<p>There quite a few ways to do this, choose a method of installation from the
+<a href="https://github.com/srid/devour-flake">devour-flake</a> repository and then
+continue with step 1.</p>
+<p>You can even build it without installing with the following command:</p>
+<pre><code class="language-bash">nix build github:srid/devour-flake \
+  -L --no-link --print-out-paths \
+  --override-input flake github:nammayatri/nammayatri | cachix push &lt;name&gt;
+</code></pre>
+<p>This will push all flake outputs to cachix if you have a valid authentication
+token and have created a cache already.</p>
+<p>How to Use devour-flake with Cachix</p>
+<ol>
+<li>Prerequisites</li>
+</ol>
+<ul>
+<li>A Cachix cache: Create one on <a href="https://www.cachix.org/">Cachix</a> and generate a
+"Write + Read" auth token. You'll click the cache you just created and select
+Settings, in the settings you'll find Auth Tokens. When in the Auth Tokens
+section give your token a Description, Expiration date, and finally click
+Generate.</li>
+</ul>
+<p>(Optional) Configure your token locally, copy your auth token for the following
+command:</p>
+<pre><code class="language-bash">cachix authtoken &lt;YOUR_TOKEN&gt;
+# Use cachix cli for the following
+cachix use &lt;your-cache-name&gt;
+</code></pre>
+<ul>
+<li>
+<p><code>cachix use</code> adds your substitutors and trusted-public-keys to your
+<code>~/.config/nix/nix.conf</code> and creates one if it doesn't exist.</p>
+</li>
+<li>
+<p>For the Flake way of doing things you would create something like the
+following:</p>
+</li>
+</ul>
+<pre><code class="language-nix">{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  cfg = config.custom.cachix;
+in {
+  options = {
+    custom.cachix.enable = lib.mkEnableOption "Enable custom cachix configuration";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = with pkgs; [cachix];
+
+    # to prevent garbage collection of outputs immediately after building
+    nix.extraOptions = "gc-keep-outputs = true";
+    nix.settings = {
+      substituters = [
+        "https://nix-community.cachix.org"
+        "https://hyprland.cachix.org"
+        "https://ghostty.cachix.org"
+        "https://neovim-nightly.cachix.org"
+        "https://yazi.cachix.org"
+        "https://helix.cachix.org"
+        "https://nushell-nightly.cachix.org"
+        "https://wezterm.cachix.org"
+        "https://sayls88.cachix.org"
+        # "https://nixpkgs-wayland.cachix.org"
+      ];
+      trusted-public-keys = [
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+        "ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns="
+        "neovim-nightly.cachix.org-1:feIoInHRevVEplgdZvQDjhp11kYASYCE2NGY9hNrwxY="
+        "yazi.cachix.org-1:Dcdz63NZKfvUCbDGngQDAZq6kOroIrFoyO064uvLh8k="
+        "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="
+        "nushell-nightly.cachix.org-1:nLwXJzwwVmQ+fLKD6aH6rWDoTC73ry1ahMX9lU87nrc="
+        "wezterm.cachix.org-1:kAbhjYUC9qvblTE+s7S+kl5XM1zVa4skO+E/1IDWdH0="
+        "sayls88.cachix.org-1:LT8JnboX8mKhabC3Mj/ONHb5tyrjlnsdauQkD8Lu0us="
+        # "nixpkgs-wayland.cachix.org-1:3lwxaILxMRkVhehr5StQprHdEo4IrE8sRho9R9HOLYA="
+      ];
+    };
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p>The sayls88 entries are my custome cache. To find your trusted key go to the
+cachix website, click on your cache and it is listed near the top.</p>
+</li>
+<li>
+<p>I enable this with <code>custom.cachix.enable = true;</code> in my <code>configuration.nix</code> or
+equivalent.</p>
+</li>
+<li>
+<p>Another option is to use the top-level <code>nixConfig</code> attribute for adding your
+substitutors and trusted-public-keys. You only need to choose 1 method FYI:</p>
+</li>
+</ul>
+<pre><code class="language-nix">{
+  description = "NixOS &amp; Flake Config";
+
+# the nixConfig here only affects the flake itself, not the system configuration!
+  nixConfig = {
+    experimental-features = [ "nix-command" "flakes" ];
+    trusted-users = [ "ryan" ];
+
+    substituters = [
+      # replace official cache with a mirror located in China
+      "https://mirrors.ustc.edu.cn/nix-channels/store"
+      "https://cache.nixos.org"
+    ];
+
+    # nix community's cache server
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+      "https://nixpkgs-wayland.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "nixpkgs-wayland.cachix.org-1:3lwxaILxMRkVhehr5StQprHdEo4IrE8sRho9R9HOLYA="
+    ];
+  };
+# ... snip
+</code></pre>
+<ol start="2">
+<li>Building and Caching All Outputs</li>
+</ol>
+<p>You can build and push all outputs of your flake to Cachix using the following
+command when in your flake directory:</p>
+<pre><code class="language-bash">nix build github:srid/devour-flake \
+ -L --no-link --print-out-paths \
+ --override-input flake . \
+ | cachix push &lt;your-cache-name&gt;
+</code></pre>
+<ul>
+<li>
+<p>Replace <your-cache-name> with your actual Cachix cache name.</p>
+<p>This command will:</p>
+</li>
+<li>
+<p>Use devour-flake to enumerate and build all outputs of your flake (including
+packages, devShells, NixOS configs, etc.)</p>
+</li>
+<li>
+<p>Pipe the resulting store paths to cachix push, uploading them to your binary
+cache.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Example</li>
+</ol>
+<p>Suppose your cache is named my-flake-cache:</p>
+<pre><code class="language-bash">nix build github:srid/devour-flake \
+ -L --no-link --print-out-paths \
+ --override-input flake . \
+ | cachix push my-flake-cache
+</code></pre>
+<ol start="4">
+<li>Integration in CI</li>
+</ol>
+<p>This approach is particularly useful in CI pipelines, where you want to ensure
+all outputs are built and cached for collaborators and future builds. You can
+add the above command to your CI workflow, ensuring the Cachix auth token is
+provided as a secret</p>
+<ol start="5">
+<li>Advanced: Using as a Nix App</li>
+</ol>
+<p>You can add devour-flake as an input to your flake for local development:</p>
+<pre><code class="language-nix">{ inputs = { devour-flake.url = "github:srid/devour-flake";
+devour-flake.flake = false; }; }
+</code></pre>
+<p>And in your flake's <code>outputs</code>, add an overlay that makes <code>devour-flake</code>
+available in your package set:</p>
+<pre><code class="language-nix">outputs = { self, nixpkgs, devour-flake, ... }@inputs: {
+  overlays.default = final: prev: {
+    devour-flake = import devour-flake { inherit (prev) pkgs; };
+  };
+
+  # Example: Add devour-flake to your devShell
+  devShells.x86_64-linux.default = let
+    pkgs = import nixpkgs {
+      system = "x86_64-linux";
+      overlays = [ self.overlays.default ];
+    };
+  in pkgs.mkShell {
+    buildInputs = [ pkgs.devour-flake ];
+  };
+};
+</code></pre>
+<p>Use devour-flake in your devShell:</p>
+<pre><code class="language-bash">nix develop
+</code></pre>
+<p>You'll have the <code>devour-flake</code> command available for local use, so you can
+quickly build and push all outputs as needed.</p>
+<blockquote>
+<p>TIP: Alternatively, use <code>devour-flake</code> as an app:</p>
+<pre><code class="language-nix">apps.x86_64-linux.devour-flake = {
+ type = "app";
+ program = "${self.packages.x86_64-linux.devour-flake}/bin/devour-flake";
+};
+
+</code></pre>
+</blockquote>
+<p>What Gets Built and Cached?</p>
+<p>devour-flake detects and builds all standard outputs of a flake, including:</p>
+<ul>
+<li>
+<p>packages</p>
+</li>
+<li>
+<p>apps</p>
+</li>
+<li>
+<p>checks</p>
+</li>
+<li>
+<p>devShells</p>
+</li>
+<li>
+<p>nixosConfigurations.*</p>
+</li>
+<li>
+<p>darwinConfigurations.*</p>
+</li>
+<li>
+<p>home-manager configurations</p>
+</li>
+</ul>
+<p>This ensures that everything your flake produces is available in your Cachix
+cache for fast, reproducible builds.</p>
+<p>References:</p>
+<p><a href="https://github.com/srid/devour-flake">devour-flake documentation</a></p>
+<p><a href="https://discourse.nixos.org/t/how-to-set-up-cachix-in-flake-based-nixos-config/31781">Discourse Cachix for Flakes</a></p>
+<p><a href="https://docs.cachix.org/installation#flakes">Cachix docs: Flakes</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-paths"><a class="header" href="#nix-paths">Nix Paths</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
