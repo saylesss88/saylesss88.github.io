@@ -220,7 +220,26 @@ activation scripts, e.g.:</p>
 <p>Note: Some changes (like kernel switches) require a reboot to take effect</p>
 </blockquote>
 <p>Example: Let's create a basic specialisation to try out the Niri Window Manager:</p>
+<ul>
+<li>First we have to add the <code>niri-flake</code> as an input to our <code>flake.nix</code> and add
+the module to install it:</li>
+</ul>
+<pre><code class="language-nix"># flake.nix
+inputs = {
+     niri.url = "github:sodiboo/niri-flake";
+};
+</code></pre>
 <pre><code class="language-nix"># configuration.nix
+{ pkgs, inputs, ... }: {
+# ... snip ...
+imports = [
+    inputs.niri.nixosModules.niri
+];
+
+  nixpkgs.overlays = [inputs.niri.overlays.niri];
+
+# ... snip ...
+
   specialisation = {
     niri-test.configuration = {
       system.nixos.tags = ["niri"];
@@ -284,14 +303,28 @@ activation scripts, e.g.:</p>
       networking.networkmanager.enable = true;
     };
   };
+}
 </code></pre>
 <ul>
-<li>In my case running <code>sudo nixos-rebuild boot --flake .</code> took forever, first
-running <code>sudo nixos-rebuild switch</code> helped.</li>
+<li>
+<p>I chose to use the nightly version so it was required to add the overlay at
+the top-level as well as inside the specialisation block.</p>
+</li>
+<li>
+<p>In my case running <code>sudo nixos-rebuild boot --flake .</code> took forever, first
+running <code>sudo nixos-rebuild switch</code> helped.</p>
+</li>
 </ul>
 <blockquote>
-<p>❗ NOTE: This is a minimal example that launches with a few programs installed
-and a stock waybar.</p>
+<p>❗ NOTE: To be clear, to use Niri in a specialisation you need to:</p>
+<ul>
+<li>Add the Niri flake as an input to your <code>flake.nix</code>.</li>
+<li>Import the Niri module and overlay in your <code>configuration.nix</code>.</li>
+<li>Enable Niri (<code>programs.niri.enable = true;</code>) and set the desired package
+inside the specialisation block.</li>
+<li>If you want to use Niri system-wide (in all boot entries), enable it in the
+top-level config instead. (i.e. outside of the specialisation block).</li>
+</ul>
 </blockquote>
 <p><strong>What this does</strong>:</p>
 <ul>
