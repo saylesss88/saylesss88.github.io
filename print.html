@@ -3844,12 +3844,13 @@ relevant).</p>
 </ul>
 </li>
 <li><a href="installation/enc/enc_install.html#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></li>
-<li><a href="installation/enc/enc_install.html#persisting-critical-system-state">Persisting Critical System State</a></li>
 <li><a href="installation/enc/enc_install.html#setting-up-zram-and-tmp-on-ram">Setting up zram and /tmp on RAM</a>
 <ul>
 <li><a href="installation/enc/enc_install.html#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></li>
 </ul>
 </li>
+<li><a href="installation/enc/enc_install.html#persisting-critical-system-state">Persisting Critical System State</a></li>
+<li><a href="installation/enc/enc_install.html#reboot">Reboot</a></li>
 </ul>
 </details>
 <p>NixOS supports file systems that are encrypted using LUKS (Linux Unified Key
@@ -4042,7 +4043,7 @@ nvme0n1       259:0    0 476.9G  0 disk
             ESP = {
               label = "boot";
               name = "ESP";
-              size = "512M";
+              size = "1G";
               type = "EF00";
               content = {
                 type = "filesystem";
@@ -4090,6 +4091,11 @@ nvme0n1       259:0    0 476.9G  0 disk
                       mountpoint = "/var/lib";
                       mountOptions = ["subvol=lib" "compress=zstd" "noatime"];
                     };
+                    "/persist/swap" = {
+                      mountpoint = "/persist/swap";
+                      mountOptions = ["subvol=swap" "noatime" "nodatacow" "compress=no"];
+                      swap.swapfile.size = "18G";
+                    };
                   };
                 };
               };
@@ -4105,33 +4111,28 @@ nvme0n1       259:0    0 476.9G  0 disk
   fileSystems."/var/lib".neededForBoot = true;
 }
 </code></pre>
-<p>If you want to add swap space for hibernation, you’ll need enough swap to store
-the contents of your system’s RAM. For example, if you have 16GB of RAM, your
-swapfile should be at least 16GB.</p>
-<p>To create a swap subvolume for hibernation, you could add something like the
-following to your configuration:</p>
-<pre><code class="language-nix">"/persist/swap" = {
-      mountpoint = "/persist/swap";
-      swap.swapfile.size = "16G";
-    };
-</code></pre>
+<p>I have 16G of RAM so to be safe for hibernation I chose to give it some extra
+space. The boot partition is 1G, this extra space is for specialisations and
+lanzaboote.</p>
 <p>or for a swapfile:</p>
 <pre><code class="language-nix">swapDevices = [
   {
     device = "/persist/swap/swapfile";
-    size = 16 * 1024; # Size in MB (16GB)
+    size = 18 * 1024; # Size in MB (18GB)
     # or
     # size = 16384; # Size in MB (16G);
   }
 ];
 </code></pre>
 <h2 id="create-a-blank-snapshot-of-root"><a class="header" href="#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></h2>
-<p>This will give us more options when it comes to impermanence. (i.e. being able
-to rollback to a fresh snapshot of root on reboot)</p>
+<p>This is essential if you plan on using impermanence with this encrypted setup.
+We take a snapshot of <code>/root</code> while it's a clean slate, right after we run disko
+to format the disk.</p>
 <p>To access all of the subvolumes, we have to mount the Btrfs partitions
 top-level.</p>
 <ol>
-<li>Unlock the LUKS device:</li>
+<li>Unlock the LUKS device, if not already unlocked as it should be from running
+disko:</li>
 </ol>
 <pre><code class="language-bash">sudo cryptsetup open /dev/disk/by-partlabel/luks cryptroot
 </code></pre>
@@ -4153,24 +4154,26 @@ root   home  nix  persist  log  lib  ...
 <pre><code class="language-bash">sudo btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
 </code></pre>
 <ol start="5">
+<li>Verify Your Blank Snapshot:</li>
+</ol>
+<p>Before continuing, make sure your blank snapshot exists. This is crucial for
+impermanence to work properly.</p>
+<pre><code class="language-bash">sudo btrfs subvolume list /mnt
+</code></pre>
+<p>You should see output containing both <code>root</code> and <code>root-blank</code> subvolumes:</p>
+<pre><code class="language-bash">ID 256 gen ... path root
+ID 257 gen ... path root-blank
+</code></pre>
+<p>Check that the snapshot is read only, this ensures that our snapshot will remain
+the same as the day we took it. It was set <code>ro</code> in disko but lets check anyways:</p>
+<pre><code class="language-bash">sudo btrfs property get -ts /mnt/root-blank
+# output should be
+ro=true
+</code></pre>
+<ol start="5">
 <li>Make sure to unmount:</li>
 </ol>
 <pre><code class="language-bash">sudo umount /mnt
-</code></pre>
-<h2 id="persisting-critical-system-state"><a class="header" href="#persisting-critical-system-state">Persisting Critical System State</a></h2>
-<p>The following is a one time operation, we're just getting it out of the way now.
-This moves all of the important system state to a persistant location, further
-preparing for impermanence.</p>
-<pre><code class="language-bash">sudo mkdir -p /persist/etc
-sudo mkdir -p /persist/var/lib
-sudo mkdir -p /persist/var/log
-sudo mkdir -p /persist/home
-sudo mkdir -p /persist/root
-sudo cp -a /etc/. /persist/etc/
-sudo cp -a /var/lib/. /persist/var/lib
-sudo cp -a /var/log/. /persist/var/log
-sudo cp -a /home/. /persist/home/
-sudo cp -a /root/. /persist/root/
 </code></pre>
 <h2 id="setting-up-zram-and-tmp-on-ram"><a class="header" href="#setting-up-zram-and-tmp-on-ram">Setting up zram and /tmp on RAM</a></h2>
 <p>While <code>/tmp</code> is handled by <code>tmpfs</code> (as shown the below <code>configuration.nix</code>), you
@@ -4437,13 +4440,39 @@ privilege escalation.</p>
 </ul>
 <pre><code class="language-bash">sudo btrfs subvolume list /
 </code></pre>
+<h2 id="persisting-critical-system-state"><a class="header" href="#persisting-critical-system-state">Persisting Critical System State</a></h2>
+<p>The following is a one time operation, we're just getting it out of the way now.
+This moves all of the important system state to a persistant location, further
+preparing for impermanence.</p>
+<p>It's essential that you have first run the <code>nixos-install</code> command to populate
+these directories before copying them over.</p>
+<pre><code class="language-bash">sudo mkdir -p /mnt/persist/etc
+sudo mkdir -p /mnt/persist/var/lib
+sudo mkdir -p /mnt/persist/var/log
+sudo mkdir -p /mnt/persist/home
+sudo mkdir -p /mnt/persist/root
+sudo cp -a /mnt/etc/. /mnt/persist/etc/
+sudo cp -a /mnt/var/lib/. /mnt/persist/var/lib
+sudo cp -a /mnt/var/log/. /mnt/persist/var/log
+sudo cp -a /mnt/home/. /mnt/persist/home/
+sudo cp -a /mnt/root/. /mnt/persist/root/
+</code></pre>
+<p>Since we are in a live environment, after the install and reboot the <code>/mnt</code>
+prefix will be removed.</p>
+<h2 id="reboot"><a class="header" href="#reboot">Reboot</a></h2>
+<p>Now that everything is done, we can safely reboot and ensure that our LUKS
+password/passphrase is accepted as well as our userlevel password and username.</p>
+<p>After reboot, you can continue to setup
+<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a>
+and
+<a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Lanzaboote Secure Boot</a></p>
 <ul>
-<li>
-<p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
-</li>
 <li>
 <p>To set up impermanence for this specific layout, follow the link
 <a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
+</li>
+<li>
+<p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
 </li>
 <li>
 <p><a href="https://www.freedesktop.org/software/systemd/man/latest/systemd-cryptenroll.html">systemd-cryptenroll man page</a></p>
@@ -4732,15 +4761,18 @@ keyfile to a USB stick with existing data on it that you don't want to lose.</p>
 <pre><code class="language-bash"># cryptsetup works for both LUKS1 and LUKS2 formats but doesn't work for
 # TPM2, FIDO2, and smartcards
 sudo cryptsetup luksAddKey /dev/disk/by-partlabel/luks /root/usb-luks.key
-# OR the following has support for TPM2, FIDO2, and smartcards
-sudo systemd-cryptenroll /dev/disk/by-partlabel/luks --key-file=/root/usb-luks.key
 </code></pre>
 <blockquote>
-<p>❗ Use <code>cryptsetup luksAddKey</code> for traditional setups or if you're using
-LUKS1.</p>
-<p>❗ Use <code>systemd-cryptenroll</code> if you want to leverage features like TPM2
-binding or FIDO2 tokens and your volume is LUKS2.</p>
+<p>❗ NOTE: I discovered that you can only enroll your key with <code>cryptenroll</code> if
+you are using version 258 of systemd. You can check your version with:</p>
+<pre><code class="language-bash">systemctl --version
+ systemd 257 (257.6)
+</code></pre>
+<ul>
+<li>Unfortunately <code>nixos-unstable</code> isn't there yet so <code>cryptsetup</code> is required.</li>
+</ul>
 </blockquote>
+<p><strong>Description</strong></p>
 <ul>
 <li>
 <p><code>/dev/disk/by-partlabel/luks</code> refers to your encrypted partition by its
@@ -4762,7 +4794,8 @@ keyfile (from the USB stick) for unlocking.</p>
 <ol>
 <li><strong>Clear Data on USB stick and replace with 0's</strong></li>
 </ol>
-<pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+<pre><code class="language-bash">lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
 sda           8:0    1   239M  0 disk
 sdb           8:16   1   1.4M  0 disk  /run/media/jr/7CD1-149A # Example USB mount
 zram0       253:0    0   7.5G  0 disk  [SWAP]

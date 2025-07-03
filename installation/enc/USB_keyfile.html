@@ -190,15 +190,18 @@ keyfile to a USB stick with existing data on it that you don't want to lose.</p>
 <pre><code class="language-bash"># cryptsetup works for both LUKS1 and LUKS2 formats but doesn't work for
 # TPM2, FIDO2, and smartcards
 sudo cryptsetup luksAddKey /dev/disk/by-partlabel/luks /root/usb-luks.key
-# OR the following has support for TPM2, FIDO2, and smartcards
-sudo systemd-cryptenroll /dev/disk/by-partlabel/luks --key-file=/root/usb-luks.key
 </code></pre>
 <blockquote>
-<p>❗ Use <code>cryptsetup luksAddKey</code> for traditional setups or if you're using
-LUKS1.</p>
-<p>❗ Use <code>systemd-cryptenroll</code> if you want to leverage features like TPM2
-binding or FIDO2 tokens and your volume is LUKS2.</p>
+<p>❗ NOTE: I discovered that you can only enroll your key with <code>cryptenroll</code> if
+you are using version 258 of systemd. You can check your version with:</p>
+<pre><code class="language-bash">systemctl --version
+ systemd 257 (257.6)
+</code></pre>
+<ul>
+<li>Unfortunately <code>nixos-unstable</code> isn't there yet so <code>cryptsetup</code> is required.</li>
+</ul>
 </blockquote>
+<p><strong>Description</strong></p>
 <ul>
 <li>
 <p><code>/dev/disk/by-partlabel/luks</code> refers to your encrypted partition by its
@@ -220,7 +223,8 @@ keyfile (from the USB stick) for unlocking.</p>
 <ol>
 <li><strong>Clear Data on USB stick and replace with 0's</strong></li>
 </ol>
-<pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+<pre><code class="language-bash">lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
 sda           8:0    1   239M  0 disk
 sdb           8:16   1   1.4M  0 disk  /run/media/jr/7CD1-149A # Example USB mount
 zram0       253:0    0   7.5G  0 disk  [SWAP]
