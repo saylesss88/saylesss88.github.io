@@ -182,35 +182,25 @@
 </ul>
 </details>
 <p><strong>NixOS specialisations</strong> are a powerful feature that allow you to define
-alternative system configurations—variations—within a single NixOS setup. Each
+alternative system configurations variations within a single NixOS setup. Each
 specialisation can modify or extend the base configuration, and NixOS will
 generate separate boot entries for each, letting you choose at boot time (or
 switch at runtime) which environment to use. This is ideal for testing,
 hardware-specific tweaks, or separating work and personal environments without
 maintaining multiple configuration files</p>
 <h2 id="how-specialisations-work"><a class="header" href="#how-specialisations-work">How Specialisations Work</a></h2>
-<ul>
-<li>
-<p>Specialisations are defined as attributes under the specialisation option in
+<p>Specialisations are defined as attributes under the <code>specialisation</code> option in
 your configuration. Each key (e.g., <code>niri-test</code>) represents a named
 specialisation, and its configuration attribute contains the NixOS options to
 apply on top of the base system</p>
-</li>
-<li>
-<p>Inheritance: By default, a specialisation inherits the parent configuration
-and applies its changes on top. You can also set
-<code>inheritParentConfig = false;</code> to create a completely separate configuration</p>
-</li>
-<li>
-<p>Boot Integration: After running <code>nixos-rebuild boot</code>, your bootloader will
-present extra entries for each specialisation. Selecting one boots into the
-system with that specialisation's settings applied</p>
-</li>
-<li>
+<p>By default, a specialisation inherits the parent configuration and applies its
+changes on top. You can also set <code>inheritParentConfig = false;</code> to create a
+completely separate configuration.</p>
+<p>After running <code>nixos-rebuild boot</code>, your bootloader will present extra entries
+for each specialisation. Selecting one boots into the system with that
+specialisation's settings applied</p>
 <p>Runtime Switching: You can switch to a specialisation at runtime using
 activation scripts, e.g.:</p>
-</li>
-</ul>
 <pre><code class="language-bash">nixos-rebuild switch --specialisation niri-test
 </code></pre>
 <p>or</p>
@@ -220,10 +210,8 @@ activation scripts, e.g.:</p>
 <p>Note: Some changes (like kernel switches) require a reboot to take effect</p>
 </blockquote>
 <p>Example: Let's create a basic specialisation to try out the Niri Window Manager:</p>
-<ul>
-<li>First we have to add the <code>niri-flake</code> as an input to our <code>flake.nix</code> and add
-the module to install it:</li>
-</ul>
+<p>First we have to add the <code>niri-flake</code> as an input to our <code>flake.nix</code> and add the
+module to install it:</p>
 <pre><code class="language-nix"># flake.nix
 inputs = {
      niri.url = "github:sodiboo/niri-flake";
@@ -236,6 +224,7 @@ imports = [
     inputs.niri.nixosModules.niri
 ];
 
+# This is the top-level overlay
   nixpkgs.overlays = [inputs.niri.overlays.niri];
 
 # ... snip ...
@@ -305,27 +294,13 @@ imports = [
   };
 }
 </code></pre>
-<ul>
-<li>
-<p>I chose to use the nightly version so it was required to add the overlay at
-the top-level as well as inside the specialisation block.</p>
-</li>
-<li>
-<p>In my case running <code>sudo nixos-rebuild boot --flake .</code> took forever, first
-running <code>sudo nixos-rebuild switch</code> helped.</p>
-</li>
-</ul>
-<blockquote>
-<p>❗ NOTE: To be clear, to use Niri in a specialisation you need to:</p>
-<ul>
-<li>Add the Niri flake as an input to your <code>flake.nix</code>.</li>
-<li>Import the Niri module and overlay in your <code>configuration.nix</code>.</li>
-<li>Enable Niri (<code>programs.niri.enable = true;</code>) and set the desired package
-inside the specialisation block.</li>
-<li>If you want to use Niri system-wide (in all boot entries), enable it in the
-top-level config instead. (i.e. outside of the specialisation block).</li>
-</ul>
-</blockquote>
+<p>I chose to use the nightly version so it was required to add the overlay at the
+top-level as well as inside the specialisation block.</p>
+<p>On my system it sped up build times to first run:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake .
+# And Then Run
+sudo nixos-rebuild boot --flake .
+</code></pre>
 <p><strong>What this does</strong>:</p>
 <ul>
 <li>
@@ -370,18 +345,12 @@ session, use:</p>
 <p>Reboot if needed: Most changes apply immediately, but some (like kernel or
 initrd changes) require a reboot for the specialisation to fully take effect</p>
 <p><strong>Tip</strong>:</p>
-<ul>
-<li>
 <p>Each specialisation can have its own set of installed programs. Only those
-listed in the environment.systemPackages (or enabled via modules) inside the
-specialisation block will be available when you boot into that context.</p>
-</li>
-<li>
-<p>You manage and update your specialisation just like your main NixOS system—no
+listed in the <code>environment.systemPackages</code> (or enabled via modules) inside the
+<code>specialisation</code> block will be available when you boot into that context.</p>
+<p>You manage and update your specialisation just like your main NixOS system no
 special commands or workflow are required beyond specifying the specialisation
 when rebuilding or switching.</p>
-</li>
-</ul>
 <h2 id="use-cases-for-specialisations"><a class="header" href="#use-cases-for-specialisations">Use Cases for Specialisations</a></h2>
 <ul>
 <li>
@@ -406,6 +375,9 @@ isolated setups</p>
 </li>
 </ul>
 <h2 id="securely-separated-contexts-with-nixos-specialisations"><a class="header" href="#securely-separated-contexts-with-nixos-specialisations">Securely Separated Contexts with NixOS Specialisations</a></h2>
+<p>I will just explain it here for completeness, if you want to implement this I
+recommend following:</p>
+<p><a href="https://www.tweag.io/blog/2022-11-01-hard-user-separation-with-nixos/">Tweag Hard User Separation with NixOS</a></p>
 <details>
 <summary> ✔️ Click To Expand Section on Separate Contexts </summary>
 <p>If you use the same computer in different contexts such as for work and for your
@@ -511,14 +483,20 @@ greetd setup for my main configuration as well.</p>
 </ul>
 <pre><code class="language-nix">config = lib.mkIf (config.specialisation != {}) { ... }
 </code></pre>
-<p>This ensures those settings aren't inherited by specialisations</p>
 <ul>
 <li>
-<p>Runtime Limitations: Not all changes (e.g., kernel or initrd) can be fully
-applied at runtime; a reboot is required for those</p>
+<p>This condition checks if you're in a specialisation.</p>
 </li>
 <li>
-<p>Modularity: Specialisations work well with modular NixOS configs—keep
+<p>Any settings inside this block will <strong>not</strong> be inherited by specialisations,
+keeping them exclusive to the main system.</p>
+</li>
+<li>
+<p>Runtime Limitations: Not all changes (e.g., kernel or <code>initrd</code>) can be fully
+applied at runtime; a reboot is required for those.</p>
+</li>
+<li>
+<p>Modularity: Specialisations work well with modular NixOS configs keep
 hardware, user, and service configs in separate files for easier management</p>
 </li>
 </ul>

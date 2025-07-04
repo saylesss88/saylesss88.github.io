@@ -188,6 +188,8 @@ continue with step 1.</p>
   -L --no-link --print-out-paths \
   --override-input flake path/to/flake | cachix push &lt;name&gt;
 </code></pre>
+<pre><code class="language-bash">nix-shell -p cachix
+</code></pre>
 <p>This will push all flake outputs to cachix if you have a valid authentication
 token and have created a cache already.</p>
 <p>How to Use devour-flake with Cachix</p>
@@ -208,14 +210,26 @@ command:</p>
 cachix use &lt;your-cache-name&gt;
 </code></pre>
 <ul>
-<li>
-<p><code>cachix use</code> adds your substitutors and trusted-public-keys to your
-<code>~/.config/nix/nix.conf</code> and creates one if it doesn't exist.</p>
-</li>
-<li>
-<p>For the Flake way of doing things you would create something like the
-following:</p>
-</li>
+<li><code>cachix use</code> adds your substitutors and trusted-public-keys to your
+<code>~/.config/nix/nix.conf</code> and creates one if it doesn't exist.</li>
+</ul>
+<p><strong>Push All Flake Inputs to Cachix</strong></p>
+<p>Replace <code>&lt;mycache&gt;</code> with the name of the cache you just created.</p>
+<pre><code class="language-bash">nix flake archive --json \
+  | jq -r '.path,(.inputs|to_entries[].value.path)' \
+  | cachix push &lt;mycache&gt;
+</code></pre>
+<p><strong>Push the Entire /nix/store</strong></p>
+<pre><code class="language-bash">nix path-info --all | cachix push &lt;mycache&gt;
+</code></pre>
+<p><strong>Pushing shell environment</strong></p>
+<pre><code class="language-bash">nix develop --profile dev-profile -c true
+# then run
+cachix push &lt;mycache&gt; dev-profile
+</code></pre>
+<ul>
+<li>For the Flake way of doing things you would create something like the
+following:</li>
 </ul>
 <pre><code class="language-nix">{
   config,
@@ -265,7 +279,7 @@ in {
 </code></pre>
 <ul>
 <li>
-<p>The sayls88 entries are my custome cache. To find your trusted key go to the
+<p>The sayls88 entries are my custom cache. To find your trusted key go to the
 cachix website, click on your cache and it is listed near the top.</p>
 </li>
 <li>
