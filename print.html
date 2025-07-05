@@ -2191,6 +2191,57 @@ configuration, always use a secrets management tool like sops-nix or agenix to
 keep sensitive data safe. See the
 <a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops-Nix Guide</a>
 for details.</p>
+<p>It's also important to understand that <strong>all files in the <code>/nix/store</code> are
+world-readable by default</strong> This has important security implications for anyone
+managing sensitive data on a NixOS system.</p>
+<p>What Does "World-Readable" Mean?</p>
+<ul>
+<li>
+<p>All files in /nix/store are readable by any user on the sytem.</p>
+</li>
+<li>
+<p>This is by design, the nix store is intended to be shared, immutable store of
+all packages and configuration files.</p>
+</li>
+<li>
+<p>Permissions are typically set to <code>r-xr-xr-x</code>(read and execute for everyone)</p>
+</li>
+</ul>
+<p><strong>Security Implications</strong></p>
+<ul>
+<li>
+<p>Never store secrets or sensitive data in plane text in the Nix store.</p>
+</li>
+<li>
+<p>If you include secrets directly in your configuration, they will end up in the
+<code>/nix/store</code> and be accessible to any user or process on the system.</p>
+</li>
+<li>
+<p>This applies to files, environment variables, and any data embedded in
+derivations.</p>
+</li>
+</ul>
+<p><strong>Best Practices</strong></p>
+<ul>
+<li>
+<p>Always use a secrets management tool (like <code>sops-nix</code> or <code>agenix</code>) that
+decrypts secrets at activation time and stores them outside the Nix store,
+with restricted permissions.</p>
+</li>
+<li>
+<p>Do not embed secrets directly in Nix expressions or configuration files that
+will be build into the store.</p>
+</li>
+<li>
+<p>Even hashed passwords can be vulnerable when stored in a public repository, be
+conscious of what you store where.</p>
+</li>
+<li>
+<p>If you’re unsure about what’s safe to share, start with a private repository.
+This gives you time to learn about secrets management and review your
+configuration before making anything public.</p>
+</li>
+</ul>
 <p>First, I'll breefly explain some of the limitations of NixOS Rollbacks and then
 I'll go into how Git compliments them.</p>
 <h2 id="limitations-of-nixos-rollbacks"><a class="header" href="#limitations-of-nixos-rollbacks">Limitations of NixOS Rollbacks</a></h2>
