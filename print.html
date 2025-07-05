@@ -2385,6 +2385,7 @@ imply that the repository is somewhere else, only that it's elsewhere.</p>
 <li>The name <code>origin</code> is just a convention, it's not special. It is automatically
 set when you clone a repo.</li>
 </ul>
+<p><img src="vcs/../images/git_local-remote.png" alt="git local remote" /></p>
 <p><strong>Local</strong> is your local copy of the repository, git tracks the differences
 between <strong>local</strong> and <strong>remote</strong> which is a repo hosted elsewhere (e.g., GitHub
 GitLab etc.)</p>
@@ -2426,6 +2427,7 @@ time.</li>
 </ul>
 </li>
 </ul>
+<p><img src="vcs/../images/git-add-commit.png" alt="git commit add" /></p>
 <ol start="2">
 <li>Make and Track Changes:</li>
 </ol>
@@ -2702,6 +2704,7 @@ equivalent.</p>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="vcs/jujutsu.html#introduction">Introduction</a></li>
 <li><a href="vcs/jujutsu.html#what-is-the-jujutsu-working-copy">What is the Jujutsu Working Copy</a></li>
 <li><a href="vcs/jujutsu.html#example-jj-module">Example JJ Module</a></li>
 <li><a href="vcs/jujutsu.html#issues-ive-noticed">Issues I've Noticed</a></li>
@@ -2720,7 +2723,8 @@ equivalent.</p>
 <li><a href="vcs/jujutsu.html#operation-log-and-undo">Operation Log and Undo</a></li>
 <li><a href="vcs/jujutsu.html#conflict-resolution">Conflict Resolution</a></li>
 <li><a href="vcs/jujutsu.html#revsets">Revsets</a></li>
-<li><a href="vcs/jujutsu.html#filesets">Filesets</a>
+<li><a href="vcs/jujutsu.html#filesets">Filesets</a></li>
+<li><a href="vcs/jujutsu.html#summary">Summary</a>
 <ul>
 <li><a href="vcs/jujutsu.html#resources">Resources</a></li>
 </ul>
@@ -2746,6 +2750,109 @@ or <code>man jj</code>, <code>man jj git init</code>.</p>
 <p>❗ Pro Tip: Set the environment variable <code>export MANPAGER='nvim +Man!'</code> in
 your shell config to use Neovim as your manpager.</p>
 </blockquote>
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>Jujutsu (jj) is a modern, Git-compatible version control system designed to
+simplify and improve the developer experience. It offers a new approach to
+distributed version control, focusing on a more intuitive workflow, powerful
+undo capabilities, and a branchless model that reduces common pitfalls of Git.</p>
+<p><strong>Key Concepts</strong></p>
+<ol>
+<li>Working Copy as Commit</li>
+</ol>
+<ul>
+<li>
+<p>In JJ your working copy is always a real commit. Any changes you make are
+automatically recorded in this working commit.</p>
+</li>
+<li>
+<p>There is <strong>no staging area</strong> (index) as in Git. You do not need to run
+<code>git add</code> or <code>git commit</code> for every change. Modifications are always tracked
+in the current commit.</p>
+</li>
+</ul>
+<ol start="2">
+<li>Branchless Workflow and Bookmarks</li>
+</ol>
+<ul>
+<li>
+<p>JJ does not have the concept of a "current branch." Instead, it uses
+bookmarks, which are named pointers to specific commits.</p>
+</li>
+<li>
+<p>Bookmarks do not move automatically. You must explicitly move a bookmark
+(e.g., <code>main</code>) to your latest commit before pushing. You do this with
+<code>jj bookmark set main</code> or <code>jj bookmark set master</code></p>
+</li>
+<li>
+<p>Only commits referenced by bookmarks are pushed to remotes, preventing
+accidental sharing of unfinished work.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Automatic Tracking and Simpler Workflow</li>
+</ol>
+<ul>
+<li>
+<p>Adding or removing files is automatically tracked, no need for explicit <code>add</code>
+or <code>rm</code> commands.</p>
+</li>
+<li>
+<p>The working copy acts as a live snapshot of your workspace. Commands first
+sync filesystem changes into this commit, then perform the requested
+operation, and finally update the working copy if needed.</p>
+</li>
+</ul>
+<ol start="4">
+<li>Operation Log and Undo</li>
+</ol>
+<ul>
+<li>
+<p>JJ records every operation (commits, merges, rebases, etc.) in an <strong>operation
+log</strong>.</p>
+</li>
+<li>
+<p>You can view and undo any previous operation, not just the most recent one,
+making it easy to recover from mistakes, a feature not present in Git’s core
+CLI.</p>
+</li>
+</ul>
+<ol start="5">
+<li>First-Class Conflict Handling</li>
+</ol>
+<ul>
+<li>
+<p>Conflicts are stored inside commits, not just in the working directory. You
+can resolve them at any time, not just during a merge or rebase.</p>
+</li>
+<li>
+<p>Conflict markers are inserted directly into files, and JJ can reconstruct the
+conflict state from these markers. You can resolve conflicts by editing the
+files or using <code>jj resolve</code>.</p>
+</li>
+</ul>
+<ol start="6">
+<li>Revsets and Filesets</li>
+</ol>
+<ul>
+<li>
+<p><strong>Revsets</strong>: JJ's powerful query language for selecting sets of commits,
+inspired by Mercurial. For example, <code>jj log -r "author(alice) &amp; file(*.py)"</code>
+lists all commits by Alice that touch Python files.</p>
+</li>
+<li>
+<p><strong>Filesets</strong>:JJ supports a functional language for selecting sets of files,
+allowing advanced file-based queries and operations.</p>
+</li>
+</ul>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Git</th><th style="text-align: left">Jujutsu (jj)</th></tr></thead><tbody>
+<tr><td style="text-align: left">Staging Area</td><td style="text-align: left">Yes (git add/index)</td><td style="text-align: left">No, working copy is always a commit</td></tr>
+<tr><td style="text-align: left">Commit Workflow</td><td style="text-align: left">Stage → Commit</td><td style="text-align: left">All changes auto-recorded in working commit</td></tr>
+<tr><td style="text-align: left">Branches</td><td style="text-align: left">Central to workflow</td><td style="text-align: left">Optional, bookmarks used for sharing</td></tr>
+<tr><td style="text-align: left">Undo/Redo</td><td style="text-align: left">Limited, complex</td><td style="text-align: left">Easy, operation log for undo</td></tr>
+<tr><td style="text-align: left">Conflict Handling</td><td style="text-align: left">Manual, can be confusing</td><td style="text-align: left">Conflicts tracked in commits, easier to fix</td></tr>
+<tr><td style="text-align: left">Integration with Git</td><td style="text-align: left">Native</td><td style="text-align: left">Fully compatible, can switch back anytime</td></tr>
+</tbody></table>
+</div>
 <p>If you haven't taken the time to deep dive Git, it may be a good time to learn
 about a new way of doing Version Control that is actually less complex and
 easier to mentally map out in my opinion.</p>
@@ -2775,7 +2882,15 @@ performs the requested operation, and finally updates the working copy if needed
 <p>To finalize your current changes and start a new set of changes, you use the
 <code>jj new</code> command, which creates a new working-copy commit on top of the current
 one. This replaces the traditional Git workflow of staging and committing
-changes separately</p>
+changes separately. When you run <code>jj new</code> you will be in what Git would call a
+detached HEAD, and that's jujustu's standard state. You make your changes in a
+commit that isn't associated with a branch since JJ is designed for a branchless
+workflow and you have to be more explicit about where you want to push those
+changes. This is a safety feature to prevent you from sharing the wrong thing to
+the wrong location, when you are ready to push your changes you tell JJ by
+running <code>jj bookmark set main</code>, this lets JJ know that you are aware and want to
+push to the main branch. After this you can run <code>jj git push</code> to push from your
+local <code>main</code> branch to your remote <code>main</code>.</p>
 <p>Conflicts in the working copy are represented by inserting conflict markers
 directly into the files. Jujutsu tracks the conflicting parts and can
 reconstruct the conflict state from these markers. You resolve conflicts by
@@ -2880,6 +2995,7 @@ in {
 is enabled from a single, centralized place within my Nix configuration. So only
 if jj is enabled, <code>lazyjj</code> and <code>meld</code> will be installed.</p>
 <h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
+<p><img src="vcs/../images/jj2.png" alt="jj tree" /></p>
 <p>I have run into a few issues, such as every flake command reloading every single
 input every time. <strong>What I mean by this is what you see when you run a flake
 command for the first time, it adds all of your flakes inputs.</strong> I believe the
@@ -3258,6 +3374,12 @@ using:</p>
 <p>Jujutsu supports a functional language for selecting a set of files. Expressions
 in this language are called "filesets" (the idea comes from Mercurial). The
 language consists of file patterns, operators, and functions. --JJ Docs</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Jujutsu (jj) offers a streamlined, branchless, and undo-friendly approach to
+version control, fully compatible with Git but designed to be easier to use and
+reason about. Its workflows, operation log, and conflict handling provide a
+safer and more flexible environment for managing code changes, making it a
+compelling alternative for both new and experienced developers.</p>
 <hr />
 <h3 id="resources-3"><a class="header" href="#resources-3">Resources</a></h3>
 <ul>
@@ -13096,7 +13218,7 @@ Use `lib.mkForce value` or `lib.mkDefault value` to change the priority on any o
 shell returned 1
 </code></pre>
 </details>
-<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<h2 id="summary-1"><a class="header" href="#summary-1">Summary</a></h2>
 <ul>
 <li>
 <p>So types in the module system aren't just types in the conventional sense
