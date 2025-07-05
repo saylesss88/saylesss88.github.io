@@ -359,6 +359,73 @@ happen when you move your flake from one location to another.</p>
 <code>nix flake lock --recreate-lock-file</code> still works but is being depreciated.</p>
 <p>Sometimes the auto staging doesn't pick up the changes in your configuration so
 rebuilding changes nothing, this has been more rare but happens occasionally.</p>
+<p>One of the most fundamental differences between Jujutsu and Git is how pushing
+works. If you’re coming from Git, it’s important to understand this shift so you
+don’t get tripped up by “nothing happened” warnings or missing changes on your
+remote.</p>
+<ul>
+<li>
+<p>In Git, you're always "on" a branch (e.g., <code>main</code>).</p>
+</li>
+<li>
+<p>When you make a commit, the branch pointer automatically moves forward.</p>
+</li>
+<li>
+<p><code>git push</code> pushes the current branch's new commits to the remote.</p>
+</li>
+<li>
+<p>If you forget to switch branches, you might accidentally push to the wrong
+place, but you rarely have to think about "moving" the branch pointer
+yourself.</p>
+</li>
+</ul>
+<p>The JJ Push Model</p>
+<ul>
+<li>
+<p>JJ has no concept of a "currrent branch"</p>
+</li>
+<li>
+<p>Bookmarks do not move automatically. When you make a new commit, the bookmark
+(e.g., <code>main</code>) stays where it was. You must explicitly move it to your new
+commit with <code>jj bookmark set main</code> (or create a new one).</p>
+</li>
+<li>
+<p>JJ only pushes commits that are referenced by bookmarks. If your latest work
+isn't pointed to by a bookmark, <code>jj git push</code> will do nothing and warn you.
+This is to prevent accidental pushes and gives you more control over what gets
+shared.</p>
+</li>
+</ul>
+<p>Typical JJ Push Workflow</p>
+<ol>
+<li>
+<p>Do your work, make changes, describe them, and create new commits as needed.</p>
+</li>
+<li>
+<p>Move a bookmark to your latest commit:</p>
+</li>
+</ol>
+<pre><code class="language-bash">jj bookmark set main
+</code></pre>
+<p>or create a new bookmark:</p>
+<pre><code class="language-bash">jj bookmark create feature-x
+</code></pre>
+<ol start="3">
+<li>Push the bookmark:</li>
+</ol>
+<pre><code class="language-bash">jj git push
+</code></pre>
+<p>or push a specific bookmark, or all bookmarks:</p>
+<pre><code class="language-bash">jj git push --bookmark main
+jj git push --all
+</code></pre>
+<p>If you forget to move a bookmark, JJ will warn you and nothing will be pushed.
+This is a safety feature, not a bug. That's what the <code>upmain</code> alias does, moves
+the bookmark to <code>main</code>.</p>
+<p>This is a bit different than Git and takes some getting used to but you don't
+need to move the bookmark after every commit, just when you want to push. I know
+I've made the mistake of pushing to the wrong branch before this should prevent
+that.</p>
 <h2 id="heres-an-example-of-using-jj-in-an-existing-git-repo"><a class="header" href="#heres-an-example-of-using-jj-in-an-existing-git-repo">Here's an example of using JJ in an existing Git repo</a></h2>
 <p>Say I have my configuration flake in the <code>~/flakes/</code> directory that is an
 existing Git repository. To use JJ as the front-end I could do something like:</p>
