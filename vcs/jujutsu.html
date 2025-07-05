@@ -248,7 +248,8 @@ bookmarks, which are named pointers to specific commits.</p>
 <li>
 <p>Bookmarks do not move automatically. You must explicitly move a bookmark
 (e.g., <code>main</code>) to your latest commit before pushing. You do this with
-<code>jj bookmark set main</code> or <code>jj bookmark set master</code></p>
+<code>jj bookmark set main</code> or <code>jj bookmark set master</code>. The FAQ mentions using
+<code>jj bookmark move</code>.</p>
 </li>
 <li>
 <p>Only commits referenced by bookmarks are pushed to remotes, preventing
@@ -463,6 +464,8 @@ is enabled from a single, centralized place within my Nix configuration. So only
 if jj is enabled, <code>lazyjj</code> and <code>meld</code> will be installed.</p>
 <h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
 <p><img src="../images/jj2.png" alt="jj tree" /></p>
+<p>Pushing to remote has been the biggest pain point so far, the branchless
+paradigm with gits branch centric flow causes you to be conscious of this fact.</p>
 <p>I have run into a few issues, such as every flake command reloading every single
 input every time. <strong>What I mean by this is what you see when you run a flake
 command for the first time, it adds all of your flakes inputs.</strong> I believe the
@@ -510,7 +513,41 @@ This is to prevent accidental pushes and gives you more control over what gets
 shared.</p>
 </li>
 </ul>
-<p>Typical JJ Push Workflow</p>
+<p><strong>Typical JJ Push Workflow</strong></p>
+<ol>
+<li>Check out where your working copy and Parent commit are:</li>
+</ol>
+<pre><code class="language-bash">jj st
+Working copy changes:
+M README.md
+Working copy  (@) : mnkrokmt 7f0558f8 say hello and goodbye
+Parent commit (@-): ywyvxrts 986d16f5 main | test3
+</code></pre>
+<ul>
+<li>We can see that <code>ywy</code> is the <code>main</code> branch so lets create our change on top of
+that.</li>
+</ul>
+<pre><code class="language-bash">jj new ywy
+Working copy  (@) now at: kxwrsmmu bc7e8144 (empty) (no description set)
+Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
+Added 0 files, modified 1 files, removed 0 files
+jj desc kxw -m "Add a devShell"
+Working copy  (@) now at: kxwrsmmu eacafd73 (empty) Add a devShell
+Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
+</code></pre>
+<p>Make some changes</p>
+<pre><code class="language-bash">jj st
+Working copy changes:
+A dev/flake.lock
+A dev/flake.nix
+Working copy  (@) : kxwrsmmu 42b011cd Add a devShell
+Parent commit (@-): ywyvxrts 986d16f5 main | test3
+</code></pre>
+<p>Now I'm done, and since we built this change on top of <code>main</code> the following
+command will tell jj we know what we want to push:</p>
+<pre><code class="language-bash">jj bookmark set main
+jj git push
+</code></pre>
 <ol>
 <li>
 <p>Do your work, make changes, describe them, and create new commits as needed.</p>
@@ -710,6 +747,22 @@ empty commit is created on top, ready for the next set of changes.</p>
 <p>We're still in the nameless commit and can either continue working or run
 <code>jj desc -m ""</code> again describing our new change, then <code>jj new</code> and <code>jj squash</code>
 it's pretty simple. The nameless commit is used as an adhoc staging area.</p>
+<p>When you are ready to push, it's important to know where your working copy
+currently is and if it's attached to a bookmark. It's common for <code>jj new</code> to
+detach the head, all you have to do is tell JJ which branch to attach to, then
+push:</p>
+<pre><code class="language-bash">jj st
+Working copy changes:
+M hosts/magic/configuration.nix
+M hosts/magic/container.nix
+Working copy  (@) : youptvvn 988e6fc9 (no description set)
+Parent commit (@-): qlwqromx 4bb754fa mdbook container
+</code></pre>
+<p>The above output means that the working copy has modifications (<code>M</code>) in two
+files. And these changes are not yet committed.</p>
+<pre><code class="language-bash">jj bookmark set main
+jj git push
+</code></pre>
 <hr />
 <h3 id="the-edit-workflow"><a class="header" href="#the-edit-workflow">The Edit Workflow</a></h3>
 <p>This workflow adds a few new commands <code>jj edit</code>, and <code>jj next</code>.</p>
