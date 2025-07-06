@@ -2745,17 +2745,15 @@ recommended in the official JJ docs as a more up to date intro.</p>
 <p>After installing JJ you can run <code>jj help -k tutorial</code>, for the official guide in
 a pager but like I said Steve's guide is more up to date.</p>
 <p>You can find help for nearly every command with the command followed by <code>--help</code>
-or <code>man jj</code>, <code>man jj git init</code>.</p>
-<blockquote>
-<p>❗ Pro Tip: Set the environment variable <code>export MANPAGER='nvim +Man!'</code> in
-your shell config to use Neovim as your manpager.</p>
-</blockquote>
+(e.g., <code>jj git init --help</code>, <code>jj git push --help</code>)</p>
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
 <p>Jujutsu (jj) is a modern, Git-compatible version control system designed to
 simplify and improve the developer experience. It offers a new approach to
 distributed version control, focusing on a more intuitive workflow, powerful
 undo capabilities, and a branchless model that reduces common pitfalls of Git.</p>
 <p><strong>Key Concepts</strong></p>
+<details>
+<summary> ✔️ Click to Expand Key Concepts </summary>
 <ol>
 <li>Working Copy as Commit</li>
 </ol>
@@ -2869,6 +2867,7 @@ actual commit. When you make changes to files, these changes are automatically
 recorded to the working commit. There's no need to explicitly stage changes
 because they are already part of the commit that represents your current working
 state.</p>
+</details>
 <p><strong>Simplified Workflow</strong></p>
 <pre><code class="language-bash"># Make some changes and commit them
 jj new main
@@ -2908,6 +2907,8 @@ done for you. This is handy with flakes by preventing a "dirty working tree"
 and can instantly be rebuilt after making a change.</li>
 </ul>
 <h2 id="example-jj-module"><a class="header" href="#example-jj-module">Example JJ Module</a></h2>
+<details>
+<summary> ✔️ Click to Expand JJ home-manager module example </summary>
 <ul>
 <li>For <code>lazygit</code> fans, Nixpkgs has <code>lazyjj</code>. I've seen that it's recommended to
 use jj with <code>meld</code>. I'll share my <code>jj.nix</code> here for an example:</li>
@@ -3001,10 +3002,9 @@ in {
 <p>The <code>custom.jj</code> module allows me to override the username, email, and whether jj
 is enabled from a single, centralized place within my Nix configuration. So only
 if jj is enabled, <code>lazyjj</code> and <code>meld</code> will be installed.</p>
+</details>
 <h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
 <p><img src="vcs/../images/jj2.png" alt="jj tree" /></p>
-<p>Pushing to remote has been the biggest pain point so far, the branchless
-paradigm with gits branch centric flow causes you to be conscious of this fact.</p>
 <p>I have run into a few issues, such as every flake command reloading every single
 input every time. <strong>What I mean by this is what you see when you run a flake
 command for the first time, it adds all of your flakes inputs.</strong> I believe the
@@ -3035,15 +3035,15 @@ place, but you rarely have to think about "moving" the branch pointer
 yourself.</p>
 </li>
 </ul>
-<p>The JJ Push Model</p>
+<p><strong>The JJ Push Model</strong></p>
 <ul>
 <li>
 <p>JJ has no concept of a "currrent branch"</p>
 </li>
 <li>
-<p>Bookmarks do not move automatically. When you make a new commit, the bookmark
-(e.g., <code>main</code>) stays where it was. You must explicitly move it to your new
-commit with <code>jj bookmark set main</code> (or create a new one).</p>
+<p>Bookmarks <strong>do not</strong> move automatically. When you make a new commit, the
+bookmark (e.g., <code>main</code>) stays where it was. You must explicitly move it to
+your new commit with <code>jj bookmark set main</code> (or create a new one).</p>
 </li>
 <li>
 <p>JJ only pushes commits that are referenced by bookmarks. If your latest work
@@ -3109,36 +3109,57 @@ that.</p>
 existing Git repository. To use JJ as the front-end I could do something like:</p>
 <pre><code class="language-bash">cd ~/flakes
 jj git init --colocate
-jj describe -m "first jj commit"
-jj commit
+Done importing changes from the underlying Git repo.
+Setting the revset alias `trunk()` to `main@origin`
+Initialized repo in "."
 </code></pre>
+<ul>
+<li>By default, JJ defines <code>trunk()</code> as the main development branch of your remote
+repository. This is usually set to <code>main@origin</code>, but could be named something
+else. This means that whenever you use <code>trunk()</code> in JJ commands, it will
+resolve to the latest commit on <code>main@origin</code>. This makes it easier to refer
+to the main branch in scripts and commands without hardcoding the branch name.</li>
+</ul>
 <p><strong>Bookmarks</strong> in jj are named pointers to specific revisions, similar to
 branches in Git. When you first run <code>jj git init --git-branch .</code> in a git repo,
 you will likely get a Hint saying "Run the following command to keep local
-bookmarks updated on future pulls":</p>
-<pre><code class="language-bash">jj bookmark track main@origin
+bookmarks updated on future pulls".:</p>
+<pre><code class="language-bash">jj bookmark list
+track main@origin
+jj st
+The working copy has no changes.
+Working copy  (@) : qzxomtxq 925eca75 (empty) (no description set)
+Parent commit (@-): qnpnrklz bf291074 main | notes
 </code></pre>
-<p>This command tells jj to track the remote bookmark <code>main@origin</code> with a local
-bookmark named <code>main</code>. It is similar to setting an upstream branch in Git. In
-JJ, there's no concept of a "current branch" commits are first-class, and
-bookmarks are optional pointers.</p>
-<p><strong>Remote bookmarks</strong> are bookmarks that exist on a remote (like <code>origin</code>). jj
-keeps track of the last-seen position of each remote bookmark (e.g.,
-<code>main@origin</code>), similar to Git's remote-tracking branches</p>
-<blockquote>
-<p>NOTE: JJ is designed for a "branchless" workflow, so bookmarks are more
-lightweight and flexible than Git branches.</p>
-</blockquote>
-<p>To push you use <code>jj git push</code>, (you must first set the bookmark as we did above)</p>
+<p>This shows that running <code>jj git init --colocate</code> automatically started tracking
+<code>main</code> in this case. If it doesn't, use <code>jj bookmark track main@origin</code>.</p>
+<p>I'll create a simple change in the <code>README.md</code>:</p>
+<pre><code class="language-bash">jj st
+Working copy changes:
+M README.md
+Working copy  (@) : qzxomtxq b963dff0 (no description set)
+Parent commit (@-): qnpnrklz bf291074 main | notes
+</code></pre>
+<p>We can see that the working copy now contains a modified file <code>M README.md</code> and
+has no description set. Lets give it a description before pushing to github.</p>
+<pre><code class="language-bash">jj desc @ -m "Added to README"
+jj bookmark set main -r @
+Moved 1 bookmarks to pxwnopqo 1e6e08a2 main* | Added to README
+</code></pre>
+<p><code>jj bookmark set main -r @</code> moves the <code>main</code> bookmark to the current revision
+(the working copy), which is the explicit, recommended way to update bookmarks
+in JJ. Without this step, your bookmark will continue to point at the old
+commit, not your latest work. This is a major difference from Git.</p>
+<p>And finally push to GitHub:</p>
 <pre><code class="language-bash">jj git push
-# or the full command is
-jj git push --bookmark main
-# example output after pushing my flake repo
-Rebased 1 descendant commits onto updated working copy
 Changes to push to origin:
-  Move forward bookmark main from b48d4e9b361f to 6fb5e4c02617
-remote: Resolving deltas: 100% (25/25), completed with 12 local objects.
+  Move forward bookmark main from bf291074125e to e2a75e45237b
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+Warning: The working-copy commit in workspace 'default' became immutable, so a new commit has been created on top of it.
+Working copy  (@) now at: pxwnopqo 8311444b (empty) (no description set)
+Parent commit (@-)      : qzxomtxq e2a75e45 main | Added to README
 </code></pre>
+<hr />
 <h2 id="create-a-repo-without-an-existing-git-repo"><a class="header" href="#create-a-repo-without-an-existing-git-repo">Create a Repo without an existing Git Repo</a></h2>
 <p><strong>Or</strong> to do this in a directory that isn't already a git repo you can do
 something like:</p>
@@ -3167,7 +3188,7 @@ git branch -D update-test
 sudo nixos-rebuild switch --flake .
 </code></pre>
 <p>With JJ a similar workflow could be:</p>
-<pre><code class="language-bash">jj new  # Create a new child commit/start working on a new change
+<pre><code class="language-bash">jj new @-  # Create a new commit off of main (Parent Commit)
 nix flake update
 sudo nixos-rebuild test --flake .
 jj squash #  similar to `git commit -a --amend`
