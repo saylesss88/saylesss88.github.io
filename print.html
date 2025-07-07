@@ -2704,7 +2704,8 @@ equivalent.</p>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <ul>
-<li><a href="vcs/jujutsu.html#introduction">Introduction</a></li>
+<li><a href="vcs/jujutsu.html#getting-started">Getting Started</a></li>
+<li><a href="vcs/jujutsu.html#-key-concepts">🔑 Key Concepts</a></li>
 <li><a href="vcs/jujutsu.html#what-is-the-jujutsu-working-copy">What is the Jujutsu Working Copy</a></li>
 <li><a href="vcs/jujutsu.html#example-jj-module">Example JJ Module</a></li>
 <li><a href="vcs/jujutsu.html#issues-ive-noticed">Issues I've Noticed</a></li>
@@ -2712,6 +2713,8 @@ equivalent.</p>
 <li><a href="vcs/jujutsu.html#create-a-repo-without-an-existing-git-repo">Create a Repo without an existing Git Repo</a>
 <ul>
 <li><a href="vcs/jujutsu.html#jj-and-git-side-by-side">JJ and Git Side by Side</a></li>
+<li><a href="vcs/jujutsu.html#zsh-function-to-squash-and-push-in-1-command">Zsh function to squash and push in 1 command</a></li>
+<li><a href="vcs/jujutsu.html#summary">Summary</a></li>
 </ul>
 </li>
 <li><a href="vcs/jujutsu.html#the-2-main-jj-workflows">The 2 main JJ Workflows</a>
@@ -2724,7 +2727,7 @@ equivalent.</p>
 <li><a href="vcs/jujutsu.html#conflict-resolution">Conflict Resolution</a></li>
 <li><a href="vcs/jujutsu.html#revsets">Revsets</a></li>
 <li><a href="vcs/jujutsu.html#filesets">Filesets</a></li>
-<li><a href="vcs/jujutsu.html#summary">Summary</a>
+<li><a href="vcs/jujutsu.html#summary-1">Summary</a>
 <ul>
 <li><a href="vcs/jujutsu.html#resources">Resources</a></li>
 </ul>
@@ -2732,26 +2735,38 @@ equivalent.</p>
 </ul>
 </details>
 <p><img src="vcs/../images/jujutsu.png" alt="JJ Logo" /></p>
-<p>⚠️ <strong>Important</strong>: Never commit secrets (passwords, API keys, tokens, etc.) in
-plain text to your Git repository. If you plan to publish your NixOS
+<p>⚠️ <strong>Security Reminder</strong>: Never commit secrets (passwords, API keys, tokens,
+etc.) in plain text to your Git repository. If you plan to publish your NixOS
 configuration, always use a secrets management tool like sops-nix or agenix to
 keep sensitive data safe. See the
 <a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops-Nix Guide</a>
 for details.</p>
-<p>You may want to check
-<a href="https://steveklabnik.github.io/jujutsu-tutorial/">Steve's Jujutsu Tutorial</a>, he
-does a great job of explaining how to use jj with practical examples. It is
-recommended in the official JJ docs as a more up to date intro.</p>
-<p>After installing JJ you can run <code>jj help -k tutorial</code>, for the official guide in
-a pager but like I said Steve's guide is more up to date.</p>
-<p>You can find help for nearly every command with the command followed by <code>--help</code>
-(e.g., <code>jj git init --help</code>, <code>jj git push --help</code>)</p>
-<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
 <p>Jujutsu (jj) is a modern, Git-compatible version control system designed to
 simplify and improve the developer experience. It offers a new approach to
 distributed version control, focusing on a more intuitive workflow, powerful
 undo capabilities, and a branchless model that reduces common pitfalls of Git.</p>
-<p><strong>Key Concepts</strong></p>
+<p><strong>Recommended resources</strong>:</p>
+<ul>
+<li>
+<p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">Steve's Jujutsu Tutorial</a>
+(most up to date). Steve does an excellent job explaining the ins and outs of
+Jujutsu.</p>
+</li>
+<li>
+<p>Official:</p>
+</li>
+</ul>
+<pre><code class="language-bash">jj help -k tutorial
+</code></pre>
+<ul>
+<li>Command help:</li>
+</ul>
+<pre><code class="language-bash">jj &lt;command&gt; --help
+jj git init --help
+jj git push --help
+</code></pre>
+<h2 id="-key-concepts"><a class="header" href="#-key-concepts">🔑 Key Concepts</a></h2>
 <details>
 <summary> ✔️ Click to Expand Key Concepts </summary>
 <ol>
@@ -2774,14 +2789,13 @@ in the current commit.</p>
 </ol>
 <ul>
 <li>
-<p>JJ does not have the concept of a "current branch." Instead, it uses
-bookmarks, which are named pointers to specific commits.</p>
+<p>JJ does not have the concept of a "current branch." Instead, use bookmarks,
+which are named pointers to specific commits.</p>
 </li>
 <li>
-<p>Bookmarks do not move automatically. You must explicitly move a bookmark
-(e.g., <code>main</code>) to your latest commit before pushing. You do this with
-<code>jj bookmark set main</code> or <code>jj bookmark set master</code>. The FAQ mentions using
-<code>jj bookmark move</code>.</p>
+<p>Bookmarks do not move automatically. Commands like <code>jj new</code> and <code>jj commit</code>
+move the working copy, but the bookmark stays were it was. Use
+<code>jj bookmark move</code> to move bookmarks. (e.g., <code>jj bookmark move main</code>).</p>
 </li>
 <li>
 <p>Only commits referenced by bookmarks are pushed to remotes, preventing
@@ -2808,7 +2822,7 @@ operation, and finally update the working copy if needed.</p>
 <ul>
 <li>
 <p>JJ records every operation (commits, merges, rebases, etc.) in an <strong>operation
-log</strong>.</p>
+log</strong>. Inspect it with: <code>jj op log</code></p>
 </li>
 <li>
 <p>You can view and undo any previous operation, not just the most recent one,
@@ -2819,6 +2833,8 @@ CLI.</p>
 <ol start="5">
 <li>First-Class Conflict Handling</li>
 </ol>
+<p>Conflicts happen when JJ can't figure out how to merge different changes made to
+the same file.</p>
 <ul>
 <li>
 <p>Conflicts are stored inside commits, not just in the working directory. You
@@ -2873,18 +2889,37 @@ because they are already part of the commit that represents your current working
 state.</p>
 </details>
 <p><strong>Simplified Workflow</strong></p>
-<pre><code class="language-bash"># Make some changes and commit them
-jj new main
-jj desc @ -m "My feature"
-# ...edit files...
-jj commit -a
-
-# Push just this change to the remote
-jj git push --change @
+<p>Check where you're at, JJ doesn't care about commits without descriptions but
+Git and GitHub do:</p>
+<pre><code class="language-bash">jj st
+Working copy  (@) now at: zuknrzrx 8a20bfa7 (empty) (no description set)
+Parent commit (@-)      : yzppulzo bdd64e8d main | (empty) "Enable Rofi and update nu func for jj"
 </code></pre>
-<p>It's fairly easy to see where the changes are, (i.e., they don't say <code>(empty)</code>)
-and push them. Usually <code>@</code> or <code>@-</code></p>
+<p>We can see that the Working copy is <code>(empty)</code> and has <code>(no description set)</code>,
+lets give it a description:</p>
+<pre><code class="language-bash">jj desc -m "My feature"
+# ...edit files...
+# Check where we're at again
+jj st
+Working copy changes:
+M home/jj.nix
+Working copy  (@) : zuknrzrx bcd3d965 My feature
+Parent commit (@-): yzppulzo bdd64e8d main | (empty) "Enable Rofi and update nu func for jj"
+
+# Tell JJ which branch we're interested in
+jj bookmark set main
+# Push this change to main
+jj git push
+Changes to push to origin:
+  Move forward bookmark main from bdd64e8d6ea5 to bcd3d96567f8
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+Warning: The working-copy commit in workspace 'default' became immutable, so a new commit has been created on top of it.
+Working copy  (@) now at: ktlywzlx 8e88ddbe (empty) (no description set)
+Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
+</code></pre>
 <h2 id="what-is-the-jujutsu-working-copy"><a class="header" href="#what-is-the-jujutsu-working-copy">What is the Jujutsu Working Copy</a></h2>
+<details>
+<summary> ✔️ Click To Expand Working Copy Description </summary>
 <p><img src="vcs/../images/sourcetree.png" alt="SourceTree image" /></p>
 <p>The <strong>working copy</strong> in Jujutsu is an actual <strong>commit</strong> that represents the
 current state of the files you're working on. Unlike Git, where the working copy
@@ -2910,6 +2945,7 @@ editing these markers and then committing the resolution in the working copy</p>
 done for you. This is handy with flakes by preventing a "dirty working tree"
 and can instantly be rebuilt after making a change.</li>
 </ul>
+</details>
 <h2 id="example-jj-module"><a class="header" href="#example-jj-module">Example JJ Module</a></h2>
 <details>
 <summary> ✔️ Click to Expand JJ home-manager module example </summary>
@@ -3102,6 +3138,9 @@ jj git push
 <p>If you forget to move a bookmark, JJ will warn you and nothing will be pushed.
 This is a safety feature, not a bug. That's what the <code>upmain</code> alias does, moves
 the bookmark to <code>main</code>.</p>
+<pre><code class="language-nix"># home-manager alias
+upmain = ["bookmark" "set" "main"];
+</code></pre>
 <p>If you really have problems, <code>jj git push --change @</code> explicitly pushes the
 working copy.</p>
 <p>This is a bit different than Git and takes some getting used to but you don't
@@ -3125,9 +3164,9 @@ resolve to the latest commit on <code>main@origin</code>. This makes it easier t
 to the main branch in scripts and commands without hardcoding the branch name.</li>
 </ul>
 <p><strong>Bookmarks</strong> in jj are named pointers to specific revisions, similar to
-branches in Git. When you first run <code>jj git init --git-branch .</code> in a git repo,
-you will likely get a Hint saying "Run the following command to keep local
-bookmarks updated on future pulls".:</p>
+branches in Git. When you first run <code>jj git init --colocate</code> in a git repo, you
+will likely get a Hint saying "Run the following command to keep local bookmarks
+updated on future pulls".:</p>
 <pre><code class="language-bash">jj bookmark list
 track main@origin
 jj st
@@ -3275,6 +3314,34 @@ request for your new branch/bookmark, allowing you or your collaborators to
 review and merge the change into main.</p>
 </li>
 </ul>
+<h3 id="zsh-function-to-squash-and-push-in-1-command"><a class="header" href="#zsh-function-to-squash-and-push-in-1-command">Zsh function to squash and push in 1 command</a></h3>
+<details>
+<summary> ✔️ Click to Expand Zsh Function </summary>
+<blockquote>
+<p>Another option is to use a shell function to do a few steps for you. The
+following is a zsh function to squash and push at the same time:</p>
+<pre><code class="language-zsh"># ... snip ...
+ initContent = ''
+
+            jj-squash-push() {
+               echo "Enter commit message:"
+               read -r msg
+               jj squash -r @
+               jj describe -m "$msg"
+               jj bookmark set main
+               jj git push
+             }
+'';
+# ... snip ...
+</code></pre>
+<ul>
+<li>Once you're edits are comple and you're ready to run <code>jj squash</code>, run
+<code>jj-squash-push</code> instead. It will prompt you for a squashed commit message,
+then push for you. You can easily remove the last <code>jj git push</code> step to have
+a <code>jj-squash</code> func also.</li>
+</ul>
+</blockquote>
+</details>
 <p><strong>Merging your Change into <code>main</code></strong></p>
 <p>Option 1. Go to the URL suggested in the output, visit in this case:</p>
 <pre><code class="language-bash">https://github.com/sayls8/flake/pull/new/wyt
@@ -3299,8 +3366,11 @@ review and merge the change into main.</p>
 <pre><code class="language-bash">jj new tml wyt -m "Merge: enable vim"
 </code></pre>
 <p>This creates a new commit with both <code>tml</code> and <code>wyt</code> as parents, which is how JJ
-handles merges (since <code>jj merge</code> depreciated).</p>
+handles merges (since <code>jj merge</code> depreciated). JJ merges are additive and
+history-preserving by design especially for folks used to Git's fast-forward and
+squash options.</p>
 <hr />
+<h3 id="summary"><a class="header" href="#summary">Summary</a></h3>
 <ul>
 <li>
 <p>With <code>jj</code> you're creating a new commit rather than a new branch.</p>
@@ -3419,7 +3489,7 @@ jj git push
 <hr />
 <h3 id="the-edit-workflow"><a class="header" href="#the-edit-workflow">The Edit Workflow</a></h3>
 <p>This workflow adds a few new commands <code>jj edit</code>, and <code>jj next</code>.</p>
-<p>Heres the workflow:</p>
+<p>Here's the workflow:</p>
 <ol>
 <li>
 <p>Create a new change to work on the new feature with <code>jj new</code></p>
@@ -3547,7 +3617,7 @@ using:</p>
 <p>Jujutsu supports a functional language for selecting a set of files. Expressions
 in this language are called "filesets" (the idea comes from Mercurial). The
 language consists of file patterns, operators, and functions. --JJ Docs</p>
-<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<h2 id="summary-1"><a class="header" href="#summary-1">Summary</a></h2>
 <p>Jujutsu (jj) offers a streamlined, branchless, and undo-friendly approach to
 version control, fully compatible with Git but designed to be easier to use and
 reason about. Its workflows, operation log, and conflict handling provide a
@@ -4212,7 +4282,7 @@ accumulating, making the system more reproducible.</p>
 runtime credentials) is erased on reboot.</p>
 </li>
 </ul>
-<h3 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h3>
+<h3 id="getting-started-1"><a class="header" href="#getting-started-1">Getting Started</a></h3>
 <ol>
 <li>Add impermanence to your <code>flake.nix</code>. You will change the <code>hostname</code> in the
 flake to match your <code>networking.hostName</code>.</li>
@@ -5236,7 +5306,7 @@ However, by configuring <code>/tmp</code> to reside in RAM, you ensure that temp
 including sensitive data like passwords are stored only in volatile memory and
 are automatically cleared on shutdown or reboot. This significantly enhances the
 security of temporary data by preventing it from ever being written to disk.</p>
-<h3 id="getting-started-1"><a class="header" href="#getting-started-1">Getting Started</a></h3>
+<h3 id="getting-started-2"><a class="header" href="#getting-started-2">Getting Started</a></h3>
 <ol>
 <li>Add impermanence to your <code>flake.nix</code>. You will change the <code>hostname</code> in the
 flake to match your <code>networking.hostName</code>.</li>
@@ -13391,7 +13461,7 @@ Use `lib.mkForce value` or `lib.mkDefault value` to change the priority on any o
 shell returned 1
 </code></pre>
 </details>
-<h2 id="summary-1"><a class="header" href="#summary-1">Summary</a></h2>
+<h2 id="summary-2"><a class="header" href="#summary-2">Summary</a></h2>
 <ul>
 <li>
 <p>So types in the module system aren't just types in the conventional sense
