@@ -228,12 +228,11 @@ that subvolume, similar to how a bind mount works.</p>
 (with an internal ID of 5). This subvolume is always present and cannot be
 deleted or replaced, and it is the default mount point unless changed with btrfs
 subvolume set-default.</p>
-<p>Subvolumes can also have storage quotas set using Btrfs’s quota groups
-(qgroups), but otherwise, they all draw from the same underlying storage pool.
-Thanks to features like deduplication and snapshots, subvolumes can share data
-efficiently at the extent level.While ZFS is a solid choice and offers some
-benefits over BTRFS, I recommend looking into it before making your own
-decision.</p>
+<p>Subvolumes can also have storage quotas set using Btrfs’s quota groups , but
+otherwise, they all draw from the same underlying storage pool. Thanks to
+features like deduplication and snapshots, subvolumes can share data efficiently
+at the extent level.While ZFS is a solid choice and offers some benefits over
+BTRFS, I recommend looking into it before making your own decision.</p>
 </details>
 <p>If you have a ton of RAM you could most likely skip the minimal install and just
 set your system up as needed or just use
@@ -250,20 +249,36 @@ disk partitioning tool. Sourced from the
 <a href="https://github.com/nix-community/disko">Disko project</a>
 <img src="../images/disko1.png" alt="disko logo" /></p>
 <ol>
-<li>
-<p>Get the
+<li>Get the
 <a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
 Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
 link to the
 <a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
 download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
 executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
-<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p>
-</li>
-<li>
-<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
-enable networking run the following:</p>
-</li>
+<code>sudo ./Ventoy2Disk.sh</code> Follow the prompts to finish the install.</li>
+</ol>
+<p>You'll have to run it on for the USB drive you're trying to use, you can do that
+by unplugging the USB stick and running <code>lsblk</code>, then plug it in again and run:</p>
+<pre><code class="language-bash">lsblk -f
+NAME          FSTYPE      FSVER LABEL   UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sda
+└─sda1        vfat        FAT32 MYUSB   46E8-9304
+sdb           vfat        FAT12         F054-697D                               1.4M     0% /run/media/jr/F054-697D
+nvme0n1
+├─nvme0n1p1   vfat        FAT32         BCD8-8C51                               1.8G    12% /boot
+</code></pre>
+<ul>
+<li><code>sdb</code> is a USB plugin for a mouse. <code>sda</code> is the USB stick that I want to
+target here:</li>
+</ul>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i /dev/sda
+# Or to force overwrite an existing Ventoy entry
+sudo ./Ventoy2Disk.sh -I /dev/sda
+</code></pre>
+<ol start="2">
+<li>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
+enable networking run the following:</li>
 </ol>
 <pre><code class="language-bash">sudo systemctl start wpa_supplicant
 wpa_cli

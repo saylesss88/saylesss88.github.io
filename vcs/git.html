@@ -173,12 +173,15 @@
 <ul>
 <li><a href="#limitations-of-nixos-rollbacks">Limitations of NixOS Rollbacks</a></li>
 <li><a href="#how-git-helps">How Git Helps</a></li>
-<li><a href="#git-tips">Git Tips</a>
+<li><a href="#git-tips">Git Tips</a></li>
+<li><a href="#atomic-commits">Atomic Commits</a></li>
+<li><a href="#time-travel-in-git">Time Travel in Git</a>
 <ul>
 <li><a href="#a-basic-git-workflow">A Basic Git Workflow</a></li>
 <li><a href="#basic-branching">Basic Branching</a></li>
 </ul>
 </li>
+<li><a href="#merging-and-rebasing-branches">Merging and Rebasing Branches</a></li>
 <li><a href="#configure-git-declaratively">Configure Git Declaratively</a>
 <ul>
 <li><a href="#resources">Resources</a></li>
@@ -289,6 +292,10 @@ state outside of Nix are not reverted by a rollback</p>
 <p><img src="../images/git3.png" alt="Git Logo 2" /></p>
 <ul>
 <li>
+<p>The <a href="https://docs.github.com/en/github-cli/github-cli/quickstart">gh-cli</a>,
+simplifies quite a few things for working with GitHub from the command line.</p>
+</li>
+<li>
 <p><strong>Tracks every configuration change</strong>: By version-controlling your NixOS
 configs with Git, you can easily see what changed, when, and why.</p>
 </li>
@@ -341,7 +348,40 @@ configuration.nix or via Home Manager:</p>
 <p><img src="../images/octocat.png" alt="Octocat" /></p>
 <p>If you develop good git practices on your own repositories it will make it
 easier to contribute with others as well as get help from others.</p>
-<p><strong>Commit Tips</strong>:</p>
+<h2 id="atomic-commits"><a class="header" href="#atomic-commits">Atomic Commits</a></h2>
+<p><strong>Atomic commits</strong> are a best practice in Git where each commit represents a
+single, focused, and complete change to the codebase. The main chacacteristics
+of atomic commits are:</p>
+<ul>
+<li>
+<p><strong>One purpose</strong>: Each commit should address only one logical change or task.</p>
+</li>
+<li>
+<p><strong>Complete</strong>: The commit should leave the codebase in a working state.</p>
+</li>
+<li>
+<p><strong>Descriptive</strong>: The commit message should be able to clearly summarize the
+change in a single sentence.</p>
+</li>
+</ul>
+<p><strong>Why Atomic Commits Matter</strong></p>
+<ul>
+<li>
+<p><strong>Easier debugging</strong>: You can use tools like <code>git bisect</code> to quickly find
+which commit introduced a bug, since each commit is isolated.</p>
+</li>
+<li>
+<p><strong>Simpler reverts</strong>: You can revert without affecting unrelated changes.</p>
+</li>
+<li>
+<p><strong>Better collaboration</strong>: Code reviews and merges are more manageable when
+changes are small and focused.</p>
+</li>
+</ul>
+<p>When you lump together a bunch of changes into a single commit it can lead to
+quite a few undesirable consequences. They make it harder to track down bugs,
+it's more difficult to revert undesired changes without reverting desired ones,
+make larger tickets harder to manage.</p>
 <p><strong>Every time a logical component is completed, commit it</strong>. Smaller commits make
 it easier for other devs and yourself to understand the changes and roll them
 back if necessary. This also makes it easier to share your code with others to
@@ -355,7 +395,92 @@ more often.</p>
 of whitespace between the summary and the body of your message. Make it clear
 why this change was necessary. Use consistent language with generated messages
 from commands like <code>git merge</code> which is imperative and present tense
-(<code>&lt;&lt;change&gt;&gt;</code>, not <code>&lt;&lt;changed&gt;&gt;</code> or <code>&lt;&lt;changes&gt;&gt;</code>)</p>
+(<code>&lt;&lt;change&gt;&gt;</code>, not <code>&lt;&lt;changed&gt;&gt;</code> or <code>&lt;&lt;changes&gt;&gt;</code>).</p>
+<h2 id="time-travel-in-git"><a class="header" href="#time-travel-in-git">Time Travel in Git</a></h2>
+<details>
+<summary> ✔️ Click to Expand Time Travel Section </summary>
+<p><strong>View an old commit</strong>:</p>
+<pre><code class="language-bash">git checkout &lt;commit_hash&gt;
+</code></pre>
+<p>This puts you in a "detached HEAD" state, letting you explore code as it was at
+that commit. To return, checkout your branch again.</p>
+<p><strong>Go back and keep history (revert)</strong>:</p>
+<pre><code class="language-bash">git revert &lt;commit_hash&gt;
+</code></pre>
+<p><strong>Go back and rewrite history (reset)</strong>:</p>
+<ul>
+<li>Soft reset (keep changes staged):</li>
+</ul>
+<pre><code class="language-bash">git reset --soft &lt;commit_hash&gt;
+</code></pre>
+<ul>
+<li>Mixed reset (keep changes in working directory):</li>
+</ul>
+<pre><code class="language-bash">git reset &lt;commit_hash&gt;
+</code></pre>
+<ul>
+<li>Hard reset (discard all changes after the commit):</li>
+</ul>
+<pre><code class="language-bash">git reset --hard &lt;commit_hash&gt;
+</code></pre>
+<p>Use the above command with caution, it can delete commits from history.</p>
+<ul>
+<li>Relative time travel:</li>
+</ul>
+<pre><code class="language-bash">git reset --hard HEAD@{5.minutes.ago}
+</code></pre>
+<p>or</p>
+<pre><code class="language-bash">git reset --hard HEAD@{yesterday}
+</code></pre>
+<p><strong>Create a branch from the past</strong>:</p>
+<pre><code class="language-bash">git checkout -b &lt;new-brach&gt; &lt;commit_hash&gt;
+</code></pre>
+<p>This starts a new branch from any previous commit, preserving current changes.</p>
+</details>
+<p>Some repositories have guidelines, such as Nixpkgs:</p>
+<details>
+<summary> ✔️ Click to Expand Nixpkgs Commit Conventions </summary>
+<p><strong>Commit conventions</strong></p>
+<ul>
+<li>
+<p>Create a commit for each logical unit.</p>
+</li>
+<li>
+<p>Check for unnecessary whitespace with git diff --check before committing.</p>
+</li>
+<li>
+<p>If you have commits pkg-name: oh, forgot to insert whitespace: squash commits
+in this case. Use git rebase -i. See Squashing Commits for additional
+information.</p>
+</li>
+<li>
+<p>For consistency, there should not be a period at the end of the commit
+message's summary line (the first line of the commit message).</p>
+</li>
+<li>
+<p>When adding yourself as maintainer in the same pull request, make a separate
+commit with the message maintainers: add <handle>. Add the commit before those
+making changes to the package or module. See Nixpkgs Maintainers for details.</p>
+<p>Make sure you read about any commit conventions specific to the area you're
+touching. See: Commit conventions for changes to pkgs. Commit conventions for
+changes to lib. Commit conventions for changes to nixos. Commit conventions
+for changes to doc, the Nixpkgs manual.</p>
+</li>
+</ul>
+<p><strong>Writing good commit messages</strong></p>
+<p>In addition to writing properly formatted commit messages, it's important to
+include relevant information so other developers can later understand why a
+change was made. While this information usually can be found by digging code,
+mailing list/Discourse archives, pull request discussions or upstream changes,
+it may require a lot of work.</p>
+<p>Package version upgrades usually allow for simpler commit messages, including
+attribute name, old and new version, as well as a reference to the relevant
+release notes/changelog. Every once in a while a package upgrade requires more
+extensive changes, and that subsequently warrants a more verbose message.</p>
+<p>Pull requests should not be squash merged in order to keep complete commit
+messages and GPG signatures intact and must not be when the change doesn't make
+sense as a single commit.</p>
+</details>
 <p>A <strong>Git workflow</strong> is a recipe or recommendation for how to use Git to
 accomplish work in a consistent and productive manner. Having a defined workflow
 lets you leverage Git effectively and consistently. This is especially important
@@ -513,7 +638,7 @@ git commit -m "Describe the new feature or fix"
 <h3 id="basic-branching"><a class="header" href="#basic-branching">Basic Branching</a></h3>
 <p>Branching means to diverge from the main line of development and continue to do
 work without risking messing up your main branch. There are a few commits on
-your main branch so to visualise this it would look something like this, image
+your main branch so to visualize this it would look something like this, image
 is from <a href="https://git-scm.com/book/en/v2">Pro Git</a>:</p>
 <p><img src="../images/git-branch3.png" alt="Git Branch 1" /></p>
 <p>Let's say you haven't ran <code>nix flake update</code> in a while and you don't want to
@@ -622,6 +747,13 @@ sudo nixos-rebuild test --flake .
 sudo nixos-rebuild switch --flake .
 </code></pre>
 <p>It's good practice to delete a branch after you've merged and are done with it.</p>
+<h2 id="merging-and-rebasing-branches"><a class="header" href="#merging-and-rebasing-branches">Merging and Rebasing Branches</a></h2>
+<p>To combine two seperate branches into one unified history you typically use
+<code>git merge</code> or <code>git rebase</code>.</p>
+<p><code>git merge</code> takes two commit pointers and finds a common base commit between
+them, it then creates a "merge commit" that combines the changes.</p>
+<p><code>git rebase</code> is used to move a sequence of commits to a new base commit.</p>
+<p><img src="../images/rebase.png" alt="Git rebase" /></p>
 <h2 id="configure-git-declaratively"><a class="header" href="#configure-git-declaratively">Configure Git Declaratively</a></h2>
 <p>The following example is the <code>git.nix</code> from the hydenix project it shows some
 custom options and a way to manage everything from a single location:</p>

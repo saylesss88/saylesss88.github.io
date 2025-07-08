@@ -1542,6 +1542,36 @@ cachix use &lt;your-cache-name&gt;
   | jq -r '.path,(.inputs|to_entries[].value.path)' \
   | cachix push &lt;mycache&gt;
 </code></pre>
+<p>You should see output similar to the following:</p>
+<pre><code class="language-bash">Pushing 637 paths (2702 are already present) using zstd to cache sayls8 ⏳
+
+✓ /nix/store/0aqvmjvhkar3j2f7zag2wjl4073apnvk-vimplugin-crates.nvim-2025-05-30 (734.65 KiB)
+✓ /nix/store/02wm10zck7rb836kr0h3afjxl80866dp-X-Restart-Triggers-keyd (184.00 B)
+✓ /nix/store/0asdaaax0lf1wa6m6lqqdvc8kp6qn3f6-dconf-cleanup (1008.00 B)
+✓ /nix/store/09ki2jlh6sqbn01yw6n15h8d55ihxygf-helix-tree-sitter-mojo-3d7c53b8038f9ebbb57cd2e61296180aa5c1cf64 (601.37 KiB)
+✓ /nix/store/0i2c29nldqvb9pnypvp3ika4i7fhc0ck-devour-output (312.00 B)
+✓ /nix/store/0c0mwfb78xm862a7g4h9fhgzn55zppj6-helix-term (29.88 MiB)
+✓ /nix/store/0fhdpb2qck1kbngq1dlc8lyqqadj2pb1-hyprcursor-0.1.12+date=2025-06-05_45fcc10-lib (487.30 KiB)
+✓ /nix/store/0mfpi51bswgd91l8clqcz6mxy5k5zcd4-vimplugin-auto-pairs-2019-02-27 (40.60 KiB)
+✓ /nix/store/0k2zq8y78vrhhkf658j6i45vz3y89v11-helix-tree-sitter-tcl-56ad1fa6a34ba800e5495d1025a9b0fda338d5b8 (110.25 KiB)
+✓ /nix/store/0qxmahrw935136dbxkmvrg14fgnzi6bb-vimplugin-obsidian.nvim-2025-07-01 (493.02 KiB)
+✓ /nix/store/0wjppqzcbnlf9srhr6k27pz403j3mg2j-hm-session-vars.sh (1.86 KiB)
+✓ /nix/store/0z41071z33zg1zqyasccc3cfhxj389k0-helix-tree-sitter-swift-57c1c6d6ffa1c44b330182d41717e6fe37430704 (2.77 MiB)
+✓ /nix/store/0n5f1x8lpc93zm81bxrfh6yccyngvrdl-unit-plymouth-read-write.service (1.19 KiB)
+✓ /nix/store/0z8ac35n89lv2knzaj6kkp0cfxr6pmgc-hm_face.png (300.60 KiB)
+✓ /nix/store/0zp5846pry5rknnvzz81zlvj4ghnkxp5-hyprutils-0.8.1+date=2025-07-07_a822973 (421.64 KiB)
+✓ /nix/store/118ihgwjw6kp0528igns3pnvzbszljmg-unit-dbus.service (1.34 KiB)
+✓ /nix/store/0pajdq9mfgkcdwbqp38j7d4clc9h9iik-hm_.mozillafirefoxdefault.keep (112.00 B)
+✓ /nix/store/0nlvffvpx6s8mpd2rpnqb1bl5idd16yk-hm-dconf.ini (224.00 B)
+✓ /nix/store/1fiqgqvi574rdckav0ikdh8brwdhvh69-vimplugin-alpha-nvim-2025-05-26 (69.38 KiB)
+✓ /nix/store/1fqxw31p1llag0g7wg7izq22x5msz47r-vimplugin-persistence.nvim-2025-02-25 (37.74
+</code></pre>
+<blockquote>
+<p>❗ NOTE: The effectiveness of pushing the rest to cachix depend on your
+network speed. I actually noticed a slow down after pushing the <code>nix/store</code>.
+Pushing the <code>nix/store</code> is rarely necessary and can be very slow and
+bandwidth-intensive. Most users will only need to push relevent outputs.</p>
+</blockquote>
 <p><strong>Push the Entire /nix/store</strong></p>
 <pre><code class="language-bash">nix path-info --all | cachix push &lt;mycache&gt;
 </code></pre>
@@ -1725,7 +1755,7 @@ quickly build and push all outputs as needed.</p>
 </code></pre>
 </blockquote>
 <p>What Gets Built and Cached?</p>
-<p>devour-flake detects and builds all standard outputs of a flake, including:</p>
+<p><code>devour-flake</code> detects and builds all standard outputs of a flake, including:</p>
 <ul>
 <li>
 <p>packages</p>
@@ -2171,12 +2201,15 @@ of garbage collection and it's considered unsafe.</p>
 <ul>
 <li><a href="vcs/git.html#limitations-of-nixos-rollbacks">Limitations of NixOS Rollbacks</a></li>
 <li><a href="vcs/git.html#how-git-helps">How Git Helps</a></li>
-<li><a href="vcs/git.html#git-tips">Git Tips</a>
+<li><a href="vcs/git.html#git-tips">Git Tips</a></li>
+<li><a href="vcs/git.html#atomic-commits">Atomic Commits</a></li>
+<li><a href="vcs/git.html#time-travel-in-git">Time Travel in Git</a>
 <ul>
 <li><a href="vcs/git.html#a-basic-git-workflow">A Basic Git Workflow</a></li>
 <li><a href="vcs/git.html#basic-branching">Basic Branching</a></li>
 </ul>
 </li>
+<li><a href="vcs/git.html#merging-and-rebasing-branches">Merging and Rebasing Branches</a></li>
 <li><a href="vcs/git.html#configure-git-declaratively">Configure Git Declaratively</a>
 <ul>
 <li><a href="vcs/git.html#resources">Resources</a></li>
@@ -2287,6 +2320,10 @@ state outside of Nix are not reverted by a rollback</p>
 <p><img src="vcs/../images/git3.png" alt="Git Logo 2" /></p>
 <ul>
 <li>
+<p>The <a href="https://docs.github.com/en/github-cli/github-cli/quickstart">gh-cli</a>,
+simplifies quite a few things for working with GitHub from the command line.</p>
+</li>
+<li>
 <p><strong>Tracks every configuration change</strong>: By version-controlling your NixOS
 configs with Git, you can easily see what changed, when, and why.</p>
 </li>
@@ -2339,7 +2376,40 @@ configuration.nix or via Home Manager:</p>
 <p><img src="vcs/../images/octocat.png" alt="Octocat" /></p>
 <p>If you develop good git practices on your own repositories it will make it
 easier to contribute with others as well as get help from others.</p>
-<p><strong>Commit Tips</strong>:</p>
+<h2 id="atomic-commits"><a class="header" href="#atomic-commits">Atomic Commits</a></h2>
+<p><strong>Atomic commits</strong> are a best practice in Git where each commit represents a
+single, focused, and complete change to the codebase. The main chacacteristics
+of atomic commits are:</p>
+<ul>
+<li>
+<p><strong>One purpose</strong>: Each commit should address only one logical change or task.</p>
+</li>
+<li>
+<p><strong>Complete</strong>: The commit should leave the codebase in a working state.</p>
+</li>
+<li>
+<p><strong>Descriptive</strong>: The commit message should be able to clearly summarize the
+change in a single sentence.</p>
+</li>
+</ul>
+<p><strong>Why Atomic Commits Matter</strong></p>
+<ul>
+<li>
+<p><strong>Easier debugging</strong>: You can use tools like <code>git bisect</code> to quickly find
+which commit introduced a bug, since each commit is isolated.</p>
+</li>
+<li>
+<p><strong>Simpler reverts</strong>: You can revert without affecting unrelated changes.</p>
+</li>
+<li>
+<p><strong>Better collaboration</strong>: Code reviews and merges are more manageable when
+changes are small and focused.</p>
+</li>
+</ul>
+<p>When you lump together a bunch of changes into a single commit it can lead to
+quite a few undesirable consequences. They make it harder to track down bugs,
+it's more difficult to revert undesired changes without reverting desired ones,
+make larger tickets harder to manage.</p>
 <p><strong>Every time a logical component is completed, commit it</strong>. Smaller commits make
 it easier for other devs and yourself to understand the changes and roll them
 back if necessary. This also makes it easier to share your code with others to
@@ -2353,7 +2423,92 @@ more often.</p>
 of whitespace between the summary and the body of your message. Make it clear
 why this change was necessary. Use consistent language with generated messages
 from commands like <code>git merge</code> which is imperative and present tense
-(<code>&lt;&lt;change&gt;&gt;</code>, not <code>&lt;&lt;changed&gt;&gt;</code> or <code>&lt;&lt;changes&gt;&gt;</code>)</p>
+(<code>&lt;&lt;change&gt;&gt;</code>, not <code>&lt;&lt;changed&gt;&gt;</code> or <code>&lt;&lt;changes&gt;&gt;</code>).</p>
+<h2 id="time-travel-in-git"><a class="header" href="#time-travel-in-git">Time Travel in Git</a></h2>
+<details>
+<summary> ✔️ Click to Expand Time Travel Section </summary>
+<p><strong>View an old commit</strong>:</p>
+<pre><code class="language-bash">git checkout &lt;commit_hash&gt;
+</code></pre>
+<p>This puts you in a "detached HEAD" state, letting you explore code as it was at
+that commit. To return, checkout your branch again.</p>
+<p><strong>Go back and keep history (revert)</strong>:</p>
+<pre><code class="language-bash">git revert &lt;commit_hash&gt;
+</code></pre>
+<p><strong>Go back and rewrite history (reset)</strong>:</p>
+<ul>
+<li>Soft reset (keep changes staged):</li>
+</ul>
+<pre><code class="language-bash">git reset --soft &lt;commit_hash&gt;
+</code></pre>
+<ul>
+<li>Mixed reset (keep changes in working directory):</li>
+</ul>
+<pre><code class="language-bash">git reset &lt;commit_hash&gt;
+</code></pre>
+<ul>
+<li>Hard reset (discard all changes after the commit):</li>
+</ul>
+<pre><code class="language-bash">git reset --hard &lt;commit_hash&gt;
+</code></pre>
+<p>Use the above command with caution, it can delete commits from history.</p>
+<ul>
+<li>Relative time travel:</li>
+</ul>
+<pre><code class="language-bash">git reset --hard HEAD@{5.minutes.ago}
+</code></pre>
+<p>or</p>
+<pre><code class="language-bash">git reset --hard HEAD@{yesterday}
+</code></pre>
+<p><strong>Create a branch from the past</strong>:</p>
+<pre><code class="language-bash">git checkout -b &lt;new-brach&gt; &lt;commit_hash&gt;
+</code></pre>
+<p>This starts a new branch from any previous commit, preserving current changes.</p>
+</details>
+<p>Some repositories have guidelines, such as Nixpkgs:</p>
+<details>
+<summary> ✔️ Click to Expand Nixpkgs Commit Conventions </summary>
+<p><strong>Commit conventions</strong></p>
+<ul>
+<li>
+<p>Create a commit for each logical unit.</p>
+</li>
+<li>
+<p>Check for unnecessary whitespace with git diff --check before committing.</p>
+</li>
+<li>
+<p>If you have commits pkg-name: oh, forgot to insert whitespace: squash commits
+in this case. Use git rebase -i. See Squashing Commits for additional
+information.</p>
+</li>
+<li>
+<p>For consistency, there should not be a period at the end of the commit
+message's summary line (the first line of the commit message).</p>
+</li>
+<li>
+<p>When adding yourself as maintainer in the same pull request, make a separate
+commit with the message maintainers: add <handle>. Add the commit before those
+making changes to the package or module. See Nixpkgs Maintainers for details.</p>
+<p>Make sure you read about any commit conventions specific to the area you're
+touching. See: Commit conventions for changes to pkgs. Commit conventions for
+changes to lib. Commit conventions for changes to nixos. Commit conventions
+for changes to doc, the Nixpkgs manual.</p>
+</li>
+</ul>
+<p><strong>Writing good commit messages</strong></p>
+<p>In addition to writing properly formatted commit messages, it's important to
+include relevant information so other developers can later understand why a
+change was made. While this information usually can be found by digging code,
+mailing list/Discourse archives, pull request discussions or upstream changes,
+it may require a lot of work.</p>
+<p>Package version upgrades usually allow for simpler commit messages, including
+attribute name, old and new version, as well as a reference to the relevant
+release notes/changelog. Every once in a while a package upgrade requires more
+extensive changes, and that subsequently warrants a more verbose message.</p>
+<p>Pull requests should not be squash merged in order to keep complete commit
+messages and GPG signatures intact and must not be when the change doesn't make
+sense as a single commit.</p>
+</details>
 <p>A <strong>Git workflow</strong> is a recipe or recommendation for how to use Git to
 accomplish work in a consistent and productive manner. Having a defined workflow
 lets you leverage Git effectively and consistently. This is especially important
@@ -2511,7 +2666,7 @@ git commit -m "Describe the new feature or fix"
 <h3 id="basic-branching"><a class="header" href="#basic-branching">Basic Branching</a></h3>
 <p>Branching means to diverge from the main line of development and continue to do
 work without risking messing up your main branch. There are a few commits on
-your main branch so to visualise this it would look something like this, image
+your main branch so to visualize this it would look something like this, image
 is from <a href="https://git-scm.com/book/en/v2">Pro Git</a>:</p>
 <p><img src="vcs/../images/git-branch3.png" alt="Git Branch 1" /></p>
 <p>Let's say you haven't ran <code>nix flake update</code> in a while and you don't want to
@@ -2620,6 +2775,13 @@ sudo nixos-rebuild test --flake .
 sudo nixos-rebuild switch --flake .
 </code></pre>
 <p>It's good practice to delete a branch after you've merged and are done with it.</p>
+<h2 id="merging-and-rebasing-branches"><a class="header" href="#merging-and-rebasing-branches">Merging and Rebasing Branches</a></h2>
+<p>To combine two seperate branches into one unified history you typically use
+<code>git merge</code> or <code>git rebase</code>.</p>
+<p><code>git merge</code> takes two commit pointers and finds a common base commit between
+them, it then creates a "merge commit" that combines the changes.</p>
+<p><code>git rebase</code> is used to move a sequence of commits to a new base commit.</p>
+<p><img src="vcs/../images/rebase.png" alt="Git rebase" /></p>
 <h2 id="configure-git-declaratively"><a class="header" href="#configure-git-declaratively">Configure Git Declaratively</a></h2>
 <p>The following example is the <code>git.nix</code> from the hydenix project it shows some
 custom options and a way to manage everything from a single location:</p>
@@ -3776,12 +3938,11 @@ that subvolume, similar to how a bind mount works.</p>
 (with an internal ID of 5). This subvolume is always present and cannot be
 deleted or replaced, and it is the default mount point unless changed with btrfs
 subvolume set-default.</p>
-<p>Subvolumes can also have storage quotas set using Btrfs’s quota groups
-(qgroups), but otherwise, they all draw from the same underlying storage pool.
-Thanks to features like deduplication and snapshots, subvolumes can share data
-efficiently at the extent level.While ZFS is a solid choice and offers some
-benefits over BTRFS, I recommend looking into it before making your own
-decision.</p>
+<p>Subvolumes can also have storage quotas set using Btrfs’s quota groups , but
+otherwise, they all draw from the same underlying storage pool. Thanks to
+features like deduplication and snapshots, subvolumes can share data efficiently
+at the extent level.While ZFS is a solid choice and offers some benefits over
+BTRFS, I recommend looking into it before making your own decision.</p>
 </details>
 <p>If you have a ton of RAM you could most likely skip the minimal install and just
 set your system up as needed or just use
@@ -3798,20 +3959,36 @@ disk partitioning tool. Sourced from the
 <a href="https://github.com/nix-community/disko">Disko project</a>
 <img src="installation/unencrypted/../images/disko1.png" alt="disko logo" /></p>
 <ol>
-<li>
-<p>Get the
+<li>Get the
 <a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
 Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
 link to the
 <a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
 download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
 executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
-<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p>
-</li>
-<li>
-<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
-enable networking run the following:</p>
-</li>
+<code>sudo ./Ventoy2Disk.sh</code> Follow the prompts to finish the install.</li>
+</ol>
+<p>You'll have to run it on for the USB drive you're trying to use, you can do that
+by unplugging the USB stick and running <code>lsblk</code>, then plug it in again and run:</p>
+<pre><code class="language-bash">lsblk -f
+NAME          FSTYPE      FSVER LABEL   UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sda
+└─sda1        vfat        FAT32 MYUSB   46E8-9304
+sdb           vfat        FAT12         F054-697D                               1.4M     0% /run/media/jr/F054-697D
+nvme0n1
+├─nvme0n1p1   vfat        FAT32         BCD8-8C51                               1.8G    12% /boot
+</code></pre>
+<ul>
+<li><code>sdb</code> is a USB plugin for a mouse. <code>sda</code> is the USB stick that I want to
+target here:</li>
+</ul>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i /dev/sda
+# Or to force overwrite an existing Ventoy entry
+sudo ./Ventoy2Disk.sh -I /dev/sda
+</code></pre>
+<ol start="2">
+<li>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager, to
+enable networking run the following:</li>
 </ol>
 <pre><code class="language-bash">sudo systemctl start wpa_supplicant
 wpa_cli
@@ -14493,11 +14670,11 @@ when you want to create a feature branch from them on your fork.</li>
 </ul>
 </li>
 <li>
-<p>Click <code>&lt;&gt; Code</code> and Clone the Repo. <code>saylesss88</code> is the name of my GitHub,
-yours will obviously be different.</p>
+<p>Click <code>&lt;&gt; Code</code> and Clone the Repo. <code>sayls8</code> is the name of my GitHub, yours
+will obviously be different.</p>
 </li>
 </ul>
-<pre><code class="language-bash">git clone git@github.com:saylesss88/nixpkgs.git
+<pre><code class="language-bash">git clone git@github.com:sayls8/nixpkgs.git
 </code></pre>
 <p>Figure out the branch that should be used for this change by going through
 <a href="https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md#branch-conventions">this section</a></p>
@@ -14511,8 +14688,8 @@ git remote add upstream https://github.com/NixOS/nixpkgs.git
 git fetch upstream
 # Show currently configured remote repository
 git remote -v
-origin  git@github.com:saylesss88/nixpkgs.git (fetch)
-origin  git@github.com:saylesss88/nixpkgs.git (push)
+origin  git@github.com:sayls8/nixpkgs.git (fetch)
+origin  git@github.com:sayls8/nixpkgs.git (push)
 upstream        https://github.com/NixOS/nixpkgs.git (fetch)
 upstream        https://github.com/NixOS/nixpkgs.git (push)
 </code></pre>
@@ -14520,7 +14697,7 @@ upstream        https://github.com/NixOS/nixpkgs.git (push)
 <p>This output confirms that:</p>
 <ul>
 <li>
-<p><code>origin</code> is your personal fork on GitHub (<code>saylesss88/nixpkgs.git</code>). When you
+<p><code>origin</code> is your personal fork on GitHub (<code>sayls8/nixpkgs.git</code>). When you
 <code>git push origin ...</code>, your changes go here.</p>
 </li>
 <li>
@@ -14657,8 +14834,8 @@ Patched source to use updated API calls.
 <ol start="5">
 <li>Create a Pull Request</li>
 </ol>
-<p>Go to <a href="https://github.com/saylesss88/nixpkgs">https://github.com/saylesss88/nixpkgs</a>. (your fork) Click the PR prompt
-for my-feature-branch. Set the base branch to <code>NixOS/nixpkgs:master</code> (or
+<p>Go to <a href="https://github.com/sayls8/nixpkgs">https://github.com/sayls8/nixpkgs</a>. (your fork) Click the PR prompt for
+my-feature-branch. Set the base branch to <code>NixOS/nixpkgs:master</code> (or
 <code>nixos-24.11</code>). Write a PR description: Purpose of the change. Related issues
 (e.g., Fixes #1234). Testing steps (e.g., <code>nix-build -A &lt;package-name&gt;</code>). Submit
 and respond to feedback.</p>
