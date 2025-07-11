@@ -174,14 +174,19 @@
 <li><a href="#limitations-of-nixos-rollbacks">Limitations of NixOS Rollbacks</a></li>
 <li><a href="#how-git-helps">How Git Helps</a></li>
 <li><a href="#git-tips">Git Tips</a></li>
-<li><a href="#atomic-commits">Atomic Commits</a></li>
+<li><a href="#atomic-commits">Atomic Commits</a>
+<ul>
+<li><a href="#tips-for-keeping-commits-atomic-with-a-linear-history">Tips for Keeping Commits Atomic with a Linear History</a></li>
+</ul>
+</li>
 <li><a href="#time-travel-in-git">Time Travel in Git</a>
 <ul>
 <li><a href="#a-basic-git-workflow">A Basic Git Workflow</a></li>
 <li><a href="#basic-branching">Basic Branching</a></li>
 </ul>
 </li>
-<li><a href="#merging-and-rebasing-branches">Merging and Rebasing Branches</a></li>
+<li><a href="#nix-flake-update-example-with-branches">Nix flake update example with branches</a></li>
+<li><a href="#rebasing-branches">Rebasing Branches</a></li>
 <li><a href="#configure-git-declaratively">Configure Git Declaratively</a>
 <ul>
 <li><a href="#resources">Resources</a></li>
@@ -396,6 +401,83 @@ of whitespace between the summary and the body of your message. Make it clear
 why this change was necessary. Use consistent language with generated messages
 from commands like <code>git merge</code> which is imperative and present tense
 (<code>&lt;&lt;change&gt;&gt;</code>, not <code>&lt;&lt;changed&gt;&gt;</code> or <code>&lt;&lt;changes&gt;&gt;</code>).</p>
+<h3 id="tips-for-keeping-commits-atomic-with-a-linear-history"><a class="header" href="#tips-for-keeping-commits-atomic-with-a-linear-history">Tips for Keeping Commits Atomic with a Linear History</a></h3>
+<p>Squashing limits the benefits of atomic commits as it combines them all into a
+single commit as if you didn't take the time to write them all out atomically.</p>
+<p>🧠 Why Rebasing Wins for Linear History</p>
+<ul>
+<li>
+<p>No Merge Bubbles: Rebasing avoids those extra merge commits that clutter
+<code>git log --graph</code>. You get a clean, readable timeline.</p>
+</li>
+<li>
+<p>Atomic Commit Integrity: Each commit stands alone and tells a story. Rebasing
+preserves that narrative without diluting it with merge noise.</p>
+</li>
+<li>
+<p>Better Blame &amp; Bisect: Tools like git blame and git bisect work best when
+history is linear and logical.</p>
+</li>
+<li>
+<p>Time-Travel Simplicity: Cherry-picking or reverting is easier when commits
+aren’t tangled in merge commits.</p>
+</li>
+</ul>
+<p>By default, when you run <code>git pull</code> git merges the commits into your local repo.
+To change this to a rebase you can set the following:</p>
+<pre><code class="language-bash">git config --global pull.rebase true
+git config --global rebase.autoStash true
+git config --global fetch.prune true  # auto delets remote-tracking branches that no longer exist
+git config --global pull.ff only          # blocks merge pulls
+</code></pre>
+<p>Note: With pull.ff only pulls will fail if they would have had to merge. This
+could happen if your local branch has diverged from the remote (e.g., someone
+pushed new commits and you also committed locally) <code>git pull</code> will throw an
+error like:</p>
+<pre><code class="language-bash">fatal: Not possible to fast-forward, aborting.
+</code></pre>
+<p><strong>How to fix it</strong></p>
+<p>You basically do what Git won't auto-do:</p>
+<pre><code class="language-bash">git fetch origin
+git rebase origin/main
+</code></pre>
+<p>This rewinds your local commits, applies remote commits, and replays yours on
+top, keeping the history linear.</p>
+<p>If you don't care about your local changes and want to discard them you can use
+the following command:</p>
+<pre><code class="language-bash">git reset --hard origin/main
+</code></pre>
+<p>This just makes your branch identical to the remote, no rebase required. This
+prevents rogue merge commits, preserving atomic commits and linear logs.</p>
+<p>You could set an alias for this with:</p>
+<pre><code class="language-bash">git config --global alias.grs '!git fetch origin &amp;&amp; git rebase origin/main'
+</code></pre>
+<p>To check whether a setting is active or now you can use:</p>
+<pre><code class="language-bash">git config --get rebase.autoStash
+true
+</code></pre>
+<p>To set these options with home-manager:</p>
+<pre><code class="language-nix"># ... snip ...
+    extraConfig = lib.mkOption {
+      type = lib.types.attrs;
+      default = {
+        commit.gpgsign = true;
+        gpg.format = "ssh";
+        user.signingkey = "/etc/ssh/ssh_host_ed25519_key.pub";
+        extraConfig = {
+          pull = {
+            rebase = true;
+            ff = "only";
+        };
+        };
+        rebase = {
+          autoStash = true; # Auto stashes and unstashes local changes during rebase
+        };
+        fetch = {
+          prune = true; # Automatically deletes remote-tracking branches that no longer exist
+        };
+# ... snip ...
+</code></pre>
 <h2 id="time-travel-in-git"><a class="header" href="#time-travel-in-git">Time Travel in Git</a></h2>
 <details>
 <summary> ✔️ Click to Expand Time Travel Section </summary>
@@ -636,11 +718,128 @@ git add configuration.nix
 git commit -m "Describe the new feature or fix"
 </code></pre>
 <h3 id="basic-branching"><a class="header" href="#basic-branching">Basic Branching</a></h3>
+<p>With Git you're always on a branch and the default branch is <code>master</code>. Many
+change it to <code>main</code> because of the suggestion Git gives you I think people are
+too easily offended these days, just keep this in mind that <code>main</code> and <code>master</code>
+refer to the main development branch.</p>
+<p>You can get a listing of your current branches with:</p>
+<pre><code class="language-bash">git branch
+* (no branch)
+  main
+</code></pre>
+<p>The <code>*</code> is next to the current branch and is where the <code>HEAD</code> is currently
+pointing. It says <code>(no branch)</code> because I'm currently in detached <code>HEAD</code> where
+<code>HEAD</code> points to no branch. The reason for this is because I've been trying out
+Jujutsu VCS and that's JJ's default setting, a detached <code>HEAD</code>.</p>
+<p>Git actually gives you a warning about working in a detached <code>HEAD</code>:</p>
+<pre><code class="language-bash">You are in 'detached HEAD' state. You can make experimental
+changes and commit them, and you can discard any commits you make
+in this state without impacting any branch by switching back.
+
+If you want to create a new branch to retain commits you create,
+you can do so now (using 'git switch -c &lt;new-branch-name&gt;') or
+later (using 'git branch &lt;new-branch-name&gt; &lt;commit-id&gt;').
+
+See 'git help switch' for details.
+</code></pre>
+<p>To attach the <code>HEAD</code> (i.e., have the pointer pointing to a branch), use the
+<code>git checkout</code> command</p>
+<pre><code class="language-bash">git checkout main
+Switched to branch 'main'
+</code></pre>
+<pre><code class="language-bash">git branch
+* main
+# Ensure that you have the latest "tip" from the remote repository `origin`
+git fetch origin main
+From github.com:sayls8/flake
+ * branch            main       -&gt; FETCH_HEAD
+</code></pre>
+<p>Although we're working on our own repo and there is basically no chance of our
+local branch diverging from our remote, it's still good to get in the practice
+of getting everything in sync before merging or rebasing etc.</p>
+<p><code>git fetch</code> doesn't update <code>main</code>, it just updates your references. To update
+<code>main</code> you would use <code>git pull origin/main</code> or <code>git rebase origin/main</code></p>
+<p>You can inspect your upstream branches with the following command:</p>
+<pre><code class="language-bash">git remote show origin
+* remote origin
+  Fetch URL: git@github.com:saylesss88/flake.git
+  Push  URL: git@github.com:saylesss88/flake.git
+  HEAD branch: main
+  Remote branch:
+    main tracked
+  Local ref configured for 'git push':
+    main pushes to main (fast-forwardable)
+</code></pre>
+<p><code>* branch     main      -&gt; FETCH_HEAD</code>: This line signifies that the <code>main</code>
+branch from the remote repository (likely <code>origin</code>) was successfully fetched,
+and the commit ID of its current tip (its latest commit) is now stored in your
+local <code>FETCH_HEAD</code> reference.</p>
+<p>Now that we know our local <code>main</code> is up to date with our remote <code>origin/main</code> we
+can safely create a new feature branch:</p>
+<pre><code class="language-bash">git checkout -b feature/prose_wrap
+Switched to a new branch 'feature/prose_wrap'
+</code></pre>
+<p>Right now the branch <code>feature/prose_wrap</code> is exactly the same as <code>main</code> and we
+can safely make changes without affecting <code>main</code>. We can try crazy or even
+"dangerous" things and always be able to revert to a working state with
+<code>git checkout main</code>.</p>
+<p>If our crazy idea works out, we can then merge our feature branch into <code>main</code>.</p>
+<p>Ok the feature works, I've added and committed the change. Now it's time to
+point the <code>HEAD</code> to <code>main</code> and then either merge or rebase the feature branch
+into <code>main</code>:</p>
+<pre><code class="language-bash">git checkout main
+git fetch origin main
+git merge feature/prose_wrap
+Updating c8bd54c..b281f79
+Fast-forward
+ home/editors/helix/default.nix | 69 +++++++++++++++++++++++++++++++--------------------------------------
+ 1 file changed, 31 insertions(+), 38 deletions(-)
+</code></pre>
+<ul>
+<li>"fast-forward" means that our <code>feature/prose_wrap</code> branch was directly ahead
+of the last commit on <code>main</code>. When you merge one commit with another commit
+that can be reached by following the first commits history, remember the
+feature branch is exactly the same as <code>main</code> until I made another commit. If
+the branches diverged more and the history can't be followed, Git will perform
+a 3-way merge where it creates a new "merge commit" that combines the 2
+changes.</li>
+</ul>
+<p>If you have a bunch of branches and forget which have been merged yet use:</p>
+<pre><code class="language-bash">git branch --merged
+feature/prose_wrap
+* main
+# OR to see branches that haven't been merged use:
+git branch --no-merged
+</code></pre>
+<p>It's now safe to delete the feature branch:</p>
+<pre><code class="language-bash">git branch -d feature/prose_wrap
+Deleted branch feature/prose_wrap (was b281f79)
+</code></pre>
+<blockquote>
+<p>❗ TIP: If your feature branch has a lot of sloppy commits that won't be of
+much benefit to anyone, squash them first then merge. The workflow would look
+something like this:</p>
+<pre><code class="language-bash"> # Make sure you're on the main branch
+ git checkout main
+
+ # Merge the feature branch with squash
+ git merge --squash feature/prose_wrap
+</code></pre>
+<ul>
+<li>This combines all the commits in your branch and adds them to your <code>main</code>
+staging area, it doesn't move HEAD or create a merge commit for you. To
+apply the changes into one big commit, finalize it with:</li>
+</ul>
+<pre><code class="language-bash"> git commit -m "Add prose wrapping feature"
+</code></pre>
+<p>This is often referred to as the "squash commit".</p>
+</blockquote>
 <p>Branching means to diverge from the main line of development and continue to do
 work without risking messing up your main branch. There are a few commits on
 your main branch so to visualize this it would look something like this, image
 is from <a href="https://git-scm.com/book/en/v2">Pro Git</a>:</p>
 <p><img src="../images/git-branch3.png" alt="Git Branch 1" /></p>
+<h2 id="nix-flake-update-example-with-branches"><a class="header" href="#nix-flake-update-example-with-branches">Nix flake update example with branches</a></h2>
 <p>Let's say you haven't ran <code>nix flake update</code> in a while and you don't want to
 introduce errors to your working configuration. To do so we can first, make sure
 we don't lose any changes on our main branch:</p>
@@ -732,9 +931,9 @@ git push origin update-test
 </code></pre>
 <blockquote>
 <p>❗ This is the same workflow for commiting a PR. After you first fork and
-clone the repo you want to work on, you create a new feature branch and push
-to that branch on your fork. This allows you to create a PR comparing your
-changes to their existing configuration.</p>
+clone the repo you want to work on, you then create a new feature branch and
+push to that branch on your fork. This allows you to create a PR comparing
+your changes to their existing configuration.</p>
 </blockquote>
 <p>At this point our graph would look similar to the following:</p>
 <p><img src="../images/git-branch1.png" alt="Git Branch 3" /></p>
@@ -747,7 +946,7 @@ sudo nixos-rebuild test --flake .
 sudo nixos-rebuild switch --flake .
 </code></pre>
 <p>It's good practice to delete a branch after you've merged and are done with it.</p>
-<h2 id="merging-and-rebasing-branches"><a class="header" href="#merging-and-rebasing-branches">Merging and Rebasing Branches</a></h2>
+<h2 id="rebasing-branches"><a class="header" href="#rebasing-branches">Rebasing Branches</a></h2>
 <p>To combine two seperate branches into one unified history you typically use
 <code>git merge</code> or <code>git rebase</code>.</p>
 <p><code>git merge</code> takes two commit pointers and finds a common base commit between
@@ -805,7 +1004,7 @@ custom. So you could change it to for example, <code>config.custom.git</code> an
 would enable it with <code>custom.git.enable = true;</code> in your <code>home.nix</code> or
 equivalent.</p>
 </blockquote>
-<p>Then he has a <code>hm/default.nix</code> with the following</p>
+<p>Then he has a <code>hm/default.nix</code> with the following to enable it.</p>
 <pre><code class="language-nix">#...snip...
 
  # hydenix home-manager options go here
