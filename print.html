@@ -1785,6 +1785,8 @@ cache for fast, reproducible builds.</p>
 <p><a href="https://github.com/srid/devour-flake">devour-flake documentation</a></p>
 <p><a href="https://discourse.nixos.org/t/how-to-set-up-cachix-in-flake-based-nixos-config/31781">Discourse Cachix for Flakes</a></p>
 <p><a href="https://docs.cachix.org/installation#flakes">Cachix docs: Flakes</a></p>
+<p><a href="https://www.tweag.io/blog/2020-06-25-eval-cache/#:~:text=The%20overhead%20for%20creating%20the,nixpkgs%20blender%20takes%204.9%20seconds.">Tweag Evaluation Caching</a></p>
+<p><a href="https://scrive.github.io/nix-workshop/06-infrastructure/01-caching-nix.html">Scrive Caching</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nix-paths"><a class="header" href="#nix-paths">Nix Paths</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
@@ -14880,6 +14882,7 @@ will obviously be different.</p>
 <p>When in doubt use <code>master</code>, that's where most changes should go. This can be
 changed later by
 <a href="https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md#rebasing-between-branches-ie-from-master-to-staging">rebasing</a></p>
+<p>Add <a href="https://github.com/NixOS/nixpkgs">Nixpkgs</a> as your upstream:</p>
 <pre><code class="language-bash">cd nixpkgs
 
 git remote add upstream https://github.com/NixOS/nixpkgs.git
@@ -14906,7 +14909,7 @@ upstream        https://github.com/NixOS/nixpkgs.git (push)
 </ul>
 <p>This setup ensures you can easily pull updates from the original project and
 push your contributions to your own fork.</p>
-<pre><code class="language-bash"># Shows a ton of branches
+<pre><code class="language-bash"># Shows a ton of remote branches
 git branch -r | grep upstream
 # Narrow it down
 git branch -r | grep upstream | grep nixos-
@@ -14916,10 +14919,18 @@ git branch -r | grep upstream | grep nixos-
 <li>Ensure <code>master</code> is up to date with <code>upstream</code></li>
 </ol>
 <pre><code class="language-bash">git checkout master
-git fetch upstream
 git pull upstream master
 git push origin master
 </code></pre>
+<ul>
+<li>
+<p><code>git pull upstream master</code> is equivalent to running <code>git fetch upstream</code>
+followed by <code>git merge upstream/master</code> into your current branch (<code>master</code>).</p>
+</li>
+<li>
+<p><code>git push origin master</code> updates your forks remote with the fetched changes.</p>
+</li>
+</ul>
 <p>This keeps your fork in sync to avoid conflicts.</p>
 <p>If targeting another branch, replace <code>master</code> with <code>nixos-24.11</code> for example.</p>
 <ol start="2">
@@ -14932,22 +14943,22 @@ git checkout -b my-feature-branch # name should represent the feature
 <li>Make and Test Changes</li>
 </ol>
 <p><a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#conventions">Packaging Conventions</a></p>
-<p>New package: Add to
+<p><strong>New package</strong>: Add to
 <code>pkgs/by-name/&lt;first-two-letters&gt;/&lt;package-name&gt;/default.nix</code>.</p>
-<p>Example structure:</p>
+<p><strong>Example structure</strong>:</p>
 <pre><code class="language-nix">{ lib, stdenv, fetchFromGitHub }: stdenv.mkDerivation {
 pname = "xyz"; version = "1.2.3"; src = fetchFromGitHub { ... }; ... }
 </code></pre>
-<p>Update package: Edit version and <code>sha256</code> in the package’s <code>default.nix</code>. Use
-<code>nix-prefetch-url</code> to update hashes:</p>
+<p><strong>Update package</strong>: Edit version and <code>sha256</code> in the package’s <code>default.nix</code>.
+Use <code>nix-prefetch-url</code> to update hashes:</p>
 <pre><code class="language-bash">nix-prefetch-url &lt;source-url&gt;
 </code></pre>
-<p>Fix a bug: Modify files in <code>pkgs/</code>, <code>nixos/modules/</code>, or elsewhere.</p>
-<p>Test locally:</p>
+<p><strong>Fix a bug</strong>: Modify files in <code>pkgs/</code>, <code>nixos/modules/</code>, or elsewhere.</p>
+<p><strong>Test locally</strong>:</p>
 <p>Build:</p>
 <pre><code class="language-bash">nix-build -A &lt;package-name&gt;
 </code></pre>
-<p>Test in a shell:</p>
+<p><strong>Test in a shell</strong>:</p>
 <pre><code class="language-bash"> bash nix-shell -p &lt;package-name&gt;
 </code></pre>
 <p>For NixOS modules:</p>
@@ -14955,7 +14966,7 @@ pname = "xyz"; version = "1.2.3"; src = fetchFromGitHub { ... }; ... }
 </code></pre>
 <p>Follow the Nixpkgs Contributing Guide.</p>
 <ol start="4">
-<li>Commit and Push</li>
+<li><strong>Commit and Push</strong></li>
 </ol>
 <p>Commit with a clear message, make sure to follow
 <a href="https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md#commit-conventions">commit conventions</a>:</p>
@@ -15030,6 +15041,11 @@ Patched source to use updated API calls.
 <p>Push:</p>
 <pre><code class="language-bash">git push origin my-feature-branch
 </code></pre>
+<p>When you push your feature branch, it will output a link that you can follow to
+complete the PR on GitHub.</p>
+<p>If you have the <code>gh-cli</code> set up you can also do this from the command line:</p>
+<pre><code class="language-bash">gh pr create --repo NixOS/nixpkgs --base master --head sayls8:feat/my-package
+</code></pre>
 <ol start="5">
 <li>Create a Pull Request</li>
 </ol>
@@ -15045,7 +15061,7 @@ and respond to feedback.</p>
 <p>Edit, commit, and push:</p>
 <pre><code class="language-bash">git add . git commit -m "&lt;package-name&gt;: address feedback" git push origin my-feature-branch
 </code></pre>
-<p>Rebase if needed: bash</p>
+<p>Rebase if needed:</p>
 <pre><code class="language-bash">git fetch upstream
 git rebase upstream/master  # or upstream/nixos-24.11
 git push origin my-feature-branch --force
