@@ -2207,6 +2207,7 @@ of garbage collection and it's considered unsafe.</p>
 <li><a href="nix/hardening_NixOS.html#hardening-the-kernel">Hardening the Kernel</a></li>
 <li><a href="nix/hardening_NixOS.html#best-practices">Best Practices</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-systemd">Hardening Systemd</a></li>
+<li><a href="nix/hardening_NixOS.html#lynis-and-other-tools">Lynis and other tools</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-networking">Hardening Networking</a></li>
 <li><a href="nix/hardening_NixOS.html#encrypted-dns">Encrypted DNS</a></li>
 <li><a href="nix/hardening_NixOS.html#firewalls">Firewalls</a></li>
@@ -2463,6 +2464,49 @@ harden settings for systemd services.</p>
 <pre><code class="language-bash">systemd-analyze security bluetooth
 → Overall exposure level for bluetooth.service: 3.3 OK 🙂
 </code></pre>
+<h2 id="lynis-and-other-tools"><a class="header" href="#lynis-and-other-tools">Lynis and other tools</a></h2>
+<p>Lynis is a security auditing tool for systems based on UNIX like Linux, macOS,
+BSD, and others.--<a href="https://github.com/CISOfy/lynis">lynis repo</a></p>
+<p>Installation:</p>
+<pre><code class="language-nix">environment.systemPackages = [
+pkgs.lynis
+pkgs.chkrootkit
+pkgs.clamav
+pkgs.aide
+ ];
+</code></pre>
+<p>Usage:</p>
+<pre><code class="language-bash">sudo lynis show commands
+sudo lynis audit system
+ Lynis security scan details:
+
+  Hardening index : 78 [###############     ]
+  Tests performed : 231
+  Plugins enabled : 0
+
+  Components:
+  - Firewall               [V]
+  - Malware scanner        [V]
+</code></pre>
+<ul>
+<li>Lynis will give you more recommendations for securing your system as well.</li>
+</ul>
+<p>Example cron job for <code>chkrootkit</code>:</p>
+<pre><code class="language-nix">{pkgs, ...}: {
+  services.cron = {
+    enable = true;
+    # messages.enable = true;
+    systemCronJobs = [
+      # Every Sunday at 2:10 AM, run chkrootkit as root, log output for review
+      "10 2 * * 0 root ${pkgs.chkrootkit}/bin/chkrootkit | logger -t chkrootkit"
+    ];
+  };
+}
+</code></pre>
+<p>The above cron job will use <code>chkrootkit</code> to automatically scan for known rootkit
+signatures. It can detect hidden processes and network connections.</p>
+<p>I got the recommendation for <code>clamav</code> from the Paranoid NixOS blog post and the
+others help with compliance for <code>lynis</code>.</p>
 <h2 id="hardening-networking"><a class="header" href="#hardening-networking">Hardening Networking</a></h2>
 <h2 id="encrypted-dns"><a class="header" href="#encrypted-dns">Encrypted DNS</a></h2>
 <p><a href="https://blog.cloudflare.com/dns-encryption-explained/">Cloudflare Dns Encryption Explained</a></p>
