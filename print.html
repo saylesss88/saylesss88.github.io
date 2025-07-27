@@ -2198,6 +2198,497 @@ nix-repl&gt; :p builtins.getContext (builtins.unsafeDiscardOutputDependency open
 <p>Relying on paths outside of the nix store is generally not recommended because
 of garbage collection and it's considered unsafe.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-nixos"><a class="header" href="#hardening-nixos">Hardening NixOS</a></h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<ul>
+<li><a href="nix/hardening_NixOS.html#minimal-installation-with-luks">Minimal Installation with LUKS</a></li>
+<li><a href="nix/hardening_NixOS.html#secure-boot">Secure Boot</a></li>
+<li><a href="nix/hardening_NixOS.html#encrypted-secrets">Encrypted Secrets</a></li>
+<li><a href="nix/hardening_NixOS.html#the-kernel">The Kernel</a></li>
+<li><a href="nix/hardening_NixOS.html#best-practices">Best Practices</a></li>
+<li><a href="nix/hardening_NixOS.html#hardening-systemd">Hardening Systemd</a></li>
+<li><a href="nix/hardening_NixOS.html#firewalls">Firewalls</a></li>
+<li><a href="nix/hardening_NixOS.html#firejail">Firejail</a></li>
+<li><a href="nix/hardening_NixOS.html#securing-ssh">Securing SSH</a></li>
+<li><a href="nix/hardening_NixOS.html#usb-port-protection">USB Port Protection</a></li>
+<li><a href="nix/hardening_NixOS.html#encrypted-dns">Encrypted DNS</a></li>
+<li><a href="nix/hardening_NixOS.html#usb-interfaces">USB interfaces</a></li>
+<li><a href="nix/hardening_NixOS.html#selinux">SeLinux</a></li>
+<li><a href="nix/hardening_NixOS.html#resources">Resources</a></li>
+</ul>
+</details>
+<p><img src="nix/../images/guy_fawks.png" alt="guy fawks hacker" /></p>
+<p>Securing your NixOS system begins with a philosophy of minimalism, explicit
+configuration, and proactive control.</p>
+<blockquote>
+<p>⚠️ Warning: I am not a security professional, this is meant to show some of
+your options when hardening NixOS. You will have to judge for yourself if
+something fits your needs or is unnecessary for your setup. Always do your own
+research, hardening and isolating processes can naturally cause some issues.</p>
+</blockquote>
+<h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
+<p>Begin with NixOS’s minimal installation image. This gives you a base system with
+only essential tools and no extras that could introduce vulnerabilities.</p>
+<p>Use LUKS encryption to protect your data at rest, the following guide is a
+minimal disko encrypted installation:
+<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+<h2 id="secure-boot"><a class="header" href="#secure-boot">Secure Boot</a></h2>
+<p><img src="nix/../images/virus1.png" alt="Virus" /></p>
+<p>Secure Boot helps ensure only signed, trusted kernels and bootloaders are
+executed at startup.</p>
+<p>Useful Resources:</p>
+<ul>
+<li>
+<p><a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">The Strange State of Authenticated Boot and Encryption</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Secure_Boot">NixOS Wiki Secure Boot</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nix-community/lanzaboote">lanzaboote repo</a></p>
+</li>
+</ul>
+<p>Practical Lanzaboote Secure Boot setup for NixOS:
+<a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Guide:Secure Boot on NixOS with Lanzaboote</a></p>
+<h2 id="encrypted-secrets"><a class="header" href="#encrypted-secrets">Encrypted Secrets</a></h2>
+<p><img src="nix/../images/encrypt.png" alt="Encrypt" /></p>
+<p>Never store secrets in plain text in repositories. Use something like
+<code>sops-nix</code>, which lets you keep encrypted secrets under version control
+declaratively.</p>
+<p>Protect your sectets, the following guide is on setting up Sops on NixOS:
+<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a></p>
+<h2 id="the-kernel"><a class="header" href="#the-kernel">The Kernel</a></h2>
+<p><img src="nix/../images/kernel.png" alt="Kernel" /></p>
+<p>From the following discourse, it looks like the following is now enabled by
+default
+<a href="https://discourse.nixos.org/t/enabling-hardened-profile/63107">Discourse</a>:</p>
+<pre><code class="language-nix">profiles.hardened.enable = true;
+</code></pre>
+<ul>
+<li>There is a proposal to remove it FYI:
+<a href="https://discourse.nixos.org/t/proposal-to-deprecate-the-hardened-profile/63081">Discourse</a></li>
+</ul>
+<p>You can also use the hardened kernel:</p>
+<pre><code class="language-nix">boot.kernelPackages = pkgs.linuxPackages_latest_hardened;
+</code></pre>
+<p>Check all <code>sysctl</code> parameters:</p>
+<pre><code class="language-bash">sysctl -a
+</code></pre>
+<p>Check Active Linux Security Modules:</p>
+<pre><code class="language-bash">cat /sys/kernel/security/lsm
+</code></pre>
+<p>Check Kernel Configuration Options:</p>
+<pre><code class="language-bash">zcat /proc/config.gz | grep CONFIG_SECURITY_SELINUX
+zcat /proc/config.gz | grep CONFIG_HARDENED_USERCOPY
+zcat /proc/config.gz | grep CONFIG_STACKPROTECTOR
+</code></pre>
+<p>Or you can harden the kernel you're using:</p>
+<pre><code class="language-nix">  boot.kernel.sysctl = {
+    # The Magic SysRq key is a key combo that allows users connected to the
+    # system console of a Linux kernel to perform some low-level commands.
+    # Disable it, since we don't need it, and is a potential security concern.
+    "kernel.sysrq" = 0;
+    "fs.protected_fifos" = 2;
+    "fs.protected_regular" = 2;
+    "fs.suid_dumpable" = false;
+    "kernel.kptr_restrict" = 2;
+    # Note: certian container runtimes or browser sandboxes might rely on the following
+    "kernel.unprivileged_bpf_disabled" = true;
+
+    ## TCP hardening
+    # Prevent bogus ICMP errors from filling up logs.
+    "net.ipv4.icmp_ignore_bogus_error_responses" = 1;
+    # Reverse path filtering causes the kernel to do source validation of
+    # packets received from all interfaces. This can mitigate IP spoofing.
+    "net.ipv4.conf.all.forwarding" = 0;
+    "net.ipv4.conf.default.rp_filter" = 1;
+    "net.ipv4.conf.all.rp_filter" = 1;
+    # Do not accept IP source route packets (we're not a router)
+    "net.ipv4.conf.all.accept_source_route" = 0;
+    "net.ipv6.conf.all.accept_source_route" = 0;
+    "net.ipv6.conf.all.forwarding" = 0;
+    # Don't send ICMP redirects (again, we're not a router)
+    "net.ipv4.conf.all.send_redirects" = 0;
+    "net.ipv4.conf.default.send_redirects" = 0;
+    # "net.core.bpf_jit_harden" = 2;
+    # Refuse ICMP redirects (MITM mitigations)
+    "net.ipv4.conf.all.accept_redirects" = 0;
+    "net.ipv4.conf.default.accept_redirects" = 0;
+    "net.ipv4.conf.all.secure_redirects" = 0;
+    "net.ipv4.conf.default.secure_redirects" = 0;
+    "net.ipv6.conf.all.accept_redirects" = 0;
+    "net.ipv6.conf.default.accept_redirects" = 0;
+    # Protects against SYN flood attacks
+    "net.ipv4.tcp_syncookies" = 1;
+    # Incomplete protection again TIME-WAIT assassination
+    "net.ipv4.tcp_rfc1337" = 1;
+    # disable unprivileged user namespaces, Note: Docker, and other apps may need this
+    "kernel.unprivileged_userns_clone" = 0;
+    # memory protection (64-bit systems)
+    "vm.mmap_rnd_bits" = 32;
+    # Randomize memory
+    "kernel.randomize_va_space" = 2;
+    # Exec Shield (Stack protection)
+    "kernel.exec-shield" = 1;
+    "kernel.randomize_va_space" = 2;
+
+
+    ## TCP optimization
+    # TCP Fast Open is a TCP extension that reduces network latency by packing
+    # data in the sender’s initial TCP SYN. Setting 3 = enable TCP Fast Open for
+    # both incoming and outgoing connections:
+    "net.ipv4.tcp_fastopen" = 3;
+    # Bufferbloat mitigations + slight improvement in throughput &amp; latency
+    "net.ipv4.tcp_congestion_control" = "bbr";
+    "net.core.default_qdisc" = "cake";
+  };
+</code></pre>
+<p>Note: The above settings are fairly aggressive</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<p><strong>Explicitly enable each service</strong>: In your <code>configuration.nix</code>, only enable
+networking, SSH, desktop environments, and applications as needed. Remove or
+avoid legacy daemons and sample services.</p>
+<p><strong>Principle of Least Privilege Limit installed software</strong>: Each program or
+service added is potential attack surface. Install packages individually rather
+than enabling broad module imports or convenience meta-packages.</p>
+<p><strong>Run services as unprivileged users</strong>: Wherever possible, configure system
+services to run with a dedicated user and group, not as root.</p>
+<p>Use NixOS’s fine-grained service options: For example, set systemd sandboxing
+options (ProtectHome, PrivateTmp, NoNewPrivileges), and use NixOS modules’
+user/group settings for daemons.</p>
+<p>Secure the Boot &amp; Init Process Enable Secure Boot: Use modules like lanzaboote
+to enforce EFI Secure Boot, ensuring only signed kernels are loaded.</p>
+<p>Encrypt your root and data partitions: Use LUKS+ext4 or btrfs for storage with
+strong passphrases or keyfiles.</p>
+<p>Keep the Attack Surface Small Disable unused features and daemons: Comment out
+or set enable = false; for modules like CUPS, Samba, avahi, etc., if you don’t
+need printing, filesharing, or zeroconf networking.</p>
+<h2 id="hardening-systemd"><a class="header" href="#hardening-systemd">Hardening Systemd</a></h2>
+<p><img src="nix/../images/hacker.png" alt="Hacker" /></p>
+<p><code>systemd</code> is the core "init system" and service manager that controls how
+services, daemons, and basic system processes are started, stopped and
+supervised on modern Linux distrobutions, including NixOS.</p>
+<p>You can check the security status with:</p>
+<pre><code class="language-bash">systemd-analyze security
+# or for a detailed view of individual services security posture
+systemd-analyze security NetworkManager
+</code></pre>
+<p><a href="https://0pointer.de/blog/projects/the-biggest-myths.html">Biggest Myths about Systemd</a></p>
+<p>The following is a repo containing many of the Systemd hardening settings in
+NixOS format:</p>
+<p><a href="https://github.com/wallago/nix-system-services-hardened">nix-system-services-hardened</a></p>
+<p>For example, to harden bluetooth you could add the following to your
+<code>configuration.nix</code> or equivalent:</p>
+<pre><code class="language-nix">systemd.services = {
+      bluetooth.serviceConfig = {
+      ProtectKernelTunables = lib.mkDefault true;
+      ProtectKernelModules = lib.mkDefault true;
+      ProtectKernelLogs = lib.mkDefault true;
+      ProtectHostname = true;
+      ProtectControlGroups = true;
+      ProtectProc = "invisible";
+      SystemCallFilter = [
+        "~@obsolete"
+        "~@cpu-emulation"
+        "~@swap"
+        "~@reboot"
+        "~@mount"
+      ];
+      SystemCallArchitectures = "native";
+    };
+}
+</code></pre>
+<p>As you can see from above, you typically use the <code>serviceConfig</code> attribute to
+harden settings for systemd services.</p>
+<pre><code class="language-bash">systemd-analyze security bluetooth
+→ Overall exposure level for bluetooth.service: 3.3 OK 🙂
+</code></pre>
+<h2 id="firewalls"><a class="header" href="#firewalls">Firewalls</a></h2>
+<p>NixOS includes an integrated firewall based on iptables/nftables.</p>
+<p><a href="https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/">Beginners guide to nftables</a></p>
+<p><a href="https://wiki.archlinux.org/title/Nftables">Arch Wiki nftables</a></p>
+<p>The following firewall setup is based on the dnscrypt setup above utilizing
+nftables:</p>
+<pre><code class="language-nix">{...}: {
+  networking.nftables = {
+    enable = true;
+
+    ruleset = ''
+      table inet filter {
+        chain output {
+          # Allow localhost DNS for dnscrypt-proxy2
+          ip daddr 127.0.0.1 udp dport 53 accept
+          ip6 daddr ::1 udp dport 53 accept
+          ip daddr 127.0.0.1 tcp dport 53 accept
+          ip6 daddr ::1 tcp dport 53 accept
+          # Allow dnscrypt-proxy2 to talk to upstream
+          # ps -o uid,user,pid,cmd -C dnscrypt-proxy; Copy UID #
+          meta skuid 62396 udp dport { 443, 853 } accept
+          meta skuid 62396 tcp dport { 443, 853 } accept
+          # Block all other outbound DNS
+          udp dport { 53, 853 } drop
+          tcp dport { 53, 853 } drop
+        }
+      }
+    '';
+  };
+
+  networking.firewall = {
+    enable = true;
+    allowedTCPPorts = [
+      53 # DNS
+      22 # SSH
+      80 # HTTP
+      443 # HTTPS
+    ];
+    allowedUDPPorts = [
+      53 # DNS
+    ];
+  };
+}
+</code></pre>
+<p>Review listening ports: After each rebuild, use <code>ss -tlpn</code> or <code>netstat</code> to see
+which services are accepting connections. Close or firewall anything
+unnecessary.</p>
+<p>Use the built-in firewall: Enable and configure networking.firewall to allow
+only explicitly required ports.</p>
+<h2 id="firejail"><a class="header" href="#firejail">Firejail</a></h2>
+<p>Firejail is a SUID program that reduces the risk of security breaches by
+restricting the running environment of untrusted applications using
+<a href="https://lwn.net/Articles/531114/">Linux namespaces</a> and
+<a href="https://l3net.wordpress.com/2015/04/13/firejail-seccomp-guide/">seccomp-bpf</a>--<a href="https://firejail.wordpress.com/">Firejail Security Sandbox</a></p>
+<h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
+<p>First of all, if you don't use SSH don't enable it in the first place. If you do
+use SSH, it's important to understand what that opens you up to.</p>
+<p>The following are some recommendations from Mozilla on OpenSSH:</p>
+<ul>
+<li><a href="https://infosec.mozilla.org/guidelines/openssh.html">Mozilla OpenSSH guidelines</a></li>
+</ul>
+<p>The following OpenSSH setup is based on the above guidelines with strong
+algorithms, and best practices:</p>
+<pre><code class="language-nix">{config, ...}: {
+  config = {
+    services = {
+      fail2ban = {
+        enable = true;
+        maxretry = 5;
+        bantime = "1h";
+        # ignoreIP = [
+        # "172.16.0.0/12"
+        # "192.168.0.0/16"
+        # "2601:881:8100:8de0:31e6:ac52:b5be:462a"
+        # "matrix.org"
+        # "app.element.io" # don't ratelimit matrix users
+        # ];
+
+        bantime-increment = {
+          enable = true; # Enable increment of bantime after each violation
+          multipliers = "1 2 4 8 16 32 64 128 256";
+          maxtime = "168h"; # Do not ban for more than 1 week
+          overalljails = true; # Calculate the bantime based on all the violations
+        };
+      };
+      openssh = {
+        enable = true;
+        settings = {
+          PasswordAuthentication = false;
+          PermitEmptyPasswords = false;
+          PermitTunnel = false;
+          UseDns = false;
+          KbdInteractiveAuthentication = false;
+          X11Forwarding = config.services.xserver.enable;
+          MaxAuthTries = 3;
+          MaxSessions = 2;
+          ClientAliveInterval = 300;
+          ClientAliveCountMax = 0;
+          AllowUsers = ["your-user"];
+          TCPKeepAlive = false;
+          AllowTcpForwarding = false;
+          AllowAgentForwarding = false;
+          LogLevel = "VERBOSE";
+          PermitRootLogin = "no";
+          KexAlgorithms = [
+            "curve25519-sha256@libssh.org"
+            "ecdh-sha2-nistp521"
+            "ecdh-sha2-nistp384"
+            "ecdh-sha2-nistp256"
+            "diffie-hellman-group-exchange-sha256"
+          ];
+          Ciphers = [
+            "chacha20-poly1305@openssh.com"
+            "aes256-gcm@openssh.com"
+            "aes128-gcm@openssh.com"
+            "aes256-ctr"
+            "aes192-ctr"
+            "aes128-ctr"
+          ];
+          Macs = [
+            "hmac-sha2-512-etm@openssh.com"
+            "hmac-sha2-256-etm@openssh.com"
+            "umac-128-etm@openssh.com"
+            "hmac-sha2-512"
+            "hmac-sha2-256"
+            "umac-128@openssh.com"
+          ];
+        };
+        hostKeys = [
+          {
+            path = "/etc/ssh/ssh_host_ed25519_key";
+            type = "ed25519";
+          }
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p>Harden Authentication and Access Use key-based SSH, disable passwords: Set
+<code>services.openssh.settings.PasswordAuthentication = false;</code> and use SSH keys
+generated with strong algorithms (e.g., Ed25519).</p>
+<p>Restrict SSH access: Use AllowUsers, limit sources with firewall rules, and
+disable root login.</p>
+<p>Use multi-factor authentication (MFA): For both SSH and desktop login,
+optionally integrate U2F, TOTP, or smartcard support.</p>
+<p>System Update and Maintenance Regularly update and upgrade: Use nixos-rebuild
+frequently and review channel or flake updates to patch vulnerabilities quickly.</p>
+<p>Audit installed packages: Use <code>nix-store --gc</code> and <code>nix-collect-garbage</code> to
+minimize leftover, unused software.</p>
+<p>Automate security updates: Consider scheduled builds or notifications for NixOS
+security advisories.</p>
+<p>Monitoring, Logging, and Auditing Enable audit logging: Set
+<code>security.auditd.enable = true;</code> for system-level event logging.</p>
+<p><strong>Monitor denied accesses</strong>: Configure <code>security.apparmor</code> or <code>security.selinux</code>
+as a mandatory access control layer, and regularly check logs for AppArmor or
+SELinux policy denials.</p>
+<p><strong>Review logs with <code>journalctl</code></strong>: Check system logs for unauthorized access
+attempts or configuration errors.</p>
+<p>Advanced Hardening Implement sandboxing: For server workloads or exposed
+applications, consider running them in <code>systemd-nspawn</code>, Firejail, or with user
+namespaces for isolation.</p>
+<p>Deploy mandatory access control (MAC): Enable and tune AppArmor or SELinux for
+application-level confinement. Write or port profiles for critical apps and
+services.</p>
+<h2 id="usb-port-protection"><a class="header" href="#usb-port-protection">USB Port Protection</a></h2>
+<pre><code class="language-bash">nix-shell -p usbguard
+</code></pre>
+<pre><code class="language-bash">sudo usbguard generate-policy &gt; ~/usbguard-rules.conf
+</code></pre>
+<blockquote>
+<p>🚧 Make sure not to just enable this, you need to set up rules or you can end
+up with some persistent problems.</p>
+</blockquote>
+<p>Control USB/Removable access: Use <code>services.usbguard</code> to restrict which USB
+devices are accepted. Be particularly careful if your authentication keyfiles
+are on USB devices.</p>
+<h2 id="encrypted-dns"><a class="header" href="#encrypted-dns">Encrypted DNS</a></h2>
+<p><a href="https://blog.cloudflare.com/dns-encryption-explained/">Cloudflare Dns Encryption Explained</a></p>
+<p>The following sets up dnscrypt-proxy using DoH (DNS over HTTPS) with an oisd
+blocklist:</p>
+<pre><code class="language-nix"># dnscrypt-proxy.nix
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}: let
+  blocklist_base = builtins.readFile inputs.oisd;
+  extraBlocklist = '''';
+  blocklist_txt = pkgs.writeText "blocklist.txt" ''
+    ${extraBlocklist}
+    ${blocklist_base}
+  '';
+  hasIPv6Internet = true;
+  StateDirectory = "dnscrypt-proxy";
+in {
+  networking = {
+    # Set DNS nameservers to the local host addresses for iPv4 (`127.0.0.1`) &amp; iPv6 (::1)
+    nameservers = ["127.0.0.1" "::1"];
+    # If using dhcpcd
+    # dhcpcd.extraConfig = "nohook resolv.conf";
+    # If using NetworkManager
+    networkmanager.dns = "none";
+  };
+  services.resolved.enable = lib.mkForce false;
+  # See https://wiki.nixos.org/wiki/Encrypted_DNS
+  services.dnscrypt-proxy2 = {
+    enable = true;
+    # See https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml
+    settings = {
+      sources.public-resolvers = {
+        urls = [
+          "https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
+          "https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md"
+        ];
+        minisign_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"; # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+        cache_file = "/var/lib/${StateDirectory}/public-resolvers.md";
+      };
+
+      # Use servers reachable over IPv6 -- Do not enable if you don't have IPv6 connectivity
+      ipv6_servers = hasIPv6Internet;
+      block_ipv6 = ! hasIPv6Internet;
+      blocked_names.blocked_names_file = blocklist_txt;
+      require_dnssec = true;
+      require_nolog = false;
+      require_nofilter = true;
+      doh_servers = true;
+      odoh_servers = false;
+      force_tcp = true;
+
+      # If you want, choose a specific set of servers that come from your sources.
+      # Here it's from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+      # If you don't specify any, dnscrypt-proxy will automatically rank servers
+      # that match your criteria and choose the best one.
+      # server_names = [ ... ];
+    };
+  };
+
+  systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
+}
+</code></pre>
+<pre><code class="language-bash">sudo systemctl status dnscrypt-proxy2
+# verify that dnscrypt-proxy is listening
+sudo ss -lnp | grep 53
+# Test a DNS query, if you get valid responses it's working
+dig @127.0.0.1 example.com +short
+# check the logs
+sudo journalctl -u dnscrypt-proxy2
+</code></pre>
+<p>dnscrypt-proxy2 dnscrypt-proxy2 acts as your local DNS caching resolver.</p>
+<p>All DNS clients on your system (dig, curl, most apps, except Firefox which has
+its own proxy) use dnscrypt-proxy2.</p>
+<p>dnscrypt-proxy2 filters ads/trackers (using oisd), enforces DNSSEC, and uses
+encrypted transports (DNS-over-HTTPS/DoH, DNSCrypt, optionally
+DNS-over-TLS/DoT).</p>
+<h2 id="usb-interfaces"><a class="header" href="#usb-interfaces">USB interfaces</a></h2>
+<p>Usbguard can whitelist wanted usb devices and block the rest. Be careful here,
+don't just enable it without adding rules.</p>
+<pre><code class="language-bash">sudo usbguard generate-policy &gt; /etc/usbguard/rules.conf
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-nix">{pkgs, ...}: {
+  environment.systemPackages = [pkgs.usbguard-notifier];
+  services.usbguard = {
+    enable = true;
+    rules = ''
+      allow id 1d6b:0002 serial "0000:05:00.3" name "xHCI Host Controller" hash "4a4NgfdUaJO43rkCzmWRSeHHR/uUh5+SNsXnhosm9qs=" parent-hash "ldMchY4Tt4GPUYo30eNGvai+Fs/EdnVY3vMyxJUq4Nk=" with-interface 09:00:00 with-connect-type ""
+      allow id 1d6b:0003 serial "0000:05:00.3" name "xHCI Host Controller" hash "d+DNGWARDtv9nEK2ZvnNOCtFernuMu5/e/oZ7kCppqQ=" parent-hash "ldMchY4Tt4GPUYo30eNGvai+Fs/EdnVY3vMyxJUq4Nk=" with-interface 09:00:00 with-connect-type ""
+      # Add default policy
+      block unknown
+    '';
+    # Optional: Configure these as needed for your security posture
+    presentDevicePolicy = "apply-policy"; # Or "keep"
+    IPCAllowedGroups = ["usbguard" "wheel"]; # If you want wheel group to manage
+  };
+
+  # If your user needs to interact with usbguard (e.g., via usbguard-cli)
+  users.users.jr.extraGroups = ["usbguard"];
+}
+</code></pre>
+<h2 id="selinux"><a class="header" href="#selinux">SeLinux</a></h2>
+<h2 id="resources-2"><a class="header" href="#resources-2">Resources</a></h2>
+<ul>
+<li><a href="https://hedgedoc.grimmauld.de/s/hWcvJEniW#">AppArmor and apparmor.d on NixOS</a></li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-control-with-git"><a class="header" href="#version-control-with-git">Version Control with Git</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
@@ -3052,7 +3543,7 @@ equivalent.</p>
     # ... snip ...
 </code></pre>
 <p>You can enable git, and set your git username as well as git email right here.</p>
-<h3 id="resources-2"><a class="header" href="#resources-2">Resources</a></h3>
+<h3 id="resources-3"><a class="header" href="#resources-3">Resources</a></h3>
 <ul>
 <li>
 <p><a href="https://gist.github.com/luismts/495d982e8c5b1a0ced4a57cf3d93cf60">GitCommitBestPractices</a></p>
@@ -3988,7 +4479,7 @@ reason about. Its workflows, operation log, and conflict handling provide a
 safer and more flexible environment for managing code changes, making it a
 compelling alternative for both new and experienced developers.</p>
 <hr />
-<h3 id="resources-3"><a class="header" href="#resources-3">Resources</a></h3>
+<h3 id="resources-4"><a class="header" href="#resources-4">Resources</a></h3>
 <ul>
 <li>
 <p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
@@ -7373,7 +7864,7 @@ In the next chapter,
 <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
-<h4 id="resources-4"><a class="header" href="#resources-4">Resources</a></h4>
+<h4 id="resources-5"><a class="header" href="#resources-5">Resources</a></h4>
 <details>
 <summary> ✔️ Resources (Click to Expand) </summary>
 <ul>
@@ -8492,7 +8983,7 @@ reproducibility of your system configurations. By pinning specific versions of
 Nixpkgs and other resources, you gain greater control over your environment and
 reduce the risk of unexpected changes due to upstream updates.</p>
 </details>
-<h3 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h3>
+<h3 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h3>
 <p>You'll see the following all throughout Nix code and is convenient although it
 doesn't follow best practices. One reason is static analysis can't reason about
 the code (e.g. Because it implicitly brings all attributes into scope, tools
@@ -12322,7 +12813,7 @@ we will delve deeper into the structure and components of these derivations.
 We will explore the attributes that define a build process, how dependencies
 are managed within a derivation, and how Nix ensures the reproducibility and
 isolation of your software builds through this fundamental concept.</p>
-<h2 id="resources-5"><a class="header" href="#resources-5">Resources</a></h2>
+<h2 id="resources-6"><a class="header" href="#resources-6">Resources</a></h2>
 <ul>
 <li><a href="https://nix.dev/tutorials/packaging-existing-software.html">Packaging Existing Software</a></li>
 </ul>
@@ -13030,7 +13521,7 @@ stdenv.mkDerivation {
 }
 </code></pre>
 <p>Run <code>nix-build -A hello</code> again and you'll see the derivation successfully builds.</p>
-<h2 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h2>
+<h2 id="best-practices-2"><a class="header" href="#best-practices-2">Best Practices</a></h2>
 <p><strong>Reproducible source paths</strong>: If we built the following derivation in
 <code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
 <code>/nix/store/&lt;hash&gt;-myproject</code> causing the build to no longer be reproducible:</p>
@@ -16481,7 +16972,7 @@ valuable resources to explore, from official documentation to community-driven
 configurations.</p>
 </li>
 </ul>
-<h4 id="resources-6"><a class="header" href="#resources-6">Resources</a></h4>
+<h4 id="resources-7"><a class="header" href="#resources-7">Resources</a></h4>
 <details>
 <summary> ✔️ Click to Expand Resources </summary>
 <ul>

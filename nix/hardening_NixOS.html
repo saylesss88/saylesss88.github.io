@@ -1,0 +1,713 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Hardening NixOS - nix-book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <a href="#" class="top-link" id="back-to-top">↑</a>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">nix-book</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="hardening-nixos"><a class="header" href="#hardening-nixos">Hardening NixOS</a></h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<ul>
+<li><a href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></li>
+<li><a href="#secure-boot">Secure Boot</a></li>
+<li><a href="#encrypted-secrets">Encrypted Secrets</a></li>
+<li><a href="#the-kernel">The Kernel</a></li>
+<li><a href="#best-practices">Best Practices</a></li>
+<li><a href="#hardening-systemd">Hardening Systemd</a></li>
+<li><a href="#firewalls">Firewalls</a></li>
+<li><a href="#firejail">Firejail</a></li>
+<li><a href="#securing-ssh">Securing SSH</a></li>
+<li><a href="#usb-port-protection">USB Port Protection</a></li>
+<li><a href="#encrypted-dns">Encrypted DNS</a></li>
+<li><a href="#usb-interfaces">USB interfaces</a></li>
+<li><a href="#selinux">SeLinux</a></li>
+<li><a href="#resources">Resources</a></li>
+</ul>
+</details>
+<p><img src="../images/guy_fawks.png" alt="guy fawks hacker" /></p>
+<p>Securing your NixOS system begins with a philosophy of minimalism, explicit
+configuration, and proactive control.</p>
+<blockquote>
+<p>⚠️ Warning: I am not a security professional, this is meant to show some of
+your options when hardening NixOS. You will have to judge for yourself if
+something fits your needs or is unnecessary for your setup. Always do your own
+research, hardening and isolating processes can naturally cause some issues.</p>
+</blockquote>
+<h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
+<p>Begin with NixOS’s minimal installation image. This gives you a base system with
+only essential tools and no extras that could introduce vulnerabilities.</p>
+<p>Use LUKS encryption to protect your data at rest, the following guide is a
+minimal disko encrypted installation:
+<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+<h2 id="secure-boot"><a class="header" href="#secure-boot">Secure Boot</a></h2>
+<p><img src="../images/virus1.png" alt="Virus" /></p>
+<p>Secure Boot helps ensure only signed, trusted kernels and bootloaders are
+executed at startup.</p>
+<p>Useful Resources:</p>
+<ul>
+<li>
+<p><a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">The Strange State of Authenticated Boot and Encryption</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Secure_Boot">NixOS Wiki Secure Boot</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nix-community/lanzaboote">lanzaboote repo</a></p>
+</li>
+</ul>
+<p>Practical Lanzaboote Secure Boot setup for NixOS:
+<a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Guide:Secure Boot on NixOS with Lanzaboote</a></p>
+<h2 id="encrypted-secrets"><a class="header" href="#encrypted-secrets">Encrypted Secrets</a></h2>
+<p><img src="../images/encrypt.png" alt="Encrypt" /></p>
+<p>Never store secrets in plain text in repositories. Use something like
+<code>sops-nix</code>, which lets you keep encrypted secrets under version control
+declaratively.</p>
+<p>Protect your sectets, the following guide is on setting up Sops on NixOS:
+<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a></p>
+<h2 id="the-kernel"><a class="header" href="#the-kernel">The Kernel</a></h2>
+<p><img src="../images/kernel.png" alt="Kernel" /></p>
+<p>From the following discourse, it looks like the following is now enabled by
+default
+<a href="https://discourse.nixos.org/t/enabling-hardened-profile/63107">Discourse</a>:</p>
+<pre><code class="language-nix">profiles.hardened.enable = true;
+</code></pre>
+<ul>
+<li>There is a proposal to remove it FYI:
+<a href="https://discourse.nixos.org/t/proposal-to-deprecate-the-hardened-profile/63081">Discourse</a></li>
+</ul>
+<p>You can also use the hardened kernel:</p>
+<pre><code class="language-nix">boot.kernelPackages = pkgs.linuxPackages_latest_hardened;
+</code></pre>
+<p>Check all <code>sysctl</code> parameters:</p>
+<pre><code class="language-bash">sysctl -a
+</code></pre>
+<p>Check Active Linux Security Modules:</p>
+<pre><code class="language-bash">cat /sys/kernel/security/lsm
+</code></pre>
+<p>Check Kernel Configuration Options:</p>
+<pre><code class="language-bash">zcat /proc/config.gz | grep CONFIG_SECURITY_SELINUX
+zcat /proc/config.gz | grep CONFIG_HARDENED_USERCOPY
+zcat /proc/config.gz | grep CONFIG_STACKPROTECTOR
+</code></pre>
+<p>Or you can harden the kernel you're using:</p>
+<pre><code class="language-nix">  boot.kernel.sysctl = {
+    # The Magic SysRq key is a key combo that allows users connected to the
+    # system console of a Linux kernel to perform some low-level commands.
+    # Disable it, since we don't need it, and is a potential security concern.
+    "kernel.sysrq" = 0;
+    "fs.protected_fifos" = 2;
+    "fs.protected_regular" = 2;
+    "fs.suid_dumpable" = false;
+    "kernel.kptr_restrict" = 2;
+    # Note: certian container runtimes or browser sandboxes might rely on the following
+    "kernel.unprivileged_bpf_disabled" = true;
+
+    ## TCP hardening
+    # Prevent bogus ICMP errors from filling up logs.
+    "net.ipv4.icmp_ignore_bogus_error_responses" = 1;
+    # Reverse path filtering causes the kernel to do source validation of
+    # packets received from all interfaces. This can mitigate IP spoofing.
+    "net.ipv4.conf.all.forwarding" = 0;
+    "net.ipv4.conf.default.rp_filter" = 1;
+    "net.ipv4.conf.all.rp_filter" = 1;
+    # Do not accept IP source route packets (we're not a router)
+    "net.ipv4.conf.all.accept_source_route" = 0;
+    "net.ipv6.conf.all.accept_source_route" = 0;
+    "net.ipv6.conf.all.forwarding" = 0;
+    # Don't send ICMP redirects (again, we're not a router)
+    "net.ipv4.conf.all.send_redirects" = 0;
+    "net.ipv4.conf.default.send_redirects" = 0;
+    # "net.core.bpf_jit_harden" = 2;
+    # Refuse ICMP redirects (MITM mitigations)
+    "net.ipv4.conf.all.accept_redirects" = 0;
+    "net.ipv4.conf.default.accept_redirects" = 0;
+    "net.ipv4.conf.all.secure_redirects" = 0;
+    "net.ipv4.conf.default.secure_redirects" = 0;
+    "net.ipv6.conf.all.accept_redirects" = 0;
+    "net.ipv6.conf.default.accept_redirects" = 0;
+    # Protects against SYN flood attacks
+    "net.ipv4.tcp_syncookies" = 1;
+    # Incomplete protection again TIME-WAIT assassination
+    "net.ipv4.tcp_rfc1337" = 1;
+    # disable unprivileged user namespaces, Note: Docker, and other apps may need this
+    "kernel.unprivileged_userns_clone" = 0;
+    # memory protection (64-bit systems)
+    "vm.mmap_rnd_bits" = 32;
+    # Randomize memory
+    "kernel.randomize_va_space" = 2;
+    # Exec Shield (Stack protection)
+    "kernel.exec-shield" = 1;
+    "kernel.randomize_va_space" = 2;
+
+
+    ## TCP optimization
+    # TCP Fast Open is a TCP extension that reduces network latency by packing
+    # data in the sender’s initial TCP SYN. Setting 3 = enable TCP Fast Open for
+    # both incoming and outgoing connections:
+    "net.ipv4.tcp_fastopen" = 3;
+    # Bufferbloat mitigations + slight improvement in throughput &amp; latency
+    "net.ipv4.tcp_congestion_control" = "bbr";
+    "net.core.default_qdisc" = "cake";
+  };
+</code></pre>
+<p>Note: The above settings are fairly aggressive</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<p><strong>Explicitly enable each service</strong>: In your <code>configuration.nix</code>, only enable
+networking, SSH, desktop environments, and applications as needed. Remove or
+avoid legacy daemons and sample services.</p>
+<p><strong>Principle of Least Privilege Limit installed software</strong>: Each program or
+service added is potential attack surface. Install packages individually rather
+than enabling broad module imports or convenience meta-packages.</p>
+<p><strong>Run services as unprivileged users</strong>: Wherever possible, configure system
+services to run with a dedicated user and group, not as root.</p>
+<p>Use NixOS’s fine-grained service options: For example, set systemd sandboxing
+options (ProtectHome, PrivateTmp, NoNewPrivileges), and use NixOS modules’
+user/group settings for daemons.</p>
+<p>Secure the Boot &amp; Init Process Enable Secure Boot: Use modules like lanzaboote
+to enforce EFI Secure Boot, ensuring only signed kernels are loaded.</p>
+<p>Encrypt your root and data partitions: Use LUKS+ext4 or btrfs for storage with
+strong passphrases or keyfiles.</p>
+<p>Keep the Attack Surface Small Disable unused features and daemons: Comment out
+or set enable = false; for modules like CUPS, Samba, avahi, etc., if you don’t
+need printing, filesharing, or zeroconf networking.</p>
+<h2 id="hardening-systemd"><a class="header" href="#hardening-systemd">Hardening Systemd</a></h2>
+<p><img src="../images/hacker.png" alt="Hacker" /></p>
+<p><code>systemd</code> is the core "init system" and service manager that controls how
+services, daemons, and basic system processes are started, stopped and
+supervised on modern Linux distrobutions, including NixOS.</p>
+<p>You can check the security status with:</p>
+<pre><code class="language-bash">systemd-analyze security
+# or for a detailed view of individual services security posture
+systemd-analyze security NetworkManager
+</code></pre>
+<p><a href="https://0pointer.de/blog/projects/the-biggest-myths.html">Biggest Myths about Systemd</a></p>
+<p>The following is a repo containing many of the Systemd hardening settings in
+NixOS format:</p>
+<p><a href="https://github.com/wallago/nix-system-services-hardened">nix-system-services-hardened</a></p>
+<p>For example, to harden bluetooth you could add the following to your
+<code>configuration.nix</code> or equivalent:</p>
+<pre><code class="language-nix">systemd.services = {
+      bluetooth.serviceConfig = {
+      ProtectKernelTunables = lib.mkDefault true;
+      ProtectKernelModules = lib.mkDefault true;
+      ProtectKernelLogs = lib.mkDefault true;
+      ProtectHostname = true;
+      ProtectControlGroups = true;
+      ProtectProc = "invisible";
+      SystemCallFilter = [
+        "~@obsolete"
+        "~@cpu-emulation"
+        "~@swap"
+        "~@reboot"
+        "~@mount"
+      ];
+      SystemCallArchitectures = "native";
+    };
+}
+</code></pre>
+<p>As you can see from above, you typically use the <code>serviceConfig</code> attribute to
+harden settings for systemd services.</p>
+<pre><code class="language-bash">systemd-analyze security bluetooth
+→ Overall exposure level for bluetooth.service: 3.3 OK 🙂
+</code></pre>
+<h2 id="firewalls"><a class="header" href="#firewalls">Firewalls</a></h2>
+<p>NixOS includes an integrated firewall based on iptables/nftables.</p>
+<p><a href="https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/">Beginners guide to nftables</a></p>
+<p><a href="https://wiki.archlinux.org/title/Nftables">Arch Wiki nftables</a></p>
+<p>The following firewall setup is based on the dnscrypt setup above utilizing
+nftables:</p>
+<pre><code class="language-nix">{...}: {
+  networking.nftables = {
+    enable = true;
+
+    ruleset = ''
+      table inet filter {
+        chain output {
+          # Allow localhost DNS for dnscrypt-proxy2
+          ip daddr 127.0.0.1 udp dport 53 accept
+          ip6 daddr ::1 udp dport 53 accept
+          ip daddr 127.0.0.1 tcp dport 53 accept
+          ip6 daddr ::1 tcp dport 53 accept
+          # Allow dnscrypt-proxy2 to talk to upstream
+          # ps -o uid,user,pid,cmd -C dnscrypt-proxy; Copy UID #
+          meta skuid 62396 udp dport { 443, 853 } accept
+          meta skuid 62396 tcp dport { 443, 853 } accept
+          # Block all other outbound DNS
+          udp dport { 53, 853 } drop
+          tcp dport { 53, 853 } drop
+        }
+      }
+    '';
+  };
+
+  networking.firewall = {
+    enable = true;
+    allowedTCPPorts = [
+      53 # DNS
+      22 # SSH
+      80 # HTTP
+      443 # HTTPS
+    ];
+    allowedUDPPorts = [
+      53 # DNS
+    ];
+  };
+}
+</code></pre>
+<p>Review listening ports: After each rebuild, use <code>ss -tlpn</code> or <code>netstat</code> to see
+which services are accepting connections. Close or firewall anything
+unnecessary.</p>
+<p>Use the built-in firewall: Enable and configure networking.firewall to allow
+only explicitly required ports.</p>
+<h2 id="firejail"><a class="header" href="#firejail">Firejail</a></h2>
+<p>Firejail is a SUID program that reduces the risk of security breaches by
+restricting the running environment of untrusted applications using
+<a href="https://lwn.net/Articles/531114/">Linux namespaces</a> and
+<a href="https://l3net.wordpress.com/2015/04/13/firejail-seccomp-guide/">seccomp-bpf</a>--<a href="https://firejail.wordpress.com/">Firejail Security Sandbox</a></p>
+<h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
+<p>First of all, if you don't use SSH don't enable it in the first place. If you do
+use SSH, it's important to understand what that opens you up to.</p>
+<p>The following are some recommendations from Mozilla on OpenSSH:</p>
+<ul>
+<li><a href="https://infosec.mozilla.org/guidelines/openssh.html">Mozilla OpenSSH guidelines</a></li>
+</ul>
+<p>The following OpenSSH setup is based on the above guidelines with strong
+algorithms, and best practices:</p>
+<pre><code class="language-nix">{config, ...}: {
+  config = {
+    services = {
+      fail2ban = {
+        enable = true;
+        maxretry = 5;
+        bantime = "1h";
+        # ignoreIP = [
+        # "172.16.0.0/12"
+        # "192.168.0.0/16"
+        # "2601:881:8100:8de0:31e6:ac52:b5be:462a"
+        # "matrix.org"
+        # "app.element.io" # don't ratelimit matrix users
+        # ];
+
+        bantime-increment = {
+          enable = true; # Enable increment of bantime after each violation
+          multipliers = "1 2 4 8 16 32 64 128 256";
+          maxtime = "168h"; # Do not ban for more than 1 week
+          overalljails = true; # Calculate the bantime based on all the violations
+        };
+      };
+      openssh = {
+        enable = true;
+        settings = {
+          PasswordAuthentication = false;
+          PermitEmptyPasswords = false;
+          PermitTunnel = false;
+          UseDns = false;
+          KbdInteractiveAuthentication = false;
+          X11Forwarding = config.services.xserver.enable;
+          MaxAuthTries = 3;
+          MaxSessions = 2;
+          ClientAliveInterval = 300;
+          ClientAliveCountMax = 0;
+          AllowUsers = ["your-user"];
+          TCPKeepAlive = false;
+          AllowTcpForwarding = false;
+          AllowAgentForwarding = false;
+          LogLevel = "VERBOSE";
+          PermitRootLogin = "no";
+          KexAlgorithms = [
+            "curve25519-sha256@libssh.org"
+            "ecdh-sha2-nistp521"
+            "ecdh-sha2-nistp384"
+            "ecdh-sha2-nistp256"
+            "diffie-hellman-group-exchange-sha256"
+          ];
+          Ciphers = [
+            "chacha20-poly1305@openssh.com"
+            "aes256-gcm@openssh.com"
+            "aes128-gcm@openssh.com"
+            "aes256-ctr"
+            "aes192-ctr"
+            "aes128-ctr"
+          ];
+          Macs = [
+            "hmac-sha2-512-etm@openssh.com"
+            "hmac-sha2-256-etm@openssh.com"
+            "umac-128-etm@openssh.com"
+            "hmac-sha2-512"
+            "hmac-sha2-256"
+            "umac-128@openssh.com"
+          ];
+        };
+        hostKeys = [
+          {
+            path = "/etc/ssh/ssh_host_ed25519_key";
+            type = "ed25519";
+          }
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p>Harden Authentication and Access Use key-based SSH, disable passwords: Set
+<code>services.openssh.settings.PasswordAuthentication = false;</code> and use SSH keys
+generated with strong algorithms (e.g., Ed25519).</p>
+<p>Restrict SSH access: Use AllowUsers, limit sources with firewall rules, and
+disable root login.</p>
+<p>Use multi-factor authentication (MFA): For both SSH and desktop login,
+optionally integrate U2F, TOTP, or smartcard support.</p>
+<p>System Update and Maintenance Regularly update and upgrade: Use nixos-rebuild
+frequently and review channel or flake updates to patch vulnerabilities quickly.</p>
+<p>Audit installed packages: Use <code>nix-store --gc</code> and <code>nix-collect-garbage</code> to
+minimize leftover, unused software.</p>
+<p>Automate security updates: Consider scheduled builds or notifications for NixOS
+security advisories.</p>
+<p>Monitoring, Logging, and Auditing Enable audit logging: Set
+<code>security.auditd.enable = true;</code> for system-level event logging.</p>
+<p><strong>Monitor denied accesses</strong>: Configure <code>security.apparmor</code> or <code>security.selinux</code>
+as a mandatory access control layer, and regularly check logs for AppArmor or
+SELinux policy denials.</p>
+<p><strong>Review logs with <code>journalctl</code></strong>: Check system logs for unauthorized access
+attempts or configuration errors.</p>
+<p>Advanced Hardening Implement sandboxing: For server workloads or exposed
+applications, consider running them in <code>systemd-nspawn</code>, Firejail, or with user
+namespaces for isolation.</p>
+<p>Deploy mandatory access control (MAC): Enable and tune AppArmor or SELinux for
+application-level confinement. Write or port profiles for critical apps and
+services.</p>
+<h2 id="usb-port-protection"><a class="header" href="#usb-port-protection">USB Port Protection</a></h2>
+<pre><code class="language-bash">nix-shell -p usbguard
+</code></pre>
+<pre><code class="language-bash">sudo usbguard generate-policy &gt; ~/usbguard-rules.conf
+</code></pre>
+<blockquote>
+<p>🚧 Make sure not to just enable this, you need to set up rules or you can end
+up with some persistent problems.</p>
+</blockquote>
+<p>Control USB/Removable access: Use <code>services.usbguard</code> to restrict which USB
+devices are accepted. Be particularly careful if your authentication keyfiles
+are on USB devices.</p>
+<h2 id="encrypted-dns"><a class="header" href="#encrypted-dns">Encrypted DNS</a></h2>
+<p><a href="https://blog.cloudflare.com/dns-encryption-explained/">Cloudflare Dns Encryption Explained</a></p>
+<p>The following sets up dnscrypt-proxy using DoH (DNS over HTTPS) with an oisd
+blocklist:</p>
+<pre><code class="language-nix"># dnscrypt-proxy.nix
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}: let
+  blocklist_base = builtins.readFile inputs.oisd;
+  extraBlocklist = '''';
+  blocklist_txt = pkgs.writeText "blocklist.txt" ''
+    ${extraBlocklist}
+    ${blocklist_base}
+  '';
+  hasIPv6Internet = true;
+  StateDirectory = "dnscrypt-proxy";
+in {
+  networking = {
+    # Set DNS nameservers to the local host addresses for iPv4 (`127.0.0.1`) &amp; iPv6 (::1)
+    nameservers = ["127.0.0.1" "::1"];
+    # If using dhcpcd
+    # dhcpcd.extraConfig = "nohook resolv.conf";
+    # If using NetworkManager
+    networkmanager.dns = "none";
+  };
+  services.resolved.enable = lib.mkForce false;
+  # See https://wiki.nixos.org/wiki/Encrypted_DNS
+  services.dnscrypt-proxy2 = {
+    enable = true;
+    # See https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml
+    settings = {
+      sources.public-resolvers = {
+        urls = [
+          "https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
+          "https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md"
+        ];
+        minisign_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"; # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+        cache_file = "/var/lib/${StateDirectory}/public-resolvers.md";
+      };
+
+      # Use servers reachable over IPv6 -- Do not enable if you don't have IPv6 connectivity
+      ipv6_servers = hasIPv6Internet;
+      block_ipv6 = ! hasIPv6Internet;
+      blocked_names.blocked_names_file = blocklist_txt;
+      require_dnssec = true;
+      require_nolog = false;
+      require_nofilter = true;
+      doh_servers = true;
+      odoh_servers = false;
+      force_tcp = true;
+
+      # If you want, choose a specific set of servers that come from your sources.
+      # Here it's from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+      # If you don't specify any, dnscrypt-proxy will automatically rank servers
+      # that match your criteria and choose the best one.
+      # server_names = [ ... ];
+    };
+  };
+
+  systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
+}
+</code></pre>
+<pre><code class="language-bash">sudo systemctl status dnscrypt-proxy2
+# verify that dnscrypt-proxy is listening
+sudo ss -lnp | grep 53
+# Test a DNS query, if you get valid responses it's working
+dig @127.0.0.1 example.com +short
+# check the logs
+sudo journalctl -u dnscrypt-proxy2
+</code></pre>
+<p>dnscrypt-proxy2 dnscrypt-proxy2 acts as your local DNS caching resolver.</p>
+<p>All DNS clients on your system (dig, curl, most apps, except Firefox which has
+its own proxy) use dnscrypt-proxy2.</p>
+<p>dnscrypt-proxy2 filters ads/trackers (using oisd), enforces DNSSEC, and uses
+encrypted transports (DNS-over-HTTPS/DoH, DNSCrypt, optionally
+DNS-over-TLS/DoT).</p>
+<h2 id="usb-interfaces"><a class="header" href="#usb-interfaces">USB interfaces</a></h2>
+<p>Usbguard can whitelist wanted usb devices and block the rest. Be careful here,
+don't just enable it without adding rules.</p>
+<pre><code class="language-bash">sudo usbguard generate-policy &gt; /etc/usbguard/rules.conf
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-nix">{pkgs, ...}: {
+  environment.systemPackages = [pkgs.usbguard-notifier];
+  services.usbguard = {
+    enable = true;
+    rules = ''
+      allow id 1d6b:0002 serial "0000:05:00.3" name "xHCI Host Controller" hash "4a4NgfdUaJO43rkCzmWRSeHHR/uUh5+SNsXnhosm9qs=" parent-hash "ldMchY4Tt4GPUYo30eNGvai+Fs/EdnVY3vMyxJUq4Nk=" with-interface 09:00:00 with-connect-type ""
+      allow id 1d6b:0003 serial "0000:05:00.3" name "xHCI Host Controller" hash "d+DNGWARDtv9nEK2ZvnNOCtFernuMu5/e/oZ7kCppqQ=" parent-hash "ldMchY4Tt4GPUYo30eNGvai+Fs/EdnVY3vMyxJUq4Nk=" with-interface 09:00:00 with-connect-type ""
+      # Add default policy
+      block unknown
+    '';
+    # Optional: Configure these as needed for your security posture
+    presentDevicePolicy = "apply-policy"; # Or "keep"
+    IPCAllowedGroups = ["usbguard" "wheel"]; # If you want wheel group to manage
+  };
+
+  # If your user needs to interact with usbguard (e.g., via usbguard-cli)
+  users.users.jr.extraGroups = ["usbguard"];
+}
+</code></pre>
+<h2 id="selinux"><a class="header" href="#selinux">SeLinux</a></h2>
+<h2 id="resources"><a class="header" href="#resources">Resources</a></h2>
+<ul>
+<li><a href="https://hedgedoc.grimmauld.de/s/hWcvJEniW#">AppArmor and apparmor.d on NixOS</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../nix/nixLang/nix_paths.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../vcs/git.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../nix/nixLang/nix_paths.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../vcs/git.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
