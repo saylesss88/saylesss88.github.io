@@ -2219,7 +2219,6 @@ of garbage collection and it's considered unsafe.</p>
 <li><a href="nix/hardening_NixOS.html#firejail">Firejail</a></li>
 <li><a href="nix/hardening_NixOS.html#securing-ssh">Securing SSH</a></li>
 <li><a href="nix/hardening_NixOS.html#usb-port-protection">USB Port Protection</a></li>
-<li><a href="nix/hardening_NixOS.html#usb-interfaces">USB interfaces</a></li>
 <li><a href="nix/hardening_NixOS.html#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></li>
 <li><a href="nix/hardening_NixOS.html#resources">Resources</a></li>
 </ul>
@@ -2233,16 +2232,6 @@ options when hardening NixOS. You will have to judge for yourself if something
 fits your needs or is unnecessary for your setup. Always do your own research,
 hardening and isolating processes can naturally cause some issues. There are
 also performance tradeoffs with added protection.</p>
-</blockquote>
-<blockquote>
-<p><strong>Security information</strong>: Changing SSH configuration settings can
-significantly impact the security of your system(s). It is crucial to have a
-solid understanding of what you are doing before making any adjustments. Avoid
-blindly copying and pasting examples, including those from this Wiki page,
-without conducting a thorough analysis. Failure to do so may compromise the
-security of your system(s) and lead to potential vulnerabilities. Take the
-time to comprehend the implications of your actions and ensure that any
-changes made are done thoughtfully and with care. --NixOS Wiki</p>
 </blockquote>
 <p>Containers and VMs are beyond the scope of this chapter but can also enhance
 security if configured correctly.</p>
@@ -2832,6 +2821,16 @@ AppArmor/SELinux does at a kernel level. However, it's not as secure or
 comprehensive as kernel-enforced MAC systems (AppArmor/SELinux), since it's a
 userspace tool and can potentially be bypassed by privilege escalation exploits.</p>
 <h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
+<blockquote>
+<p><strong>Security information</strong>: Changing SSH configuration settings can
+significantly impact the security of your system(s). It is crucial to have a
+solid understanding of what you are doing before making any adjustments. Avoid
+blindly copying and pasting examples, including those from this Wiki page,
+without conducting a thorough analysis. Failure to do so may compromise the
+security of your system(s) and lead to potential vulnerabilities. Take the
+time to comprehend the implications of your actions and ensure that any
+changes made are done thoughtfully and with care. --NixOS Wiki</p>
+</blockquote>
 <p>First of all, if you don't use SSH don't enable it in the first place. If you do
 use SSH, it's important to understand what that opens you up to.</p>
 <p>The following are some recommendations from Mozilla on OpenSSH:</p>
@@ -2916,21 +2915,42 @@ algorithms, and best practices:</p>
   };
 }
 </code></pre>
-<p>Harden Authentication and Access Use key-based SSH, disable passwords: Set
-<code>services.openssh.settings.PasswordAuthentication = false;</code> and use SSH keys
-generated with strong algorithms (e.g., Ed25519).</p>
-<p>Restrict SSH access: Use AllowUsers, limit sources with firewall rules, and
-disable root login.</p>
-<p>Use multi-factor authentication (MFA): For both SSH and desktop login,
-optionally integrate U2F, TOTP, or smartcard support.</p>
-<p>System Update and Maintenance Regularly update and upgrade: Use nixos-rebuild
-frequently and review channel or flake updates to patch vulnerabilities quickly.</p>
-<p>Audit installed packages: Use <code>nix-store --gc</code> and <code>nix-collect-garbage</code> to
-minimize leftover, unused software.</p>
-<p>Automate security updates: Consider scheduled builds or notifications for NixOS
-security advisories.</p>
-<p>Monitoring, Logging, and Auditing Enable audit logging: Set
-<code>security.auditd.enable = true;</code> for system-level event logging.</p>
+<p>Fail2Ban is an intrusion prevention software framework. It's designed to prevent
+brute-force attacks by scanning log files for suspicious activity, such as
+repeated failed login attempts.</p>
+<p>OpenSSH is the primary tool for secure remote access for NixOS. Enabling it
+activates the OpenSSH server on the system, allowing incoming SSH connections.</p>
+<p>The above configuration is a robust setup for securing an SSH server by:</p>
+<ul>
+<li>
+<p>Preventing brute-force attacks with Fail2Ban</p>
+</li>
+<li>
+<p>Eliminating password authentication in favor of more secure SSH keys</p>
+</li>
+<li>
+<p>Restricting user access and preventing root login</p>
+</li>
+<li>
+<p>Disabling potentially risky forwarding features (tunnel, TCP, agent)</p>
+</li>
+<li>
+<p>Enforce the use of strong, modern cryptographic algorithms for all SSH
+communications.</p>
+</li>
+<li>
+<p>Enhanced logging for better auditing.</p>
+</li>
+</ul>
+<p>Further Reading:</p>
+<ul>
+<li>
+<p><a href="https://www.openssh.com/">OpenSSH</a></p>
+</li>
+<li>
+<p><a href="https://en.wikipedia.org/wiki/Fail2ban">Wikipedia Fail2Ban</a></p>
+</li>
+</ul>
 <details>
 <summary> ✔️ Click to expand `auditd` example </summary>
 <p>To enable the Linux Audit Daemon (<code>auditd</code>) and define a very basic rule set,
@@ -2956,19 +2976,18 @@ Without this, some events could be missed.</p>
 <p><code>security.auditd.enable = true;</code> Ensures the <code>auditd</code> userspace daemon is
 started.</p>
 </li>
+<li>
+<p>While often enabled together, <code>security.audit.enable</code> specifically refers to
+enabling the NixOS module for audit rules generation.</p>
+</li>
+<li>
+<p><code>execve</code> (program executions)</p>
+</li>
 </ul>
 </details>
-<p><strong>Monitor denied accesses</strong>: Configure <code>security.apparmor</code> as a mandatory access
-control layer, and regularly check logs for AppArmor.</p>
-<p><strong>Review logs with <code>journalctl</code></strong>: Check system logs for unauthorized access
-attempts or configuration errors.</p>
-<p><strong>Advanced Hardening Implement sandboxing</strong>: For server workloads or exposed
-applications, consider running them in <code>systemd-nspawn</code> containers, Firejail, or
-with user namespaces for isolation.</p>
-<p><strong>Deploy mandatory access control (MAC)</strong>: Enable and tune AppArmor for
-application-level confinement. Write or port profiles for critical apps and
-services.</p>
 <h2 id="usb-port-protection"><a class="header" href="#usb-port-protection">USB Port Protection</a></h2>
+<p>It's important to protect your USB ports to prevent BadUSB attacks, data
+exfiltration, unauthorized device access, malware injection, etc.</p>
 <pre><code class="language-bash">nix-shell -p usbguard
 </code></pre>
 <pre><code class="language-bash">sudo usbguard generate-policy &gt; ~/usbguard-rules.conf
@@ -2980,7 +2999,6 @@ up with some persistent problems.</p>
 <p>Control USB/Removable access: Use <code>services.usbguard</code> to restrict which USB
 devices are accepted. Be particularly careful if your authentication keyfiles
 are on USB devices.</p>
-<h2 id="usb-interfaces"><a class="header" href="#usb-interfaces">USB interfaces</a></h2>
 <p>Usbguard can whitelist wanted usb devices and block the rest. Be careful here,
 don't just enable it without adding rules.</p>
 <pre><code class="language-bash">sudo usbguard generate-policy &gt; /etc/usbguard/rules.conf
@@ -3005,6 +3023,18 @@ don't just enable it without adding rules.</p>
   users.users.jr.extraGroups = ["usbguard"];
 }
 </code></pre>
+<p>Further Reading:</p>
+<ul>
+<li>
+<p><a href="https://en.wikipedia.org/wiki/BadUSB">Wikipedia BadUSB</a></p>
+</li>
+<li>
+<p><a href="https://usbguard.github.io/">USBGuard</a></p>
+</li>
+<li>
+<p><a href="https://www.cyberciti.biz/security/how-to-protect-linux-against-rogue-usb-devices-using-usbguard/">NixCraft USBGuard</a></p>
+</li>
+</ul>
 <h2 id="selinuxapparmor-mac-mandatory-access-control"><a class="header" href="#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></h2>
 <p><strong>AppArmor</strong>: Stable, supported, easier for most users; enable with one line,
 but profile coverage may be incomplete. From my understanding the main issue is
