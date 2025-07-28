@@ -2422,7 +2422,7 @@ zcat /proc/config.gz | grep CONFIG_STACKPROTECTOR
   };
 </code></pre>
 <p>Note: The above settings are fairly aggressive and can break common programs, I
-attempted to leave comment warnings.</p>
+left comment warnings.</p>
 <h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
 <p><strong>Explicitly enable each service</strong>: In your <code>configuration.nix</code>, only enable
 networking, SSH, desktop environments, and applications as needed. Remove or
@@ -2466,6 +2466,10 @@ default as of yet. To set <code>dbus-broker</code> as the default:</p>
     journald = {
       storage = "volatile"; # Store logs in memory
       upload.enable = false; # Disable remote log upload (the default)
+      extraConfig = ''
+        SystemMaxUse=500M
+        SystemMaxFileSize=50M
+      '';
     };
   };
 </code></pre>
@@ -2486,7 +2490,11 @@ information.</p>
 </li>
 <li>
 <p>Enabling <code>logrotate</code> prevents your disk from filling with excessive
-legacy/service log files.</p>
+<strong>legacy/service</strong> log files. These are the classic plain-text logs.</p>
+</li>
+<li>
+<p>Systemd uses <code>journald</code> which stores logs in a binary format which we take
+care of with the <code>extraConfig</code> settings.</p>
 </li>
 </ul>
 <p>You can check the security status with:</p>
