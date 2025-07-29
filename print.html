@@ -2208,10 +2208,10 @@ of garbage collection and it's considered unsafe.</p>
 <li><a href="nix/hardening_NixOS.html#using-sysctl-on-an-existing-kernel">Using sysctl on an existing kernel</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-systemd">Hardening Systemd</a></li>
 <li><a href="nix/hardening_NixOS.html#lynis-and-other-tools">Lynis and other tools</a></li>
-<li><a href="nix/hardening_NixOS.html#firejail">Firejail</a></li>
 <li><a href="nix/hardening_NixOS.html#securing-ssh">Securing SSH</a></li>
 <li><a href="nix/hardening_NixOS.html#usb-port-protection">USB Port Protection</a></li>
 <li><a href="nix/hardening_NixOS.html#doas-over-sudo">Doas over sudo</a></li>
+<li><a href="nix/hardening_NixOS.html#firejail">Firejail</a></li>
 <li><a href="nix/hardening_NixOS.html#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></li>
 <li><a href="nix/hardening_NixOS.html#resources">Resources</a>
 <ul>
@@ -2554,18 +2554,6 @@ sudo lynis audit system
 signatures. It can detect hidden processes and network connections.</p>
 <p>I got the recommendation for <code>clamav</code> from the Paranoid NixOS blog post and the
 others help with compliance for <code>lynis</code>.</p>
-<h2 id="firejail"><a class="header" href="#firejail">Firejail</a></h2>
-<ul>
-<li><a href="https://wiki.nixos.org/wiki/Firejail">NixOS Wiki Firejail</a></li>
-</ul>
-<p>Firejail is a SUID program that reduces the risk of security breaches by
-restricting the running environment of untrusted applications using
-<a href="https://lwn.net/Articles/531114/">Linux namespaces</a> and
-<a href="https://l3net.wordpress.com/2015/04/13/firejail-seccomp-guide/">seccomp-bpf</a>--<a href="https://firejail.wordpress.com/">Firejail Security Sandbox</a></p>
-<p>It provides sandboxing and access restriction per application, much like what
-AppArmor/SELinux does at a kernel level. However, it's not as secure or
-comprehensive as kernel-enforced MAC systems (AppArmor/SELinux), since it's a
-userspace tool and can potentially be bypassed by privilege escalation exploits.</p>
 <h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
 <blockquote>
 <p><strong>Security information</strong>: Changing SSH configuration settings can
@@ -2737,29 +2725,6 @@ exfiltration, unauthorized device access, malware injection, etc.</p>
 <ul>
 <li><a href="https://usbguard.github.io">USBGuard</a></li>
 </ul>
-<p>You can safely use the following USBGuard configuration in your NixOS
-<code>configuration.nix</code> to block high-risk composite USB devices (such as those
-combining mass storage and keyboard functions), while still allowing standard
-USB thumb drives. This setup significantly reduces the likelihood of BadUSB
-attacks. If you use legitimate devices that combine multiple interfaces, you may
-need to tailor the rules to your hardware.</p>
-<pre><code class="language-nix">{ ... }:
-{
-    services.usbguard = {
-        enable = true;
-        dbus.enable = true;
-        IPCAllowedGroups = [ "usbguard" "wheel" ];
-        rules = ''
-        allow with-interface equals { 08:*:* }
-        # Reject devices with suspicious combination of interfaces
-        reject with-interface all-of { 08:*:* 03:00:* }
-        reject with-interface all-of { 08:*:* 03:01:* }
-        reject with-interface all-of { 08:*:* e0:*:* }
-        reject with-interface all-of { 08:*:* 02:*:* }
-        '';
-    };
-}
-</code></pre>
 <p>Further Reading:</p>
 <ul>
 <li>
@@ -2826,6 +2791,21 @@ imports = [
 
 custom.security.doas.enable = true;
 </code></pre>
+<blockquote>
+<p>❗ NOTE:</p>
+</blockquote>
+<h2 id="firejail"><a class="header" href="#firejail">Firejail</a></h2>
+<ul>
+<li><a href="https://wiki.nixos.org/wiki/Firejail">NixOS Wiki Firejail</a></li>
+</ul>
+<p>Firejail is a SUID program that reduces the risk of security breaches by
+restricting the running environment of untrusted applications using
+<a href="https://lwn.net/Articles/531114/">Linux namespaces</a> and
+<a href="https://l3net.wordpress.com/2015/04/13/firejail-seccomp-guide/">seccomp-bpf</a>--<a href="https://firejail.wordpress.com/">Firejail Security Sandbox</a></p>
+<p>It provides sandboxing and access restriction per application, much like what
+AppArmor/SELinux does at a kernel level. However, it's not as secure or
+comprehensive as kernel-enforced MAC systems (AppArmor/SELinux), since it's a
+userspace tool and can potentially be bypassed by privilege escalation exploits.</p>
 <h2 id="selinuxapparmor-mac-mandatory-access-control"><a class="header" href="#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></h2>
 <p><strong>AppArmor</strong> is available on NixOS, but is still in a somewhat experimental and
 evolving state. There are only a few profiles that have been adapted to NixOS,
