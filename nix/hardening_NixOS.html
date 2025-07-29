@@ -176,6 +176,7 @@
 <li><a href="#encrypted-secrets">Encrypted Secrets</a></li>
 <li><a href="#hardening-the-kernel">Hardening the Kernel</a></li>
 <li><a href="#using-sysctl-on-an-existing-kernel">Using sysctl on an existing kernel</a></li>
+<li><a href="#hardening-boot-parameters">Hardening Boot Parameters</a></li>
 <li><a href="#hardening-systemd">Hardening Systemd</a></li>
 <li><a href="#lynis-and-other-tools">Lynis and other tools</a></li>
 <li><a href="#securing-ssh">Securing SSH</a></li>
@@ -240,6 +241,9 @@ secrets under version control declaratively.</p>
 <h2 id="hardening-the-kernel"><a class="header" href="#hardening-the-kernel">Hardening the Kernel</a></h2>
 <p>Given the kernel's central role, it's a frequent target for malicious actors,
 making robust hardening essential.</p>
+<ul>
+<li><a href="https://wiki.nixos.org/wiki/Linux_kernel">NixOS Wiki Linux Kernel</a></li>
+</ul>
 <p>NixOS provides a <code>hardened</code> profile that applies a set of security-focused
 kernel and system configurations. This profile is defined in
 <a href="https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/profiles/hardened.nix">nixpkgs/nixos/modules/profiles/hardened.nix</a></p>
@@ -383,6 +387,28 @@ come from the madaidans-insecurities guide with a few optimizations:</p>
 <p>Note: The above settings are fairly aggressive and can break common programs, I
 left comment warnings. The following guide explains kernel hardening and many of
 the parameters above:
+<a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html">Linux Hardening Guide</a></p>
+<h2 id="hardening-boot-parameters"><a class="header" href="#hardening-boot-parameters">Hardening Boot Parameters</a></h2>
+<p>Kernel parameters are special options that NixOS passes to the Linux kernel at
+boot time. These parameters can control the kernel’s behavior, such as enabling
+security features or modifying hardware settings, similar to what sysctl options
+accomplish at runtime. In NixOS, you set kernel parameters declaratively using
+the <code>boot.kernelParams</code> list in your <code>configuration.nix</code> file.</p>
+<p>For example to add a few of the recommendations from <code>madaidans-insecurities</code>
+you could add the following:</p>
+<pre><code class="language-nix"># boot.nix
+boot.kernelParams = [
+    # ... snip ...
+    # prevent heap exploitations
+    "slab_nomerge"
+    # mitigate use-after-free vulnerabilities
+    "init_on_alloc=1"
+    "init_on_free=1"
+    # randomises page allocator freelists
+    "page_alloc.shuffel=1"
+];
+</code></pre>
+<p>There are many more recommendations in the
 <a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html">Linux Hardening Guide</a></p>
 <h2 id="hardening-systemd"><a class="header" href="#hardening-systemd">Hardening Systemd</a></h2>
 <p><img src="../images/hacker.png" alt="Hacker" /></p>
