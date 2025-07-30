@@ -2328,7 +2328,7 @@ zcat /proc/config.gz | grep CONFIG_STACKPROTECTOR
 <p><strong>Or</strong> you can harden the kernel you're using <code>sysctl</code>, the following parameters
 come from the madaidans-insecurities guide with a few optimizations:</p>
 <pre><code class="language-nix">  boot.kernel.sysctl = {
-    "fs.suid_dumpable" = false;
+    "fs.suid_dumpable" = 0;
     # prevent pointer leaks
     "kernel.kptr_restrict" = 2;
     # restrict kernel log to CAP_SYSLOG capability
@@ -2429,6 +2429,22 @@ come from the madaidans-insecurities guide with a few optimizations:</p>
 left comment warnings. The following guide explains kernel hardening and many of
 the parameters above:
 <a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html">Linux Hardening Guide</a></p>
+<blockquote>
+<p>❗ If you are ever unsure about a setting that you want to harden and think
+that it could possibly break your system you can always use a specialisation
+reversing the action and choose it's generation at boot up. For example, to
+force-reverse the above settings you could:</p>
+<pre><code class="language-nix"># configuration.nix
+specialisation.no-kernel-mods.configuration = {
+   boot.kernel.sysctl = lib.mkForce {}
+};
+</code></pre>
+<ul>
+<li>You would see a generation named <code>no-kernel-mods</code> in your generation menu at
+boot up giving you a safety hatch. You shouldn't need it here, but on more
+sketchy or experimental settings it doesn't hurt to have an out.</li>
+</ul>
+</blockquote>
 <h2 id="hardening-boot-parameters"><a class="header" href="#hardening-boot-parameters">Hardening Boot Parameters</a></h2>
 <p><code>boot.kernelParams</code> can be used to set additional kernel command line arguments
 at boot time. It can only be used for built-in modules.</p>
