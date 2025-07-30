@@ -2201,9 +2201,13 @@ of garbage collection and it's considered unsafe.</p>
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="nix/hardening_NixOS.html#best-practices">Best Practices</a></li>
 <li><a href="nix/hardening_NixOS.html#minimal-installation-with-luks">Minimal Installation with LUKS</a></li>
+<li><a href="nix/hardening_NixOS.html#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
+<li><a href="nix/hardening_NixOS.html#guided-encrypted-install-using-disko">Guided Encrypted install using disko</a></li>
 <li><a href="nix/hardening_NixOS.html#secure-boot">Secure Boot</a></li>
 <li><a href="nix/hardening_NixOS.html#encrypted-secrets">Encrypted Secrets</a></li>
+<li><a href="nix/hardening_NixOS.html#sops-nix-guide">Sops-nix Guide</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-the-kernel">Hardening the Kernel</a></li>
 <li><a href="nix/hardening_NixOS.html#using-sysctl-on-an-existing-kernel">Using sysctl on an existing kernel</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-boot-parameters">Hardening Boot Parameters</a></li>
@@ -2240,19 +2244,58 @@ convenience to check for yourself. <code>--Source</code> means the proceeding pa
 came from <code>--Source</code>, you can often click to check for yourself. Much of the
 information comes directly from the wiki or other respected sources that are
 also linked in multiple places. Although this is a work in progress, if you
-use a little common sense with a bit of caution you could end up with a much
-more secure NixOS system that fits your needs. To those that read my
-<strong>multiple warnings that this is a work in progress</strong> and gave actionable
-feedback thank you!</p>
+use some common sense with a bit of caution you could end up with a more
+secure NixOS system that fits your needs.</p>
 </blockquote>
 <p>Containers and VMs are beyond the scope of this chapter but can also enhance
 security if configured correctly.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
+review and remove unused or outdated accounts to reduce your system’s attack
+surface, improve compliance, and ensure only authorized users have access.</p>
+<p><strong>Only install, enable, and run what is needed</strong>: Disable or uninstall
+unnecessary software and services to minimize potential vulnerabilities. Take
+advantage of NixOS’s easy package management and minimalism to keep your system
+lean and secure.</p>
+<p><strong>Avoid permanently installing temporary tools</strong>: Use tools like <code>nix-shell</code>,
+<code>comma</code>, and <code>nix-direnv</code> to test or run software temporarily. This prevents
+clutter and reduces potential risks from unused software lingering on the
+system.</p>
+<p><strong>Update regularly</strong>: Keep your system and software up to date to receive the
+latest security patches. Delaying updates leaves known vulnerabilities open to
+exploitation.</p>
+<p><strong>Apply the Principle of Least Privilege</strong>: Never run tools or services as root
+unless absolutely necessary. Create dedicated users and groups with the minimum
+required permissions to limit potential damage if compromised. See the doas
+example. <a href="nix/hardening_NixOS.html#doas-over-sudo">Check the doas example here</a></p>
+<p><strong>Use strong passwords and passphrases</strong>: Aim for at least 14–16 characters by
+combining several unrelated words, symbols, and numbers. For example:
+sunset-CoffeeHorse$guitar!. Strong passphrases are both memorable and secure.</p>
+<p><strong>Use a password manager and enable multi-factor authentication (MFA)</strong>: Manage
+unique, strong passwords effectively with a trusted manager and protect accounts
+with MFA wherever possible for a second layer of defense.</p>
+<p>After establishing some standard best practices, it’s time to dive deeper into
+system hardening, the process of adding layered safeguards throughout your NixOS
+setup. This next section guides you through concrete steps and options for
+hardening critical areas of your system: from encryption and secure boot to
+managing secrets, tightening kernel security, and leveraging platform-specific
+tools.</p>
 <h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
 <p>Begin with NixOS’s minimal installation image. This gives you a base system with
 only essential tools and no extras that could introduce vulnerabilities.</p>
+<h2 id="manual-encrypted-install-following-the-manual"><a class="header" href="#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></h2>
 <ul>
-<li><a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Minimal ISO Download (64-bit Intel/AMD)</a></li>
+<li>
+<p><a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Minimal ISO Download (64-bit Intel/AMD)</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/manual/nixos/stable/#sec-installation">NixOS Manual Installation</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Full_Disk_Encryption">NixOS Wiki Full Disk Encryption</a></p>
+</li>
 </ul>
+<h2 id="guided-encrypted-install-using-disko"><a class="header" href="#guided-encrypted-install-using-disko">Guided Encrypted install using disko</a></h2>
 <p>Use LUKS encryption to protect your data at rest, the following guide is a
 minimal disko encrypted installation:
 <a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
@@ -2278,6 +2321,11 @@ executed at startup.</p>
 <p>Never store secrets in plain text in repositories. Use something like
 <a href="https://github.com/Mic92/sops-nix">sops-nix</a>, which lets you keep encrypted
 secrets under version control declaratively.</p>
+<p>Another option is <a href="https://github.com/ryantm/agenix">agenix</a></p>
+<ul>
+<li><a href="https://wiki.nixos.org/wiki/Agenix">NixOS Wiki Agenix</a></li>
+</ul>
+<h2 id="sops-nix-guide"><a class="header" href="#sops-nix-guide">Sops-nix Guide</a></h2>
 <p>Protect your secrets, the following guide is on setting up Sops on NixOS:
 <a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a></p>
 <h2 id="hardening-the-kernel"><a class="header" href="#hardening-the-kernel">Hardening the Kernel</a></h2>
@@ -2443,6 +2491,8 @@ specialisation.no-kernel-mods.configuration = {
 <li>You would see a generation named <code>no-kernel-mods</code> in your generation menu at
 boot up giving you a safety hatch. You shouldn't need it here, but on more
 sketchy or experimental settings it doesn't hurt to have an out.</li>
+<li>You can obviously add whichever parameters you had before you started making
+changes rather than <code>lib.mkForce {}</code>, this is just an example.</li>
 </ul>
 </blockquote>
 <h2 id="hardening-boot-parameters"><a class="header" href="#hardening-boot-parameters">Hardening Boot Parameters</a></h2>
@@ -9535,7 +9585,7 @@ reproducibility of your system configurations. By pinning specific versions of
 Nixpkgs and other resources, you gain greater control over your environment and
 reduce the risk of unexpected changes due to upstream updates.</p>
 </details>
-<h3 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h3>
+<h3 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h3>
 <p>You'll see the following all throughout Nix code and is convenient although it
 doesn't follow best practices. One reason is static analysis can't reason about
 the code (e.g. Because it implicitly brings all attributes into scope, tools
@@ -14073,7 +14123,7 @@ stdenv.mkDerivation {
 }
 </code></pre>
 <p>Run <code>nix-build -A hello</code> again and you'll see the derivation successfully builds.</p>
-<h2 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h2>
+<h2 id="best-practices-2"><a class="header" href="#best-practices-2">Best Practices</a></h2>
 <p><strong>Reproducible source paths</strong>: If we built the following derivation in
 <code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
 <code>/nix/store/&lt;hash&gt;-myproject</code> causing the build to no longer be reproducible:</p>
