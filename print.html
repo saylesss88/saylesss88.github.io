@@ -2335,7 +2335,27 @@ by default</p>
 </ul>
 <p>I misunderstood the above thread, it means that <strong>if</strong> the file is imported that
 it's enabled by default.</p>
-<pre><code class="language-nix">{ pkgs, modulesPath, ... }:
+<p>For flakes, you can pass <code>modulesPath</code> through <code>specialArgs</code>:</p>
+<pre><code class="language-nix"># flake.nix
+# ...snip...
+  outputs = {
+    self,
+    nixpkgs,
+    home-manager,
+    treefmt-nix,
+    systems,
+    ...
+  } @ inputs: let
+    system = "x86_64-linux";
+    modulesPath = "${inputs.nixpkgs}/nixos/modules";
+    # ...snip...
+      specialArgs = {
+        inherit inputs host username myLib overlays modulesPath;
+      };
+    # ...snip...
+</code></pre>
+<pre><code class="language-nix"># configuration.nix
+{ pkgs, modulesPath, ... }:
 
 {
   imports = [ "${modulesPath}/profiles/hardened.nix" ];
