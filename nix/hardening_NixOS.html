@@ -176,14 +176,16 @@
 <li><a href="#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
 <li><a href="#guided-encrypted-install-using-disko">Guided Encrypted install using disko</a></li>
 <li><a href="#secure-boot">Secure Boot</a></li>
-<li><a href="#encrypted-secrets">Encrypted Secrets</a></li>
-<li><a href="#sops-nix-guide">Sops-nix Guide</a></li>
 <li><a href="#hardening-the-kernel">Hardening the Kernel</a></li>
 <li><a href="#using-sysctl-on-an-existing-kernel">Using sysctl on an existing kernel</a></li>
 <li><a href="#hardening-boot-parameters">Hardening Boot Parameters</a></li>
 <li><a href="#hardening-systemd">Hardening Systemd</a></li>
 <li><a href="#lynis-and-other-tools">Lynis and other tools</a></li>
 <li><a href="#securing-ssh">Securing SSH</a></li>
+<li><a href="#key-generation">Key generation</a></li>
+<li><a href="#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></li>
+<li><a href="#encrypted-secrets">Encrypted Secrets</a></li>
+<li><a href="#sops-nix-guide">Sops-nix Guide</a></li>
 <li><a href="#usb-port-protection">USB Port Protection</a></li>
 <li><a href="#doas-over-sudo">Doas over sudo</a></li>
 <li><a href="#firejail">Firejail</a></li>
@@ -240,7 +242,7 @@ required permissions to limit potential damage if compromised. See the doas
 example. <a href="#doas-over-sudo">Check the doas example here</a></p>
 <p><strong>Use strong passwords and passphrases</strong>: Aim for at least 14–16 characters by
 combining several unrelated words, symbols, and numbers. For example:
-sunset-CoffeeHorse$guitar!. Strong passphrases are both memorable and secure.</p>
+<code>sunset-CoffeeHorse$guitar!</code>. Strong passphrases are both memorable and secure.</p>
 <p><strong>Use a password manager and enable multi-factor authentication (MFA)</strong>: Manage
 unique, strong passwords effectively with a trusted manager and protect accounts
 with MFA wherever possible for a second layer of defense.</p>
@@ -287,17 +289,6 @@ executed at startup.</p>
 </ul>
 <p>Practical Lanzaboote Secure Boot setup for NixOS:
 <a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Guide:Secure Boot on NixOS with Lanzaboote</a></p>
-<h2 id="encrypted-secrets"><a class="header" href="#encrypted-secrets">Encrypted Secrets</a></h2>
-<p>Never store secrets in plain text in repositories. Use something like
-<a href="https://github.com/Mic92/sops-nix">sops-nix</a>, which lets you keep encrypted
-secrets under version control declaratively.</p>
-<p>Another option is <a href="https://github.com/ryantm/agenix">agenix</a></p>
-<ul>
-<li><a href="https://wiki.nixos.org/wiki/Agenix">NixOS Wiki Agenix</a></li>
-</ul>
-<h2 id="sops-nix-guide"><a class="header" href="#sops-nix-guide">Sops-nix Guide</a></h2>
-<p>Protect your secrets, the following guide is on setting up Sops on NixOS:
-<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a></p>
 <h2 id="hardening-the-kernel"><a class="header" href="#hardening-the-kernel">Hardening the Kernel</a></h2>
 <p>Given the kernel's central role, it's a frequent target for malicious actors,
 making robust hardening essential.</p>
@@ -307,21 +298,22 @@ making robust hardening essential.</p>
 <p>NixOS provides a <code>hardened</code> profile that applies a set of security-focused
 kernel and system configurations. This profile is defined in
 <a href="https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/profiles/hardened.nix">nixpkgs/nixos/modules/profiles/hardened.nix</a></p>
-<p>For users of the NixOS unstable channel, the following is applied by default:</p>
-<pre><code class="language-nix">profiles.hardened.enable = true;
-</code></pre>
-<p><strong>Note on Future Changes</strong>:</p>
+<p>The following discourse thread explains how the <code>profiles.hardened</code> is enabled
+by default</p>
 <ul>
-<li>
-<p>It's important to be aware that the status of the hardened profile is under
-active discussion within the NixOS community. There is a proposal to deprecate
-or remove it in future releases, as discussed in this:
-<a href="https://discourse.nixos.org/t/proposal-to-deprecate-the-hardened-profile/63081">Discourse thread</a></p>
-</li>
-<li>
-<p>There is an open Pull Request regarding the above thread:
-<a href="https://github.com/NixOS/nixpkgs/pull/383438">PR#383438</a></p>
-</li>
+<li><a href="https://discourse.nixos.org/t/enabling-hardened-profile/63107">Discourse Thread Enabling hardened profile</a></li>
+</ul>
+<p>I misunderstood the above thread, it means that <strong>if</strong> the file is imported that
+it's enabled by default.</p>
+<pre><code class="language-nix">{ pkgs, modulesPath, ... }:
+
+{
+  imports = [ "${modulesPath}/profiles/hardened.nix" ];
+}
+</code></pre>
+<ul>
+<li>Now after importing the above module into your configuration,
+<code>profiles.hardened</code> is enabled by default.</li>
 </ul>
 <p>You can also use the hardened kernel:</p>
 <pre><code class="language-nix">boot.kernelPackages = pkgs.linuxPackages_latest_hardened;
@@ -692,6 +684,203 @@ signatures. It can detect hidden processes and network connections.</p>
 <p>I got the recommendation for <code>clamav</code> from the Paranoid NixOS blog post and the
 others help with compliance for <code>lynis</code>.</p>
 <h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
+<h2 id="key-generation"><a class="header" href="#key-generation">Key generation</a></h2>
+<p>The <code>ed25519</code> algorithm is significantly faster and more secure when compared to
+<code>RSA</code>. You can also specify the key derivation function (KDF) rounds to
+strengthen protection even more.</p>
+<p>For example, to generate a strong key for :</p>
+<pre><code class="language-bash">ssh-keygen -t ed25519 -a 32 -f ~/.ssh/id_ed25519_github_$(date +%Y-%m-%d) -C "SSH Key for Mdbook"
+</code></pre>
+<ul>
+<li>
+<p><code>-t</code> is for type</p>
+</li>
+<li>
+<p><code>-a 32</code> sets the number of KDF rounds</p>
+</li>
+<li>
+<p><code>-f</code> is for filename</p>
+</li>
+</ul>
+<h2 id="install-gnupg-and-gpg-agent-for-home-manager"><a class="header" href="#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></h2>
+</details>
+<summary> ✔️ Click to expand PGP installation and key generation example </summary>
+<pre><code class="language-nix"># home.nix or equivalent
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
+  options = {
+    custom.pgp = {
+      enable = lib.mkEnableOption {
+        description = "Enable PGP Gnupgp";
+        default = false;
+      };
+    };
+  };
+
+  config = lib.mkIf config.custom.pgp.enable {
+    services = {
+      ## Enable gpg-agent with ssh support
+      gpg-agent = {
+        enable = true;
+        enableSshSupport = true;
+        enableZshIntegration = true;
+        pinentryPackage = pkgs.pinentry-gnome3;
+      };
+
+      ## Add SSH key
+      gpg-agent.sshKeys = [];
+    };
+    home.packages = [pkgs.gnupg];
+    programs = {
+      gpg = {
+        ## Enable GnuPG
+        enable = true;
+
+        # homedir = "/home/userName/.config/gnupg";
+      };
+    };
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p>The default path is <code>~/.gnupg</code>, if you prefer placing it in the <code>~/.config</code>
+directory uncomment the <code>homedir</code> line and change <code>userName</code> to your username.</p>
+</li>
+<li>
+<p>I use hyprland so <code>pinentry-gnome3</code> works for me, there is also the following
+options for this attribute:</p>
+</li>
+<li>
+<p><code>pinentry-tty</code></p>
+</li>
+<li>
+<p><code>pinentry-qt</code></p>
+</li>
+<li>
+<p><code>pinentry-gtk2</code></p>
+</li>
+</ul>
+<p>And more, research what you need and use the correct one.</p>
+<p>Enable in your <code>home.nix</code> or equivalent:</p>
+<pre><code class="language-nix"># home.nix
+custom.pgp.enable = true;
+</code></pre>
+<p>To generate a pgp key you can do the following:</p>
+<pre><code class="language-bash">gpg --expert --full-generate-key
+</code></pre>
+<ul>
+<li>
+<p>Choose the default (11) ECC (set your own capabilities)</p>
+</li>
+<li>
+<p>Choose <code>A</code> for Authenticate capabilities, which is the only setting required
+for this.</p>
+</li>
+<li>
+<p>Choose (1) Default Curve 25519</p>
+</li>
+<li>
+<p>Give it a name and description</p>
+</li>
+<li>
+<p>Give it an expiration date, 1y is common</p>
+</li>
+<li>
+<p>Use a strong passphrase or password</p>
+</li>
+</ul>
+<p>If you see a warning about incorrect permissions, you can run the following:</p>
+<pre><code class="language-bash">chmod 700 ~/.gnupg
+chmod 600 ~/.gnupg/*
+</code></pre>
+<p>Verify:</p>
+<pre><code class="language-bash">ls -ld ~/.gnupg
+# Should show: drwx------
+
+ls -l ~/.gnupg
+# Files should show: -rw-------
+</code></pre>
+<p>After fixing, run:</p>
+<pre><code class="language-bash">gpg --list-keys
+</code></pre>
+<p>The warning should be gone.</p>
+<p><strong>List your key and copy the key ID</strong></p>
+<pre><code class="language-bash">gpg --list-secret-keys --keyid-format LONG
+</code></pre>
+<p>Output example:</p>
+<pre><code class="language-bash">sec   ed25519/ABCDEF1234567890 2025-07-31 [SC]
+      ABC123ABC123ABC123ABC123ABC123ABC123ABC1
+uid           [ultimate] Your Name &lt;you@example.com&gt;
+ssb   ed25519/1234567890ABCDEF 2025-07-31 [S]
+</code></pre>
+<ul>
+<li>Take the part after <code>/</code> on the <code>sec</code> line (e.g., <code>ABCDEF1234567890</code>)</li>
+</ul>
+<p><strong>Export the public key for GitHub</strong></p>
+<pre><code class="language-bash">gpg --armor --export ABCDEF1234567890
+</code></pre>
+<ul>
+<li>Copy everything from
+<code>-----BEGIN PGP PUBLIC KEY BLOCK----- to -----END PGP PUBLIC KEY BLOCK-----</code>.</li>
+</ul>
+<p><strong>Add to GitHub</strong></p>
+<ol>
+<li>
+<p>Go to Settings, SSH and GPG keys, New GPG key</p>
+</li>
+<li>
+<p>Paste the exported block.</p>
+</li>
+</ol>
+<p><strong>Add Keygrip to <code>sshcontrol</code> for SSH agent</strong></p>
+<p>A keygrip is a unique identifier for the private part of a GPG key. Unlike key
+IDs, which refer to public keys, keygrips are used by <code>gpg-agent</code> to locate and
+authorize private keys for SSH authentication.</p>
+<pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --with-colons
+</code></pre>
+<ul>
+<li>Copy the <code>grp</code> line - that's your keygrip</li>
+</ul>
+<p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild:</p>
+<pre><code class="language-nix">gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
+</code></pre>
+<p>Rebuild and then restart gpg-agent:</p>
+<pre><code class="language-bash">gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+</code></pre>
+<p>Add the following to your shell config:</p>
+<pre><code class="language-bash"># zsh.nix
+# ... snip ...
+initContent = ''
+      # GPG Agent
+        export GPG_TTY=$(tty)
+        export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
+        gpg-connect-agent updatestartuptty /bye
+
+        # Optional: confirm it's set
+        echo "SSH_AUTH_SOCK is set to: $SSH_AUTH_SOCK"
+'';
+# ... snip ...
+</code></pre>
+<p>Test, these should match:</p>
+<pre><code class="language-bash">echo "$SSH_AUTH_SOCK"
+/run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76534j/S.gpg-agent.ssh
+gpgconf --list-dirs agent-ssh-socket
+/run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76834j/S.gpg-agent.ssh
+</code></pre>
+<pre><code class="language-bash">ssh-add -L
+ssh-ed25519 AABBC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I (none)
+</code></pre>
+<ul>
+<li>Mine shows <code>(none)</code> because I left the comment field blank when creating the
+key and doesn't affect functionality.</li>
+</ul>
+</details>
 <blockquote>
 <p><strong>Security information</strong>: Changing SSH configuration settings can
 significantly impact the security of your system(s). It is crucial to have a
@@ -822,6 +1011,17 @@ communications.</p>
 <p><a href="https://en.wikipedia.org/wiki/Fail2ban">Wikipedia Fail2Ban</a></p>
 </li>
 </ul>
+<h2 id="encrypted-secrets"><a class="header" href="#encrypted-secrets">Encrypted Secrets</a></h2>
+<p>Never store secrets in plain text in repositories. Use something like
+<a href="https://github.com/Mic92/sops-nix">sops-nix</a>, which lets you keep encrypted
+secrets under version control declaratively.</p>
+<p>Another option is <a href="https://github.com/ryantm/agenix">agenix</a></p>
+<ul>
+<li><a href="https://wiki.nixos.org/wiki/Agenix">NixOS Wiki Agenix</a></li>
+</ul>
+<h2 id="sops-nix-guide"><a class="header" href="#sops-nix-guide">Sops-nix Guide</a></h2>
+<p>Protect your secrets, the following guide is on setting up Sops on NixOS:
+<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a></p>
 <details>
 <summary> ✔️ Click to expand `auditd` example </summary>
 <p>To enable the Linux Audit Daemon (<code>auditd</code>) and define a very basic rule set,
