@@ -184,6 +184,12 @@
 <li><a href="#securing-ssh">Securing SSH</a></li>
 <li><a href="#key-generation">Key generation</a></li>
 <li><a href="#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></li>
+<li><a href="#encrypt-a-file-with-pgp">Encrypt a File with PGP</a>
+<ul>
+<li><a href="#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></li>
+<li><a href="#encrypt-a-file-for-yourself">Encrypt a file for yourself</a></li>
+</ul>
+</li>
 <li><a href="#encrypted-secrets">Encrypted Secrets</a></li>
 <li><a href="#sops-nix-guide">Sops-nix Guide</a></li>
 <li><a href="#usb-port-protection">USB Port Protection</a></li>
@@ -741,6 +747,16 @@ adding extra rounds can make it harder to brute-force.</p>
 <h2 id="install-gnupg-and-gpg-agent-for-home-manager"><a class="header" href="#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></h2>
 </details>
 <summary> ✔️ Click to expand PGP installation and key generation example </summary>
+<p><strong>What’s safe to share?</strong></p>
+<pre><code>Your public key (used to encrypt files and verify signatures)
+
+Your key ID (identifies your key, useful for sharing public keys or configs)
+</code></pre>
+<p><strong>What must never be shared?</strong></p>
+<pre><code>Your private (secret) key, usually in your ~/.gnupg/private-keys-v1.d/ directory.
+
+Your passphrase for your private key.
+</code></pre>
 <pre><code class="language-nix"># home.nix or equivalent
 {
   config,
@@ -767,7 +783,7 @@ adding extra rounds can make it harder to brute-force.</p>
         pinentryPackage = pkgs.pinentry-gnome3;
       };
 
-      ## Add SSH key
+      ## We will put our keygrip here
       gpg-agent.sshKeys = [];
     };
     home.packages = [pkgs.gnupg];
@@ -928,6 +944,68 @@ ssh-ed25519 AABBC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I
 <li>Mine shows <code>(none)</code> because I left the comment field blank when creating the
 key and doesn't affect functionality.</li>
 </ul>
+<h2 id="encrypt-a-file-with-pgp"><a class="header" href="#encrypt-a-file-with-pgp">Encrypt a File with PGP</a></h2>
+<h3 id="list-your-keys-and-get-the-key-id"><a class="header" href="#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></h3>
+<pre><code class="language-bash">gpg --list-keys --keyid-format LONG
+</code></pre>
+<p>Example output:</p>
+<pre><code class="language-bash">pub   rsa4096/ABCDEF1234567890 2024-01-01 [SC]
+uid           [ultimate] Your Name &lt;you@example.com&gt;
+sub   rsa4096/1234567890ABCDEF 2024-01-01 [E]
+</code></pre>
+<ul>
+<li>
+<p>The part after the slash on the <code>pub</code> line is your key ID (<code>ABCDEF1234567890</code>
+in the example)</p>
+</li>
+<li>
+<p>You can also use your email or name to refer to the key in most commands.</p>
+</li>
+</ul>
+<h3 id="encrypt-a-file-for-yourself"><a class="header" href="#encrypt-a-file-for-yourself">Encrypt a file for yourself</a></h3>
+<pre><code class="language-bash">echo "This file will be encrypted" &gt; file.txt
+</code></pre>
+<pre><code class="language-bash">gpg --encrypt --recipient ABCDEF1234567890 file.txt
+</code></pre>
+<pre><code class="language-bash">ls
+│  7 │ file.txt            │ file │     28 B │ now           │
+│  8 │ file.txt.gpg        │ file │    191 B │ now           │
+</code></pre>
+<p><code>gpg --encrypt</code> doesn't modify the original file. It creates a new encrypted
+file by default with <code>gpg</code> amended to the filename.</p>
+<pre><code class="language-bash">gpg --decrypt file.txt.gpg
+gpg: encrypted with cv25519 key, ID 0x4AC131B80CEC833E, created 2025-07-31
+      "GPG Key &lt;sayls8@proton.me&gt;"
+This file will be encrypted
+</code></pre>
+<ul>
+<li>You will be asked for the passphrase you used when creating the key in order
+to decrypt the file.</li>
+</ul>
+<p>There is much more you can do with PGP beyond simple file encryption:</p>
+<ul>
+<li>
+<p>Sign files and commits: Prove that content really came from you.</p>
+</li>
+<li>
+<p>Encrypt for multiple recipients: Share encrypted data with teammates using
+their public keys.</p>
+</li>
+<li>
+<p>Use smartcards or YubiKeys: Store your private key on hardware for extra
+security.</p>
+</li>
+<li>
+<p>Verify software releases: Check that downloaded files are genuine using the
+developer’s signature.</p>
+</li>
+<li>
+<p>Integrate with Git: Sign tags and commits so others can trust your repository
+history.</p>
+</li>
+</ul>
+<p>This guide only scratches the surface — once your PGP key and <code>gpg-agent</code> are
+set up, these capabilities become easy to add to your workflow.</p>
 </details>
 <blockquote>
 <p><strong>Security information</strong>: Changing SSH configuration settings can
