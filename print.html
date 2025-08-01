@@ -2758,8 +2758,8 @@ headless CI/CD environments, <code>ssh-keygen</code> is required.</p>
 <p>The <code>ed25519</code> algorithm is significantly faster and more secure when compared to
 <code>RSA</code>. You can also specify the key derivation function (KDF) rounds to
 strengthen protection even more.</p>
-<p>For example, to generate a strong key for :</p>
-<pre><code class="language-bash">ssh-keygen -t ed25519 -a 32 -f ~/.ssh/id_ed25519_github_$(date +%Y-%m-%d) -C "SSH Key for Mdbook"
+<p>For example, to generate a strong key for MdBook:</p>
+<pre><code class="language-bash">ssh-keygen -t ed25519 -a 32 -f ~/.ssh/id_ed25519_github_$(date +%Y-%m-%d) -C "SSH Key for MdBook"
 </code></pre>
 <ul>
 <li>
@@ -2777,15 +2777,24 @@ adding extra rounds can make it harder to brute-force.</p>
 </details>
 <summary> ✔️ Click to expand PGP installation and key generation example </summary>
 <p><strong>What’s safe to share?</strong></p>
-<pre><code>Your public key (used to encrypt files and verify signatures)
-
-Your key ID (identifies your key, useful for sharing public keys or configs)
-</code></pre>
+<ul>
+<li>
+<p>Your public key (used to encrypt files and verify signatures)</p>
+</li>
+<li>
+<p>Your key ID (identifies your key, useful for sharing public keys or configs)</p>
+</li>
+</ul>
 <p><strong>What must never be shared?</strong></p>
-<pre><code>Your private (secret) key, usually in your ~/.gnupg/private-keys-v1.d/ directory.
-
-Your passphrase for your private key.
-</code></pre>
+<ul>
+<li>
+<p>Your private (secret) key, usually in your ~/.gnupg/private-keys-v1.d/
+directory.</p>
+</li>
+<li>
+<p>Your passphrase for your private key.</p>
+</li>
+</ul>
 <pre><code class="language-nix"># home.nix or equivalent
 {
   config,
@@ -2851,6 +2860,8 @@ options for this attribute:</p>
 <pre><code class="language-nix"># home.nix
 custom.pgp.enable = true;
 </code></pre>
+<p><code>gpg --full-generate-key</code> can be used to generate a basic keypair, adding
+<code>--expert</code> gives more options and capabilities needed for <code>gpg-agent</code>.</p>
 <p>To generate a pgp key you can do the following:</p>
 <pre><code class="language-bash">gpg --expert --full-generate-key
 </code></pre>
@@ -2860,7 +2871,8 @@ custom.pgp.enable = true;
 </li>
 <li>
 <p>Choose <code>A</code> for Authenticate capabilities, which is the only setting required
-for this.</p>
+for this. Additional subkeys may be created for encryption, sign, and/or
+authentication capabilities.</p>
 </li>
 <li>
 <p>Choose (1) Default Curve 25519</p>
@@ -2962,11 +2974,15 @@ gpgconf --launch gpg-agent
 </code></pre>
 <p>Test, these should match:</p>
 <pre><code class="language-bash">echo "$SSH_AUTH_SOCK"
+# output
 /run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76534j/S.gpg-agent.ssh
+
 gpgconf --list-dirs agent-ssh-socket
+# output
 /run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76834j/S.gpg-agent.ssh
 </code></pre>
 <pre><code class="language-bash">ssh-add -L
+# output
 ssh-ed25519 AABBC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I (none)
 </code></pre>
 <ul>
