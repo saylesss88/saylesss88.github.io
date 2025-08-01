@@ -2213,6 +2213,7 @@ of garbage collection and it's considered unsafe.</p>
 <li><a href="nix/hardening_NixOS.html#lynis-and-other-tools">Lynis and other tools</a></li>
 <li><a href="nix/hardening_NixOS.html#securing-ssh">Securing SSH</a></li>
 <li><a href="nix/hardening_NixOS.html#key-generation">Key generation</a></li>
+<li><a href="nix/hardening_NixOS.html#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></li>
 <li><a href="nix/hardening_NixOS.html#encrypted-secrets">Encrypted Secrets</a></li>
 <li><a href="nix/hardening_NixOS.html#sops-nix-guide">Sops-nix Guide</a></li>
 <li><a href="nix/hardening_NixOS.html#usb-port-protection">USB Port Protection</a></li>
@@ -2723,6 +2724,31 @@ signatures. It can detect hidden processes and network connections.</p>
 <p>I got the recommendation for <code>clamav</code> from the Paranoid NixOS blog post and the
 others help with compliance for <code>lynis</code>.</p>
 <h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
+<blockquote>
+<p>❗ NOTE: I am going to show two approaches for SSH authentication. You should
+typically choose <strong>one</strong>:</p>
+</blockquote>
+<ol>
+<li>
+<p>Use normal SSH keys generated with <code>ssh-keygen</code></p>
+</li>
+<li>
+<p>Use a GPG key with <code>gpg-agent</code> (which acts as your SSH agent).</p>
+</li>
+</ol>
+<p>My setup caused conflicts when enabling <code>programs.ssh.startAgent</code> so I chose
+<code>gpg-agent</code> personally.</p>
+<p>There are situations where you are required to use one or the other like for
+headless CI/CD environments, <code>ssh-keygen</code> is required.</p>
+<p>Further reading:</p>
+<ul>
+<li>
+<p><a href="https://wiki.archlinux.org/title/OpenSSH">Arch Wiki OpenSSH</a></p>
+</li>
+<li>
+<p><a href="https://wiki.gentoo.org/wiki/GnuPG">Gentoo GnuPG</a></p>
+</li>
+</ul>
 <h2 id="key-generation"><a class="header" href="#key-generation">Key generation</a></h2>
 <p>The <code>ed25519</code> algorithm is significantly faster and more secure when compared to
 <code>RSA</code>. You can also specify the key derivation function (KDF) rounds to
@@ -2742,6 +2768,185 @@ adding extra rounds can make it harder to brute-force.</p>
 <p><code>-f</code> is for filename</p>
 </li>
 </ul>
+<h2 id="install-gnupg-and-gpg-agent-for-home-manager"><a class="header" href="#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></h2>
+</details>
+<summary> ✔️ Click to expand PGP installation and key generation example </summary>
+<pre><code class="language-nix"># home.nix or equivalent
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
+  options = {
+    custom.pgp = {
+      enable = lib.mkEnableOption {
+        description = "Enable PGP Gnupgp";
+        default = false;
+      };
+    };
+  };
+
+  config = lib.mkIf config.custom.pgp.enable {
+    services = {
+      ## Enable gpg-agent with ssh support
+      gpg-agent = {
+        enable = true;
+        enableSshSupport = true;
+        enableZshIntegration = true;
+        pinentryPackage = pkgs.pinentry-gnome3;
+      };
+
+      ## Add SSH key
+      gpg-agent.sshKeys = [];
+    };
+    home.packages = [pkgs.gnupg];
+    programs = {
+      gpg = {
+        ## Enable GnuPG
+        enable = true;
+
+        # homedir = "/home/userName/.config/gnupg";
+      };
+    };
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p>The default path is <code>~/.gnupg</code>, if you prefer placing it in the <code>~/.config</code>
+directory uncomment the <code>homedir</code> line and change <code>userName</code> to your username.</p>
+</li>
+<li>
+<p>I use hyprland so <code>pinentry-gnome3</code> works for me, there is also the following
+options for this attribute:</p>
+</li>
+<li>
+<p><code>pinentry-tty</code></p>
+</li>
+<li>
+<p><code>pinentry-qt</code></p>
+</li>
+<li>
+<p><code>pinentry-gtk2</code></p>
+</li>
+</ul>
+<p>And more, research what you need and use the correct one.</p>
+<p>Enable in your <code>home.nix</code> or equivalent:</p>
+<pre><code class="language-nix"># home.nix
+custom.pgp.enable = true;
+</code></pre>
+<p>To generate a pgp key you can do the following:</p>
+<pre><code class="language-bash">gpg --expert --full-generate-key
+</code></pre>
+<ul>
+<li>
+<p>Choose the default (11) ECC (set your own capabilities)</p>
+</li>
+<li>
+<p>Choose <code>A</code> for Authenticate capabilities, which is the only setting required
+for this.</p>
+</li>
+<li>
+<p>Choose (1) Default Curve 25519</p>
+</li>
+<li>
+<p>Give it a name and description</p>
+</li>
+<li>
+<p>Give it an expiration date, 1y is common</p>
+</li>
+<li>
+<p>Use a strong passphrase or password</p>
+</li>
+</ul>
+<p>If you see a warning about incorrect permissions, you can run the following:</p>
+<pre><code class="language-bash">chmod 700 ~/.gnupg
+chmod 600 ~/.gnupg/*
+</code></pre>
+<p>Verify:</p>
+<pre><code class="language-bash">ls -ld ~/.gnupg
+# Should show: drwx------
+
+ls -l ~/.gnupg
+# Files should show: -rw-------
+</code></pre>
+<p>After fixing, run:</p>
+<pre><code class="language-bash">gpg --list-keys
+</code></pre>
+<p>The warning should be gone.</p>
+<p><strong>List your key and copy the key ID</strong></p>
+<pre><code class="language-bash">gpg --list-secret-keys --keyid-format LONG
+</code></pre>
+<p>Output example:</p>
+<pre><code class="language-bash">sec   ed25519/ABCDEF1234567890 2025-07-31 [SC]
+      ABC123ABC123ABC123ABC123ABC123ABC123ABC1
+uid           [ultimate] Your Name &lt;you@example.com&gt;
+ssb   ed25519/1234567890ABCDEF 2025-07-31 [S]
+</code></pre>
+<ul>
+<li>Take the part after <code>/</code> on the <code>sec</code> line (e.g., <code>ABCDEF1234567890</code>)</li>
+</ul>
+<p><strong>Export the public key for GitHub</strong></p>
+<pre><code class="language-bash">gpg --armor --export ABCDEF1234567890
+</code></pre>
+<ul>
+<li>Copy everything from
+<code>-----BEGIN PGP PUBLIC KEY BLOCK----- to -----END PGP PUBLIC KEY BLOCK-----</code>.</li>
+</ul>
+<p><strong>Add to GitHub</strong></p>
+<ol>
+<li>
+<p>Go to Settings, SSH and GPG keys, New GPG key</p>
+</li>
+<li>
+<p>Paste the exported block.</p>
+</li>
+</ol>
+<p><strong>Add Keygrip to <code>sshcontrol</code> for SSH agent</strong></p>
+<p>A keygrip is a unique identifier for the private part of a GPG key. Unlike key
+IDs, which refer to public keys, keygrips are used by <code>gpg-agent</code> to locate and
+authorize private keys for SSH authentication.</p>
+<pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --with-colons
+</code></pre>
+<ul>
+<li>Copy the <code>grp</code> line - that's your keygrip</li>
+</ul>
+<p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild:</p>
+<pre><code class="language-nix">gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
+</code></pre>
+<p>Add the following to your shell config:</p>
+<pre><code class="language-bash"># zsh.nix
+# ... snip ...
+initContent = ''
+      # GPG Agent
+        export GPG_TTY=$(tty) # which terminal to use for passphrase prompts
+        export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)" # points SSH_AUTH_SOCK to the socket created by gpg-agent
+        gpg-connect-agent updatestartuptty /bye # refresh gpg-agent so it knows which terminal is active
+
+        # Optional: confirm it's set correctly
+        echo "SSH_AUTH_SOCK is set to: $SSH_AUTH_SOCK"
+'';
+# ... snip ...
+</code></pre>
+<p>Rebuild and then restart gpg-agent:</p>
+<pre><code class="language-bash">gpgconf --kill gpg-agent
+gpgconf --launch gpg-agent
+</code></pre>
+<p>Test, these should match:</p>
+<pre><code class="language-bash">echo "$SSH_AUTH_SOCK"
+/run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76534j/S.gpg-agent.ssh
+gpgconf --list-dirs agent-ssh-socket
+/run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76834j/S.gpg-agent.ssh
+</code></pre>
+<pre><code class="language-bash">ssh-add -L
+ssh-ed25519 AABBC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I (none)
+</code></pre>
+<ul>
+<li>Mine shows <code>(none)</code> because I left the comment field blank when creating the
+key and doesn't affect functionality.</li>
+</ul>
+</details>
 <blockquote>
 <p><strong>Security information</strong>: Changing SSH configuration settings can
 significantly impact the security of your system(s). It is crucial to have a
