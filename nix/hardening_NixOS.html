@@ -177,7 +177,8 @@
 <li><a href="#guided-encrypted-install-using-disko">Guided Encrypted install using disko</a></li>
 <li><a href="#secure-boot">Secure Boot</a></li>
 <li><a href="#hardening-the-kernel">Hardening the Kernel</a></li>
-<li><a href="#using-sysctl-on-an-existing-kernel">Using sysctl on an existing kernel</a></li>
+<li><a href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></li>
+<li><a href="#or-harden-your-existing-kernel">OR Harden your existing Kernel</a></li>
 <li><a href="#hardening-boot-parameters">Hardening Boot Parameters</a></li>
 <li><a href="#hardening-systemd">Hardening Systemd</a></li>
 <li><a href="#lynis-and-other-tools">Lynis and other tools</a></li>
@@ -306,21 +307,32 @@ making robust hardening essential.</p>
 <li><a href="https://wiki.nixos.org/wiki/Linux_kernel">NixOS Wiki Linux Kernel</a></li>
 </ul>
 <p>NixOS provides a <code>hardened</code> profile that applies a set of security-focused
-kernel and system configurations. This profile is defined in
-<a href="https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/profiles/hardened.nix">nixpkgs/nixos/modules/profiles/hardened.nix</a></p>
+kernel and system configurations.</p>
 <p>The following discourse thread explains the use of <code>profiles.hardened</code>:</p>
 <ul>
 <li><a href="https://discourse.nixos.org/t/enabling-hardened-profile/63107">Discourse Thread Enabling hardened profile</a></li>
 </ul>
 <p>I misunderstood the above thread, it means that <strong>if</strong> the file is imported that
-it's enabled by default.</p>
-<p>For flakes, you could do something like the following:</p>
+it's enabled by default. If you look at <code>profiles/hardened.nix</code> you'll see that
+it defaults to true:</p>
+<pre><code class="language-nix"># nixpkgs/nixos/modules/profiles/hardened.nix
+# ... snip ...
+{
+  options.profiles.hardened = mkEnableOption "hardened" // {
+    default = true;
+    example = false;
+  };
+# ... snip ...
+</code></pre>
+<p>For flakes, you could do something like the following in your
+<code>configuration.nix</code> or equivalent:</p>
 <pre><code class="language-nix"># configuration.nix
 { pkgs, inputs, ... }: let
    modulesPath = "${inputs.nixpkgs}/nixos/modules";
 
 in {
   imports = [ "${modulesPath}/profiles/hardened.nix" ];
+
 }
 </code></pre>
 <ul>
@@ -329,13 +341,23 @@ in {
 <code>profiles.hardened</code> is enabled by default.</p>
 </li>
 <li>
-<p>The PR and other discourse thread were based off of my initial
-misunderstanding of this being enabled by default. You could add
-<code>profiles.hardened.enable = true;</code> to your configuration to be forwards
-compatible if they do change the option to default to false but it's currently
-unnecessary.</p>
+<p>There is a proposal to remove it completely, so you may want to think twice
+before enabling it and read the following
+<a href="https://discourse.nixos.org/t/proposal-to-deprecate-the-hardened-profile/63081">Discourse Thread</a>
+Talking about removing it completely because of reasons listed in the above
+thread.</p>
+</li>
+<li>
+<p><a href="https://github.com/NixOS/nixpkgs/pull/383438">PR #383438</a></p>
+</li>
+<li>
+<p>If you do decide to use the hardened profile, if you decide to continue
+hardening your system you need to know exactly what <code>profiles.hardened</code>
+enables/disables so you avoid duplicate entries and conflicts. Check
+<a href="https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/profiles/hardened.nix">hardened.nix</a>.</p>
 </li>
 </ul>
+<h2 id="choosing-the-hardened-kernel"><a class="header" href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></h2>
 <p>You can also use the hardened kernel:</p>
 <pre><code class="language-nix">boot.kernelPackages = pkgs.linuxPackages_latest_hardened;
 </code></pre>
@@ -355,7 +377,8 @@ enable/disable different features.</p>
 zcat /proc/config.gz | grep CONFIG_HARDENED_USERCOPY
 zcat /proc/config.gz | grep CONFIG_STACKPROTECTOR
 </code></pre>
-<h2 id="using-sysctl-on-an-existing-kernel"><a class="header" href="#using-sysctl-on-an-existing-kernel">Using sysctl on an existing kernel</a></h2>
+<h2 id="or-harden-your-existing-kernel"><a class="header" href="#or-harden-your-existing-kernel">OR Harden your existing Kernel</a></h2>
+<p>If you chose the hardened kernel don't follow this section.</p>
 <p><strong>Or</strong> you can harden the kernel you're using <code>sysctl</code>, the following parameters
 come from the madaidans-insecurities guide with a few optimizations:</p>
 <pre><code class="language-nix">  boot.kernel.sysctl = {
