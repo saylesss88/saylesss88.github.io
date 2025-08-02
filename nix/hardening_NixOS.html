@@ -1238,6 +1238,11 @@ enabling the NixOS module for audit rules generation.</p>
 exfiltration, unauthorized device access, malware injection, etc.</p>
 <p>To get a list of your connected USB devices you can use <code>lsusb</code> from the
 <code>usbutils</code> package.</p>
+<pre><code class="language-bash">lsusb
+</code></pre>
+<p>To list the devices recognized by USBGuard, run:</p>
+<pre><code class="language-bash">sudo usbguard list-devices
+</code></pre>
 <ul>
 <li><a href="https://mynixos.com/options/services.usbguard">MyNixOS services.usbguard</a></li>
 </ul>
@@ -1259,6 +1264,7 @@ in {
     services.usbguard = {
       enable = true;
       IPCAllowedUsers = ["root" "your-user"];
+    # presentDevicePolicy refers to how to treat USB devices that are already connected when the daemon starts
       presentDevicePolicy = "allow";
       rules = ''
         # allow `only` devices with mass storage interfaces (USB Mass Storage)
@@ -1278,15 +1284,23 @@ in {
   };
 }
 </code></pre>
+<p>The above settings can be found in
+<a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/security_guide/sec-using-usbguard">RedHat UsbGuard</a></p>
 <p>The only <code>allow</code> rule is for devices with <strong>only</strong> mass storage interfaces
 (<code>08:*:*</code>) i.e., USB Mass storage devices, devices like keyboards and mice
 (which use interface class <code>03:*:*</code>) implicitly <strong>not allowed</strong>.</p>
+<p>The <code>reject</code> rules reject devices with a suspicious combination of interfaces. A
+USB drive that implements a keyboard or a network interface is very suspicious,
+these <code>reject</code> rules prevent that.</p>
 <p>The <code>presentDevicePolicy = "allow";</code> allows any device that is present at daemon
 start up even if they're not explicitly allowed. However, newly plugged in
 devices must match an <code>allow</code> rule or get denied implicitly. I have a keyboard,
 and mouse usb device connected and it works without uncommenting the line,
 <code>allow with-interface equals { 03:*:* }</code> since they were both plugged in at
 daemon start up.</p>
+<p>The <code>presentDevicePolicy</code> should be one of: # one of <code>"apply-policy"</code>(default,
+evaluate the rule set for every present device), <code>"block"</code>, <code>"reject"</code>, <code>"keep"</code>
+(keep whatever state the device is currently in), or <code>"allow"</code></p>
 <p>And enable it with the following in your <code>configuration.nix</code> or equivalent:</p>
 <pre><code class="language-nix"># configuration.nix
 imports = [
