@@ -2223,6 +2223,7 @@ of garbage collection and it's considered unsafe.</p>
 <ul>
 <li><a href="nix/hardening_NixOS.html#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></li>
 <li><a href="nix/hardening_NixOS.html#encrypt-a-file-for-yourself">Encrypt a file for yourself</a></li>
+<li><a href="nix/hardening_NixOS.html#openssh-server">OpenSSH Server</a></li>
 </ul>
 </li>
 <li><a href="nix/hardening_NixOS.html#encrypted-secrets">Encrypted Secrets</a></li>
@@ -2265,7 +2266,26 @@ security if configured correctly.</p>
 <h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
 <p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
 review and remove unused or outdated accounts to reduce your system’s attack
-surface, improve compliance, and ensure only authorized users have access.</p>
+surface, improve compliance, and ensure only authorized users have access. The
+following setting ensures that user (and group) management is fully declarative:</p>
+<pre><code class="language-nix"># configuration.nix
+# All users must be declared
+users.mutableUsers = false;
+</code></pre>
+<p>With <code>users.mutableUsers = false;</code>, all non-declaratively managed (imperative)
+user management including creation, modification, or password changes will fail
+or be reset on rebuild. User and group definitions become entirely controlled by
+your system configuration for maximum reproducibility and security. If you need
+to add, remove, or modify users, you must do so in your <code>configuration.nix</code> and
+rebuild the system.</p>
+<blockquote>
+<p>NOTE: There is mention of making
+<a href="https://github.com/nikstur/userborn">userborn</a> the default for NixOS in the
+future. It can be more secure by prohibiting UID/GID re-use and giving
+warnings about insecure password hashing schemes. From the userborn docs all
+that is clear is how to install it, I see no mention on how to use it or how
+to convert from declarative NixOS users to userborn.</p>
+</blockquote>
 <p><strong>Only install, enable, and run what is needed</strong>: Disable or uninstall
 unnecessary software and services to minimize potential vulnerabilities. Take
 advantage of NixOS’s easy package management and minimalism to keep your system
@@ -3098,6 +3118,7 @@ history.</p>
 <p>This guide only scratches the surface — once your PGP key and <code>gpg-agent</code> are
 set up, these capabilities become easy to add to your workflow.</p>
 </details>
+<h3 id="openssh-server"><a class="header" href="#openssh-server">OpenSSH Server</a></h3>
 <p>First of all, if you don't use SSH don't enable it in the first place. If you do
 use SSH, it's important to understand what that opens you up to.</p>
 <p>The following are some recommendations from Mozilla on OpenSSH:</p>
@@ -3538,7 +3559,13 @@ refer directly to its
 <ul>
 <li><a href="nix/hardening_networking.html#simple-tips">Simple Tips</a>
 <ul>
-<li><a href="nix/hardening_networking.html#choosing-a-secure-browser">Choosing a secure Browser</a></li>
+<li><a href="nix/hardening_networking.html#choosing-a-secure-browser">Choosing a secure Browser</a>
+<ul>
+<li><a href="nix/hardening_networking.html#tor-browser">Tor Browser</a></li>
+<li><a href="nix/hardening_networking.html#searxng">SearXNG</a></li>
+<li><a href="nix/hardening_networking.html#hardening-other-browsers">Hardening Other Browsers</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a href="nix/hardening_networking.html#encrypted-dns">Encrypted DNS</a></li>
@@ -3602,13 +3629,13 @@ for this on Android and IOS.</p>
 to the internet, and so security, privacy, and anti-tracking features of
 browsers are now as important, or even more important than platform-level
 protections.</p>
+<h4 id="tor-browser"><a class="header" href="#tor-browser">Tor Browser</a></h4>
 <p>Tor routes your internet traffic through a global volunteer-operated network,
 masking your IP address and activities from local observers, ISPs, websites, and
 surveillance systems. This helps you protect personal information and maintain
 anonymity when browsing, communicating, or using online services.</p>
 <ul>
-<li>
-<p><a href="https://wiki.nixos.org/wiki/Tor">Tor on NixOS</a></p>
+<li><a href="https://wiki.nixos.org/wiki/Tor">Tor on NixOS</a>
 <ul>
 <li>
 <p><a href="https://tb-manual.torproject.org/">Tor Browser User Manual</a></p>
@@ -3619,17 +3646,18 @@ anonymity when browsing, communicating, or using online services.</p>
 </ul>
 </li>
 </ul>
+<h4 id="searxng"><a class="header" href="#searxng">SearXNG</a></h4>
 <p>SearXNG is a privacy-respecting metasearch engine that aggregates results from
 various search services, such as Google, DuckDuckGo, etc without tracking you or
 profiling your searches.</p>
 <ul>
-<li>
-<p><a href="https://wiki.nixos.org/wiki/SearXNG">SearXNG on NixOS</a></p>
+<li><a href="https://wiki.nixos.org/wiki/SearXNG">SearXNG on NixOS</a>
 <ul>
 <li><a href="https://docs.searxng.org/">Welcome to SearXNG</a></li>
 </ul>
 </li>
 </ul>
+<h4 id="hardening-other-browsers"><a class="header" href="#hardening-other-browsers">Hardening Other Browsers</a></h4>
 <p>If the above browsers aren't for you, you can harden the browser you're using
 now. I personally still like Firefox and have hardened it for daily use while
 using Tor in situations where I want more privacy.</p>
@@ -3645,6 +3673,21 @@ using Tor in situations where I want more privacy.</p>
 The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
 set of security configuration standards developed by the U.S. Department of
 Defense.</p>
+</li>
+</ul>
+<p><strong>LibreWolf</strong> is an open-source fork of Firefox with a strong focus on privacy,
+security, and user freedom. LibreWolf enables always HTTPS, includes
+uBlockOrigin, and only includes privacy focused search engines by default among
+other strong defaults. Also, since LibreWolf is a fork of Firefox most of the
+other hardening options work for it as well.</p>
+<ul>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Librewolf">NixOS Wiki LibreWolf</a>, the options in
+the wiki make it less secure but more compatible with common websites.</p>
+</li>
+<li>
+<p><a href="https://librewolf.net/docs/features/">LibreWolf Features</a> You still need to
+enable DNS over HTTPS through privacy settings.</p>
 </li>
 </ul>
 <h2 id="encrypted-dns"><a class="header" href="#encrypted-dns">Encrypted DNS</a></h2>
