@@ -2208,7 +2208,7 @@ of garbage collection and it's considered unsafe.</p>
 <li><a href="nix/hardening_NixOS.html#secure-boot">Secure Boot</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-the-kernel">Hardening the Kernel</a></li>
 <li><a href="nix/hardening_NixOS.html#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></li>
-<li><a href="nix/hardening_NixOS.html#or-harden-your-existing-kernel">OR Harden your existing Kernel</a></li>
+<li><a href="nix/hardening_NixOS.html#further-hardening-with-sysctl">Further Hardening with sysctl</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-boot-parameters">Hardening Boot Parameters</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-systemd">Hardening Systemd</a></li>
 <li><a href="nix/hardening_NixOS.html#lynis-and-other-tools">Lynis and other tools</a></li>
@@ -2433,9 +2433,22 @@ enables/disables so you avoid duplicate entries and conflicts. Check
 </li>
 </ul>
 <h2 id="choosing-the-hardened-kernel"><a class="header" href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></h2>
-<p>You can also use the hardened kernel:</p>
-<pre><code class="language-nix">boot.kernelPackages = pkgs.linuxPackages_latest_hardened;
+<p>The <code>linuxPackages_latest_hardened</code> attribute has been deprecated. If you want
+to use a hardened kernel, you must specify a versioned package that is currently
+supported.</p>
+<p>You can find the available hardened kernel packages by searching
+<a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/top-level/linux-kernels.nix">pkgs/top-level/linux-kernels.nix</a></p>
+<p>For example, to use a specific version, you would configure it like this:</p>
+<pre><code class="language-nix">boot.kernelPackages = pkgs.linux_6_6_hardened;
 </code></pre>
+<p>You can inspect
+<a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/kernel/hardened/patches.json">nixpkgs/pkgs/os-specific/linux/kernel/hardened/patches.json</a>
+to see the metadata of the patches that are applied. You can then follow the
+links in the <code>.json</code> file to see the patches.</p>
+<blockquote>
+<p>❗ NOTE: Always check the <code>linux-kernels.nix</code> file for the latest available
+versions, as older kernels are regularly removed from Nixpkgs.</p>
+</blockquote>
 <p><code>sysctl</code> is a tool that allows you to view or modify kernel settings and
 enable/disable different features.</p>
 <p>Check all <code>sysctl</code> parameters (long output):</p>
@@ -2452,9 +2465,8 @@ enable/disable different features.</p>
 zcat /proc/config.gz | grep CONFIG_HARDENED_USERCOPY
 zcat /proc/config.gz | grep CONFIG_STACKPROTECTOR
 </code></pre>
-<h2 id="or-harden-your-existing-kernel"><a class="header" href="#or-harden-your-existing-kernel">OR Harden your existing Kernel</a></h2>
-<p>If you chose the hardened kernel don't follow this section.</p>
-<p><strong>Or</strong> you can harden the kernel you're using <code>sysctl</code>, the following parameters
+<h2 id="further-hardening-with-sysctl"><a class="header" href="#further-hardening-with-sysctl">Further Hardening with sysctl</a></h2>
+<p>You can also harden the kernel you're using <code>sysctl</code>, the following parameters
 come from the madaidans-insecurities guide with a few optimizations:</p>
 <pre><code class="language-nix">  boot.kernel.sysctl = {
     "fs.suid_dumpable" = 0;
