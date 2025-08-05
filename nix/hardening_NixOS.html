@@ -175,6 +175,7 @@
 <li><a href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></li>
 <li><a href="#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
 <li><a href="#guided-encrypted-install-using-disko">Guided Encrypted install using disko</a></li>
+<li><a href="#impermanence">Impermanence</a></li>
 <li><a href="#secure-boot">Secure Boot</a></li>
 <li><a href="#hardening-the-kernel">Hardening the Kernel</a></li>
 <li><a href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></li>
@@ -286,22 +287,27 @@ unnecessary software and services to minimize potential vulnerabilities. Take
 advantage of NixOS’s easy package management and minimalism to keep your system
 lean and secure.</p>
 <p><strong>Avoid permanently installing temporary tools</strong>: Use tools like <code>nix-shell</code>,
-<code>comma</code>, and <code>nix-direnv</code> to test or run software temporarily. This prevents
-clutter and reduces potential risks from unused software lingering on the
-system.</p>
+<code>comma</code>, <code>devShells</code> and <code>nix-direnv</code> to test or run software temporarily. This
+prevents clutter and reduces potential risks from unused software lingering on
+the system.</p>
 <p><strong>Update regularly</strong>: Keep your system and software up to date to receive the
 latest security patches. Delaying updates leaves known vulnerabilities open to
 exploitation.</p>
 <p><strong>Apply the Principle of Least Privilege</strong>: Never run tools or services as root
 unless absolutely necessary. Create dedicated users and groups with the minimum
-required permissions to limit potential damage if compromised. See the doas
-example. <a href="#doas-over-sudo">Check the doas example here</a></p>
+required permissions to limit potential damage if compromised.
+<a href="#doas-over-sudo">Check the doas example here</a></p>
 <p><strong>Use strong passwords and passphrases</strong>: Aim for at least 14–16 characters by
 combining several unrelated words, symbols, and numbers. For example:
 <code>sunset-CoffeeHorse$guitar!</code>. Strong passphrases are both memorable and secure.</p>
 <p><strong>Use a password manager and enable multi-factor authentication (MFA)</strong>: Manage
 unique, strong passwords effectively with a trusted manager and protect accounts
 with MFA wherever possible for a second layer of defense.</p>
+<p><strong>Follow reputable sources</strong>: STIGs are configuration standards developed by the
+Defense Information Systems Agency (DISA) to secure systems and software for the
+U.S. Department of Defense (DoD). They are considered a highly authoritative
+source for system hardening.There are recommendations for hardening all kinds of
+software in the <a href="https://stigviewer.com/stigs">Stig Viewer</a></p>
 <p>After establishing some standard best practices, it’s time to dive deeper into
 system hardening, the process of adding layered safeguards throughout your NixOS
 setup. This next section guides you through concrete steps and options for
@@ -327,6 +333,25 @@ only essential tools and no extras that could introduce vulnerabilities.</p>
 <p>Use LUKS encryption to protect your data at rest, the following guide is a
 minimal disko encrypted installation:
 <a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+<h2 id="impermanence"><a class="header" href="#impermanence">Impermanence</a></h2>
+<p>Impermanence, especially when using a <code>tmpfs</code> as the root filesystem, provides
+several significant security benefits. The core principle is that impermanence
+defeats persistence, a fundamental goal for any attacker.</p>
+<p>When you use a root-as-tmpfs setup on NixOS, the boot process loads the entire
+operating system from the read-only Nix store into a <code>tmpfs</code> in RAM. The mutable
+directories, such as <code>/etc</code> and <code>/var</code>, are then created on this RAM disk. When
+the system is shut down, the <code>tmpfs</code> is wiped, leaving the on-disk storage
+untouched and secure.</p>
+<p>This means you get a fresh, secure boot every time, making it much harder for an
+attacker to maintain a presence on your system.</p>
+<ul>
+<li>
+<p><a href="https://grahamc.com/blog/erase-your-darlings/">Erase your Darlings (ZFS)</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted BTRFS Impermanence Guide</a></p>
+</li>
+</ul>
 <h2 id="secure-boot"><a class="header" href="#secure-boot">Secure Boot</a></h2>
 <p><img src="../images/virus1.png" alt="Virus" /></p>
 <p>Secure Boot helps ensure only signed, trusted kernels and bootloaders are
@@ -406,16 +431,18 @@ enables/disables so you avoid duplicate entries and conflicts. Check
 <p>The <code>linuxPackages_latest_hardened</code> attribute has been deprecated. If you want
 to use a hardened kernel, you must specify a versioned package that is currently
 supported.</p>
-<p>You can find the available hardened kernel packages by searching
+<p>You can find the latest available hardened kernel packages by searching
 <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/top-level/linux-kernels.nix">pkgs/top-level/linux-kernels.nix</a></p>
-<p>For example, to use a specific version, you would configure it like this:</p>
+<p>For example, to use the latest available <code>6.6</code>, you would configure it like
+this:</p>
 <pre><code class="language-nix">boot.kernelPackages = pkgs.linux_6_6_hardened;
 </code></pre>
 <p>You can inspect
 <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/kernel/hardened/patches.json">nixpkgs/pkgs/os-specific/linux/kernel/hardened/patches.json</a>
 to see the metadata of the patches that are applied. You can then follow the
 links in the <code>.json</code> file to see the patches. When I did this, the browser
-opened up Thunar so I could save the file and then review it.</p>
+opened up Thunar so I could save the file and then review it. It is very complex
+and hard to understand FYI.</p>
 <blockquote>
 <p>❗ NOTE: Always check the <code>linux-kernels.nix</code> file for the latest available
 versions, as older kernels are regularly removed from Nixpkgs.</p>
