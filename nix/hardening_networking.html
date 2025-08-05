@@ -225,7 +225,8 @@ URL into a scanner to ensure it's safe.</p>
 </li>
 <li>
 <p>Take potentially dangerous PDFs, office documents, or images and convert them
-to a safe PDF with <a href="https://github.com/freedomofpress/dangerzone">dangerzone</a></p>
+to a safe PDF with <a href="https://github.com/freedomofpress/dangerzone">dangerzone</a>
+Be especially careful with torrents.</p>
 </li>
 <li>
 <p>This may be unrelated but don't scan random QR codes either, you can download
@@ -233,8 +234,9 @@ a QR scan checker to ensure the code isn't malicious. There are different apps
 for this on Android and IOS.</p>
 </li>
 <li>
-<p>Don't use your browsers "remember my password" function, disable and delete
-the history. Use a password manager instead. (security not usability)</p>
+<p>Don't use your browsers "remember my password" or "Autofill" functions,
+disable and delete the history. Use a password manager instead. (security not
+usability)</p>
 </li>
 <li>
 <p>If you need to enter your credentials for something, don't click use Google or
@@ -243,7 +245,14 @@ of them gets compromised. Take the extra time to create an account with it's
 own unique password and user.</p>
 </li>
 <li>
-<p>Use passkeys to store complex passwords.</p>
+<p>Delete cookies and site data when the browser is closed. (security not
+usability). I believe this is the default on LibreWolf, I recently started
+using this and it's not too bad with bitwarden.</p>
+</li>
+<li>
+<p>Use passkeys to store complex passwords, use your password manager to generate
+unique and complex passphrases/passwords for you and save them right away.
+Make sure to follow the next suggestion for your password manager.</p>
 </li>
 <li>
 <p>Use 2 factor authentication everywhere possible.</p>
@@ -346,8 +355,11 @@ in {
     programs.librewolf = {
       enable = true;
       policies = {
+        # A bit annoying
         DontCheckDefaultBrowser = true;
+        # Pocket is insecure according to DoD
         DisablePocket = true;
+        # No imperative updates
         DisableAppUpdate = true;
       };
       settings = {
@@ -427,8 +439,8 @@ custom.librewolf.enable = true;
 </code></pre>
 <p>The <code>xdg</code> settings at the end make LibreWolf the defaults for what is listed.</p>
 <p>Thanks to <code>JosefKatic</code> for putting the above settings in NixOS format.</p>
-<p>There is more hardening that can be done but this should be a good starting
-point for a hardened version of LibreWolf.</p>
+<p>There are more hardening parameters that can be set but this should be a good
+starting point for a hardened version of LibreWolf.</p>
 </details>
 <h3 id="virtual-private-networks-vpns"><a class="header" href="#virtual-private-networks-vpns">Virtual Private Networks (VPNs)</a></h3>
 <p>A <strong>VPN</strong> (Virtual Private Network) encrypts your Internet connection and routes
@@ -547,12 +559,13 @@ in {
     enable = true;
     # See https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml
     settings = {
+      # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
       sources.public-resolvers = {
         urls = [
           "https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
           "https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md"
         ];
-        minisign_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"; # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+        minisign_key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
         cache_file = "/var/lib/${StateDirectory}/public-resolvers.md";
       };
 
@@ -561,6 +574,7 @@ in {
       block_ipv6 = ! hasIPv6Internet;
       blocked_names.blocked_names_file = blocklist_txt;
       require_dnssec = true;
+      # Logs can get large very quickly...
       require_nolog = false;
       require_nofilter = true;
 
@@ -575,7 +589,8 @@ in {
   systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
 }
 </code></pre>
-<pre><code class="language-bash">sudo systemctl status dnscrypt-proxy2
+<pre><code class="language-bash"># You should see that dnscrypt-proxy chooses the Server with the lowest initial latency
+sudo systemctl status dnscrypt-proxy2
 # verify that dnscrypt-proxy is listening
 sudo ss -lnp | grep 53
 # Test a DNS query, if you get valid responses it's working
