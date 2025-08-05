@@ -178,7 +178,11 @@
 <li><a href="#impermanence">Impermanence</a></li>
 <li><a href="#secure-boot">Secure Boot</a></li>
 <li><a href="#hardening-the-kernel">Hardening the Kernel</a></li>
-<li><a href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></li>
+<li><a href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a>
+<ul>
+<li><a href="#sysctl">sysctl</a></li>
+</ul>
+</li>
 <li><a href="#further-hardening-with-sysctl">Further Hardening with sysctl</a></li>
 <li><a href="#hardening-boot-parameters">Hardening Boot Parameters</a></li>
 <li><a href="#hardening-systemd">Hardening Systemd</a></li>
@@ -382,20 +386,11 @@ kernel and system configurations.</p>
 <ul>
 <li><a href="https://discourse.nixos.org/t/enabling-hardened-profile/63107">Discourse Thread Enabling hardened profile</a></li>
 </ul>
-<p>I misunderstood the above thread, it means that <strong>if</strong> the file is imported that
-it's enabled by default. If you look at <code>profiles/hardened.nix</code> you'll see that
-it defaults to true:</p>
-<pre><code class="language-nix"># nixpkgs/nixos/modules/profiles/hardened.nix
-# ... snip ...
-{
-  options.profiles.hardened = mkEnableOption "hardened" // {
-    default = true;
-    example = false;
-  };
-# ... snip ...
-</code></pre>
+<p>The thread is just mentioning that <strong>if</strong> you import <code>profiles/hardened.nix</code>
+into your <code>configuration.nix</code> that <code>profiles.hardened.enable</code> defaults to
+<code>true</code>.</p>
 <p>For flakes, you could do something like the following in your
-<code>configuration.nix</code> or equivalent:</p>
+<code>configuration.nix</code> or equivalent to import <code>hardened.nix</code>:</p>
 <pre><code class="language-nix"># configuration.nix
 { pkgs, inputs, ... }: let
    modulesPath = "${inputs.nixpkgs}/nixos/modules";
@@ -411,20 +406,18 @@ in {
 <code>profiles.hardened</code> is enabled by default.</p>
 </li>
 <li>
-<p>There is a proposal to remove it completely, so you may want to think twice
-before enabling it and read the following
-<a href="https://discourse.nixos.org/t/proposal-to-deprecate-the-hardened-profile/63081">Discourse Thread</a>
-Talking about removing it completely because of reasons listed in the above
-thread.</p>
+<p>There is a proposal to remove it completely that has gained ground, the
+following thread discusses why and the PR is related to this:
+<a href="https://discourse.nixos.org/t/proposal-to-deprecate-the-hardened-profile/63081">Discourse Thread</a></p>
 </li>
 <li>
 <p><a href="https://github.com/NixOS/nixpkgs/pull/383438">PR #383438</a></p>
 </li>
 <li>
-<p>If you do decide to use the hardened profile, if you decide to continue
-hardening your system you need to know exactly what <code>profiles.hardened</code>
-enables/disables so you avoid duplicate entries and conflicts. Check
-<a href="https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/profiles/hardened.nix">hardened.nix</a>.</p>
+<p>Check
+<a href="https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/profiles/hardened.nix">hardened.nix</a>
+to see exactly what adding it enables to avoid duplicates and conflicts moving
+on.</p>
 </li>
 </ul>
 <h2 id="choosing-the-hardened-kernel"><a class="header" href="#choosing-the-hardened-kernel">Choosing the Hardened Kernel</a></h2>
@@ -441,14 +434,29 @@ this:</p>
 <a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/kernel/hardened/patches.json">nixpkgs/pkgs/os-specific/linux/kernel/hardened/patches.json</a>
 to see the metadata of the patches that are applied. You can then follow the
 links in the <code>.json</code> file to see the patches. When I did this, the browser
-opened up Thunar so I could save the file and then review it. It is very complex
-and hard to understand FYI.</p>
+opened up Thunar so I could save the file and then review it. If you do so you
+will get a diff of all of the changes for that patch. If you don't know what
+you're looking for its fairly complex.</p>
 <blockquote>
 <p>❗ NOTE: Always check the <code>linux-kernels.nix</code> file for the latest available
 versions, as older kernels are regularly removed from Nixpkgs.</p>
 </blockquote>
+<h3 id="sysctl"><a class="header" href="#sysctl">sysctl</a></h3>
 <p><code>sysctl</code> is a tool that allows you to view or modify kernel settings and
 enable/disable different features.</p>
+<p>Since it is difficult to see exactly what enabling the hardened_kernel does.
+Before rebuilding, you could do something like this to see exactly what is
+added:</p>
+<pre><code class="language-bash">sysctl -a &gt; before.txt
+</code></pre>
+<p>And after the rebuild:</p>
+<pre><code class="language-bash">sysctl -a &gt; after.txt
+</code></pre>
+<p>And finally run a <code>diff</code> on them:</p>
+<pre><code class="language-bash">diff before.txt after.txt
+</code></pre>
+<p>You can also diff against <code>after.txt</code> for future changes to avoid duplicates,
+this seems easier to me than trying to parse through the patches.</p>
 <p>Check all <code>sysctl</code> parameters (long output):</p>
 <pre><code class="language-bash">sysctl -a
 </code></pre>
@@ -574,8 +582,8 @@ the parameters above:
 <h2 id="hardening-boot-parameters"><a class="header" href="#hardening-boot-parameters">Hardening Boot Parameters</a></h2>
 <p><code>boot.kernelParams</code> can be used to set additional kernel command line arguments
 at boot time. It can only be used for built-in modules.</p>
-<p>You can find the following settings in the above guide in the Kernel
-self-protection section:</p>
+<p>You can find the following settings in the above guide in the "Kernel
+self-protection" section:</p>
 <pre><code class="language-nix"># boot.nix
       kernelParams = [
         # make it harder to influence slab cache layout
