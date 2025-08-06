@@ -203,26 +203,93 @@ system with minimal risk of breaking workflows or causing admin headaches.</p>
 <p>Avoid reusing passwords, use a password manager.</p>
 </li>
 <li>
-<p>Enable multi-factor authentication (MFA) wherever possible.</p>
-</li>
-<li>
-<p>Declare everything everywhere and disable imperative configuration where
-possible. For example, setting <code>users.mutableUsers = false;</code> to ensure that
-all users <strong>must</strong> be declared.</p>
-</li>
-<li>
 <p>Only enable what you use, and actively disable what's no longer in use.</p>
 </li>
 <li>
-<p>Enable at least a basic firewall:</p>
+<p>Enable at least a basic firewall, a more complex firewall example that
+utilizes nftables is shared in the
+<a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking Chapter</a></p>
 </li>
 </ul>
 <pre><code class="language-nix"># configuration.nix
 # this denies incoming connections but allows outgoing and established connections
 networking.firewall.enable = true;
 </code></pre>
-<p>For deeper explanations and more advanced hardening, see the
-<a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS Chapter</a></p>
+<p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
+review and remove unused or outdated accounts to reduce your system’s attack
+surface, improve compliance, and ensure only authorized users have access. The
+following setting ensures that user (and group) management is fully declarative:</p>
+<pre><code class="language-nix"># configuration.nix
+# All users must be declared
+users.mutableUsers = false;
+</code></pre>
+<p>With <code>users.mutableUsers = false;</code>, all non-declaratively managed (imperative)
+user management including creation, modification, or password changes will fail
+or be reset on rebuild. User and group definitions become entirely controlled by
+your system configuration for maximum reproducibility and security. If you need
+to add, remove, or modify users, you must do so in your <code>configuration.nix</code> and
+rebuild the system.</p>
+<blockquote>
+<p>NOTE: There is mention of making
+<a href="https://github.com/nikstur/userborn">userborn</a> the default for NixOS in the
+future. It can be more secure by prohibiting UID/GID re-use and giving
+warnings about insecure password hashing schemes. From the userborn docs all
+that is clear is how to install it, I see no mention on how to use it or how
+to convert from declarative NixOS users to userborn.</p>
+</blockquote>
+<p>You can also specify which users or groups are allowed to do anything with the
+Nix daemon and Nix package manager. The following setting will only allow
+members of the <code>wheel</code> group access to commands that require elevated
+privileges, such as installing or modifying system-wide packages:</p>
+<pre><code class="language-nix"># configuration.nix
+{ ... }:
+{
+  nix.settings.allowed-users = [ "@wheel" ];
+}
+</code></pre>
+<p><strong>OR</strong> Only allow the <code>root</code> user:</p>
+<pre><code class="language-nix"># configuration.nix
+{ ... }:
+{
+  nix.settings.allowed-users = [ "root" ];
+}
+</code></pre>
+<p>This is more restrictive and much less convenient, think twice before going this
+restrictive.</p>
+<p><strong>Only install, enable, and run what is needed</strong>: Disable or uninstall
+unnecessary software and services to minimize potential vulnerabilities. Take
+advantage of NixOS’s easy package management and minimalism to keep your system
+lean and secure.</p>
+<p><strong>Avoid permanently installing temporary tools</strong>: Use tools like <code>nix-shell</code>,
+<code>comma</code>, <code>devShells</code> and <code>nix-direnv</code> to test or run software temporarily. This
+prevents clutter and reduces potential risks from unused software lingering on
+the system.</p>
+<p><strong>Update regularly</strong>: Keep your system and software up to date to receive the
+latest security patches. Delaying updates leaves known vulnerabilities open to
+exploitation.</p>
+<p><strong>Apply the Principle of Least Privilege</strong>: Never run tools or services as root
+unless absolutely necessary. Create dedicated users and groups with the minimum
+required permissions to limit potential damage if compromised.</p>
+<p><strong>Use strong passwords and passphrases</strong>: Aim for at least 14–16 characters by
+combining several unrelated words, symbols, and numbers. For example:
+<code>sunset-CoffeeHorse$guitar!</code>. Strong passphrases are both memorable and secure.</p>
+<p><strong>Use a password manager and enable multi-factor authentication (MFA)</strong>: Manage
+unique, strong passwords effectively with a trusted manager and protect accounts
+with MFA wherever possible for a second layer of defense.</p>
+<p><strong>Check logs regularly</strong>: Reviewing your system logs helps you spot unusual
+activity, errors, or failed login attempts that could indicate a security
+problem. NixOS uses <code>journald</code> by default, which makes this easy. For example,
+to see the logs for your current boot session:</p>
+<pre><code class="language-bash">journalctl -b
+# for the previous session
+journalctl -b -1
+</code></pre>
+<p>After establishing some standard best practices, it’s time to dive deeper into
+system hardening, the process of adding layered safeguards throughout your NixOS
+setup. This next section guides you through concrete steps and options for
+hardening critical areas of your system: from encryption and secure boot to
+managing secrets, tightening kernel security, and leveraging platform-specific
+tools. <a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
 
                     </main>
 
