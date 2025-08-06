@@ -2241,10 +2241,17 @@ utilizes nftables is shared in the
 <a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking Chapter</a></p>
 </li>
 </ul>
+<p>The firewall is enabled by default on NixOS. To explicitly ensure it's enabled,
+add the following to your <code>configuration.nix</code> or equivalent:</p>
 <pre><code class="language-nix"># configuration.nix
 # this denies incoming connections but allows outgoing and established connections
 networking.firewall.enable = true;
 </code></pre>
+<p>Many services provide an option to open the required firewall ports
+automatically. For example:</p>
+<pre><code class="language-nix">services.tor.openFirewall = true;
+</code></pre>
+<p>This prevents you from having to manually open ports</p>
 <p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
 review and remove unused or outdated accounts to reduce your system’s attack
 surface, improve compliance, and ensure only authorized users have access. The
@@ -2314,12 +2321,13 @@ to see the logs for your current boot session:</p>
 # for the previous session
 journalctl -b -1
 </code></pre>
-<p>After establishing some standard best practices, it’s time to dive deeper into
-system hardening, the process of adding layered safeguards throughout your NixOS
-setup. This next section guides you through concrete steps and options for
-hardening critical areas of your system: from encryption and secure boot to
-managing secrets, tightening kernel security, and leveraging platform-specific
-tools. <a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
+<p>After establishing some standard best practices and a hardened base, it’s time
+to dive deeper into system hardening, the process of adding layered safeguards
+throughout your NixOS setup. This next section guides you through concrete steps
+and options for hardening critical areas of your system: from encryption and
+secure boot to managing secrets, tightening kernel security, and leveraging
+platform-specific tools.
+<a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-nixos"><a class="header" href="#hardening-nixos">Hardening NixOS</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
@@ -2388,13 +2396,20 @@ play one size fits all security solutions.</p>
 </blockquote>
 <blockquote>
 <p>That said, I typically write about what I'm implementing myself to deepen
-understanding and share what works for me. Accuracy is important to me so if
-you catch a mistake, please let me know so I can fix it. <code>--Source</code> means the
-proceeding paragraph came from <code>--Source</code>, you can often click to check for
-yourself. Much of the information comes directly from the wiki or other
-respected sources that are also linked in multiple places. If you use some
-common sense with a bit of caution you could end up with a more secure NixOS
-system that fits your needs.</p>
+understanding and share what works for me. <code>--Source</code> means the proceeding
+paragraph came from <code>--Source</code>, you can often click to check for yourself. If
+you use some common sense with a bit of caution you could end up with a more
+secure NixOS system that fits your needs.</p>
+</blockquote>
+<blockquote>
+<p>Much of this guide draws inspiration or recommendations from the well-known
+<a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html">Linux Hardening Guide</a>
+by Madaidan's Insecurities. Madaidan’s work is widely regarded in technical
+and security circles as one of the most comprehensive and rigorously
+researched sources on practical Linux security, frequently cited for its depth
+and actionable advice. For example, much of the original basis for hardening
+for <a href="https://github.com/cynicsketch/nix-mineral">nix-mineral</a> came from this
+guide as well.</p>
 </blockquote>
 <p>Containers and VMs are beyond the scope of this chapter but can also enhance
 security if configured correctly.</p>
@@ -2404,8 +2419,9 @@ clear history. This approach makes it far simpler to revert a breaking change
 and quickly identify what went wrong. Over time, this discipline allows you to
 create security-focused checklists and ensure all angles are covered, building a
 more robust and secure system.</p>
-<p>Check out the <a href="https://saylesss88.github.io/nix/index.html">Hardening README</a>
-for baseline hardening recommendations.</p>
+<p>Check out the
+<a href="https://saylesss88.github.io/nix/index.html">Hardening NixOS Baseline Hardening README</a>
+for baseline hardening recommendations and best practices.</p>
 <h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
 <p>Begin with NixOS’s minimal installation image. This gives you a base system with
 only essential tools and no extras that could introduce vulnerabilities.</p>
@@ -2454,6 +2470,8 @@ authentication in order to access the UEFI/BIOS.</p>
 <p>Secure Boot helps ensure only signed, trusted kernels and bootloaders are
 executed at startup.</p>
 <p>Useful Resources:</p>
+<details>
+<summary> ✔️ Click to Expand Secure Boot Resources </summary>
 <ul>
 <li>
 <p><a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">The Strange State of Authenticated Boot and Encryption</a></p>
@@ -2465,6 +2483,7 @@ executed at startup.</p>
 <p><a href="https://github.com/nix-community/lanzaboote">lanzaboote repo</a></p>
 </li>
 </ul>
+</details>
 <p>Practical Lanzaboote Secure Boot setup for NixOS:
 <a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Guide:Secure Boot on NixOS with Lanzaboote</a></p>
 <h3 id="the-kernel"><a class="header" href="#the-kernel">The Kernel</a></h3>
@@ -2874,16 +2893,34 @@ pkgs.aide
 </code></pre>
 <p>Usage:</p>
 <pre><code class="language-bash">sudo lynis show commands
-sudo lynis audit system
- Lynis security scan details:
+# Output:
+Commands:
+lynis audit
+lynis configure
+lynis generate
+lynis show
+lynis update
+lynis upload-only
 
-  Hardening index : 78 [###############     ]
-  Tests performed : 231
+sudo lynis audit system
+# Output:
+  Lynis security scan details:
+
+  Hardening index : 79 [###############     ]
+  Tests performed : 234
   Plugins enabled : 0
 
   Components:
   - Firewall               [V]
   - Malware scanner        [V]
+
+  Scan mode:
+  Normal [V]  Forensics [ ]  Integration [ ]  Pentest [ ]
+
+  Lynis modules:
+  - Compliance status      [?]
+  - Security audit         [V]
+  - Vulnerability scan     [V]
 </code></pre>
 <ul>
 <li>
@@ -2941,6 +2978,8 @@ harder to understand in my opinion.</li>
 <p>There are situations where you are required to use one or the other like for
 headless CI/CD environments, <code>ssh-keygen</code> is required.</p>
 <p>Further reading:</p>
+<details>
+<summary> ✔️ Click to Expand Resourses on OpenSSH </summary>
 <ul>
 <li>
 <p><a href="https://wiki.archlinux.org/title/OpenSSH">Arch Wiki OpenSSH</a></p>
@@ -2955,6 +2994,7 @@ headless CI/CD environments, <code>ssh-keygen</code> is required.</p>
 <p><a href="https://blog.stribik.technology/2015/01/04/secure-secure-shell.html">Secure Secure Shell</a></p>
 </li>
 </ul>
+</details>
 <h2 id="key-generation"><a class="header" href="#key-generation">Key generation</a></h2>
 <h3 id="ssh-keygen"><a class="header" href="#ssh-keygen">ssh-keygen</a></h3>
 <p>The <code>ed25519</code> algorithm is significantly faster and more secure when compared to
