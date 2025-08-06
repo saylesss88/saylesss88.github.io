@@ -2197,11 +2197,67 @@ nix-repl&gt; :p builtins.getContext (builtins.unsafeDiscardOutputDependency open
 </code></pre>
 <p>Relying on paths outside of the nix store is generally not recommended because
 of garbage collection and it's considered unsafe.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-readme"><a class="header" href="#hardening-readme">Hardening README</a></h1>
+<p>📌 <strong>How to Use This Guide</strong></p>
+<p><strong>Read warnings</strong>: Advanced hardening can break compatibility or cause data
+loss! Pause and research before enabling anything not listed above unless you
+understand the consequences.</p>
+<p>The guide is broken up into 2 chapters:</p>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking</a></p>
+</li>
+</ul>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<p>There is a lot covered in this guide which can get overwhelming when trying to
+decide what is worth implementing. Here, I will list some common recommendations
+that most users should follow to harden their stance.</p>
+<h3 id="baseline-hardening"><a class="header" href="#baseline-hardening">Baseline Hardening</a></h3>
+<p>Before diving into advanced or specialized hardening, apply these baseline
+security measures suitable for all NixOS users. These settings help protect your
+system with minimal risk of breaking workflows or causing admin headaches.</p>
+<ul>
+<li>
+<p>Use Disk Encryption (LUKS) to protect your data at rest.</p>
+</li>
+<li>
+<p>Keep your system up to date (update regularly).</p>
+</li>
+<li>
+<p>Use strong, unique passwords.</p>
+</li>
+<li>
+<p>Avoid reusing passwords, use a password manager.</p>
+</li>
+<li>
+<p>Enable multi-factor authentication (MFA) wherever possible.</p>
+</li>
+<li>
+<p>Declare everything everywhere and disable imperative configuration where
+possible. For example, setting <code>users.mutableUsers = false;</code> to ensure that
+all users <strong>must</strong> be declared.</p>
+</li>
+<li>
+<p>Only enable what you use, and actively disable what's no longer in use.</p>
+</li>
+<li>
+<p>Enable at least a basic firewall:</p>
+</li>
+</ul>
+<pre><code class="language-nix"># configuration.nix
+# this denies incoming connections but allows outgoing and established connections
+networking.firewall.enable = true;
+</code></pre>
+<p>For deeper explanations and more advanced hardening, see the
+<a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS Chapter</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-nixos"><a class="header" href="#hardening-nixos">Hardening NixOS</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <ul>
-<li><a href="nix/hardening_NixOS.html#best-practices">Best Practices</a></li>
+<li><a href="nix/hardening_NixOS.html#hardening-basics">Hardening Basics</a></li>
 <li><a href="nix/hardening_NixOS.html#minimal-installation-with-luks">Minimal Installation with LUKS</a></li>
 <li><a href="nix/hardening_NixOS.html#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
 <li><a href="nix/hardening_NixOS.html#guided-encrypted-install-using-disko">Guided Encrypted install using disko</a></li>
@@ -2278,67 +2334,8 @@ clear history. This approach makes it far simpler to revert a breaking change
 and quickly identify what went wrong. Over time, this discipline allows you to
 create security-focused checklists and ensure all angles are covered, building a
 more robust and secure system.</p>
-<p>There is a lot covered in this chapter which can be overwhelming. I recommend as
-a baseline to at least configure the following <strong>for everyone</strong> which will be
-further explained in this chapter:</p>
-<p>📌 <strong>How to Use This Guide</strong></p>
-<ul>
-<li>
-<p>Start here, apply the below essentials first. These rarely interfere with
-normal usage and dramatically improve baseline security.</p>
-</li>
-<li>
-<p>Read warnings, advanced hardening can break compatibility or cause data loss!
-Pause and research before enabling anything not listed above unless you
-understand the consequences.</p>
-</li>
-<li>
-<p>Document your changes, keep track of applied settings so you can undo or
-adjust if something breaks</p>
-</li>
-<li>
-<p>Test after changes, reboot or review logs for warnings/errors after making
-changes.</p>
-</li>
-<li>
-<p><strong>Use Encrypted Storage</strong>, set up disk encryption (LUKS)</p>
-</li>
-<li>
-<p><strong>Update your system often</strong></p>
-</li>
-<li>
-<p><strong>Declare everything</strong> and restrict capabilities where possible to only accept
-declared configuration. Force declarative user management and restrict nix
-operations to admins.</p>
-</li>
-<li>
-<p><strong>Use strong, unique passwords</strong> and don't reuse passwords. Use a password
-manager</p>
-</li>
-<li>
-<p><strong>Enable multi-factor authentication (MFA) wherever possible</strong></p>
-</li>
-<li>
-<p><strong>Only enable what you use</strong> and actively disable what's no longer needed</p>
-</li>
-<li>
-<p><strong>Ensure at least a basic firewall is active</strong>:</p>
-</li>
-</ul>
-<pre><code class="language-nix">networking.firewall.enable = true;
-</code></pre>
-<ul>
-<li>
-<p><strong>Prefer secure defaults</strong>, use HTTPS-Only Mode and avoid using autofill for
-passwords in browsers.</p>
-</li>
-<li>
-<p>Secure boot is still in a stage where I shouldn't recommend it for everyone.
-I'll just say that I haven't had any problems with it and found it fairly easy
-to set up.</p>
-</li>
-</ul>
-<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<p>Check out the [README] for baseline hardening recommendations.</p>
+<h2 id="hardening-basics"><a class="header" href="#hardening-basics">Hardening Basics</a></h2>
 <p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
 review and remove unused or outdated accounts to reduce your system’s attack
 surface, improve compliance, and ensure only authorized users have access. The
@@ -5142,7 +5139,7 @@ configuration, always use a secrets management tool like sops-nix or agenix to
 keep sensitive data safe. See the
 <a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops-Nix Guide</a>
 for details.</p>
-<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<h2 id="getting-started-1"><a class="header" href="#getting-started-1">Getting Started</a></h2>
 <p>Jujutsu (jj) is a modern, Git-compatible version control system designed to
 simplify and improve the developer experience. It offers a new approach to
 distributed version control, focusing on a more intuitive workflow, powerful
@@ -6698,7 +6695,7 @@ accumulating, making the system more reproducible.</p>
 runtime credentials) is erased on reboot.</p>
 </li>
 </ul>
-<h3 id="getting-started-1"><a class="header" href="#getting-started-1">Getting Started</a></h3>
+<h3 id="getting-started-2"><a class="header" href="#getting-started-2">Getting Started</a></h3>
 <ol>
 <li>Add impermanence to your <code>flake.nix</code>. You will change the <code>hostname</code> in the
 flake to match your <code>networking.hostName</code>.</li>
@@ -7722,7 +7719,7 @@ However, by configuring <code>/tmp</code> to reside in RAM, you ensure that temp
 including sensitive data like passwords are stored only in volatile memory and
 are automatically cleared on shutdown or reboot. This significantly enhances the
 security of temporary data by preventing it from ever being written to disk.</p>
-<h3 id="getting-started-2"><a class="header" href="#getting-started-2">Getting Started</a></h3>
+<h3 id="getting-started-3"><a class="header" href="#getting-started-3">Getting Started</a></h3>
 <ol>
 <li>Add impermanence to your <code>flake.nix</code>. You will change the <code>hostname</code> in the
 flake to match your <code>networking.hostName</code>.</li>
@@ -10528,7 +10525,7 @@ reproducibility of your system configurations. By pinning specific versions of
 Nixpkgs and other resources, you gain greater control over your environment and
 reduce the risk of unexpected changes due to upstream updates.</p>
 </details>
-<h3 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h3>
+<h3 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h3>
 <p>You'll see the following all throughout Nix code and is convenient although it
 doesn't follow best practices. One reason is static analysis can't reason about
 the code (e.g. Because it implicitly brings all attributes into scope, tools
@@ -15066,7 +15063,7 @@ stdenv.mkDerivation {
 }
 </code></pre>
 <p>Run <code>nix-build -A hello</code> again and you'll see the derivation successfully builds.</p>
-<h2 id="best-practices-2"><a class="header" href="#best-practices-2">Best Practices</a></h2>
+<h2 id="best-practices-1"><a class="header" href="#best-practices-1">Best Practices</a></h2>
 <p><strong>Reproducible source paths</strong>: If we built the following derivation in
 <code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
 <code>/nix/store/&lt;hash&gt;-myproject</code> causing the build to no longer be reproducible:</p>
