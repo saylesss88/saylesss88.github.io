@@ -3771,8 +3771,7 @@ hardening.There are recommendations for hardening all kinds of software in the
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <ul>
-<li><a href="nix/hardening_networking.html#introduction">Introduction</a></li>
-<li><a href="nix/hardening_networking.html#simple-privacy-and-network-security-tips">Simple Privacy and Network Security Tips</a>
+<li><a href="nix/hardening_networking.html#introduction">Introduction</a>
 <ul>
 <li><a href="nix/hardening_networking.html#practice-safe-browsing-hygiene">Practice Safe Browsing Hygiene</a></li>
 <li><a href="nix/hardening_networking.html#why-follow-these-basics">Why Follow These Basics?</a></li>
@@ -3791,7 +3790,11 @@ hardening.There are recommendations for hardening all kinds of software in the
 <li><a href="nix/hardening_networking.html#firewalls">Firewalls</a></li>
 <li><a href="nix/hardening_networking.html#nixos-firewall-vs-nftables-ruleset">NixOS Firewall vs <code>nftables</code> Ruleset</a></li>
 <li><a href="nix/hardening_networking.html#testing">Testing</a></li>
-<li><a href="nix/hardening_networking.html#opensnitch">OpenSnitch</a></li>
+<li><a href="nix/hardening_networking.html#opensnitch">OpenSnitch</a>
+<ul>
+<li><a href="nix/hardening_networking.html#resources">Resources</a></li>
+</ul>
+</li>
 </ul>
 </details>
 <blockquote>
@@ -3817,36 +3820,6 @@ the entire guide to strengthen your security and privacy.</p>
 <p>That said, every setup is unique, feel free to adapt or skip sections based on
 your needs. Start with the basics and build up as you gain confidence. The goal
 is practical, tested hardening tailored to you.</p>
-<h2 id="simple-privacy-and-network-security-tips"><a class="header" href="#simple-privacy-and-network-security-tips">Simple Privacy and Network Security Tips</a></h2>
-<p>A few simple things you can do to help protect your privacy and your network,
-again some of this may be unnecessary. The point is to make you aware of
-potential attack areas and provide some safeguards in those areas:</p>
-<ul>
-<li>
-<p>HTTPS encrypts the data between a web browser and a website. This is
-especially important for services that need logging into such as a bank
-account, email, etc.</p>
-</li>
-<li>
-<p><a href="https://discourse.nixos.org/t/declare-firefox-extensions-and-settings/36265">Discourse Declare Firefox extensions and settings</a></p>
-</li>
-<li>
-<p><a href="https://cloudflare.com/learning/ssl/what-is-https">Cloudflare What is HTTPS</a></p>
-</li>
-<li>
-<p><a href="https://ssd.eff.org/module/what-fingerprinting">What is Fingerprinting</a>, more
-than you realize is being tracked constantly.</p>
-</li>
-<li>
-<p><a href="https://ssd.eff.org/">Surveillance Self-Defence</a> has a lot of helpful info to
-protect your privacy.</p>
-</li>
-<li>
-<p>Take potentially dangerous PDFs, office documents, or images and convert them
-to a safe PDF with <a href="https://github.com/freedomofpress/dangerzone">dangerzone</a>
-Be especially careful with torrents.</p>
-</li>
-</ul>
 <h3 id="practice-safe-browsing-hygiene"><a class="header" href="#practice-safe-browsing-hygiene">Practice Safe Browsing Hygiene</a></h3>
 <p><strong>Adopt Encrypted DNS and HTTPS Everywhere</strong></p>
 <ul>
@@ -3870,9 +3843,26 @@ compromises.</li>
 </ul>
 <p><strong>Use Metadata Cleaning Tools</strong></p>
 <ul>
-<li>Before sharing images or files, use tools like
-<a href="https://0xacab.org/jvoisin/mat2">mat2</a> to strip metadata that might leak
-personal information. (<code>pkgs.mat2</code>)</li>
+<li>
+<p>Many files like images, PDFs, and office documents contain hidden metadata
+information such as location data, device details, author names, timestamps,
+or editing history that can inadvertently reveal your identity or other
+sensitive information when you share the files publicly.</p>
+</li>
+<li>
+<p>To protect your privacy, always sanitize files by removing this metadata
+before sharing. Tools like <a href="https://0xacab.org/jvoisin/mat2">mat2</a> are
+designed to strip metadata from a wide range of media files efficiently.
+(<code>pkgs.mat2</code>)</p>
+</li>
+<li>
+<p>For potentially dangerous file types like PDFs, office documents, or images,
+especially those downloaded from untrusted sources such as torrents, consider
+converting them to a safe PDF format with
+<a href="https://github.com/freedomofpress/dangerzone">dangerzone</a>. Dangerzone not
+only removes metadata but also applies robust sanitization to neutralize
+malicious content.</p>
+</li>
 </ul>
 <p><strong>Use Anonymous File-Sharing Tools</strong></p>
 <ul>
@@ -3896,7 +3886,7 @@ usability).</p>
 <ul>
 <li>Avoid reused passwords by using reliable password managers like KeePassXC or
 Bitwarden, both available on NixOS. Pair this with enabling two-factor
-authentication (2FA) wherever possible.</li>
+authentication <strong>(2FA) wherever possible</strong>.</li>
 </ul>
 <pre><code class="language-nix">environment.systemPackages = [
     pkgs.keepassxc
@@ -3980,6 +3970,9 @@ The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
 set of security configuration standards developed by the U.S. Department of
 Defense. They are created by the Defense Information Systems Agency (DISA) to
 secure and harden DoD information systems and software.</p>
+</li>
+<li>
+<p><a href="https://discourse.nixos.org/t/declare-firefox-extensions-and-settings/36265">Discourse Declare Firefox extensions and settings</a></p>
 </li>
 </ul>
 <p><strong>LibreWolf</strong> is an open-source fork of Firefox with a strong focus on privacy,
@@ -4271,9 +4264,6 @@ sudo journalctl -u dnscrypt-proxy2
 (<code>127.0.0.1</code>) for IPv4 and <code>::1</code> for iPv6.</p>
 <p><code>inputs.oisd</code> refers to the flake input oisd blocklist, it prevents your device
 from connecting to unwanted or harmful domains.</p>
-<ul>
-<li><a href="https://oisd.nl/">oisd.nl</a> the oisd website</li>
-</ul>
 <p><code>dnscrypt-proxy2</code> filters ads/trackers (using oisd), enforces DNSSEC, and uses
 encrypted transports (DNS-over-HTTPS/DoH, DNSCrypt, optionally
 DNS-over-TLS/DoT).</p>
@@ -4398,6 +4388,23 @@ connections on a per-application basis.</p>
 to (i.e., block telemetry and more). Opensnitch will report that the app has
 attempted to make an outbound internet connection and block it or allow it based
 on the rules you set.</p>
+<h3 id="resources-3"><a class="header" href="#resources-3">Resources</a></h3>
+<ul>
+<li>
+<p><a href="https://cloudflare.com/learning/ssl/what-is-https">Cloudflare What is HTTPS</a></p>
+</li>
+<li>
+<p><a href="https://ssd.eff.org/module/what-fingerprinting">What is Fingerprinting</a>, more
+than you realize is being tracked constantly.</p>
+</li>
+<li>
+<p><a href="https://ssd.eff.org/">Surveillance Self-Defence</a> has a lot of helpful info to
+protect your privacy.</p>
+</li>
+<li>
+<p><a href="https://oisd.nl/">oisd.nl</a> the oisd website</p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-control-with-git"><a class="header" href="#version-control-with-git">Version Control with Git</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
@@ -5252,7 +5259,7 @@ equivalent.</p>
     # ... snip ...
 </code></pre>
 <p>You can enable git, and set your git username as well as git email right here.</p>
-<h3 id="resources-3"><a class="header" href="#resources-3">Resources</a></h3>
+<h3 id="resources-4"><a class="header" href="#resources-4">Resources</a></h3>
 <ul>
 <li>
 <p><a href="https://gist.github.com/luismts/495d982e8c5b1a0ced4a57cf3d93cf60">GitCommitBestPractices</a></p>
@@ -6188,7 +6195,7 @@ reason about. Its workflows, operation log, and conflict handling provide a
 safer and more flexible environment for managing code changes, making it a
 compelling alternative for both new and experienced developers.</p>
 <hr />
-<h3 id="resources-4"><a class="header" href="#resources-4">Resources</a></h3>
+<h3 id="resources-5"><a class="header" href="#resources-5">Resources</a></h3>
 <ul>
 <li>
 <p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
@@ -9573,7 +9580,7 @@ In the next chapter,
 <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
-<h4 id="resources-5"><a class="header" href="#resources-5">Resources</a></h4>
+<h4 id="resources-6"><a class="header" href="#resources-6">Resources</a></h4>
 <details>
 <summary> ✔️ Resources (Click to Expand) </summary>
 <ul>
@@ -14521,7 +14528,7 @@ we will delve deeper into the structure and components of these derivations.
 We will explore the attributes that define a build process, how dependencies
 are managed within a derivation, and how Nix ensures the reproducibility and
 isolation of your software builds through this fundamental concept.</p>
-<h2 id="resources-6"><a class="header" href="#resources-6">Resources</a></h2>
+<h2 id="resources-7"><a class="header" href="#resources-7">Resources</a></h2>
 <ul>
 <li><a href="https://nix.dev/tutorials/packaging-existing-software.html">Packaging Existing Software</a></li>
 </ul>
@@ -18680,7 +18687,7 @@ valuable resources to explore, from official documentation to community-driven
 configurations.</p>
 </li>
 </ul>
-<h4 id="resources-7"><a class="header" href="#resources-7">Resources</a></h4>
+<h4 id="resources-8"><a class="header" href="#resources-8">Resources</a></h4>
 <details>
 <summary> ✔️ Click to Expand Resources </summary>
 <ul>
