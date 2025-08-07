@@ -3771,8 +3771,11 @@ hardening.There are recommendations for hardening all kinds of software in the
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <ul>
+<li><a href="nix/hardening_networking.html#introduction">Introduction</a></li>
 <li><a href="nix/hardening_networking.html#simple-privacy-and-network-security-tips">Simple Privacy and Network Security Tips</a>
 <ul>
+<li><a href="nix/hardening_networking.html#practice-safe-browsing-hygiene">Practice Safe Browsing Hygiene</a></li>
+<li><a href="nix/hardening_networking.html#why-follow-these-basics">Why Follow These Basics?</a></li>
 <li><a href="nix/hardening_networking.html#choosing-a-secure-browser">Choosing a secure Browser</a>
 <ul>
 <li><a href="nix/hardening_networking.html#tor-browser">Tor Browser</a></li>
@@ -3792,20 +3795,28 @@ hardening.There are recommendations for hardening all kinds of software in the
 </ul>
 </details>
 <blockquote>
-<p>⚠️ I am not a security expert, but I have carefully researched and tested the
-configurations in this chapter.Not every setting or method will be appropriate
-or necessary for all setups; some may cause compatibility or connectivity
-issues depending on your environment and needs.</p>
-<p>Always carefully research any changes before applying them, especially when
-they affect critical components like DNS or firewalls. Network hardening can
-occasionally disrupt legitimate services, degrade performance, or block access
-in unexpected ways.</p>
-<p>Test adjustments in a controlled environment first, understand the tradeoffs
-involved, and only use what fits your threat model and workflow. Security is
-complex, and it’s important to tailor your approach to your unique
-requirements. Take what’s useful, adapt as needed, and don’t hesitate to seek
-expert guidance for advanced scenarios.</p>
+<p>⚠️ While I am not a security expert, I have carefully researched and tested
+the configurations in this chapter. The advice presented here is grounded in
+widely accepted best practices and is generally safe and effective.</p>
 </blockquote>
+<blockquote>
+<p>However, since networks and systems vary, some adjustments may cause
+unexpected issues, especially around critical components like DNS or
+firewalls. Always review and test changes in a controlled environment before
+applying them broadly.</p>
+</blockquote>
+<blockquote>
+<p>Understand the trade-offs and tailor the settings to your threat model and
+workflow. Take what’s useful, adapt as needed, and seek expert guidance for
+more advanced scenarios.</p>
+</blockquote>
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>This chapter offers a comprehensive set of network and privacy hardening
+practices suitable for Linux, especially NixOS. You can confidently implement
+the entire guide to strengthen your security and privacy.</p>
+<p>That said, every setup is unique, feel free to adapt or skip sections based on
+your needs. Start with the basics and build up as you gain confidence. The goal
+is practical, tested hardening tailored to you.</p>
 <h2 id="simple-privacy-and-network-security-tips"><a class="header" href="#simple-privacy-and-network-security-tips">Simple Privacy and Network Security Tips</a></h2>
 <p>A few simple things you can do to help protect your privacy and your network,
 again some of this may be unnecessary. The point is to make you aware of
@@ -3814,8 +3825,7 @@ potential attack areas and provide some safeguards in those areas:</p>
 <li>
 <p>HTTPS encrypts the data between a web browser and a website. This is
 especially important for services that need logging into such as a bank
-account, email, etc. Most browsers either have a setting or an extension to
-enforce HTTPS everywhere, use it.</p>
+account, email, etc.</p>
 </li>
 <li>
 <p><a href="https://discourse.nixos.org/t/declare-firefox-extensions-and-settings/36265">Discourse Declare Firefox extensions and settings</a></p>
@@ -3828,11 +3838,6 @@ enforce HTTPS everywhere, use it.</p>
 than you realize is being tracked constantly.</p>
 </li>
 <li>
-<p>Check sketchy urls first with
-<a href="https://www.virustotal.com/gui/home/url">VirusTotal</a> where you can plug the
-URL into a scanner to ensure it's safe.</p>
-</li>
-<li>
 <p><a href="https://ssd.eff.org/">Surveillance Self-Defence</a> has a lot of helpful info to
 protect your privacy.</p>
 </li>
@@ -3841,53 +3846,58 @@ protect your privacy.</p>
 to a safe PDF with <a href="https://github.com/freedomofpress/dangerzone">dangerzone</a>
 Be especially careful with torrents.</p>
 </li>
-<li>
-<p>Use a metadata-cleaner before you publish or share images, audio, video, etc.
-Nixpkgs has <code>pkgs.metadata-cleaner</code> and <code>pkgs.mat2</code></p>
-</li>
 </ul>
-<blockquote>
-<p>❗ WARNING: The <a href="https://gitlab.com/rmnvgr/metadata-cleaner">metadata-cleaner</a>
-that <code>pkgs.metadata-cleaner</code> is built off of was archived and is no longer
-maintained. <a href="https://0xacab.org/jvoisin/mat2">mat2</a> is still active.</p>
-</blockquote>
+<h3 id="practice-safe-browsing-hygiene"><a class="header" href="#practice-safe-browsing-hygiene">Practice Safe Browsing Hygiene</a></h3>
+<p><strong>Adopt Encrypted DNS and HTTPS Everywhere</strong></p>
 <ul>
 <li>
-<p>Securely and anonymously send and receive files with
-<a href="https://github.com/onionshare/onionshare">OnionShare</a> available in Nixpkgs as
-<code>pkgs.onionshare</code>, and <code>pkgs.onionshare-gui</code></p>
+<p>Configure your system and browsers to use DNS over HTTPS (DoH), DNS over TLS
+(DoT), or DNSCrypt to prevent DNS leakage. Use HTTPS-Only mode in browsers to
+encrypt all web traffic. Prefer browsers with strong privacy defaults or add
+recommended extensions.</p>
 </li>
 <li>
-<p>This may be unrelated but don't scan random QR codes, you can download a QR
-scan checker to ensure the code isn't malicious. There are different apps for
-this on Android and IOS.</p>
-</li>
-<li>
-<p>Don't use your browsers "remember my password" or "Autofill" functions,
-disable and delete the history. Use a password manager instead. (security not
-usability).</p>
-</li>
-<li>
-<p>If you need to enter your credentials for something, don't click use Google or
-FaceBook to create the account. Doing so opens up all of those services if one
-of them gets compromised. Take the extra time to create an account with it's
-own unique password and user.</p>
-</li>
-<li>
-<p>Delete cookies and site data when the browser is closed. (security not
-usability).</p>
-</li>
-<li>
-<p>Use your password manager to generate unique and complex passphrases/passwords
-for you and save them right away. Make sure to enable 2 factor authentication
-for your pw-manager.</p>
-</li>
-<li>
-<p>Use 2 factor authentication <strong>everywhere possible</strong>.</p>
+<p>Disable browser "remember password" and autofill features, clear cookies and
+site data upon exit, and carefully vet suspicious URLs with tools like
+<a href="https://www.virustotal.com/gui/home/url">VirusTotal</a>.</p>
 </li>
 </ul>
-<p>A few popular password managers for NixOS are KeePassXC and BitWarden which both
-have CLI counterparts:</p>
+<p><strong>Limit Account Linking and Use Unique Credentials</strong></p>
+<ul>
+<li>Create separate accounts with unique passwords instead of signing in with
+Google, Facebook, or similar services to limit broad data exposure from
+compromises.</li>
+</ul>
+<p><strong>Use Metadata Cleaning Tools</strong></p>
+<ul>
+<li>Before sharing images or files, use tools like
+<a href="https://0xacab.org/jvoisin/mat2">mat2</a> to strip metadata that might leak
+personal information. (<code>pkgs.mat2</code>)</li>
+</ul>
+<p><strong>Use Anonymous File-Sharing Tools</strong></p>
+<ul>
+<li>For sensitive transfers, consiter tools like
+<a href="https://github.com/onionshare/onionshare">OnionShare</a> that provide anonymity
+and security.(<code>pkgs.onionshare</code>)</li>
+</ul>
+<p><strong>Avoid Scanning Random QR Codes Without Verification</strong></p>
+<ul>
+<li>Use QR code scanner apps that check for malicious content before loading
+links.</li>
+</ul>
+<p><strong>Understand Your Threat Model</strong></p>
+<ul>
+<li>Apply these basics universally, but tailor advanced hardening according to
+your unique environment, connectivity needs, and risk profile.</li>
+</ul>
+<p><strong>Delete cookies and site data when the browser is closed</strong>. (security not
+usability).</p>
+<p><strong>Use Strong, Unique Passwords and a Password Manager</strong></p>
+<ul>
+<li>Avoid reused passwords by using reliable password managers like KeePassXC or
+Bitwarden, both available on NixOS. Pair this with enabling two-factor
+authentication (2FA) wherever possible.</li>
+</ul>
 <pre><code class="language-nix">environment.systemPackages = [
     pkgs.keepassxc
     pkgs.kpcli     # KeePass CLI
@@ -3900,6 +3910,11 @@ have CLI counterparts:</p>
 mind if they spy on me and profit from my data." Whatever your online activities
 may be, your privacy is your right alone. Why make it easier for others to
 access your personal information when you have the power to limit your exposure?</p>
+<h3 id="why-follow-these-basics"><a class="header" href="#why-follow-these-basics">Why Follow These Basics?</a></h3>
+<p>These recommended steps help protect your privacy and security while maintaining
+usability and minimizing system interruptions. They catch common threats like
+network eavesdropping, password reuse, fingerprinting, and data leakage,
+providing a solid foundation to build on.</p>
 <h3 id="choosing-a-secure-browser"><a class="header" href="#choosing-a-secure-browser">Choosing a secure Browser</a></h3>
 <p>On a hardened Linux system, the browser is most often the weakest link exposed
 to the internet, and so security, privacy, and anti-tracking features of
