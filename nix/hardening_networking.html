@@ -245,9 +245,8 @@ compromises.</li>
 <ul>
 <li>
 <p>Many files like images, PDFs, and office documents contain hidden metadata
-information such as location data, device details, author names, timestamps,
-or editing history that can inadvertently reveal your identity or other
-sensitive information when you share the files publicly.</p>
+information such as location data, device details, and more that can reveal
+your identity or other sensitive information when you share files publicly.</p>
 </li>
 <li>
 <p>To protect your privacy, always sanitize files by removing this metadata
@@ -673,7 +672,12 @@ DNS-over-TLS/DoT).</p>
 <p><a href="https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/">Beginners guide to nftables</a></p>
 <p><a href="https://wiki.archlinux.org/title/Nftables">Arch Wiki nftables</a></p>
 <p>The following firewall setup is based on the dnscrypt setup above utilizing
-nftables. (This was edited on 08-07-25):</p>
+nftables.</p>
+<p>This nftables firewall configuration is a strong recommended practice for
+enforcing encrypted DNS on your system by restricting all outbound DNS traffic
+to a local dnscrypt-proxy process. It greatly reduces DNS leak risks and
+enforces privacy by limiting DNS queries to trusted, encrypted upstream
+servers.(This was edited on 08-07-25):</p>
 <pre><code class="language-nix">{...}: {
   networking.nftables = {
     enable = true;
@@ -711,7 +715,7 @@ nftables. (This was edited on 08-07-25):</p>
       53 # DNS
       22 # SSH
       80 # HTTP
-      443 # HTTPS
+      443 # HTTPS (Allow web traffic to reach your machine)
     ];
     allowedUDPPorts = [
       53 # DNS
@@ -721,8 +725,7 @@ nftables. (This was edited on 08-07-25):</p>
 </code></pre>
 <p><code>nft</code> is a cli tool used to set up, maintain and inspect packet filtering and
 classification rules in the Linux kernel, in the nftables framework. The Linux
-kernel subsystem is known as nf_tables, and 'nf' stands for Netfilter.--
-<code>man nft</code></p>
+kernel subsystem is known as nftables, and 'nf' stands for Netfilter.--<code>man nft</code></p>
 <pre><code class="language-bash">sudo nft list ruleset
 </code></pre>
 <ul>
@@ -730,15 +733,15 @@ kernel subsystem is known as nf_tables, and 'nf' stands for Netfilter.--
 </ul>
 <h2 id="nixos-firewall-vs-nftables-ruleset"><a class="header" href="#nixos-firewall-vs-nftables-ruleset">NixOS Firewall vs <code>nftables</code> Ruleset</a></h2>
 <p><code>networking.nftables</code>: This section provides a raw <code>nftables</code> ruleset that gives
-you granular, low-level control. The rules you've defined here are more specific
-and are meant to handle the intricate logic of the DNS proxy setup. They will be
-applied directly to the kernel's <code>nftables</code> subsystem.</p>
+you granular, low-level control. The rules here are more specific and are meant
+to handle the intricate logic of the DNS proxy setup. They will be applied
+directly to the kernel's <code>nftables</code> subsystem.</p>
 <p><code>networking.firewall</code>: This is a higher-level, simpler NixOS option that uses
 <code>iptables</code> rules to open ports for inbound traffic. The rules defined here
 (allowing ports 53, 22, 80, 443) are for incoming connections to the machine,
 not for outbound traffic, so they do not interfere with the <code>nftables</code> rules
 that filter the outgoing traffic.</p>
-<p>The firewall ensures only your authorized, local encrypted DNS proxy process can
+<p>The firewall ensures only authorized, local encrypted DNS proxy process can
 speak DNS with the outside world, and that all other DNS requests from any other
 process are blocked unless they're to <code>127.0.0.1</code> (our local proxy). This is a
 robust policy against both DNS leaks and local compromise.</p>
