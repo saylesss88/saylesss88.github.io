@@ -3247,13 +3247,35 @@ gpgconf --list-dirs agent-ssh-socket
 /run/user/1000/gnupg/d.wft5hcsny4qqq3g31c76834j/S.gpg-agent.ssh
 </code></pre>
 <pre><code class="language-bash">ssh-add -L
-# output
+# Copy the entire following line:
 ssh-ed25519 AABBC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I (none)
 </code></pre>
 <ul>
 <li>Mine shows <code>(none)</code> because I left the comment field blank when creating the
 key and doesn't affect functionality.</li>
 </ul>
+<p>Then, in your server's NixOS configuration (e.g., <code>configuration.nix</code>):</p>
+<pre><code class="language-nix">services.openssh = {
+  enable = true;
+  authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I"
+  ];
+};
+</code></pre>
+<blockquote>
+<p>❗ NOTE: Only the <strong>public</strong> key goes here, it's safe to commit to version
+control. If you prefer not to hardcode it in the config, you can reference it
+from a <code>.pub</code> file in your repo and read it with
+<code>builtins.readFile ./mykey.pub</code></p>
+</blockquote>
+<p>Rebuild your system and test an SSH connection into the server:</p>
+<pre><code class="language-bash">ssh -p &lt;your-port&gt; user@hostname
+</code></pre>
+<ul>
+<li><code>&lt;your-port&gt;</code> is often <code>22</code> so it would be something like:</li>
+</ul>
+<pre><code class="language-bash">ssh -p 22 bill@xps
+</code></pre>
 <h2 id="encrypt-a-file-with-pgp"><a class="header" href="#encrypt-a-file-with-pgp">Encrypt a File with PGP</a></h2>
 <h3 id="list-your-keys-and-get-the-key-id"><a class="header" href="#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></h3>
 <pre><code class="language-bash">gpg --list-keys --keyid-format LONG
