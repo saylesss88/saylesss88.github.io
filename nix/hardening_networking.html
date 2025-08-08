@@ -606,6 +606,9 @@ in {
   systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
 }
 </code></pre>
+<ul>
+<li>Above, we have a local DNS proxy that encrypts and forwards queries.</li>
+</ul>
 <pre><code class="language-bash"># You should see that dnscrypt-proxy chooses the Server with the lowest initial latency
 sudo systemctl status dnscrypt-proxy2
 # verify that dnscrypt-proxy is listening
@@ -617,11 +620,12 @@ sudo journalctl -u dnscrypt-proxy2
 </code></pre>
 <p><code>dnscrypt-proxy2</code> acts as your local DNS resolver listening on your machine
 (<code>127.0.0.1</code>) for IPv4 and <code>::1</code> for iPv6.</p>
+<p>The system's DNS settings (<code>networking.nameservers</code>) point to localhost, so
+<strong>all DNS queries from the computer</strong> go to dnscrypt-proxy.</p>
 <p><code>inputs.oisd</code> refers to the flake input oisd blocklist, it prevents your device
 from connecting to unwanted or harmful domains.</p>
-<p><code>dnscrypt-proxy2</code> filters ads/trackers (using oisd), enforces DNSSEC, and uses
-encrypted transports (DNS-over-HTTPS/DoH, DNSCrypt, optionally
-DNS-over-TLS/DoT).</p>
+<p><code>dnscrypt-proxy2</code> then encrypts and forwards our DNS requests to third-party
+public DNSCrypt or DoH servers.</p>
 <h2 id="firewalls"><a class="header" href="#firewalls">Firewalls</a></h2>
 <p><a href="https://www.cloudflare.com/learning/security/what-is-a-firewall/">Cloudflare What is a Firewall</a></p>
 <p>NixOS includes an integrated firewall based on iptables/nftables.</p>
@@ -633,7 +637,7 @@ nftables.</p>
 enforcing encrypted DNS on your system by restricting all outbound DNS traffic
 to a local dnscrypt-proxy process. It greatly reduces DNS leak risks and
 enforces privacy by limiting DNS queries to trusted, encrypted upstream
-servers.(This was edited on 08-07-25):</p>
+servers.(This was edited on 08-08-25):</p>
 <pre><code class="language-nix">{...}: {
   networking.nftables = {
     enable = true;
@@ -651,7 +655,6 @@ servers.(This was edited on 08-07-25):</p>
           ip6 daddr ::1 tcp dport 53 accept
 
           # Allow dnscrypt-proxy2 to talk to upstream (set correct UID!)
-          # the following command gives you the UID:
           # ps -o uid,user,pid,cmd -C dnscrypt-proxy
           meta skuid 62396 udp dport { 443, 853 } accept
           meta skuid 62396 tcp dport { 443, 853 } accept
@@ -665,16 +668,27 @@ servers.(This was edited on 08-07-25):</p>
       }
     '';
   };
+
   networking.firewall = {
     enable = true;
+
     allowedTCPPorts = [
-      53 # DNS
-      22 # SSH
-      80 # HTTP
-      443 # HTTPS (Allow web traffic to reach your machine)
+      # TCP ports to allow *inbound* connections from the internet.
+      # Keep this list as small as possible to reduce attack surface.
+
+      22 # SSH – Only keep open if you need to connect to this machine remotely.
+      # If not used, comment it out or remove it entirely.
+
+      # 53  # DNS – Not needed unless running a public DNS server.
+      # 80  # HTTP – Only for hosting a public website.
+      # 443 # HTTPS – Only for hosting a public HTTPS service.
     ];
+
     allowedUDPPorts = [
-      53 # DNS
+      # UDP ports to allow *inbound* connections.
+      # Most desktop systems don’t need any open here unless hosting a service.
+
+      # 53  # DNS – Not needed unless running a public DNS server.
     ];
   };
 }
@@ -691,12 +705,12 @@ kernel subsystem is known as nftables, and 'nf' stands for Netfilter.--<code>man
 <p><code>networking.nftables</code>: This section provides a raw <code>nftables</code> ruleset that gives
 you granular, low-level control. The rules here are more specific and are meant
 to handle the intricate logic of the DNS proxy setup. They will be applied
-directly to the kernel's <code>nftables</code> subsystem.</p>
+directly to the kernel's <code>nftables</code> subsystem and prevent DNS leaks.</p>
 <p><code>networking.firewall</code>: This is a higher-level, simpler NixOS option that uses
 <code>iptables</code> rules to open ports for inbound traffic. The rules defined here
-(allowing ports 53, 22, 80, 443) are for incoming connections to the machine,
-not for outbound traffic, so they do not interfere with the <code>nftables</code> rules
-that filter the outgoing traffic.</p>
+(allowing port 22) is for incoming SSH connections to the machine, not for
+outbound traffic, so they do not interfere with the <code>nftables</code> rules that filter
+the outgoing traffic.</p>
 <p>The firewall ensures only authorized, local encrypted DNS proxy process can
 speak DNS with the outside world, and that all other DNS requests from any other
 process are blocked unless they're to <code>127.0.0.1</code> (our local proxy). This is a
