@@ -381,6 +381,24 @@ uname -r
 # show kernel version, hostname, and architecture
 uname -a
 </code></pre>
+<p>Show the configuration of your current kernel:</p>
+<pre><code class="language-bash">zcat /proc/config.gz
+# ...snip...
+#
+# Compression
+#
+CONFIG_CRYPTO_DEFLATE=m
+CONFIG_CRYPTO_LZO=y
+CONFIG_CRYPTO_842=m
+CONFIG_CRYPTO_LZ4=m
+CONFIG_CRYPTO_LZ4HC=m
+CONFIG_CRYPTO_ZSTD=y
+# end of Compression
+# ...snip...
+</code></pre>
+<p>The <a href="https://nixos.org/manual/nixos/stable/#sec-kernel-config">NixOS Manual</a>
+states that the default Linux kernel configuration should be fine for most
+users.</p>
 <p>The Linux kernel is typically released under two forms: stable and long-term
 support (LTS). Choosing either has consequences, do your research.
 <a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html#stable-vs-lts">Stable vs. LTS kernels</a></p>
@@ -399,6 +417,8 @@ supported.</p>
 this:</p>
 <pre><code class="language-nix">boot.kernelPackages = pkgs.linux_6_12_hardened;
 </code></pre>
+<p>Note that this not only replaces the kernel, but also packages that are specific
+to the kernel version, such as NVIDIA video drivers.</p>
 <ul>
 <li>If you decide to use this, read further before rebuilding.</li>
 </ul>
@@ -445,6 +465,10 @@ this seems easier to me than trying to parse through the patches.</p>
 hardened kernel includes security patches and stricter defaults, but it doesn't
 cover all runtime tunables. Refer to the above commands to get a diff of the
 changes.</p>
+<p><a href="https://nixos.org/manual/nixos/stable/options#opt-boot.kernel.sysctl">boot.kernel.sysctl</a>:
+Runtime parameters of the Linux kernel, as set by sysctl(8). Note that the
+sysctl parameters names must be enclosed in quotes. Values may be a string,
+integer, boolean, or null.</p>
 <p>Refer to
 <a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html#sysctl-kernel">madadaidans-insecurities#sysctl-kernel</a>
 for the following settings and their explainations.</p>
@@ -556,7 +580,7 @@ at boot time. It can only be used for built-in modules.</p>
 <p>You can find the following settings in the above guide in the
 <a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html#boot-parameters">Boot parameters section</a></p>
 <pre><code class="language-nix"># boot.nix
-      kernelParams = [
+      boot.kernelParams = [
         # make it harder to influence slab cache layout
         "slab_nomerge"
         # enables zeroing of memory during allocation and free time
@@ -590,9 +614,14 @@ at boot time. It can only be used for built-in modules.</p>
 </code></pre>
 <p>This is a thoughtful start to hardening boot parameters, there are more
 recommendations in the guide.</p>
+<p>Kernel modules for hardware devices are generally loaded automatically by
+<code>udev</code>. You can force a module to be loaded via <code>boot.kernelModules</code>.</p>
+<p><a href="https://nixos.org/manual/nixos/stable/options#opt-boot.blacklistedKernelModules">boot.blacklistedKernelModules</a>:
+List of names of kernel modules that should not be loaded automatically by the
+hardware probing code.</p>
 <p>You can find the following settings in the
 <a href="https://madaidans-insecurities.github.io/guides/linux-hardening.html#kasr-kernel-modules">Blacklisting Kernel Modules Section</a></p>
-<pre><code class="language-nix">      blacklistedKernelModules = [
+<pre><code class="language-nix">      boot.blacklistedKernelModules = [
         # Obscure networking protocols
         "dccp"
         "sctp"
@@ -635,7 +664,8 @@ recommendations in the guide.</p>
       ];
 </code></pre>
 <p>As with the <code>kernelParameters</code> above, there are more suggestions in the guide, I
-have used the above parameters and had no issues.</p>
+have used the above parameters along with the commented out ones and had no
+issues.</p>
 <h2 id="hardening-systemd"><a class="header" href="#hardening-systemd">Hardening Systemd</a></h2>
 <p><img src="../images/hacker.png" alt="Hacker" /></p>
 <p><code>systemd</code> is the core "init system" and service manager that controls how
@@ -1273,6 +1303,8 @@ algorithms, and best practices:</p>
   };
 }
 </code></pre>
+<p>TCP port 22 (ssh) is opened automatically if the SSH daemon is enabled
+(<code>services.openssh.enable = true;</code>)</p>
 <p>Much of the SSH hardening settings came from
 <a href="https://ryanseipp.com/post/nixos-secure-ssh/">ryanseipp's secure-ssh Guide</a>
 with some additions of my own.</p>
