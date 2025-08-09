@@ -206,11 +206,26 @@ risk if your machine is stolen or seized, do not use this feature if the
 physical security of your machine is a concern. This is still at a stage where
 you can expect rough edges and workarounds.</p>
 </blockquote>
+<p>You can add an additional layer by encrypting user data, such as individual home
+folders, with a different mechanism, such as <code>fscrypt-experimental</code> or
+<code>systemd-homed</code>. Or, you can use a TPM pin to benefit from the security
+properties of the TPM, while avoiding completely unattended unlocking.
+--<a href="https://wiki.archlinux.org/title/Trusted_Platform_Module">Arch Wiki</a></p>
+<p>I am reading that <code>fscrypt</code> is no longer experimental.</p>
+<pre><code class="language-nix">security.pam.enableFscrypt = true;
+</code></pre>
+<pre><code class="language-bash">sudo fscrypt setup --all-users
+sudo mv /home/&lt;user&gt; /home/old&lt;user&gt;
+sudo mkdir /home/&lt;user&gt;
+sudo chown &lt;user&gt;:users /home/&lt;user&gt;
+sudo fscrypt encrypt --source pam_passphrase --user &lt;user&gt; --skip-unlock /home/&lt;user&gt;/
+</code></pre>
+<p>--☝️<a href="https://discourse.nixos.org/t/experienced-with-systemd-homed-or-other-encrypted-home/63516/2">Discourse</a></p>
 <p>It is fairly complex as to how TPM2 auto-unlock can improve security in some
 ways, it has to do with how Linux distributions fail to authenticate the boot
-process past the initrd.This means that even if your data is encrypted and
-Secure Boot is enabled, there is nothing preventing a tampered initrd image from
-being injected in place of your trusted one.</p>
+process past the initrd.Even with encryption and Secure Boot enabled, the initrd
+stage often remains unverified, meaning a tampered initrd could be substituted
+without detection.</p>
 <p>TPMs protect secrets by releasing them only if the boot process can be
 authenticated through "measurements." During boot, each component involved
 (firmware, bootloader, kernel, etc.) is hashed, and these hashes are extended
@@ -223,6 +238,13 @@ unlocks secrets when its software stack is known and trusted, providing strong
 protection against tampering or unauthorized modifications. The values aren't
 only protected by these PCRs but encrypted with a "seed key" that's generated on
 the TPM chip itself, and cannot leave the TPM.</p>
+<p>Check TPM support:</p>
+<pre><code class="language-bash">cat /sys/class/tpm/tpm0/device/description
+TPM 2.0 Device
+</code></pre>
+<p>Check for necessary software dependencies:</p>
+<pre><code class="language-bash">systemd-analyze has-tpm2
+</code></pre>
 <p>Find your encrypted partition with <code>lsblk</code>:</p>
 <pre><code class="language-bash">lsblk
 </code></pre>
