@@ -3818,6 +3818,7 @@ hardening.There are recommendations for hardening all kinds of software in the
 <li><a href="nix/hardening_networking.html#librewolf">LibreWolf</a>
 <ul>
 <li><a href="nix/hardening_networking.html#virtual-private-networks-vpns">Virtual Private Networks (VPNs)</a></li>
+<li><a href="nix/hardening_networking.html#setting-up-tailscale">Setting up Tailscale</a></li>
 </ul>
 </li>
 <li><a href="nix/hardening_networking.html#encrypted-dns">Encrypted DNS</a></li>
@@ -4113,6 +4114,48 @@ WireGuard under the hood and only works if <code>systemd-resolvd</code> is enabl
 <li>
 <p><a href="https://wiki.nixos.org/wiki/OpenVPN">OpenVPN</a></p>
 </li>
+</ul>
+<h3 id="setting-up-tailscale"><a class="header" href="#setting-up-tailscale">Setting up Tailscale</a></h3>
+<p>I was surprised at how easy this actually was to set up. Either go to
+<a href="https://www.tailscale.com">https://www.tailscale.com</a> and/or download the app for either Android or IOS,
+sign up with your identity provider, and click <code>Start connecting devices -&gt;</code></p>
+<ul>
+<li><a href="https://tailscale.com/kb/1017/install">Tailscale quickstart</a></li>
+</ul>
+<p>To add tailscale to NixOS:</p>
+<pre><code class="language-nix"># tailscale.nix
+{...}: {
+  services.tailscale.enable = true;
+  # Tell the firewall to implicitly trust packets routed over Tailscale:
+  networking.firewall.trustedInterfaces = ["tailscale0"];
+}
+</code></pre>
+<p>Tailscale will automatically use the hostname of your device as the name of the
+network. If you want to change it to something else:</p>
+<pre><code class="language-bash">sudo tailscale set --hostname=&lt;name&gt;
+# You can also give your account a nickname
+sudo tailscale set --nickname=&lt;name&gt;
+</code></pre>
+<p>This allows you to refer to your network by <code>name</code> rather than IP address.</p>
+<p>Tailscale uses <a href="https://tailscale.com/kb/1081/magicdns">MagicDNS</a> which is
+enabled by default, and they recommend you keep it enabled.</p>
+<p>If you use dnscrypt or something else for NixOS, the following command disables
+MagicDNS:</p>
+<pre><code class="language-bash">sudo tailscale set --accept-dns=false
+</code></pre>
+<p>To connect to tailscale after rebuilding you can run:</p>
+<pre><code class="language-bash">sudo tailscale up
+</code></pre>
+<p>Get the status of your connections to other Tailscale devices:</p>
+<pre><code class="language-bash">tailscale status
+1           2         3           4         5
+100.1.2.3   device-a  apenwarr@   linux     active; direct &lt;ip-port&gt;, tx 1116 rx 1124
+100.4.5.6   device-b  crawshaw@   macOS     active; relay &lt;relay-server&gt;, tx 1351 rx 4262
+100.7.8.9   device-c  danderson@  windows   idle; tx 1214 rx 50
+100.0.1.2   device-d  ross@       iOS       —
+</code></pre>
+<ul>
+<li><a href="https://tailscale.com/kb/1196/security-hardening">Tailscale Best Practices</a></li>
 </ul>
 <h2 id="encrypted-dns"><a class="header" href="#encrypted-dns">Encrypted DNS</a></h2>
 <p>DNS (Domain Name System) resolution is the process of translating a website's
