@@ -2934,16 +2934,45 @@ pkgs.chkrootkit
 pkgs.clamav
 pkgs.aide
  ];
-#services = {  # clamd daemon (included for completeness, I was unsuccessful with it)
-#    clamav = {
-#        scanner.enable = true;
-#        scanner.interval = "*-*-* 04:00:00";
-#        daemon.enable = true;
-#        updater.enable = true;
-#        updater.interval = "hourly";
-#    };
-#};
 </code></pre>
+<details>
+<summary> ✔️ Click to Expand clamav.nix Example </summary>
+<pre><code class="language-nix"># clamav.nix
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  cfg = config.custom.security.clamav;
+in {
+  options.custom.security.clamav = {
+    enable = lib.mkEnableOption "Enable Clamav";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [
+      pkgs.clamav
+    ];
+    services.clamav = {
+      daemon.enable = true;
+      updater.enable = true;
+    };
+    users.groups.clamav = {};
+    users.users.jr.extraGroups = ["clamav"];
+    # networking.firewall.allowedTCPPorts = [3310]; # Allow other machines to send requests
+  };
+}
+</code></pre>
+<p>Enable with:</p>
+<pre><code class="language-nix"># configuration.nix
+custom = {
+    security = {
+        clamav.enable = true;
+    };
+};
+</code></pre>
+</details>
 <p>Lynis Usage:</p>
 <pre><code class="language-bash">sudo lynis show commands
 # Output:
@@ -3012,10 +3041,10 @@ clamscan -r ~/home
 </code></pre>
 <blockquote>
 <p>❗ NOTE: You only need either the individual <code>pkgs.clamav</code> with the cron job
-<strong>OR</strong> the <code>clamd-daemon</code>. When testing, I was unable to get <code>clamdscan</code> to
-work properly with <strong>Permission denied</strong> errors. You may have better luck so I
-included both ways, the <code>clamscan -r ~/home</code> command was successful although
-lengthy.</p>
+<strong>OR</strong> the <code>clamd-daemon</code> module. When testing, I was unable to get
+<code>clamdscan</code> to work properly with <strong>Permission denied</strong> errors. You may have
+better luck so I included both ways, the <code>clamscan -r ~/home</code> command was
+successful although lengthy.</p>
 </blockquote>
 <h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
 <blockquote>
