@@ -2934,14 +2934,17 @@ pkgs.chkrootkit
 pkgs.clamav
 pkgs.aide
  ];
-services = {
-    clamav = {
-        daemon.enable = true;
-        updater.enable = true;
-    };
-};
+#services = {  # clamd daemon (included for completeness, I was unsuccessful with it)
+#    clamav = {
+#        scanner.enable = true;
+#        scanner.interval = "*-*-* 04:00:00";
+#        daemon.enable = true;
+#        updater.enable = true;
+#        updater.interval = "hourly";
+#    };
+#};
 </code></pre>
-<p>Usage:</p>
+<p>Lynis Usage:</p>
 <pre><code class="language-bash">sudo lynis show commands
 # Output:
 Commands:
@@ -2983,7 +2986,10 @@ a system with more than average safety measures implemented.</p>
 <p>Lynis will give you more recommendations for securing your system as well.</p>
 </li>
 </ul>
-<p>Example cron job for <code>chkrootkit</code>:</p>
+<p>If you use <code>clamscan</code>, create the following log file:</p>
+<pre><code class="language-bash">sudo touch /var/log/clamscan.log
+</code></pre>
+<p>Example cron job for <code>chkrootkit</code> &amp; <code>clamav</code>:</p>
 <pre><code class="language-nix">{pkgs, ...}: {
   services.cron = {
     enable = true;
@@ -2991,14 +2997,26 @@ a system with more than average safety measures implemented.</p>
     systemCronJobs = [
       # Every Sunday at 2:10 AM, run chkrootkit as root, log output for review
       "10 2 * * 0 root ${pkgs.chkrootkit}/bin/chkrootkit | logger -t chkrootkit"
+      # Every day at 2:00 AM, run clamscan as root and append output to a log file
+      "0 2 * * * root ${pkgs.clamav}/bin/clamscan -r /home &gt;&gt; /var/log/clamscan.log"
     ];
   };
 }
 </code></pre>
 <p>The above cron job will use <code>chkrootkit</code> to automatically scan for known rootkit
 signatures. It can detect hidden processes and network connections.</p>
-<p>I got the recommendation for <code>clamav</code> from the Paranoid NixOS blog post and the
-others help with compliance for <code>lynis</code>.</p>
+<p>ClamAV usage:</p>
+<p>You can run <code>clamav</code> manually with:</p>
+<pre><code class="language-bash"># Recursive Scan:
+clamscan -r ~/home
+</code></pre>
+<blockquote>
+<p>❗ NOTE: You only need either the individual <code>pkgs.clamav</code> with the cron job
+<strong>OR</strong> the <code>clamd-daemon</code>. When testing, I was unable to get <code>clamdscan</code> to
+work properly with <strong>Permission denied</strong> errors. You may have better luck so I
+included both ways, the <code>clamscan -r ~/home</code> command was successful although
+lengthy.</p>
+</blockquote>
 <h2 id="securing-ssh"><a class="header" href="#securing-ssh">Securing SSH</a></h2>
 <blockquote>
 <p><strong>Security information</strong>: Changing SSH configuration settings can
