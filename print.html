@@ -4216,6 +4216,71 @@ custom.librewolf.enable = true;
 <p>Thanks to <code>JosefKatic</code> for putting the above STIG settings in NixOS format.</p>
 <p>You can test your browser to see how well you are protected from tracking and
 fingerprinting at <a href="https://coveryourtracks.eff.org/">Cover Your Tracks</a>.</p>
+<details>
+<summary> ✔️ Click to Expand Script to wipe cache and generate new `machine-id` </summary>
+<p>Your <code>machine-id</code> located at <code>/etc/machine-id</code> is a unique number that
+identifies Linux computers. Since it is world-readable, it's a good idea to
+generate a new one. While we're at it we'll wipe the <code>~/.cache</code> directory, where
+programs store runtime information that can be used to track you:</p>
+<pre><code class="language-bash">#!/bin/sh -e
+# /etc/cleanup.sh
+# Clears a user's cache and regenerates the machine-id for NixOS.
+# CAUTION: Must be run as root.
+
+USER="Your-UserName"
+HOME_DIR="/home/$USER"
+
+# --- Clear user cache ---
+if id "$USER" &gt;/dev/null 2&gt;&amp;1; then
+    echo "Clearing cache for $USER..."
+    sudo -u "$USER" rm -rf "$HOME_DIR/.cache"
+else
+    echo "User $USER not found!" &gt;&amp;2
+    exit 1
+fi
+
+# --- Regenerate machine-id ---
+echo "Regenerating machine-id..."
+rm -f /etc/machine-id /var/lib/systemd/machine-id
+dbus-uuidgen &gt; /etc/machine-id
+
+# Ensure both locations match (if /var/lib/systemd exists)
+if [ -d /var/lib/systemd ]; then
+    cp /etc/machine-id /var/lib/systemd/machine-id
+fi
+
+chmod 444 /etc/machine-id /var/lib/systemd/machine-id 2&gt;/dev/null || true
+
+echo "Cleanup complete."
+exit 0
+</code></pre>
+<p>Before running the above script, you'll need to make it executable and check
+your <code>machine-id</code> to ensure it works correctly:</p>
+<pre><code class="language-bash">chmod +x cleanup.sh
+ls ~/.cache
+cat /etc/machine-id
+# Output:
+9a8e75fca0ea44aa0457f7e1b689a1560
+</code></pre>
+<p>And run the script:</p>
+<pre><code class="language-bash">sudo bash cleanup.sh
+Clearing cache for UserName...
+Regenerating machine-id...
+Cleanup complete.
+</code></pre>
+<p>And finally, check that your <code>machine-id</code> is new and the <code>~/.cache</code> directory
+has minimal files in it:</p>
+<pre><code class="language-bash">cat /etc/machine-id
+# Output
+30f877f1ded258ad4b334991689a0dec
+ls ~/.cache
+</code></pre>
+<blockquote>
+<p>❗ This can be done declaratively as well, I'm currently working on it. The
+idea for this actually came from the Firejail Tor docs, edited for use with
+NixOS.</p>
+</blockquote>
+</details>
 <p>Privacy protection doesn't need to be perfect to make a difference. The best
 protection against tracking and fingerprinting available is to use Tor. For your
 daily driver, tools like Ghostery, UblockOrigin, Privacy Badger, Disconnect, and
