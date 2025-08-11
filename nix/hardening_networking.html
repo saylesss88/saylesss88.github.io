@@ -459,36 +459,22 @@ fingerprinting at <a href="https://coveryourtracks.eff.org/">Cover Your Tracks</
 identifies Linux computers. Since it is world-readable, it's a good idea to
 generate a new one. While we're at it we'll wipe the <code>~/.cache</code> directory, where
 programs store runtime information that can be used to track you:</p>
+<p>Change <code>YourUser</code> to your username</p>
 <pre><code class="language-bash">#!/bin/sh -e
-# /etc/cleanup.sh
-# Clears a user's cache and regenerates the machine-id for NixOS.
-# CAUTION: Must be run as root.
-
-USER="Your-UserName"
+# to be stored in /etc/cleanup.sh
+USER="YourUser"
 HOME_DIR="/home/$USER"
 
-# --- Clear user cache ---
-if id "$USER" &gt;/dev/null 2&gt;&amp;1; then
-    echo "Clearing cache for $USER..."
-    sudo -u "$USER" rm -rf "$HOME_DIR/.cache"
-else
-    echo "User $USER not found!" &gt;&amp;2
-    exit 1
-fi
+# clear user cache
+sudo -u "$USER" rm -fr "$HOME_DIR/.cache"
 
-# --- Regenerate machine-id ---
-echo "Regenerating machine-id..."
-rm -f /etc/machine-id /var/lib/systemd/machine-id
-dbus-uuidgen &gt; /etc/machine-id
+# generate a new machine-id
+# this is running as root, be careful!
+rm -f /var/lib/machine-id
+dbus-uuidgen &gt; /var/lib/machine-id
+cp /var/lib/machine-id /etc/machine-id
+chmod 444 /etc/machine-id
 
-# Ensure both locations match (if /var/lib/systemd exists)
-if [ -d /var/lib/systemd ]; then
-    cp /etc/machine-id /var/lib/systemd/machine-id
-fi
-
-chmod 444 /etc/machine-id /var/lib/systemd/machine-id 2&gt;/dev/null || true
-
-echo "Cleanup complete."
 exit 0
 </code></pre>
 <p>Before running the above script, you'll need to make it executable and check
@@ -500,10 +486,7 @@ cat /etc/machine-id
 9a8e75fca0ea44aa0457f7e1b689a1560
 </code></pre>
 <p>And run the script:</p>
-<pre><code class="language-bash">sudo bash cleanup.sh
-Clearing cache for UserName...
-Regenerating machine-id...
-Cleanup complete.
+<pre><code class="language-bash">sudo ./cleanup.sh
 </code></pre>
 <p>And finally, check that your <code>machine-id</code> is new and the <code>~/.cache</code> directory
 has minimal files in it:</p>
