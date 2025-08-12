@@ -377,6 +377,7 @@ its own commands.</p>
 <ul>
 <li>Create a <code>users.json</code> with the following contents:</li>
 </ul>
+<p>👇 users.json</p>
 <pre><code class="language-json">[
   { "name": "Alice", "age": 25 },
   { "name": "Bob", "age": 30 },
@@ -391,7 +392,8 @@ the <code>name</code> and <code>age</code> columns, sorts them by age, and final
 back to <code>json</code> and saves them to a file called <code>filtered_users.json</code>. A lot
 happening in a 6 line script.</li>
 </ul>
-<pre><code class="language-nu">open users.json           # Read JSON file into structured data
+<pre><code class="language-nu"># filter.nu
+open users.json           # Read JSON file into structured data
 | where age &gt; 21         # Filter users older than 21
 | select name age        # Select only name and age columns
 | sort-by age            # Sort by age
@@ -422,6 +424,7 @@ for further use. In this example, <code>source filter.nu</code> runs the command
 <code>filtered_users.json</code> file:</li>
 </ul>
 <pre><code class="language-nu">source filter.nu
+# View the contents with bat
 bat filtered_users.json
 ───────┬──────────────────────────────────────────────────────────────────────────────────────
        │ File: filtered_users.json
@@ -446,7 +449,8 @@ natively, making common data manipulation tasks within the shell significantly
 more streamlined and readable compared to traditional approaches.</li>
 </ul>
 <p><strong>In the filter.nu example:</strong></p>
-<pre><code class="language-nu">open users.json           # Read JSON file into structured data
+<pre><code class="language-nu"># filter.nu
+open users.json           # Read JSON file into structured data
 | where age &gt; 21         # Filter users older than 21
 | select name age        # Select only name and age columns
 | sort-by age            # Sort by age
@@ -631,8 +635,11 @@ commands that elevate Nushell for NixOS users.</li>
 <li>
 <p><code>Carapace</code>
 <a href="https://carapace-sh.github.io/carapace-bin/install.html">Carapace-Bin Install</a>:</p>
-<p><img src="images/nu9.png" alt="nu9" /></p>
 </li>
+</ul>
+<p>The folling is showing tab completion, I typed <code>hx fl&lt;TAB&gt;</code>:</p>
+<p><img src="images/nu9.png" alt="nu9" /></p>
+<ul>
 <li>
 <p><code>Carapace</code> man example:</p>
 <p><img src="images/nu7.png" alt="nu7" /></p>
@@ -685,6 +692,11 @@ def nix-upgrade [
 }
 </code></pre>
 </details>
+<p><strong>Usage</strong>:</p>
+<pre><code class="language-nu">nix-upgrade
+# or for individual packages
+nix-upgrade -i
+</code></pre>
 <p><img src="images/nu5.png" alt="nu5" /></p>
 <ul>
 <li>The <code>ns</code> command is designed to search for Nix packages using <code>nix search</code> and
@@ -712,6 +724,9 @@ architecture and operating system prefix that nix search often includes.</li>
 }
 </code></pre>
 </details>
+<p><strong>Usage</strong>:</p>
+<pre><code class="language-nu">ns fzf&lt;ENTER&gt;
+</code></pre>
 <p><img src="images/nu10.png" alt="nu10" /></p>
 <ul>
 <li><code>nufetch</code> command:</li>
@@ -743,35 +758,6 @@ def nufetch [] {
 <li><code>ps</code> command:</li>
 </ul>
 <p><img src="images/ps.png" alt="ps" /></p>
-<ul>
-<li>Adding the following to your <code>configuration.nix</code> will show you the diff of the
-closures on rebuild:</li>
-</ul>
-<blockquote>
-<p>❗ NOTE: This stopped working after recent updates.</p>
-</blockquote>
-<details>
-<summary> ✔️ Click To Expand</summary>
-<pre><code class="language-nix"># configuration.nix
-# During system activation, compare the closure size difference between the
-# current and new system and display a formatted table if significant changes are
-# detected.
-system.activationScripts.diff = ''
-  if [[ -e /run/current-system ]]; then
-    ${pkgs.nushell}/bin/nu -c "let diff_closure = (${pkgs.nix}/bin/nix store
-     diff-closures /run/current-system '$systemConfig'); let table =
-     (\$diff_closure | lines | where \$it =~ KiB | where \$it =~ → | parse -r
-     '^(?&lt;Package&gt;\S+): (?&lt;Old&gt;[^,]+)(?:.*) → (?&lt;New&gt;[^,]+)(?:.*), (?&lt;DiffBin&gt;.*)$'
-     | insert Diff { get DiffBin | ansi strip | into filesize } | sort-by -r Diff
-     | reject DiffBin); if (\$table | get Diff | is-not-empty) { print \"\"; \$table
-    | append [[Package Old New Diff]; [\"\" \"\" \"\" \"\"]] | append [[Package Old
-     New Diff]; [\"\" \"\" \"Total:\" (\$table | get Diff | math sum) ]]
-    | print; print \"\" }"
-  fi
-'';
-</code></pre>
-</details>
-<p><img src="images/config1.png" alt="conf1" /></p>
 <ul>
 <li><code>nix-list-system</code> command lists all installed packages:</li>
 </ul>
