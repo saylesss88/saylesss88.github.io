@@ -461,47 +461,51 @@ identifies Linux computers. Since it is world-readable, it's a good idea to
 generate a new one. While we're at it we'll wipe the <code>~/.cache</code> directory, where
 programs store runtime information that can be used to track you:</p>
 <p>Change <code>YourUser</code> to your username</p>
-<pre><code class="language-bash">#!/bin/sh -e
-# to be stored in /etc/cleanup.sh
-USER="YourUser"
-HOME_DIR="/home/$USER"
-
-# clear user cache
-sudo -u "$USER" rm -fr "$HOME_DIR/.cache"
-
-# generate a new machine-id
-# this is running as root, be careful!
-rm -f /var/lib/machine-id
-dbus-uuidgen &gt; /var/lib/machine-id
-cp /var/lib/machine-id /etc/machine-id
-chmod 444 /etc/machine-id
-
-exit 0
+<pre><code class="language-nix"># cleanup.nix
+{pkgs, ...}: let
+  cleanupScript = pkgs.writeShellScriptBin "clean" ''
+    #!/bin/sh
+    set -e
+    # Remove user cache directory
+    rm -rf /home/Your-User/.cache || true
+    # Reset machine-id
+    rm -f /var/lib/machine-id || true
+    dbus-uuidgen --ensure=/var/lib/machine-id
+    cp /var/lib/machine-id /etc/machine-id
+    chmod 444 /etc/machine-id
+  '';
+in {
+  systemd.services.cleanup = {
+    description = "Custom shutdown system cleanup";
+    wantedBy = ["shutdown.target"]; # Simplified to shutdown.target
+    before = ["shutdown.target" "reboot.target" "halt.target"];
+    unitConfig = {
+      DefaultDependencies = false; # Disable default dependencies for shutdown
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${cleanupScript}/bin/clean";
+      RemainAfterExit = false;
+      # Ensure PATH includes necessary binaries
+      Environment = "PATH=/run/current-system/sw/bin:/usr/bin:/bin";
+      # Run as root to ensure permissions
+      User = "root";
+      # Timeout to prevent hanging
+      TimeoutSec = 30;
+    };
+  };
+}
 </code></pre>
-<p>Before running the above script, you'll need to make it executable and check
-your <code>machine-id</code> to ensure it works correctly:</p>
-<pre><code class="language-bash">chmod +x cleanup.sh
-ls ~/.cache
+<p>Rebuild, and check your <code>~/.cache</code> directory and your <code>machine-id</code> before
+rebooting:</p>
+<pre><code class="language-bash">ls ~/.cache
 cat /etc/machine-id
-# Output:
-9a8e75fca0ea44aa0457f7e1b689a1560
-</code></pre>
-<p>And run the script:</p>
-<pre><code class="language-bash">sudo ./cleanup.sh
-</code></pre>
-<p>And finally, check that your <code>machine-id</code> is new and the <code>~/.cache</code> directory
-has minimal files in it:</p>
-<pre><code class="language-bash">cat /etc/machine-id
 # Output
 30f877f1ded258ad4b334991689a0dec
 ls ~/.cache
+# Output should be minimal
 </code></pre>
-<blockquote>
-<p>❗ This can be done declaratively as well, I'm currently working on it. The
-idea for this actually came from the Firejail Tor docs, edited for use with
-NixOS. It is meant to be run on every shutdown with a Hook, currently you have
-to run it manually.</p>
-</blockquote>
+<p>Reboot, and recheck.</p>
 <ul>
 <li><a href="https://firejail.wordpress.com/all-about-tor/">Firejail Tor</a></li>
 </ul>
