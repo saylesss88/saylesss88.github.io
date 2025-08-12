@@ -221,6 +221,9 @@ undo capabilities, and a branchless model that reduces common pitfalls of Git.</
 Jujutsu.</p>
 </li>
 <li>
+<p><a href="https://zerowidth.com/2025/jj-tips-and-tricks/">zerowidth jj-tips-and-tricks</a></p>
+</li>
+<li>
 <p>Official:</p>
 </li>
 </ul>
@@ -387,7 +390,6 @@ Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
 <h2 id="what-is-the-jujutsu-working-copy"><a class="header" href="#what-is-the-jujutsu-working-copy">What is the Jujutsu Working Copy</a></h2>
 <details>
 <summary> ✔️ Click To Expand Working Copy Description </summary>
-<p><img src="../images/sourcetree.png" alt="SourceTree image" /></p>
 <p>The <strong>working copy</strong> in Jujutsu is an actual <strong>commit</strong> that represents the
 current state of the files you're working on. Unlike Git, where the working copy
 is separate from commits and changes must be explicitly staged and committed, in
@@ -417,14 +419,20 @@ and can instantly be rebuilt after making a change.</li>
 <details>
 <summary> ✔️ Click to Expand JJ home-manager module example </summary>
 <ul>
-<li>For <code>lazygit</code> fans, Nixpkgs has <code>lazyjj</code>. I've seen that it's recommended to
-use jj with <code>meld</code>. I'll share my <code>jj.nix</code> here for an example:</li>
+<li>
+<p>For <code>lazygit</code> fans, Nixpkgs has <code>lazyjj</code>. I've seen that it's recommended to
+use jj with <code>meld</code>. I'll share my <code>jj.nix</code> here for an example:</p>
+</li>
+<li>
+<p>I got a lot of the aliases and such from the
+<a href="https://zerowidth.com/2025/jj-tips-and-tricks/">zerowidth</a> post, this has
+been a game changer:</p>
+</li>
 </ul>
 <pre><code class="language-nix">{
   lib,
   config,
   pkgs,
-  # userVars ? {},
   ...
 }: let
   cfg = config.custom.jj;
@@ -458,23 +466,92 @@ in {
       type = lib.types.attrs;
       default = {
         ui = {
-          default-command = ["status"];
-          diff-editor = ["nvim" "-c" "DiffEditor" "$left" "$right" "$output"];
+          default-command = "log-recent";
+          # default-command = ["status" "--no-pager"];
+          diff-editor = "gitpatch";
+          # diff-editor = ["nvim" "-c" "DiffEditor" "$left" "$right" "$output"];
+          # diff-formatter = ["meld" "$left" "$right"];
           merge-editor = ":builtin";
+          conflict-marker-style = "diff";
         };
         git = {
+          # remove the need for `--allow-new` when pushing new bookmarks
           auto-local-bookmark = true;
+          push-new-bookmarks = true;
+        };
+        revset-aliases = {
+          "closest_bookmark(to)" = "heads(::to &amp; bookmarks())";
+          "immutable_heads()" = "builtin_immutable_heads() | remote_bookmarks()";
+          "default()" = "coalesce(trunk(),root())::present(@) | ancestors(visible_heads() &amp; recent(), 2)";
+          "recent()" = "committer_date(after:'1 month ago')";
+          trunk = "main@origin";
+        };
+        template-aliases = {
+          "format_short_change_id(id)" = "id.shortest()";
+        };
+        merge-tools.gitpatch = {
+          program = "sh";
+          edit-args = [
+            "-c"
+            ''
+              set -eu
+              rm -f "$right/JJ-INSTRUCTIONS"
+              git -C "$left" init -q
+              git -C "$left" add -A
+              git -C "$left" commit -q -m baseline --allow-empty
+              mv "$left/.git" "$right"
+              git -C "$right" add --intent-to-add -A
+              git -C "$right" add -p
+              git -C "$right" diff-index --quiet --cached HEAD &amp;&amp; { echo "No changes done, aborting split."; exit 1; }
+              git -C "$right" commit -q -m split
+              git -C "$right" restore . # undo changes in modified files
+              git -C "$right" reset .   # undo --intent-to-add
+              git -C "$right" clean -q -df # remove untracked files
+            ''
+          ];
         };
         aliases = {
-          tug = ["bookmark" "move" "--from" "heads(::@- &amp; bookmarks())" "--to" "@-"];
+          c = ["commit"];
+          ci = ["commit" "--interactive"];
+          e = ["edit"];
+          i = ["git" "init" "--colocate"];
+          tug = ["bookmark" "move" "--from" "closest_bookmark(@-)" "--to" "@-"];
+          log-recent = ["log" "-r" "default() &amp; recent()"];
+          nb = ["bookmark" "create" "-r" "@-"]; # new bookmark
           upmain = ["bookmark" "set" "main"];
           squash-desc = ["squash" "::@" "-d" "@"];
           rebase-main = ["rebase" "-d" "main"];
           amend = ["describe" "-m"];
           pushall = ["git" "push" "--all"];
+          push = ["git" "push" "--allow-new"];
+          pull = ["git" "fetch"];
           dmain = ["diff" "-r" "main"];
           l = ["log" "-T" "builtin_log_compact"];
           lf = ["log" "-r" "all()"];
+          r = ["rebase"];
+          s = ["squash"];
+          si = ["squash" "--interactive"];
+          squash-push = [
+            "squash"
+            "::@"
+            "-d"
+            "@"
+            "&amp;&amp;"
+            "describe"
+            "-m"
+            "\"Update after squash\""
+            "&amp;&amp;"
+            "bookmark"
+            "set"
+            "main"
+            "&amp;&amp;"
+            "git"
+            "push"
+          ];
+        };
+        revsets = {
+          # log = "main@origin";
+          # log = "master@origin";
         };
       };
       description = "Jujutsu configuration settings";
@@ -495,20 +572,29 @@ in {
     };
   };
 }
-
 </code></pre>
 <p>In my <code>home.nix</code> I have this to enable it:</p>
 <pre><code class="language-nix">custom = {
     jj = {
         enable = true;
-        userName = "sayls88";
-        userEmail = "sayls88@proton.me";
+        userName = "sayls8";
+        userEmail = "sayls8@proton.me";
     };
 };
 </code></pre>
 <p>The <code>custom.jj</code> module allows me to override the username, email, and whether jj
 is enabled from a single, centralized place within my Nix configuration. So only
 if jj is enabled, <code>lazyjj</code> and <code>meld</code> will be installed.</p>
+<p>With the above <code>gitpatch</code> setup, say you did more work than you want to commit
+which is common with jj since it automatically tracks everything. I can now run:</p>
+<pre><code class="language-bash">jj commit -i
+</code></pre>
+<p>And an interactive diff will come up allowing you to choose what to include in
+the current commit. This also works for <code>jj split -i</code> and <code>jj squash -i</code>.</p>
+<p>The <code>tug</code> command is to help with branches not auto updating like they do in
+git. When you're done with your commit and ready to push, running <code>jj tug</code> moves
+the nearest bookmark up to <code>@-</code>. Allowing you to describe the change and run
+<code>jj git push</code> successfully.</p>
 </details>
 <h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
 <p><img src="../images/jj2.png" alt="jj tree" /></p>
