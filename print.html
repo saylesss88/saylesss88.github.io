@@ -4221,65 +4221,19 @@ custom.librewolf.enable = true;
 fingerprinting at <a href="https://coveryourtracks.eff.org/">Cover Your Tracks</a>.</p>
 <details>
 <summary> ✔️ Click to Expand Script to wipe cache and generate new `machine-id` </summary>
-<p>Your <code>machine-id</code> located at <code>/etc/machine-id</code> is a unique number that
-identifies Linux computers. Since it is world-readable, it's a good idea to
-generate a new one. While we're at it we'll wipe the <code>~/.cache</code> directory, where
-programs store runtime information that can be used to track you:</p>
-<p>Change <code>YourUser</code> to your username</p>
-<blockquote>
-<p>NOTE: This is a WIP, currently it only changes the <code>machine-id</code>. Also, this is
-probably overkill for most setups and something that can be run manually as
-needed.</p>
-</blockquote>
-<pre><code class="language-nix"># cleanup.nix
-{pkgs, ...}: let
-  cleanupScript = pkgs.writeShellScriptBin "clean" ''
-    #!/bin/sh
-    set -e
-    # Remove user cache directory
-    rm -rf /home/Your-User/.cache || true
-    # Reset machine-id
-    rm -f /var/lib/machine-id || true
-    dbus-uuidgen --ensure=/var/lib/machine-id
-    cp /var/lib/machine-id /etc/machine-id
-    chmod 444 /etc/machine-id
-  '';
-in {
-  systemd.services.cleanup = {
-    description = "Custom shutdown system cleanup";
-    wantedBy = ["shutdown.target"]; # Simplified to shutdown.target
-    before = ["shutdown.target" "reboot.target" "halt.target"];
-    unitConfig = {
-      DefaultDependencies = false; # Disable default dependencies for shutdown
-    };
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${cleanupScript}/bin/clean";
-      RemainAfterExit = false;
-      # Ensure PATH includes necessary binaries
-      Environment = "PATH=/run/current-system/sw/bin:/usr/bin:/bin";
-      # Run as root to ensure permissions
-      User = "root";
-      # Timeout to prevent hanging
-      TimeoutSec = 30;
-    };
-  };
-}
-</code></pre>
-<p>Rebuild, and check your <code>~/.cache</code> directory and your <code>machine-id</code> before
-rebooting:</p>
-<pre><code class="language-bash">ls ~/.cache
-cat /etc/machine-id
-# Output
-30f877f1ded258ad4b334991689a0dec
-ls ~/.cache
-# Output should be minimal
-</code></pre>
-<p>The above service is trying to do what this script does on every shutdown. This
-can be run manually as root:</p>
-<p>👇 <code>cleanup.sh</code></p>
+<ul>
+<li>
+<p><a href="https://www.man7.org/linux/man-pages/man5/machine-id.5.html">man page machine-id(5)</a></p>
+</li>
+<li>
+<p>The following example is adapted from
+<a href="https://firejail.wordpress.com/all-about-tor/">Firejail All About Tor</a>
+section, adapted for NixOS.</p>
+</li>
+</ul>
+<p>Save the following script as <code>cleanup.sh</code>, change <code>Your-User</code> to your username:</p>
 <pre><code class="language-bash">#!/bin/sh -e
-USER="jr"
+USER="Your-User"
 HOME_DIR="/home/$USER"
 # clear user cache directly as root
 sudo -u "$USER" rm -fr "$HOME_DIR/.cache"
@@ -4290,12 +4244,23 @@ cp /var/lib/machine-id /etc/machine-id
 chmod 444 /etc/machine-id
 exit 0
 </code></pre>
-<pre><code class="language-bash">sudo ./cleanup.sh
+<p>The <code>~/.cache</code> directory is where most programs store runtime information:
+webpages you visited, torrent trackers you connected to, and deleted emails.
+It's a good idea to remove them at shutdown. --Firejail all-about-tor</p>
+<p>Check <code>/etc/machine-id</code> &amp; <code>~/.cache</code> before running the script:</p>
+<pre><code class="language-bash">cat /etc/machine-id
+# Output
+0b46feb27a20469da0ee62baaeb51c5c
+ls ~/.cache
 </code></pre>
-<p>Reboot, and recheck.</p>
-<ul>
-<li><a href="https://firejail.wordpress.com/all-about-tor/">Firejail Tor</a></li>
-</ul>
+<pre><code class="language-bash">chmod +x cleanup.sh
+sudo ./cleanup.sh
+</code></pre>
+<p>Recheck your <code>machine-id</code> and <code>~/.cache</code> directories, you should have a newly
+generated <code>machine-id</code> and minimal files in the <code>~/.cache</code> directory. The
+Firejail example shows a systemd unit that runs the above script at every
+shutdown but that may be overkill, I suggest running it occasionally to make it
+harder for sites to link your <code>machine-id</code> to you.</p>
 </details>
 <p>Privacy protection doesn't need to be perfect to make a difference. The best
 protection against tracking and fingerprinting available is to use Tor. For your
@@ -4303,6 +4268,9 @@ daily driver, tools like Ghostery, UblockOrigin, Privacy Badger, Disconnect, and
 NoScript reduce fingerprinting significantly but not completely. Some privacy
 guides will suggest not to use add-ons at all because they make your browser
 unique, this isn't one of them. Just use Tor when it truly matters.</p>
+<ul>
+<li><a href="https://ssd.eff.org/module/how-to-use-tor">Surveillance Self-Defense How to: Use Tor</a></li>
+</ul>
 <p>There are more hardening parameters that can be set but this should be a good
 starting point for a hardened version of LibreWolf. When testing with Cover your
 tracks, customized LibreWolf tested as having stronger tracking protection than
