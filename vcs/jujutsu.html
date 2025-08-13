@@ -230,7 +230,13 @@ Jujutsu.</p>
 <pre><code class="language-bash">jj help -k tutorial
 </code></pre>
 <ul>
-<li>Command help:</li>
+<li>
+<p>Every time you run a <code>jj</code> command, it examines the working copy and takes a
+snapshot.</p>
+</li>
+<li>
+<p>Command help:</p>
+</li>
 </ul>
 <pre><code class="language-bash">jj &lt;command&gt; --help
 jj git init --help
@@ -265,7 +271,9 @@ which are named pointers to specific commits.</p>
 <li>
 <p>Bookmarks do not move automatically. Commands like <code>jj new</code> and <code>jj commit</code>
 move the working copy, but the bookmark stays were it was. Use
-<code>jj bookmark move</code> to move bookmarks. (e.g., <code>jj bookmark move main</code>).</p>
+<code>jj bookmark move</code> to move bookmarks. (e.g., <code>jj bookmark move main</code>). You can
+also use <code>jj bookmark set main -r @</code> to explicitly set the main bookmark to
+point at the working copy commit.</p>
 </li>
 <li>
 <p>Only commits referenced by bookmarks are pushed to remotes, preventing
@@ -602,6 +610,14 @@ the nearest bookmark up to <code>@-</code>. Allowing you to describe the change 
 <code>jj git push</code> successfully.</p>
 <p>Example, using <code>jj commit -i</code>:</p>
 <p><img src="../images/jj-gitpatch.png" alt="jj commit -i" /></p>
+<p>You can also use the <code>jj tug</code> command to make pushing to a remote more
+straightforward. Since JJ's bookmarks don't automatically move as they do with
+Git, you can use <code>jj tug</code> after you've made a few commits to move the bookmark
+that is closest to the parent commit of your current position to your current
+commit:</p>
+<pre><code class="language-bash">jj tug
+jj git push
+</code></pre>
 </details>
 <h2 id="issues-ive-noticed"><a class="header" href="#issues-ive-noticed">Issues I've Noticed</a></h2>
 <p><img src="../images/jj2.png" alt="jj tree" /></p>
@@ -696,10 +712,10 @@ command will tell jj we know what we want to push:</p>
 jj git push
 </code></pre>
 <p>If you forget to move a bookmark, JJ will warn you and nothing will be pushed.
-This is a safety feature, not a bug. That's what the <code>upmain</code> alias does, moves
-the bookmark to <code>main</code>.</p>
-<pre><code class="language-nix"># home-manager alias
-upmain = ["bookmark" "set" "main"];
+This is a safety feature, not a bug. That's what the <code>mb</code> alias does, moves the
+bookmark to the working copy.</p>
+<pre><code class="language-nix"># home-manager alias (move bookmark)
+mb = ["bookmark" "set" "-r" "@"];
 </code></pre>
 <p>If you really have problems, <code>jj git push --change @</code> explicitly pushes the
 working copy.</p>
@@ -729,6 +745,7 @@ will likely get a Hint saying "Run the following command to keep local bookmarks
 updated on future pulls".:</p>
 <pre><code class="language-bash">jj bookmark list
 track main@origin
+
 jj st
 The working copy has no changes.
 Working copy  (@) : qzxomtxq 925eca75 (empty) (no description set)
