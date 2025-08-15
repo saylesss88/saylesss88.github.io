@@ -189,6 +189,7 @@
 </details>
 <p><img src="images/gruv13.png" alt="gruv13" /></p>
 <h2 id="intro"><a class="header" href="#intro">Intro</a></h2>
+<p>INSTANTanious</p>
 <p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
 towards using Flakes but will contrast traditional Nix where beneficial.
 Originally, this content started as a blog. I'm refining its flow to make it
@@ -317,12 +318,11 @@ in
 }
 </code></pre>
 <ul>
-<li>
-<p>This module, <code>programs.zmap.nix</code>, demonstrates how NixOS configurations work.
+<li>This module, <code>programs.zmap.nix</code>, demonstrates how NixOS configurations work.
 It defines an enable option for the ZMap network scanner. If enabled by the
 user in their system configuration, the module ensures the <code>zmap</code> package is
 installed and its default configuration files are placed in <code>/etc</code>, allowing
-ZMap to be managed declaratively as part of the operating system.</p>
+ZMap to be managed declaratively as part of the operating system.
 <ul>
 <li>
 <p>When <code>nixpkgs</code> is imported (e.g., in a NixOS configuration), the
@@ -19266,23 +19266,42 @@ you can reproduce the exact same environment anywhere.</p>
 versions of Git or HTTP servers side by side.</p>
 </li>
 </ul>
-<h2 id="hosting-an-mdbook-or-offline-git-server"><a class="header" href="#hosting-an-mdbook-or-offline-git-server">Hosting an mdBook or Offline Git Server</a></h2>
-<p>Let’s say you want to host your mdBook or run a Git server for offline use. You
-can define a NixOS container that runs only the necessary service, isolated from
-your main system:</p>
-<pre><code class="language-nix">containers.mdbook = {
-  ephemeral = true;         # Container resets on restart (optional)
-  autoStart = true;         # Starts automatically at boot
-  config = { config, pkgs, ... }: {
-    # Example: Serve static files with httpd (Apache)
-    services.httpd.enable = true;
-    services.httpd.adminAddr = "you@example.org";
-    networking.firewall.allowedTCPPorts = [ 80 ];
-    # You could also use nginx, or run the mdbook server directly
-    # Or, for a git server:
-    # services.gitDaemon.enable = true;
+<h2 id="hosting-mdbook"><a class="header" href="#hosting-mdbook">Hosting mdbook</a></h2>
+<p>Let’s say you want to host your mdBook. You can define a NixOS container that
+runs only the necessary service, isolated from your main system:</p>
+<pre><code class="language-nix">{
+  config,
+  lib,
+  ...
+}: {
+  containers.mdbook-host = {
+    autoStart = true;
+    ephemeral = lib.mkDefault false;
+    privateNetwork = false;  # Use the hosts network
+
+    bindMounts."/var/www/mdbook" = {
+      hostPath = "/home/jr/nix-book/book";
+      isReadOnly = true;
+    };
+
+    config = {containerPkgs, ...}: {
+      networking.useDHCP = lib.mkDefault true;
+
+      services.httpd = {
+        enable = true;
+        adminAddr = "yourEmail.com";
+        virtualHosts."localhost" = {
+          documentRoot = "/var/www/mdbook";
+          serverAliases = [];
+        };
+      };
+
+      networking.firewall.allowedTCPPorts = [80];
+      environment.systemPackages = with containerPkgs; [];
+      system.stateVersion = "25.05";
+    };
   };
-};
+}
 </code></pre>
 <ul>
 <li>
@@ -19295,6 +19314,107 @@ your main system:</p>
 <p><code>config</code>: Defines the containers NixOS configuration, just like a regular
 NixOS system.</p>
 </li>
+</ul>
+<h2 id="check-container-status"><a class="header" href="#check-container-status">Check Container Status</a></h2>
+<pre><code class="language-bash">nixos-container list
+mdbook-host
+</code></pre>
+<pre><code class="language-bash">sudo systemctl status container@mdbook-host
+ Main PID: 32938 (systemd-nspawn)
+     Status: "Container running: Ready."
+</code></pre>
+<p><strong>Test HTTP server inside the container</strong></p>
+<p>We configured Apache (<code>httpd</code>) to serve <code>/var/www/mdbook</code> at <code>*:80</code></p>
+<p>Let's check if Apache is running:</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
+● httpd.service - Apache HTTPD
+     Loaded: loaded (/etc/systemd/system/httpd.service; enabled; preset: ignored)
+     Active: active (running) since Fri 2025-08-15 10:14:39 EDT; 2min 18s ago
+</code></pre>
+<p>Check the Bind Mount:</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
+</code></pre>
+<ul>
+<li>You should see an <code>index.html</code> and any other files from <code>~/nix-book/book</code></li>
+</ul>
+<p>Test the Web Server:</p>
+<pre><code class="language-bash">curl http://localhost
+</code></pre>
+<ul>
+<li>You should see your book in HTTP format.</li>
+</ul>
+<p>Test on the web, in your browser visit:</p>
+<pre><code class="language-text">http://localhost/
+</code></pre>
+<ul>
+<li>You should see your book fully served</li>
+</ul>
+<h3 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h3>
+<p>Make sure your book has the correct permissions to allow <code>hostPath</code> to read it:</p>
+<pre><code class="language-bash">sudo chmod -R o+rX ~/nix-book/book
+</code></pre>
+<p>If needed restart the container:</p>
+<pre><code class="language-bash">sudo nixos-container stop mdbook-host
+sudo nixos-container start mdbook-host
+</code></pre>
+<p>Ensure that <code>/var/www/mdbook</code> is being populated:</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
+</code></pre>
+<p>You should see an <code>index.html</code> and more</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
+</code></pre>
+<ul>
+<li>You should see <code>enabled</code> &amp; <code>active (running)</code></li>
+</ul>
+<p>See if your container is active:</p>
+<pre><code class="language-bash">systemctl is-active container@mdbook-host.service
+active
+</code></pre>
+<h2 id="why-bother-serving-your-book-to-localhost"><a class="header" href="#why-bother-serving-your-book-to-localhost">Why Bother Serving your book to localhost?</a></h2>
+<ol>
+<li>Real-time updates without rebuilding the container</li>
+</ol>
+<ul>
+<li>Files added, changed, or removed from <code>~/nix-book/book</code> on the host are
+immediately reflected inside the container. This allows for:
+<ul>
+<li>
+<p>Rapid iteration and testing of your books content without rebuilding</p>
+</li>
+<li>
+<p>Easier debugging and fixing content or config issues on the fly.</p>
+</li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li>Keeps container images small and immutable</li>
+</ol>
+<ul>
+<li>Instead of baking book files into the container image (which requires
+rebuilding every change), the container image remains clean and generic.</li>
+</ul>
+<ol start="3">
+<li>Separation of concerns</li>
+</ol>
+<ul>
+<li>The container focuses on running the service, while the content is managed
+independently on the host. This separation improves maintainability and more.</li>
+</ul>
+<ol start="4">
+<li>Data persistence</li>
+</ol>
+<ul>
+<li>Since the files live on the host, they persist independently of the containers
+lifecycle: restarting, recreating, or destroying the container won't lose your
+content.</li>
+</ul>
+<ol start="5">
+<li>Security Control</li>
+</ol>
+<ul>
+<li>You can carefully set permissions on the host directory, control read/write
+access, and isolate the container runtime from sensitive data.</li>
 </ul>
 
                     </main>
