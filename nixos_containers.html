@@ -172,6 +172,12 @@
 declaratively through your NixOS configuration. They allow you to run separate,
 minimal NixOS instances on the same machine, each with its own services,
 packages, and (optionally) network stack.</p>
+<blockquote>
+<p>❗ NixOS’ containers do not provide full security out of the box (just like
+docker). They do give you a separate chroot, but a privileged user (root) in a
+container can escape the container and become root on the host system.
+--<a href="https://blog.beardhatcode.be/2020/12/Declarative-Nixos-Containers.html">beardhatcode Declarative-Nixos-Containers</a></p>
+</blockquote>
 <p><strong>Common Use Cases</strong></p>
 <ul>
 <li>
@@ -201,7 +207,7 @@ runs only the necessary service, isolated from your main system:</p>
 }: {
   containers.mdbook-host = {
     autoStart = true;
-    ephemeral = lib.mkDefault false;
+    ephemeral = true;
     privateNetwork = false;  # Use the hosts network
 
     bindMounts."/var/www/mdbook" = {
@@ -249,7 +255,7 @@ mdbook-host
      Status: "Container running: Ready."
 </code></pre>
 <p><strong>Test HTTP server inside the container</strong></p>
-<p>We configured Apache (<code>httpd</code>) to serve <code>/var/www/mdbook</code> at <code>*:80</code></p>
+<p>We configured Apache (<code>httpd</code>) to serve <code>/var/www/mdbook</code> at <code>localhost</code></p>
 <p>Let's check if Apache is running:</p>
 <pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
 ● httpd.service - Apache HTTPD
@@ -266,7 +272,7 @@ mdbook-host
 <pre><code class="language-bash">curl http://localhost
 </code></pre>
 <ul>
-<li>You should see your book in HTTP format.</li>
+<li>You should see your book in HTTP format as raw HTML.</li>
 </ul>
 <p>Test on the web, in your browser visit:</p>
 <pre><code class="language-text">http://localhost/
