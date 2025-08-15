@@ -19321,6 +19321,27 @@ runs only the necessary service, isolated from your main system:</p>
 NixOS system.</p>
 </li>
 </ul>
+<p><strong>Mounts</strong></p>
+<pre><code class="language-nix">    bindMounts."/var/www/mdbook" = {
+      hostPath = "/home/jr/nix-book/book";
+      isReadOnly = true;
+    };
+</code></pre>
+<p>The <code>bindMount</code> settings above specify that <code>/var/www/mdbook</code> in the container
+should be linked to <code>/home/jr/nix-book/book</code> on the host.</p>
+<p><code>hostPath</code> must exist, and <code>/var/www/mdbook</code> must not exist for this to work.</p>
+<p>The above container is fairly simple because its <code>ReadOnly</code>, things get more
+complicated when you need HTTPD to have write privileges.</p>
+<p>When you create and run a NixOS container like <code>mdbook-host</code>. NixOS stores the
+container's root filesystem and related container state data under:</p>
+<pre><code class="language-bash">ls /var/lib/nixos-containers/
+╭────────────╮
+│ empty list │  # It's empty because we set ephemeral to true
+╰────────────╯
+</code></pre>
+<p>This directory holds the container's own filesystem image, including system
+files, installed packages, configuration, and any data internal to the
+container.</p>
 <h2 id="check-container-status"><a class="header" href="#check-container-status">Check Container Status</a></h2>
 <pre><code class="language-bash">nixos-container list
 mdbook-host
@@ -19372,9 +19393,9 @@ sudo nixos-container start mdbook-host
 <ul>
 <li>You should see <code>enabled</code> &amp; <code>active (running)</code></li>
 </ul>
-<p>See if your container is active:</p>
-<pre><code class="language-bash">systemctl is-active container@mdbook-host.service
-active
+<p>Check the containers status:</p>
+<pre><code class="language-bash">sudo nixos-container status mdbook-host
+up
 </code></pre>
 <h2 id="why-bother-serving-your-book-to-localhost"><a class="header" href="#why-bother-serving-your-book-to-localhost">Why Bother Serving your book to localhost?</a></h2>
 <ol>
@@ -19422,6 +19443,14 @@ content.</li>
 <li>You can carefully set permissions on the host directory, control read/write
 access, and isolate the container runtime from sensitive data.</li>
 </ul>
+<h2 id="removing-the-state"><a class="header" href="#removing-the-state">Removing the State</a></h2>
+<p>To remove <code>/var/lib/nixos-containers/mdbook-host</code>, you need to remove the
+container configuration, rebuild, and then run the following commands to remove
+the immutable sticky bits that prevent deletion.</p>
+<pre><code class="language-bash"># Forcibly remove all attributes
+sudo chattr -R -i mdbook-host/
+sudo rm -rf mdbook-host/
+</code></pre>
 
                     </main>
 
