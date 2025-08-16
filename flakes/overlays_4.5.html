@@ -183,12 +183,12 @@
 <li><a href="#customizing-nixpkgs-imports-and-overlays">Customizing Nixpkgs Imports and Overlays</a></li>
 </ul>
 </details>
-<p><img src="../images/pokego.png" alt="Pokego Logo" /></p>
+<p><img src="../images/pokego.png" alt="Pokego Logo" />--<a href="https://github.com/rubiin/pokego">pokego repo</a></p>
 <p>Overlays are Nix functions that accept two arguments, <code>final</code> and <code>prev</code> and
-return a set of packages. Overlays are similar to <code>packageOverrides</code> as a way
-to customize Nixpkgs, <code>packageOverrides</code> acts as an overlay with only the <code>prev</code>
-argument. Therefore, <code>packageOverrides</code> is appropriate for basic use, but overlays
-are more powerful and easier to distribute.</p>
+return a set of packages. Overlays are similar to <code>packageOverrides</code> as a way to
+customize Nixpkgs, <code>packageOverrides</code> acts as an overlay with only the <code>prev</code>
+argument. Therefore, <code>packageOverrides</code> is appropriate for basic use, but
+overlays are more powerful and easier to distribute.</p>
 <p>Example:</p>
 <pre><code class="language-nix">final: prev: {
   firefox = prev.firefox.overrideAttrs (old: {
@@ -213,14 +213,15 @@ automatic updates of the Gecko Media Plugin.</p>
 available in the standard Nixpkgs repository.</p>
 <p><strong>Overlays</strong> are one of the primary and recommended ways to extend and customize
 your Nix environment. It's important to remember that Nix overlays are made to
-allow you to modify or extend the package set provided by Nixpkgs (or other
-Nix sources) without directly altering the original package definitions. This
-is crucial for maintaining reproducibility and avoiding conflicts. Overlays
-are essentially functions that take the previous package set and allow you to
-add, modify, or remove packages.</p>
+allow you to modify or extend the package set provided by Nixpkgs (or other Nix
+sources) without directly altering the original package definitions. This is
+crucial for maintaining reproducibility and avoiding conflicts. Overlays are
+essentially functions that take the previous package set and allow you to add,
+modify, or remove packages.</p>
 <ul>
-<li>To better understand the structure of my <code>flake.nix</code> it may be helpful to first
-read <a href="https://tsawyer87.github.io/posts/nix_flakes_tips/">This</a> blog post first.</li>
+<li>To better understand the structure of my <code>flake.nix</code> it may be helpful to
+first read <a href="https://tsawyer87.github.io/posts/nix_flakes_tips/">This</a> blog
+post first.</li>
 </ul>
 <h2 id="adding-the-overlays-output-to-your-flake"><a class="header" href="#adding-the-overlays-output-to-your-flake">Adding the overlays output to your Flake</a></h2>
 <p>I'll show the process of adding the <code>pokego</code> package that is not in Nixpkgs:</p>
@@ -263,27 +264,26 @@ flake like so just showing the necessary parts for brevity:</li>
       # ... snip ...
 </code></pre>
 <ul>
-<li>
-<p>Why I Created <code>inputs.lib</code> in My <code>flake.nix</code>. In the above example, you'll notice
-a <code>lib</code> attribute defined within the main <code>let</code> block.</p>
+<li>Why I Created <code>inputs.lib</code> in My <code>flake.nix</code>. In the above example, you'll
+notice a <code>lib</code> attribute defined within the main <code>let</code> block.
 <ul>
 <li>
-<p>This might seem a bit unusual at first, as inputs are typically defined at the
-top level of a flake. However, this structure provides a powerful way to organize
-and reuse common Nix functions and configurations across my flake.</p>
+<p>This might seem a bit unusual at first, as inputs are typically defined at
+the top level of a flake. However, this structure provides a powerful way to
+organize and reuse common Nix functions and configurations across my flake.</p>
 </li>
 <li>
-<p>By bundling my custom logic and modules into <code>inputs.lib</code>, I can pass <code>inputs</code>
-(which now includes my custom <code>lib</code>) as a <code>specialArgs</code> to other modules. This
-provides a clean way for all modules to access these shared resources. For
-example, in <code>configuration.nix</code>, <code>inputs.lib.overlays</code> directly references my
-custom overlay set.</p>
+<p>By bundling my custom logic and modules into <code>inputs.lib</code>, I can pass
+<code>inputs</code> (which now includes my custom <code>lib</code>) as a <code>specialArgs</code> to other
+modules. This provides a clean way for all modules to access these shared
+resources. For example, in <code>configuration.nix</code>, <code>inputs.lib.overlays</code>
+directly references my custom overlay set.</p>
 </li>
 <li>
 <p>My <code>inputs.lib</code> is my own project-specific library, designed to hold
 functions and attribute sets relevant to my flake's custom configurations.
-While <code>nixpkgs.lib</code> is globally available, my custom <code>lib</code> contains my unique
-additions.</p>
+While <code>nixpkgs.lib</code> is globally available, my custom <code>lib</code> contains my
+unique additions.</p>
 </li>
 </ul>
 </li>
@@ -340,8 +340,8 @@ defines a helper function called <code>callPackage</code>.</p>
 <ul>
 <li>
 <p><code>prev.lib.callPackageWith</code> Is a function provided by Nixpkgs' <code>lib</code>.
-<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing
-of additional arguments that will then be passed to the package definition.</p>
+<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing of
+additional arguments that will then be passed to the package definition.</p>
 </li>
 <li>
 <p><code>(prev // packages)</code>: This is an attribute set merge operation. It takes the
@@ -376,15 +376,15 @@ function defined earlier.</p>
 </li>
 <li>
 <p><code>./pac_defs/pokego.nix</code>: This is the path to another Nix file(<code>pokego.nix</code>)
-that contains the actual package definition for pokego. This file would
-define how to fetch, build, and install the pokego software</p>
+that contains the actual package definition for pokego. This file would define
+how to fetch, build, and install the pokego software</p>
 </li>
 <li>
 <p><code>{}</code>: This is an empty attribute set passed as additional arguments to the
 <code>pokego.nix</code> package definition. If <code>pokego.nix</code> expected any specific
-parameters (like versions or dependencies), you would provide them here.
-Since it's empty, it implies pokego.nix either has no required arguments or
-uses default values.</p>
+parameters (like versions or dependencies), you would provide them here. Since
+it's empty, it implies pokego.nix either has no required arguments or uses
+default values.</p>
 </li>
 </ul>
 <ol start="6">
@@ -436,8 +436,8 @@ buildGoModule rec {
 }
 </code></pre>
 <h2 id="adding-the-overlay-to-your-configuration"><a class="header" href="#adding-the-overlay-to-your-configuration">Adding the overlay to your configuration</a></h2>
-<p>There are a few places you could choose to put the following, I choose to use
-my <code>configuration.nix</code> because of my setup:</p>
+<p>There are a few places you could choose to put the following, I choose to use my
+<code>configuration.nix</code> because of my setup:</p>
 <pre><code class="language-nix"># configuration.nix
 nixpkgs.overlays = [inputs.lib.overlays]
 </code></pre>
@@ -485,14 +485,18 @@ home.packages = [
 </code></pre>
 <ul>
 <li>
-<p>Normally, <code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments:  </code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}<code>.  This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin` system, with the overlay from the nix flake applied.</p>
+<p>Normally,
+<code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments:  </code>pkgs
+= import nixpkgs { inherit system; overlays = [
+nix.overlays.default];}<code>.  This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin`
+system, with the overlay from the nix flake applied.</p>
 </li>
 <li>
 <p>Consequently, any packages built using this customized <code>pkgs</code> will now depend
-on or use the specific nix version (<code>2.17.0</code>) provided by the nix flake, instead
-of the version that comes with the fetched <code>nixpkgs</code>. This technique can be
-useful for ensuring a consistent environment or testing specific package
-versions.</p>
+on or use the specific nix version (<code>2.17.0</code>) provided by the nix flake,
+instead of the version that comes with the fetched <code>nixpkgs</code>. This technique
+can be useful for ensuring a consistent environment or testing specific
+package versions.</p>
 </li>
 </ul>
 <h2 id="customizing-nixpkgs-imports-and-overlays"><a class="header" href="#customizing-nixpkgs-imports-and-overlays">Customizing Nixpkgs Imports and Overlays</a></h2>
@@ -552,14 +556,14 @@ directly at the import site:</p>
 However, the example above customizes this import by passing arguments:
 <code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}</code>.
 This makes the <code>pkgs_with_custom_nix</code> variable represent Nixpkgs specifically
-for the <code>aarch64-darwin</code> system, with the overlay from the nix flake applied
-at the time of import.</p>
+for the <code>aarch64-darwin</code> system, with the overlay from the nix flake applied at
+the time of import.</p>
 <p>Consequently, any packages built using this customized <code>pkgs_with_custom_nix</code>
 will now depend on or use the specific Nix version (<code>2.17.0</code>) provided by the
 nix flake's overlay, instead of the version that comes with the base <code>nixpkgs</code>
 input. This technique is highly useful for ensuring a consistent environment or
-testing specific package versions without affecting the entire system's <code>nixpkgs</code>
-set.</p>
+testing specific package versions without affecting the entire system's
+<code>nixpkgs</code> set.</p>
 
                     </main>
 

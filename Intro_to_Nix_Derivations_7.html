@@ -200,7 +200,7 @@
 </ul>
 </details>
 <h2 id="introduction-to-nix-derivations"><a class="header" href="#introduction-to-nix-derivations">Introduction to Nix Derivations</a></h2>
-<p><img src="images/gruv10.png" alt="gruv10" /></p>
+<!-- ![gruv10](images/gruv10.png) -->
 <p>Nix's build instructions, known as <strong>derivations</strong>, are defined using the Nix
 Language. These derivations can describe anything from individual software
 packages to complete system configurations. The Nix package manager then
@@ -215,12 +215,13 @@ configuration, <code>nixos-rebuild</code> handles the process:</p>
 <p>Then, once the build is complete, it switches to that new system:</p>
 <pre><code class="language-bash">result/bin/switch-to-configuration
 </code></pre>
-<p>After the build, <code>nixos-rebuild</code> updates a crucial symbolic link: <code>/run/current-system</code>
-This symlink always points to the active, running version of your system in the
-Nix store. In essence, the <code>/run/current-system</code> path is the currently active
-system derivation. This design choice gives NixOS its powerful atomic upgrade
-and rollback capabilities: changing your system involves building a new system
-derivation and updating this symlink to point to the latest version.</p>
+<p>After the build, <code>nixos-rebuild</code> updates a crucial symbolic link:
+<code>/run/current-system</code> This symlink always points to the active, running version
+of your system in the Nix store. In essence, the <code>/run/current-system</code> path is
+the currently active system derivation. This design choice gives NixOS its
+powerful atomic upgrade and rollback capabilities: changing your system involves
+building a new system derivation and updating this symlink to point to the
+latest version.</p>
 <blockquote>
 <pre><code class="language-nix"> ls -lsah /run/current-system
  0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/
@@ -239,7 +240,8 @@ the result of a derivation being built (the system closure)</p>
 <p><strong>Ingredients (Dependencies):</strong> What other software or libraries are needed.</p>
 </li>
 <li>
-<p><strong>Steps (Build Instructions):</strong> The commands to compile, configure, and install.</p>
+<p><strong>Steps (Build Instructions):</strong> The commands to compile, configure, and
+install.</p>
 </li>
 <li>
 <p><strong>Final Dish (Output):</strong> The resulting package or resource.</p>
@@ -247,31 +249,31 @@ the result of a derivation being built (the system closure)</p>
 </ul>
 </li>
 </ul>
-<p>A Nix derivation encapsulates all this information, telling Nix what inputs
-to use, how to build it, and what the final output should be.</p>
+<p>A Nix derivation encapsulates all this information, telling Nix what inputs to
+use, how to build it, and what the final output should be.</p>
 <p>Nix derivations run in <strong>pure</strong>, <strong>isolated environments</strong>, meaning they
-<strong>cannot</strong> access the internet during the build phase. This ensures that
-builds are reproducible -- they don't depend on external sources that might
-change over time.</p>
-<p>There are <code>Fixed-output-derivations</code> that allow fetching resources during
-the build process by explicitly specifying the expected hash upfront. Just
-keep this in mind that normal derivations don't have network access.</p>
+<strong>cannot</strong> access the internet during the build phase. This ensures that builds
+are reproducible -- they don't depend on external sources that might change over
+time.</p>
+<p>There are <code>Fixed-output-derivations</code> that allow fetching resources during the
+build process by explicitly specifying the expected hash upfront. Just keep this
+in mind that normal derivations don't have network access.</p>
 <h2 id="creating-derivations-in-nix"><a class="header" href="#creating-derivations-in-nix">Creating Derivations in Nix</a></h2>
-<p>The primary way to define packages in Nix is through the <code>mkDerivation</code> function,
-which is part of the standard environment (<code>stdenv</code>). While a
-lower-level <code>derivation</code> function exists for advanced use cases,
-<code>mkDerivation</code> simplifies the process by automatically managing dependencies
-and the build environment.</p>
-<p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument.
-At a minimum, you'll often encounter these essential attributes:</p>
+<p>The primary way to define packages in Nix is through the <code>mkDerivation</code>
+function, which is part of the standard environment (<code>stdenv</code>). While a
+lower-level <code>derivation</code> function exists for advanced use cases, <code>mkDerivation</code>
+simplifies the process by automatically managing dependencies and the build
+environment.</p>
+<p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument. At
+a minimum, you'll often encounter these essential attributes:</p>
 <ol>
 <li>
-<p><strong>name:</strong> A human-readable identifier for the derivation
-(e.g., "foo", "hello.txt"). This helps you and Nix refer to the package.</p>
+<p><strong>name:</strong> A human-readable identifier for the derivation (e.g., "foo",
+"hello.txt"). This helps you and Nix refer to the package.</p>
 </li>
 <li>
-<p><strong>system:</strong> Specifies the target architecture for the build
-(e.g., <code>builtins.currentSystem</code> for your current machine).</p>
+<p><strong>system:</strong> Specifies the target architecture for the build (e.g.,
+<code>builtins.currentSystem</code> for your current machine).</p>
 </li>
 <li>
 <p><strong>builder:</strong> Defines the program that will execute the build instructions
@@ -283,9 +285,9 @@ At a minimum, you'll often encounter these essential attributes:</p>
 <code>derivation</code> and <code>mkDerivation</code>, this takes the form
 <code>functionName { attribute1 = value1; attribute2 = value2; ... }</code>, where the <code>{}</code>
 encloses the set of attributes being passed as the function's argument.</p>
-<p>Remember that <code>derivation</code> and <code>mkDerivation</code> take a set (i.e. <code>{}</code>) of attributes
-as its first argument. So, in order to pass the required attributes you would
-do something like this:</p>
+<p>Remember that <code>derivation</code> and <code>mkDerivation</code> take a set (i.e. <code>{}</code>) of
+attributes as its first argument. So, in order to pass the required attributes
+you would do something like this:</p>
 <pre><code class="language-nix">nix-repl&gt; pkgs = import &lt;nixpkgs&gt; {}
 
 nix-repl&gt; d = derivation {
@@ -327,8 +329,9 @@ system for example, you could do something like:</li>
 <li>
 <p>Instead, these empty sets explicitly override any global or implicit
 overlays/configurations that Nix might otherwise pick up from environment
-variables (like <code>NIXPKGS_CONFIG</code>), default locations (like <code>~/.config/nixpkgs/config.nix</code>
-or <code>~/.config/nixpkgs/overlays</code>), or other mechanisms.</p>
+variables (like <code>NIXPKGS_CONFIG</code>), default locations (like
+<code>~/.config/nixpkgs/config.nix</code> or <code>~/.config/nixpkgs/overlays</code>), or other
+mechanisms.</p>
 </li>
 <li>
 <p>This is to prevent accidental partial application from other parts of your
@@ -336,14 +339,16 @@ configuration and is saying "Do not pass any custom configuration options for
 this particular import"</p>
 </li>
 <li>
-<p><code>derivation</code> is a pre-made, built-in function in the Nix language. Here, we are
-passing it an attribute set as argument with the three required attributes.
-(<code>name</code>, <code>builder</code>, <code>system</code>, and we added an extra argument <code>args</code>.)</p>
+<p><code>derivation</code> is a pre-made, built-in function in the Nix language. Here, we
+are passing it an attribute set as argument with the three required
+attributes. (<code>name</code>, <code>builder</code>, <code>system</code>, and we added an extra argument
+<code>args</code>.)</p>
 </li>
 </ul>
 <h2 id="the-hello-world-derivation"><a class="header" href="#the-hello-world-derivation">The Hello World Derivation</a></h2>
-<p>For this example, first create a <code>hello</code> directory and add the <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">Hello tarball</a>
-to said directory.</p>
+<p>For this example, first create a <code>hello</code> directory and add the
+<a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">Hello tarball</a> to said
+directory.</p>
 <p>Now lets create the classic Hello derivation:</p>
 <pre><code class="language-nix"># hello.nix
 let
@@ -370,9 +375,10 @@ derivation {
 </code></pre>
 <ul>
 <li>As you can see, this isn't the only required file but is a recipe outlining
-how to build the <code>hello</code> package. The <code>tar.gz</code> package can be found <a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a>
-You would just place the tarball in the same directory as the derivation along
-with the following <code>hello_builder.sh</code>:</li>
+how to build the <code>hello</code> package. The <code>tar.gz</code> package can be found
+<a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a> You would just place
+the tarball in the same directory as the derivation along with the following
+<code>hello_builder.sh</code>:</li>
 </ul>
 <pre><code class="language-bash"># hello_builder.sh
 export PATH="$gnutar/bin:$gcc/bin:$gnumake/bin:$coreutils/bin:$gawk/bin:$gzip/bin:$gnugrep/bin:$gnused/bin:$bintools/bin"
@@ -446,8 +452,8 @@ warning: you did not specify '--add-root'; the result might be removed by the ga
 <p>This simple Rust example, built with a direct derivation call, illustrates:</p>
 <ul>
 <li>
-<p>How Nix explicitly manages every single tool in your build environment (<code>bash</code>,
-<code>rustc</code>, <code>gcc</code>, <code>coreutils</code>).</p>
+<p>How Nix explicitly manages every single tool in your build environment
+(<code>bash</code>, <code>rustc</code>, <code>gcc</code>, <code>coreutils</code>).</p>
 </li>
 <li>
 <p>The strict isolation of Nix builds, where nothing is implicitly available.</p>
@@ -456,8 +462,8 @@ warning: you did not specify '--add-root'; the result might be removed by the ga
 <p>The deterministic mapping of inputs to unique output paths in the Nix store.</p>
 </li>
 <li>
-<p>The above example shows the fundamental structure of a Nix derivation, how it's
-defined within the <code>nix-repl</code>.</p>
+<p>The above example shows the fundamental structure of a Nix derivation, how
+it's defined within the <code>nix-repl</code>.</p>
 </li>
 <li>
 <p><code>.drv</code> files are intermediate files that describe how to build a derivation;
@@ -569,15 +575,16 @@ packages.</p>
 </ul>
 </li>
 <li>
-<p><code>mkDerivation</code> takes an attribute set (a collection of key-value pairs) as its argument.</p>
+<p><code>mkDerivation</code> takes an attribute set (a collection of key-value pairs) as its
+argument.</p>
 </li>
 <li>
 <p><code>name = "my-environment";</code>: This gives your derivation a human-readable name.</p>
 </li>
 <li>
-<p><code>buildInputs = [ pkgs.cowsay ];</code>: This is a list of dependencies that will
-be available in the build environment of this derivation (or in the <code>PATH</code> if
-you enter the shell created by this derivation). <code>pkgs.cowsay</code> refers to the
+<p><code>buildInputs = [ pkgs.cowsay ];</code>: This is a list of dependencies that will be
+available in the build environment of this derivation (or in the <code>PATH</code> if you
+enter the shell created by this derivation). <code>pkgs.cowsay</code> refers to the
 <code>cowsay</code> package from the imported <code>pkgs</code> collection.</p>
 </li>
 </ul>
@@ -625,13 +632,13 @@ it often modifies the core system environment directly. This can lead to
 dependency conflicts and makes rollbacks difficult.</p>
 </li>
 <li>
-<p><strong>Stateless Systems (Nix):</strong> Nix takes a different approach. When installing
-a package, it creates a unique, immutable directory in the Nix store. This
+<p><strong>Stateless Systems (Nix):</strong> Nix takes a different approach. When installing a
+package, it creates a unique, immutable directory in the Nix store. This
 means:</p>
 <ul>
 <li>
-<p><strong>No Conflicts:</strong> Different versions of the same package can coexist
-without interfering with each other.</p>
+<p><strong>No Conflicts:</strong> Different versions of the same package can coexist without
+interfering with each other.</p>
 </li>
 <li>
 <p><strong>Reliable Rollback:</strong> You can easily switch back to previous versions
@@ -639,8 +646,8 @@ without affecting system-wide files.</p>
 </li>
 <li>
 <p><strong>Reproducibility:</strong> Builds are more likely to produce the same result
-across different machines if they are "pure" (don't rely on external
-system state).</p>
+across different machines if they are "pure" (don't rely on external system
+state).</p>
 </li>
 </ul>
 </li>
@@ -695,7 +702,8 @@ in the output for consistent hashing.</p>
 they run on and always produce the same result, given the same inputs.</p>
 <h2 id="our-builder-script"><a class="header" href="#our-builder-script">Our builder Script</a></h2>
 <ul>
-<li>For our first derivation, we'll create a simple <code>builder.sh</code> file in the current directory:</li>
+<li>For our first derivation, we'll create a simple <code>builder.sh</code> file in the
+current directory:</li>
 </ul>
 <pre><code class="language-bash"># builder.sh
 declare -xp
@@ -708,17 +716,16 @@ function).</p>
 </li>
 <li>
 <p>Nix needs to know where the final built product (the "cake" in our earlier
-analogy) should be placed. So, during the derivation process, Nix calculates
-a unique output path within the Nix store. This path is then made available
-to our builder script as an environment variable named <code>$out</code>. The <code>.drv</code>
-file, which is the recipe, contains instructions for the builder, including
-setting up this <code>$out</code> variable. Our builder script will then put the result
-of its work (in this case, the "foo" file) into this specific <code>$out</code> directory.</p>
+analogy) should be placed. So, during the derivation process, Nix calculates a
+unique output path within the Nix store. This path is then made available to
+our builder script as an environment variable named <code>$out</code>. The <code>.drv</code> file,
+which is the recipe, contains instructions for the builder, including setting
+up this <code>$out</code> variable. Our builder script will then put the result of its
+work (in this case, the "foo" file) into this specific <code>$out</code> directory.</p>
 </li>
 <li>
 <p>As mentioned earlier we need to find the nix store path to the bash
-executable, common way to do this is to load Nixpkgs into the repl
-and check:</p>
+executable, common way to do this is to load Nixpkgs into the repl and check:</p>
 </li>
 </ul>
 <pre><code class="language-bash">nix-repl&gt; :l &lt;nixpkgs&gt;
@@ -726,8 +733,8 @@ Added 3950 variables.
 nix-repl&gt; "${bash}"
 "/nix/store/ihmkc7z2wqk3bbipfnlh0yjrlfkkgnv6-bash-4.2-p45"
 </code></pre>
-<p>So, with this little trick we are able to refer to <code>bin/bash</code> and create
-our derivation:</p>
+<p>So, with this little trick we are able to refer to <code>bin/bash</code> and create our
+derivation:</p>
 <pre><code class="language-bash">nix-repl&gt; d = derivation { name = "foo"; builder = "${bash}/bin/bash";
  args = [ ./builder.sh ]; system = builtins.currentSystem; }
 nix-repl&gt; :b d
@@ -738,12 +745,12 @@ this derivation produced the following outputs:
 </code></pre>
 <ul>
 <li>
-<p>The contents of the resulting store path (<code>/nix/store/...-foo</code>) now contain the
-file <code>foo</code>, as intended. We have successfully built a derivation!</p>
+<p>The contents of the resulting store path (<code>/nix/store/...-foo</code>) now contain
+the file <code>foo</code>, as intended. We have successfully built a derivation!</p>
 </li>
 <li>
-<p>Derivations are the primitive that Nix uses to define packages. “Package”
-is a loosely defined term, but a derivation is simply the result of calling
+<p>Derivations are the primitive that Nix uses to define packages. “Package” is a
+loosely defined term, but a derivation is simply the result of calling
 <code>builtins.derivation</code>.</p>
 </li>
 </ul>
@@ -799,8 +806,8 @@ in
   hello = pkgs.callPackage ./hello.nix { };
 }
 </code></pre>
-<p>This allows you to run <code>nix-build -A hello</code> to realize the derivation in <code>hello.nix</code>,
-similar to the current convention used in Nixpkgs:</p>
+<p>This allows you to run <code>nix-build -A hello</code> to realize the derivation in
+<code>hello.nix</code>, similar to the current convention used in Nixpkgs:</p>
 <ul>
 <li>Click to expand Output:</li>
 </ul>
@@ -811,7 +818,8 @@ similar to the current convention used in Nixpkgs:</p>
 </span><span class="boring">error: 1 dependencies of derivation '/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv' failed to build
 </span></code></pre>
 <ul>
-<li>Another way to do this is with <a href="https://nix.dev/manual/nix/2.24/command-ref/nix-prefetch-url">nix-prefetch-url</a>
+<li>Another way to do this is with
+<a href="https://nix.dev/manual/nix/2.24/command-ref/nix-prefetch-url">nix-prefetch-url</a>
 It is a utility to calculate the sha beforehand.</li>
 </ul>
 <pre><code class="language-bash">nix-prefetch-url https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz
@@ -819,19 +827,20 @@ path is '/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz'
 086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd
 </code></pre>
 <ul>
-<li>When you use <code>nix-prefetch-url</code>, you get a Base32 hash when nix needs SRI format.</li>
+<li>When you use <code>nix-prefetch-url</code>, you get a Base32 hash when nix needs SRI
+format.</li>
 </ul>
 <p>Run the following command to convert from Base32 to SRI:</p>
 <pre><code class="language-bash">nix hash to-sri --type sha256 086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd
 sha256-jZkUKv2SV28wsM18tCqNxoCZmLxdYH2Idh9RLibH2yA=
 </code></pre>
 <ul>
-<li>
-<p>This actually fetched a different sha than the Nix compiler returned in the
-example where we replace the empty sha with the one Nix gives us. The difference
-was that <code>fetchzip</code> automatically extracts archives before computing the hash
-and slight differences in the metadata cause different results. I had to switch
-from <code>fetchzip</code> to <code>fetchurl</code> to get the correct results.</p>
+<li>This actually fetched a different sha than the Nix compiler returned in the
+example where we replace the empty sha with the one Nix gives us. The
+difference was that <code>fetchzip</code> automatically extracts archives before
+computing the hash and slight differences in the metadata cause different
+results. I had to switch from <code>fetchzip</code> to <code>fetchurl</code> to get the correct
+results.
 <ul>
 <li>
 <p>Extracted archives can differ in timestamps, permissions, or compression
@@ -846,14 +855,15 @@ details, causing different hash values.</p>
 </li>
 <li>
 <p><code>fetchurl</code> returns a <code>fixed-output derivation</code>(FOD): A derivation where a
-cryptographic hash of the output is determined in advance using the outputHash
-attribute, and where the builder executable has access to the network.</p>
+cryptographic hash of the output is determined in advance using the
+outputHash attribute, and where the builder executable has access to the
+network.</p>
 </li>
 </ul>
 </li>
 </ul>
-<p>Lastly replace the empty sha256 placeholder with the returned value from the last
-command:</p>
+<p>Lastly replace the empty sha256 placeholder with the returned value from the
+last command:</p>
 <pre><code class="language-nix"># hello.nix
 {
   stdenv,
@@ -870,7 +880,8 @@ stdenv.mkDerivation {
   };
 }
 </code></pre>
-<p>Run <code>nix-build -A hello</code> again and you'll see the derivation successfully builds.</p>
+<p>Run <code>nix-build -A hello</code> again and you'll see the derivation successfully
+builds.</p>
 <h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
 <p><strong>Reproducible source paths</strong>: If we built the following derivation in
 <code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
@@ -883,8 +894,7 @@ pkgs.stdenv.mkDerivation {
 }
 </code></pre>
 <blockquote>
-<p>❗ TIP:
-Use <code>builtins.path</code> with the <code>name</code> attribute set to something fixed.
+<p>❗ TIP: Use <code>builtins.path</code> with the <code>name</code> attribute set to something fixed.
 This will derive the symbolic name of the store path from the <code>name</code> instead
 of the working directory:</p>
 <pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
@@ -911,13 +921,15 @@ files, channel subscriptions, and manual dependency management.</p>
 managing dependencies is through Nix Flakes. Flakes introduce a standardized
 project structure, explicit input tracking, and a more robust way to ensure
 reproducible builds across different environments.</p>
-<p>In our next chapter, <a href="https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html">Comparing Flakes and Traditional Nix</a>,
-we will directly compare and contrast these two approaches. We'll examine the strengths and
-weaknesses of traditional Nix practices in contrast to the benefits and features
-offered by Nix Flakes. This comparison will help you understand the motivations
-behind Flakes and when you might choose one approach over the other for your Nix
-projects.</p>
-<p>As you can see below, there is a ton of information on derivations freely available.</p>
+<p>In our next chapter,
+<a href="https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html">Comparing Flakes and Traditional Nix</a>,
+we will directly compare and contrast these two approaches. We'll examine the
+strengths and weaknesses of traditional Nix practices in contrast to the
+benefits and features offered by Nix Flakes. This comparison will help you
+understand the motivations behind Flakes and when you might choose one approach
+over the other for your Nix projects.</p>
+<p>As you can see below, there is a ton of information on derivations freely
+available.</p>
 <h4 id="links-to-articles-about-derivations"><a class="header" href="#links-to-articles-about-derivations">Links To Articles about Derivations</a></h4>
 <details>
 <summary> Click To Expand Resources </summary>
@@ -941,7 +953,8 @@ projects.</p>
 <p><a href="https://ianthehenry.com/posts/how-to-learn-nix/derivations-in-detail/">howToLearnNix-DerivationsInDetail</a></p>
 </li>
 <li>
-<p><a href="https://www.sam.today/blog/creating-a-super-simple-derivation-learning-nix-pt-3">Sparky/blog-creatingASuperSimpleDerivation</a> # How to learn Nix</p>
+<p><a href="https://www.sam.today/blog/creating-a-super-simple-derivation-learning-nix-pt-3">Sparky/blog-creatingASuperSimpleDerivation</a> #
+How to learn Nix</p>
 </li>
 <li>
 <p><a href="https://www.sam.today/blog/derivations-102-learning-nix-pt-4">Sparky/blog-Derivations102</a></p>
