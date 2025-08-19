@@ -2269,10 +2269,35 @@ rebuild the system.</p>
 <p>NOTE: There is mention of making
 <a href="https://github.com/nikstur/userborn">userborn</a> the default for NixOS in the
 future. It can be more secure by prohibiting UID/GID re-use and giving
-warnings about insecure password hashing schemes. From the userborn docs all
-that is clear is how to install it, I see no mention on how to use it or how
-to convert from declarative NixOS users to userborn.</p>
+warnings about insecure password hashing schemes.</p>
 </blockquote>
+<p>To enable <code>userborn</code>, just add the following to your <code>configuration.nix</code> or
+equivalent:</p>
+<pre><code class="language-nix"># users.nix
+{pkgs,...}:{
+services.userborn = {
+    enable = true;
+    # Only needed if `/etc` is immutable
+    # passwordFilesLocation = "/var/lib/nixos/userborn"
+};
+    users.users = {
+       "newuser" = {
+         homeMode = "755";
+         uid = 1000;
+         isNormalUser = true;
+         description = "New user account";
+         extraGroups = [ "networkmanager" "wheel" "libvirtd" ];
+         shell = pkgs.bash;
+         ignoreShellProgramCheck = true;
+         packages = with pkgs; [];
+       };
+    };
+    }
+</code></pre>
+<p>With <code>userborn</code>, you configure your users as you normally would declaratively
+with NixOS with <code>users.users</code>, change <code>"newuser"</code> to your desired username.</p>
+<p>Explicitly setting <code>uid = 1000;</code> is a best practice for compatibility and
+predictability.</p>
 <p>You can also specify which users or groups are allowed to do anything with the
 Nix daemon and Nix package manager. The following setting will only allow
 members of the <code>wheel</code> group access to commands that require elevated
