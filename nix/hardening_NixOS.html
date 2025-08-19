@@ -1146,6 +1146,16 @@ ls -l ~/.gnupg
 <pre><code class="language-bash">gpg --list-keys
 </code></pre>
 <p>The warning should be gone.</p>
+<p>Copy the <code>pub</code> line after the <code>/</code></p>
+<p>Also add a subkey with Encrypt capabilities:</p>
+<pre><code class="language-bash">gpg --edit-key Ox37ACA569C5C44787
+</code></pre>
+<pre><code class="language-bash">gpg&gt; addkey
+</code></pre>
+<p>Choose ECC (Encryption)</p>
+<p>Save your changes:</p>
+<pre><code class="language-bash">gpg&gt; save
+</code></pre>
 <p><strong>List your key and copy the key ID</strong></p>
 <pre><code class="language-bash">gpg --list-secret-keys --keyid-format LONG
 </code></pre>
@@ -1180,8 +1190,10 @@ ssb   ed25519/1234567890ABCDEF 2025-07-31 [S]
 <ul>
 <li>Copy the <code>grp</code> line - that's your keygrip</li>
 </ul>
-<p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild:</p>
-<pre><code class="language-nix">gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
+<p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild, this adds an SSH
+key to gpg-agent:</p>
+<pre><code class="language-nix"># gpg-agent.nix
+gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
 </code></pre>
 <ul>
 <li>By itself, a keygrip cannot be used to reconstruct your private key. It's
@@ -1200,6 +1212,14 @@ of the key:</p>
 <p>Never version-control your private key files or <code>.gnupg</code> contents.</p>
 </li>
 </ul>
+<p>Add the KeyId to your <code>gpg-agent.nix</code>, this declares your default-key to persist
+through rebuilds:</p>
+<pre><code class="language-nix"># gpg-agent.nix
+gpg.settings = {
+    default-key = "Ox37ACA569C5C44787";
+    trusted-key = "Ox37ACA569C5C44787";
+};
+</code></pre>
 <p>Add the following to your shell config:</p>
 <pre><code class="language-bash"># zsh.nix
 # ... snip ...
