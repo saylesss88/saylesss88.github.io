@@ -318,7 +318,7 @@ rewrites your history. Just keep this in mind. This happens because Git has a
 protection that stops you from doing stupid things.</p>
 </blockquote>
 <p>Generate an encrypted password hash with:</p>
-<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/password-hash.txt
+<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/password-hash.txt
 # Enter your chosen password and copy the encrypted hash it gives you back
 </code></pre>
 <pre><code class="language-bash">sops secrets/password-hash.yaml      # For your `hashedPasswordFile`
@@ -354,7 +354,7 @@ this location below.</p>
     defaultSopsFile = ../../.sops.yaml; # Or the correct path to your .sops.yaml
     # Don't mix sshKeyPaths and keyFile
     age.sshKeyPaths = [];
-    age.keyFile = "/home/jr/sops/age/keys.txt";
+    age.keyFile = "/persist/sops/age/keys.txt";
 
     secrets = {
       "password_hash" = {
@@ -396,7 +396,7 @@ in a persistent directory, loaded early enough during the boot process. If you
 are using the btrfs subvolume layout you don't need to worry about this
 because your home will be on its own partition when only the root partition is
 wiped on reboot. Adding <code>neededForUsers = true;</code> tells <code>sops-nix</code> to decrypt
-and make that secret available earlier in the boot process--specifically,
+and make that secret available earlier in the boot process specifically,
 before user and group accounts are created.</p>
 </blockquote>
 <p>You typically use <code>age.sshKeyPaths</code> for <strong>system-level secrets</strong> with a
@@ -420,15 +420,10 @@ my user is <code>jr</code> so I added this:</p>
         hashedPasswordFile = config.sops.secrets.password_hash.path;
   # ...snip...
 </code></pre>
-<ol start="8">
-<li>Rebuild your configuration and you should see something like this:</li>
-</ol>
-<pre><code class="language-bash">sops-install-secrets: Imported /etc/ssh/ssh_host_ed25519_key as age key with fingerprint age1smamdkzrwpdxw63hrxxcq8kmejsm4olknsrg72vd0qtfpmlzlvnf8uws38mzuj
-</code></pre>
 <p>By integrating SOPS with NixOS through <code>sops-nix</code>, you gain a modern, secure,
-and reproducible way to manage sensitive secrets. Unlike traditional
-approaches—where secrets are often scattered in ad hoc locations, referenced by
-absolute paths, or managed outside version control—sops-nix keeps your secrets
+and reproducible way to manage sensitive secrets. Unlike traditional approaches
+where secrets are often scattered in ad hoc locations, referenced by absolute
+paths, or managed outside version control, <code>sops-nix</code> keeps your secrets
 encrypted, declarative, and version-control friendly.</p>
 
                     </main>
