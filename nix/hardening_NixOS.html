@@ -1194,34 +1194,6 @@ ls -l ~/.gnupg
 <pre><code class="language-bash">gpg --list-keys
 </code></pre>
 <p>The warning should be gone.</p>
-<p><strong>List your key and copy the key ID</strong></p>
-<pre><code class="language-bash">gpg --list-secret-keys --keyid-format LONG
-</code></pre>
-<p>Output example:</p>
-<pre><code class="language-bash">sec   ed25519/ABCDEF1234567890 2025-07-31 [SC]
-      ABC123ABC123ABC123ABC123ABC123ABC123ABC1
-uid           [ultimate] Your Name &lt;you@example.com&gt;
-ssb   ed25519/1234567890ABCDEF 2025-07-31 [S]
-</code></pre>
-<ul>
-<li>Take the part after <code>/</code> on the <code>sec</code> line (e.g., <code>ABCDEF1234567890</code>)</li>
-</ul>
-<p><strong>Export the public key for GitHub</strong></p>
-<pre><code class="language-bash">gpg --armor --export ABCDEF1234567890
-</code></pre>
-<ul>
-<li>Copy everything from
-<code>-----BEGIN PGP PUBLIC KEY BLOCK----- to -----END PGP PUBLIC KEY BLOCK-----</code>.</li>
-</ul>
-<p><strong>Add to GitHub</strong></p>
-<ol>
-<li>
-<p>Go to Settings, SSH and GPG keys, New GPG key</p>
-</li>
-<li>
-<p>Paste the exported block.</p>
-</li>
-</ol>
 <p><strong>Add Keygrip to <code>sshcontrol</code> for gpg-agent</strong></p>
 <pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --with-colons
 </code></pre>
@@ -1233,6 +1205,31 @@ key to gpg-agent:</p>
 <pre><code class="language-nix"># gpg-agent.nix
 gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
 </code></pre>
+<p>Add the KeyId to your <code>gpg-agent.nix</code>, this declares your default-key to persist
+through rebuilds:</p>
+<pre><code class="language-bash">gpg --list-keys
+</code></pre>
+<p>Copy your public key:</p>
+<pre><code class="language-nix"># gpg-agent.nix
+gpg.settings = {
+    default-key = "Ox37ACA569C5C44787";
+    trusted-key = "Ox37ACA569C5C44787";
+};
+</code></pre>
+<p>Rebuild, and check that everything is correct with:</p>
+<pre><code class="language-bash">ssh-add -L
+# you should see something like:
+ssh-ed25519 AABCC3NzaC1lZDI1NTE5ABBAIHyujgyCjjBTqIuFM3EMUSo6RGklmOXQW3uWRhWdJ1Mm (none)
+</code></pre>
+<p>After adding the keygrip of the key with Authenticate capabilities and
+rebuilding, you can then add a subkey with Encrypt capabilities. For some reason
+doing both at the same time and adding that keys keygrip makes gpg-agent fail.</p>
+<p>Copy your public key:</p>
+<pre><code class="language-bash">gpg --edit-key 0xD35CEB9322AC054E
+gpg&gt; addkey
+</code></pre>
+<p>Choose ECC Encrypt capabilities, and type <code>save</code> to save changes and exit the
+<code>gpg&gt;</code>.</p>
 <ul>
 <li>By itself, a keygrip cannot be used to reconstruct your private key. It's
 derived from the public key material, not from the secret key itself so it's
@@ -1250,14 +1247,6 @@ of the key:</p>
 <p>Never version-control your private key files or <code>.gnupg</code> contents.</p>
 </li>
 </ul>
-<p>Add the KeyId to your <code>gpg-agent.nix</code>, this declares your default-key to persist
-through rebuilds:</p>
-<pre><code class="language-nix"># gpg-agent.nix
-gpg.settings = {
-    default-key = "Ox37ACA569C5C44787";
-    trusted-key = "Ox37ACA569C5C44787";
-};
-</code></pre>
 <p>Add the following to your shell config:</p>
 <pre><code class="language-bash"># zsh.nix
 # ... snip ...
