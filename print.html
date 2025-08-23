@@ -2383,6 +2383,7 @@ platform-specific tools.
 </ul>
 </li>
 <li><a href="nix/hardening_NixOS.html#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></li>
+<li><a href="nix/hardening_NixOS.html#add-your-pgp-key-to-github">Add your PGP Key to GitHub</a></li>
 <li><a href="nix/hardening_NixOS.html#encrypt-a-file-with-pgp">Encrypt a File with PGP</a>
 <ul>
 <li><a href="nix/hardening_NixOS.html#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></li>
@@ -3258,6 +3259,7 @@ directory.</p>
         settings = {
           # Default/trusted key ID (helpful with throw-keyids)
           # Example, you will put your own keyid here
+          # Use `gpg --list-keys`
           default-key = "0x37ACBCDA569C5C44788";
           trusted-key = "0x37ACBCDA569C5C44788";
           # https://github.com/drduh/config/blob/master/gpg.conf
@@ -3376,14 +3378,20 @@ ls -l ~/.gnupg
 # Files should show: -rw-------
 </code></pre>
 <p>After fixing, run:</p>
-<pre><code class="language-bash">gpg --list-keys
+<pre><code class="language-bash"># Take note of your public key
+gpg --list-keys
+/home/jr/.gnupg/pubring.kbx
+---------------------------
+pub   ed25519/0x095882C1A124CF15 2025-08-23 [SCA] [expires: 2026-08-23]
 </code></pre>
+<p>My public key, which verifies my commits on github is <code>0x095882C1A124CF15</code>. You
+will use this key as your <code>default-key</code> and <code>trusted-key</code> in <code>gpg-agent.nix</code>.</p>
 <p>The warning should be gone.</p>
 <p><strong>Add Keygrip to <code>sshcontrol</code> for gpg-agent</strong></p>
 <pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --with-colons
 </code></pre>
 <ul>
-<li>Copy the <code>grp</code> line - that's your keygrip</li>
+<li>Copy the <code>grp</code> line - that's your keygrip, you don't need to add the last <code>:</code></li>
 </ul>
 <p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild, this adds an SSH
 key to gpg-agent:</p>
@@ -3392,8 +3400,6 @@ gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
 </code></pre>
 <p>Add the KeyId to your <code>gpg-agent.nix</code>, this declares your default-key to persist
 through rebuilds:</p>
-<pre><code class="language-bash">gpg --list-keys
-</code></pre>
 <p>Copy your public key:</p>
 <pre><code class="language-nix"># gpg-agent.nix
 gpg.settings = {
@@ -3436,17 +3442,13 @@ of the key:</p>
 <pre><code class="language-bash"># zsh.nix
 # ... snip ...
 initContent = ''
-      # GPG Agent
-        export GPG_TTY=$(tty) # which terminal to use for passphrase prompts
-        export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)" # points SSH_AUTH_SOCK to the socket created by gpg-agent
-        gpg-connect-agent updatestartuptty /bye # refresh gpg-agent so it knows which terminal is active
-
-        # Optional: confirm it's set correctly
-        echo "SSH_AUTH_SOCK is set to: $SSH_AUTH_SOCK"
+    export GPG_TTY=$(tty)
+    export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+    gpgconf --launch gpg-agent
 '';
 # ... snip ...
 </code></pre>
-<p>Rebuild and then restart gpg-agent:</p>
+<p>Rebuild and then restart <code>gpg-agent</code> if necessary:</p>
 <pre><code class="language-bash">gpgconf --kill gpg-agent
 gpgconf --launch gpg-agent
 </code></pre>
@@ -3491,6 +3493,28 @@ from a <code>.pub</code> file in your repo and read it with
 </ul>
 <pre><code class="language-bash">ssh -p 22 bill@xps
 </code></pre>
+<h2 id="add-your-pgp-key-to-github"><a class="header" href="#add-your-pgp-key-to-github">Add your PGP Key to GitHub</a></h2>
+<p>Plug your own public key from <code>gpg --list-keys</code> in the following command:</p>
+<pre><code class="language-bash">gpg --armor --export &lt;Public-Key&gt;
+</code></pre>
+<p>Copy the entire block from <code>-----BEGIN PGP PUBLIC KEY BLOCK-----</code> to
+<code>-----END PGP PUBLIC KEY BLOCK-----</code></p>
+<p>It's the same process as adding an SSH key, Go to Settings, SSH and GPG keys,
+<code>New GPG key</code> and your all set.</p>
+<pre><code class="language-nix"># git.nix
+{...}: {
+    programs.git = {
+        enable = true;
+      extraConfig = {
+          commit.gpgsign = true;
+          user.signingkey = "0x0666C1A265F156"
+      };
+    };
+}
+</code></pre>
+<p>After this, you will be prompted for your Private Keys password on every commit.</p>
+<p>If you look at your commits on GitHub, after adding the GPG key and the above
+settings to your git setup it will show your commits are <code>Verified</code>.</p>
 <h2 id="encrypt-a-file-with-pgp"><a class="header" href="#encrypt-a-file-with-pgp">Encrypt a File with PGP</a></h2>
 <h3 id="list-your-keys-and-get-the-key-id"><a class="header" href="#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></h3>
 <pre><code class="language-bash">gpg --list-keys --keyid-format LONG
