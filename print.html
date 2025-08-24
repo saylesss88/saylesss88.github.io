@@ -2383,7 +2383,11 @@ platform-specific tools.
 </ul>
 </li>
 <li><a href="nix/hardening_NixOS.html#install-gnupg-and-gpg-agent-for-home-manager">Install GNUPG and gpg-agent for Home Manager</a></li>
-<li><a href="nix/hardening_NixOS.html#add-your-pgp-key-to-github">Add your PGP Key to GitHub</a></li>
+<li><a href="nix/hardening_NixOS.html#add-your-pgp-key-to-github">Add your PGP Key to GitHub</a>
+<ul>
+<li><a href="nix/hardening_NixOS.html#backing-up-your-private-keys">Backing up Your Private Keys</a></li>
+</ul>
+</li>
 <li><a href="nix/hardening_NixOS.html#encrypt-a-file-with-pgp">Encrypt a File with PGP</a>
 <ul>
 <li><a href="nix/hardening_NixOS.html#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></li>
@@ -3258,6 +3262,8 @@ the following configuration.</p>
         enable = true;
         enableSshSupport = true;
         enableZshIntegration = true;
+        # pinentry is a collection of simple PIN or passphrase dialogs used for
+        # password entry
         pinentryPackage = pkgs.pinentry-gnome3;
       };
 
@@ -3275,8 +3281,8 @@ the following configuration.</p>
           # Default/trusted key ID (helpful with throw-keyids)
           # Example, you will put your own keyid here
           # Use `gpg --list-keys`
-          default-key = "0x37ACBCDA569C5C44788";
-          trusted-key = "0x37ACBCDA569C5C44788";
+          # default-key = "0x37ACBCDA569C5C44788";
+          # trusted-key = "0x37ACBCDA569C5C44788";
           # https://github.com/drduh/config/blob/master/gpg.conf
           # https://www.gnupg.org/documentation/manuals/gnupg/GPG-Configuration-Options.html
           # https://www.gnupg.org/documentation/manuals/gnupg/GPG-Esoteric-Options.html
@@ -3317,7 +3323,7 @@ the following configuration.</p>
           # Disable caching of passphrase for symmetrical ops
           no-symkey-cache = "";
           # Enable smartcard
-          use-agent = "";
+          # use-agent = "";
         };
       };
     };
@@ -3409,7 +3415,7 @@ will use this key as your <code>default-key</code> and <code>trusted-key</code> 
 <li>Copy the <code>grp</code> line - that's your keygrip, you don't need to add the last <code>:</code></li>
 </ul>
 <p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild, this adds an SSH
-key to gpg-agent:</p>
+key to <code>gpg-agent</code>:</p>
 <pre><code class="language-nix"># gpg-agent.nix
 gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
 </code></pre>
@@ -3489,7 +3495,7 @@ key and doesn't affect functionality.</li>
 <pre><code class="language-nix">users.users.yourUser = {
 openssh = {
   authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXwhVokJ6cKgodYT+0+0ZrU0sBqMPPRDPJqFxqRtM+I (none)"
   ];
 };
 };
@@ -3542,11 +3548,21 @@ user IDs and metadata linked to your key, such as your email.</p>
 <p>After this, you will be prompted for your Private Keys password on every commit.</p>
 <p>If you look at your commits on GitHub, after adding the GPG key and the above
 settings to your git setup it will show your commits are <code>Verified</code>.</p>
+<h3 id="backing-up-your-private-keys"><a class="header" href="#backing-up-your-private-keys">Backing up Your Private Keys</a></h3>
+<pre><code class="language-bash">gpg --export-secret-keys --armor --output my-private-key-backup.gpg
+</code></pre>
+<p>Your private keys will be encrypted with a passphrase into a .gpg file. Store
+this backup in a secure location line an encrypted USB drive. This can prevent
+you from losing access to your keys in the case of disk failure or accidents.</p>
+<p>You can export your public keys and publish them publicly if you choose:</p>
+<pre><code class="language-bash">gpg --export --armor --output my-public-keys.gpg
+</code></pre>
+<p>Now if your keys ever get lost or corrupted, you can import these backups.</p>
 <h2 id="encrypt-a-file-with-pgp"><a class="header" href="#encrypt-a-file-with-pgp">Encrypt a File with PGP</a></h2>
 <h3 id="list-your-keys-and-get-the-key-id"><a class="header" href="#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></h3>
 <pre><code class="language-bash">gpg --list-keys --keyid-format LONG
 </code></pre>
-<p>Example output:</p>
+<p>Example output, don't use RSA keys:</p>
 <pre><code class="language-bash">pub   rsa4096/ABCDEF1234567890 2024-01-01 [SC]
 uid           [ultimate] Your Name &lt;you@example.com&gt;
 sub   rsa4096/1234567890ABCDEF 2024-01-01 [E]
@@ -3565,6 +3581,8 @@ in the example)</p>
 </code></pre>
 <pre><code class="language-bash">gpg --encrypt --recipient ABCDEF1234567890 file.txt
 </code></pre>
+<p>If you have someone's public key, you can just as easily encrypt a file that
+only they can decrypt. This is where public keyservers come in handy.</p>
 <pre><code class="language-bash">ls
 │  7 │ file.txt            │ file │     28 B │ now           │
 │  8 │ file.txt.gpg        │ file │    191 B │ now           │
@@ -3576,7 +3594,7 @@ gpg: encrypted with cv25519 key, ID 0x4AC131B80CEC833E, created 2025-07-31
       "GPG Key &lt;sayls8@proton.me&gt;"
 This file will be encrypted
 </code></pre>
-<p>Or:</p>
+<p>Or, to save the decrypted text to a file:</p>
 <pre><code class="language-bash">gpg --output decrypted_file.txt --decrypt file.txt.gpg
 cat decrypted_file.txt
 # Output
@@ -3589,9 +3607,6 @@ to decrypt the file.</li>
 </ul>
 <p>There is much more you can do with PGP beyond simple file encryption:</p>
 <ul>
-<li>
-<p>Sign files and commits: Prove that content really came from you.</p>
-</li>
 <li>
 <p>Encrypt for multiple recipients: Share encrypted data with teammates using
 their public keys.</p>
