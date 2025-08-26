@@ -2392,6 +2392,10 @@ platform-specific tools.
 <ul>
 <li><a href="nix/hardening_NixOS.html#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></li>
 <li><a href="nix/hardening_NixOS.html#encrypt-a-file-for-yourself">Encrypt a file for yourself</a></li>
+</ul>
+</li>
+<li><a href="nix/hardening_NixOS.html#make-your-public-key-highly-available">Make your Public Key Highly Available</a>
+<ul>
 <li><a href="nix/hardening_NixOS.html#openssh-server">OpenSSH Server</a></li>
 </ul>
 </li>
@@ -3362,20 +3366,17 @@ custom.pgp.enable = true;
 </code></pre>
 <p><code>gpg --full-generate-key</code> can be used to generate a basic keypair, adding
 <code>--expert</code> gives more options and capabilities needed for <code>gpg-agent</code>.</p>
-<p>To generate a pgp key you can do the following:</p>
-<pre><code class="language-bash">gpg --expert --full-generate-key
+<blockquote>
+<p>❗ NOTE: We will first generate our GPG primary key, it is often recommended
+to store your primary key offline and use your subkeys for encrypting and
+signing.</p>
+</blockquote>
+<p>To generate your gpg primary key you can do the following:</p>
+<pre><code class="language-bash">gpg --full-generate-key
 </code></pre>
 <ul>
 <li>
-<p>Choose the default (11) ECC (set your own capabilities)</p>
-</li>
-<li>
-<p>Choose <code>A</code> for Authenticate capabilities, which is the only setting required
-for this. Additional subkeys may be created for encryption, sign, and/or
-authentication capabilities.</p>
-</li>
-<li>
-<p>Choose (1) Default Curve 25519</p>
+<p>Choose (9) ECC (sign and encrypt)</p>
 </li>
 <li>
 <p>Give it a name and description</p>
@@ -3385,6 +3386,9 @@ authentication capabilities.</p>
 </li>
 <li>
 <p>Use a strong passphrase or password</p>
+</li>
+<li>
+<p>Give it a comment, I typically add the date</p>
 </li>
 </ul>
 <p>If you see a warning about incorrect permissions, you can run the following:</p>
@@ -3398,30 +3402,43 @@ chmod 600 ~/.gnupg/*
 ls -l ~/.gnupg
 # Files should show: -rw-------
 </code></pre>
-<p>After fixing, run:</p>
+<p>After fixing, run <code>gpg --list-keys</code>, which lists your public keys:</p>
 <pre><code class="language-bash"># Take note of your public key
 gpg --list-keys
 /home/jr/.gnupg/pubring.kbx
 ---------------------------
-pub   ed25519/0x095882C1A124CF15 2025-08-23 [SCA] [expires: 2026-08-23]
+pub   ed25519/0x095722C1A124CF15 2025-08-23 [SCA] [expires: 2026-08-23]
 </code></pre>
-<p>My public key, which verifies my commits on github is <code>0x095882C1A124CF15</code>. You
-will use this key as your <code>default-key</code> and <code>trusted-key</code> in <code>gpg-agent.nix</code>.</p>
 <p>The warning should be gone.</p>
-<p><strong>Add Keygrip to <code>sshcontrol</code> for gpg-agent</strong></p>
-<pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --with-colons
+<p>Now we will generate 2 subkeys, 1 for encryption and 1 for authentication.</p>
+<pre><code class="language-bash">gpg --expert --edit-key 0x095722C1A124CF15
 </code></pre>
-<ul>
-<li>Copy the <code>grp</code> line - that's your keygrip, you don't need to add the last <code>:</code></li>
-</ul>
+<p>Choose 11 (set your own capabilities) and add A (Authenticate) and type <code>save</code>
+to save and exit. Repeat this again and choose ECC (encrypt only).</p>
+<p><strong>Add Keygrip to <code>sshcontrol</code> for gpg-agent</strong></p>
+<pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --keyid-format LONG
+</code></pre>
+<p>Copy the keygrip of the subkey with Authenticate capabilities</p>
 <p>Add the keygrip number to your <code>gpg-agent.sshKeys</code> and rebuild, this adds an SSH
 key to <code>gpg-agent</code>:</p>
 <pre><code class="language-nix"># gpg-agent.nix
 gpg-agent.sshKeys = ["6BD11826F3845BC222127FE3D22C92C91BB3FB32"];
 </code></pre>
+<ul>
+<li>By itself, a keygrip cannot be used to reconstruct your private key. It's
+derived from the public key material, not from the secret key itself so it's
+safe to version control. Don't put your keygrip in a public repo if you don't
+want people to know you use that key for signing/authentication. It's not a
+security risk, but it leaks a tiny bit of metadata.</li>
+</ul>
+<p>The following article mentions the keygrip being computed from public elements
+of the key:</p>
+<ul>
+<li><a href="https://gnupg-users.gnupg.narkive.com/q5JtahdV/gpg-agent-what-is-a-keygrip">gnupg-users what-is-a-keygrip</a></li>
+</ul>
 <p>Add the KeyId to your <code>gpg-agent.nix</code>, this declares your default-key to persist
 through rebuilds:</p>
-<p>Copy your public key:</p>
+<p>Copy the public key of the same subkey with Authenticate capabilities:</p>
 <pre><code class="language-nix"># gpg-agent.nix
 gpg.settings = {
     default-key = "Ox37ACA569C5C44787";
@@ -3433,31 +3450,8 @@ gpg.settings = {
 # you should see something like:
 ssh-ed25519 AABCC3NzaC1lZDI1NTE5ABBAIHyujgyCjjBTqIuFM3EMUSo6RGklmOXQW3uWRhWdJ1Mm (none)
 </code></pre>
-<p>After adding the keygrip of the key with Authenticate capabilities and
-rebuilding, you can then add a subkey with Encrypt capabilities. For some reason
-doing both at the same time and adding that keys keygrip makes gpg-agent fail.</p>
-<p>Copy your public key:</p>
-<pre><code class="language-bash">gpg --edit-key 0xD35CEB9322AC054E
-gpg&gt; addkey
-</code></pre>
-<p>Choose ECC Encrypt capabilities, and type <code>save</code> to save changes and exit the
-<code>gpg&gt;</code>.</p>
 <ul>
-<li>By itself, a keygrip cannot be used to reconstruct your private key. It's
-derived from the public key material, not from the secret key itself so it's
-safe to version control. Don't put your keygrip in a public repo if you don't
-want people to know you use that key for signing/authentication. It's not a
-security risk, but it leaks a tiny bit of metadata.</li>
-</ul>
-<p>The following article mentions the keygrip being computed from public elements
-of the key:</p>
-<ul>
-<li>
-<p><a href="https://gnupg-users.gnupg.narkive.com/q5JtahdV/gpg-agent-what-is-a-keygrip">gnupg-users what-is-a-keygrip</a></p>
-</li>
-<li>
-<p>Never version-control your private key files or <code>.gnupg</code> contents.</p>
-</li>
+<li>Never version-control your private key files or <code>.gnupg</code> contents.</li>
 </ul>
 <p>Add the following to your shell config:</p>
 <pre><code class="language-bash"># zsh.nix
@@ -3605,7 +3599,27 @@ This file will be encrypted
 <li>You will be asked for the passphrase you used when creating the key in order
 to decrypt the file.</li>
 </ul>
-<p>There is much more you can do with PGP beyond simple file encryption:</p>
+<h2 id="make-your-public-key-highly-available"><a class="header" href="#make-your-public-key-highly-available">Make your Public Key Highly Available</a></h2>
+<p>There's nothing malicious that can happen if unknown people have your public
+key. That said, it may be beneficial to make your public key publicly available.
+People can find your info to send you messages securely from your first
+interaction. There is much more you can do with PGP beyond simple file
+encryption:</p>
+<p>You can send your public key with the command below:</p>
+<pre><code class="language-bash">gpg --output ~/mygpg.key --armor --export your_email@address.com
+</code></pre>
+<p>You can then send this file to the other party.</p>
+<p>You can also use the GPG interface to upload your key to a key server:</p>
+<pre><code class="language-bash">gpg --list-keys your_email@address.com
+</code></pre>
+<p>Copy the key ID for the following command, remember its on the <code>pub</code> line after
+the <code>/</code>.</p>
+<pre><code class="language-bash">gpg --send-keys --keyserver pgp.mit.edu key_id
+</code></pre>
+<p>The key will be uploaded to the server and likely be distributed to other key
+servers around the world. This is why expiration dates are important, if your
+key is lost or stolen, the damage window is limited to the expiration period.
+Also remember, you can add more time even after the key has expired.</p>
 <ul>
 <li>
 <p>Encrypt for multiple recipients: Share encrypted data with teammates using
@@ -4209,7 +4223,8 @@ your identity or other sensitive information when you share files publicly.</p>
 <p>To protect your privacy, always sanitize files by removing this metadata
 before sharing. Tools like <a href="https://0xacab.org/jvoisin/mat2">mat2</a> are
 designed to strip metadata from a wide range of media files efficiently.
-(<code>pkgs.mat2</code>)</p>
+(<code>pkgs.mat2</code>). You just type <code>mat2 swappy-2025.png</code> for example and there will
+then be a new <code>mat2 swappy-2025.cleaned.png</code> that can safely be shared.</p>
 </li>
 </ul>
 <p><strong>Use Anonymous File-Sharing Tools</strong></p>
@@ -4309,7 +4324,11 @@ uBlockOrigin, and only includes privacy focused search engines by default such
 as:</p>
 <p><strong>SearXNG</strong> an open-source, privacy-respecting metasearch engine that aggregates
 results from various search services, such as Google, DuckDuckGo, etc without
-tracking you or profiling your searches.</p>
+tracking you or profiling your searches. You can add SearXNG to firefox by going
+to <code>about:preferences#search</code> and at the bottom click <code>Add</code>, URL will be
+<code>searx.be/search?q=%s</code>.</p>
+<p>Searx is a bit different, you can choose which search engine you want for your
+current search with <code>!ddg search term</code> to use duckduckgo for example.</p>
 <p>Example LibreWolf config implementing many of the STIG recommendations:</p>
 <details>
 <summary> ✔️ Click to expand LibreWolf Example </summary>
@@ -4931,6 +4950,12 @@ The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
 set of security configuration standards developed by the U.S. Department of
 Defense. They are created by the Defense Information Systems Agency (DISA) to
 secure and harden DoD information systems and software.</p>
+</li>
+<li>
+<p><a href="https://thenewoil.org/en/guides/prologue/why/">Privacy, The New Oil (Why Privacy &amp; Security Matter)</a></p>
+</li>
+<li>
+<p><a href="https://www.privacyguides.org/en/">PrivacyGuides</a></p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-control-with-git"><a class="header" href="#version-control-with-git">Version Control with Git</a></h1>
