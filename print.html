@@ -7914,12 +7914,12 @@ relevant).</p>
 <li><a href="installation/enc/enc_install.html#option-b-non-interactive-wpa_passphrase">Option B: Non-Interactive <code>wpa_passphrase</code></a></li>
 </ul>
 </li>
-<li><a href="installation/enc/enc_install.html#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></li>
 <li><a href="installation/enc/enc_install.html#setting-up-zram-and-tmp-on-ram">Setting up zram and /tmp on RAM</a>
 <ul>
 <li><a href="installation/enc/enc_install.html#setting-a-flake-for-your-minimal-install">Setting a Flake for your minimal Install</a></li>
 </ul>
 </li>
+<li><a href="installation/enc/enc_install.html#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></li>
 <li><a href="installation/enc/enc_install.html#persisting-critical-system-state">Persisting Critical System State</a></li>
 <li><a href="installation/enc/enc_install.html#reboot">Reboot</a></li>
 </ul>
@@ -7937,6 +7937,11 @@ focuses on security and flexibility.</p>
 <p>If you choose to set up impermanence, ensure it matches your install. Encrypted
 Setup with Encrypted Impermanence and Unencrypted Setup with Unencrypted
 Impermanence.</p>
+<blockquote>
+<p>❗ NOTE: This is a bit convoluted, there are a few paths you can follow. If
+you choose to use the starter repo (<a href="https://github.com/saylesss88/my-flake">https://github.com/saylesss88/my-flake</a>)
+just follow the included README.</p>
+</blockquote>
 <h2 id="what-does-luks-encryption-protect"><a class="header" href="#what-does-luks-encryption-protect">What does LUKS Encryption Protect?</a></h2>
 <p>It's important to understand what disk encryption protects and what it doesn't
 protect so you don't have any misconceptions about how safe your data is.</p>
@@ -8064,6 +8069,9 @@ sudo systemctl restart wpa_supplicant@wlan0.service
 <pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
 nvme0n1     259:0    0   1,8T  0 disk
 </code></pre>
+<blockquote>
+<p>❗ From here, you can either</p>
+</blockquote>
 <ol start="4">
 <li>Copy the disk configuration to your machine. You can choose one from the
 <a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.</li>
@@ -8075,13 +8083,15 @@ export EDITOR='hx' # or 'vi'
 nix-shell -p git yazi helix mkpasswd
 git config --global user.name "gitUsername"
 git config --global user.email "gitEmail"
-# starter repo containing disk-config set up for impermanence
+# OPTIONAL starter repo containing disk-config set up for impermanence
 git clone https://github.com/saylesss88/my-flake.git
 </code></pre>
 <p>I prefer <code>helix</code> here as it's defaults are great. (i.e., auto closing brackets
 and much more)</p>
 <p>If you choose to use the starter repo you won't need to run the next command as
-it is already populated in the repo.</p>
+it is already populated in the repo and should use the
+<a href="https://github.com/saylesss88/my-flake">Starter Repo README</a> most of the rest
+of the guide is for manual disko without the starter repo.</p>
 <p>If you click on the layout you want then click the <code>Raw</code> button near the top,
 then copy the <code>url</code> and use it in the following command:</p>
 <pre><code class="language-bash">cd /tmp
@@ -8195,57 +8205,6 @@ lanzaboote.</p>
   }
 ];
 </code></pre>
-<h2 id="create-a-blank-snapshot-of-root"><a class="header" href="#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></h2>
-<p>This is essential if you plan on using impermanence with this encrypted setup.
-We take a snapshot of <code>/root</code> while it's a clean slate, right after we run disko
-to format the disk.</p>
-<p>To access all of the subvolumes, we have to mount the Btrfs partitions
-top-level.</p>
-<ol>
-<li>Unlock the LUKS device, if not already unlocked as it should be from running
-disko:</li>
-</ol>
-<pre><code class="language-bash">sudo cryptsetup open /dev/disk/by-partlabel/luks cryptroot
-</code></pre>
-<ol start="2">
-<li>Mount the Btrfs top-level (<code>subvolid=5</code>):</li>
-</ol>
-<pre><code class="language-bash">sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
-</code></pre>
-<ol start="3">
-<li>List the contents:</li>
-</ol>
-<pre><code class="language-bash">ls /mnt
-# you should see something like
-root   home  nix  persist  log  lib  ...
-</code></pre>
-<ol start="4">
-<li>Now we can take a snapshot of the <code>root</code> subvolume:</li>
-</ol>
-<pre><code class="language-bash">sudo btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
-</code></pre>
-<ol start="5">
-<li>Verify Your Blank Snapshot:</li>
-</ol>
-<p>Before continuing, make sure your blank snapshot exists. This is crucial for
-impermanence to work properly.</p>
-<pre><code class="language-bash">sudo btrfs subvolume list /mnt
-</code></pre>
-<p>You should see output containing both <code>root</code> and <code>root-blank</code> subvolumes:</p>
-<pre><code class="language-bash">ID 256 gen ... path root
-ID 257 gen ... path root-blank
-</code></pre>
-<p>Check that the snapshot is read only, this ensures that our snapshot will remain
-the same as the day we took it. It was set <code>ro</code> in disko but lets check anyways:</p>
-<pre><code class="language-bash">sudo btrfs property get -ts /mnt/root-blank
-# output should be
-ro=true
-</code></pre>
-<ol start="5">
-<li>Make sure to unmount:</li>
-</ol>
-<pre><code class="language-bash">sudo umount /mnt
-</code></pre>
 <h2 id="setting-up-zram-and-tmp-on-ram"><a class="header" href="#setting-up-zram-and-tmp-on-ram">Setting up zram and /tmp on RAM</a></h2>
 <p>While <code>/tmp</code> is handled by <code>tmpfs</code> (as shown the below <code>configuration.nix</code>), you
 can further enhance memory efficiency with <code>zram</code> for compressed swap, as shown
@@ -8316,7 +8275,7 @@ handles the <code>fileSystems</code> attribute for us.</li>
 <code>hardware-configuration.nix</code> in <code>/mnt/etc/nixos/</code></li>
 </ul>
 <p>It may be helpful to add a couple things to your <code>configuration.nix</code> now, while
-it's in it's default location. You can just add what you want and rebuild once
+it's in its default location. You can just add what you want and rebuild once
 with <code>sudo nixos-rebuild switch</code> and move on. (i.e. <code>git</code>, an editor, etc.).</p>
 <h3 id="setting-a-flake-for-your-minimal-install-1"><a class="header" href="#setting-a-flake-for-your-minimal-install-1">Setting a Flake for your minimal Install</a></h3>
 <ol start="8">
@@ -8390,7 +8349,7 @@ redirect the hashed pass to a <code>/tmp/pass.txt</code>, you can then read it i
 <code>users.nix</code>:</p>
 </li>
 </ul>
-<pre><code class="language-bash">mkpasswd -m SHA-512 -s &gt; /tmp/pass.txt
+<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 # Enter your chosen password
 </code></pre>
 <p>And then when inside <code>configuration.nix</code>, move to the line where you want the
@@ -8491,9 +8450,60 @@ change it to your chosen hostname.</p>
 <pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/flake#nixos
 </code></pre>
 <ul>
-<li>
-<p>You will be prompted to enter a new password if everything succeeds.</p>
-</li>
+<li>You will be prompted to enter a new password if everything succeeds.</li>
+</ul>
+<h2 id="create-a-blank-snapshot-of-root"><a class="header" href="#create-a-blank-snapshot-of-root">Create a Blank Snapshot of /root</a></h2>
+<p>This is essential if you plan on using impermanence with this encrypted setup.
+We take a snapshot of <code>/root</code> while it's a clean slate, right after we run disko
+to format the disk.</p>
+<p>To access all of the subvolumes, we have to mount the Btrfs partitions
+top-level.</p>
+<ol>
+<li>Unlock the LUKS device, if not already unlocked as it should be from running
+disko:</li>
+</ol>
+<pre><code class="language-bash">sudo cryptsetup open /dev/disk/by-partlabel/luks cryptroot
+</code></pre>
+<ol start="2">
+<li>Mount the Btrfs top-level (<code>subvolid=5</code>):</li>
+</ol>
+<pre><code class="language-bash">sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
+</code></pre>
+<ol start="3">
+<li>List the contents:</li>
+</ol>
+<pre><code class="language-bash">ls /mnt
+# you should see something like
+root   home  nix  persist  log  lib  ...
+</code></pre>
+<ol start="4">
+<li>Now we can take a snapshot of the <code>root</code> subvolume:</li>
+</ol>
+<pre><code class="language-bash">sudo btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
+</code></pre>
+<ol start="5">
+<li>Verify Your Blank Snapshot:</li>
+</ol>
+<p>Before continuing, make sure your blank snapshot exists. This is crucial for
+impermanence to work properly.</p>
+<pre><code class="language-bash">sudo btrfs subvolume list /mnt
+</code></pre>
+<p>You should see output containing both <code>root</code> and <code>root-blank</code> subvolumes:</p>
+<pre><code class="language-bash">ID 256 gen ... path root
+ID 257 gen ... path root-blank
+</code></pre>
+<p>Check that the snapshot is read only, this ensures that our snapshot will remain
+the same as the day we took it. It was set <code>ro</code> in disko but lets check anyways:</p>
+<pre><code class="language-bash">sudo btrfs property get -ts /mnt/root-blank
+# output should be
+ro=true
+</code></pre>
+<ol start="5">
+<li>Make sure to unmount:</li>
+</ol>
+<pre><code class="language-bash">sudo umount /mnt
+</code></pre>
+<ul>
 <li>
 <p>If everything checks out, reboot the system and you should be prompted to
 enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
