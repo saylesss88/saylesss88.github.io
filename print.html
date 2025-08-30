@@ -2937,6 +2937,9 @@ default as of yet. To set <code>dbus-broker</code> as the default:</p>
 better with Linux security features.</p>
 </li>
 <li>
+<p><a href="https://dvdhrm.github.io/rethinking-the-dbus-message-bus/">Rethinking-the-dbus-message-bus</a></p>
+</li>
+<li>
 <p>Setting <code>storage = "volatile"</code> tells journald to keep log data only in memory.
 There is a tradeoff though, If you need long-term auditing or troubleshooting
 after a reboot, this will not preserve system logs.</p>
@@ -3688,6 +3691,7 @@ hardening.There are recommendations for hardening all kinds of software in the
 <li><a href="nix/gpg-agent.html#-tools-of-the-trade">🛠️ Tools of the trade</a></li>
 <li><a href="nix/gpg-agent.html#asymmetric-encryption-public-key-cryptography">Asymmetric Encryption (Public-Key cryptography)</a>
 <ul>
+<li><a href="nix/gpg-agent.html#generate-a-revocation-certificate">Generate a Revocation Certificate</a></li>
 <li><a href="nix/gpg-agent.html#remove-and-store-your-primary-key-offline">Remove and Store your Primary Key offline</a></li>
 </ul>
 </li>
@@ -3700,7 +3704,8 @@ hardening.There are recommendations for hardening all kinds of software in the
 <li><a href="nix/gpg-agent.html#encrypt-a-file-with-pgp">Encrypt a File with PGP</a>
 <ul>
 <li><a href="nix/gpg-agent.html#list-your-keys-and-get-the-key-id">List your keys and get the key ID</a></li>
-<li><a href="nix/gpg-agent.html#encrypt-a-file-for-yourself">Encrypt a file for yourself</a></li>
+<li><a href="nix/gpg-agent.html#encrypt-a-file">Encrypt a file</a></li>
+<li><a href="nix/gpg-agent.html#sign-and-verify-signatures">Sign and Verify Signatures</a></li>
 </ul>
 </li>
 <li><a href="nix/gpg-agent.html#email-encryption">Email Encryption</a></li>
@@ -3716,7 +3721,7 @@ them with extreme care.</p>
 <p><strong>GnuPG</strong> is a complete and free implementation of the OpenPGP standard. It
 allows you to encrypt and sign your data and communications, has a versatile key
 management system, and access modules for many kinds of public key directories.
-GnuPG (GPG), is a command line tool</p>
+GnuPG (GPG), is a command line tool for secure communication.</p>
 <p><strong>PGP (Pretty Good Privacy)</strong> and <strong>GPG (GNU Privacy Guard)</strong>. While distinct,
 they are deeply interconnected and, for the rest of this section, I'll use the
 terms interchangeably.</p>
@@ -3727,6 +3732,8 @@ However, PGP later became a commercial product.</p>
 <strong>GPG</strong> was created. Crucially, <strong>GPG</strong> is a complete implementation of the
 OpenPGP standard. This open standard acts as a universal language for encryption
 and digital signatures.</p>
+<p>GnuPG uses a more complex scheme in which a user has a primary keypair and then
+zero or more additional subordinate keypairs.</p>
 <p><code>gpg-agent</code> is a daemon to manage secret (private) keys independently from any
 protocol. It is used as a backed for gpg and gpgsm as well as for a couple of
 other utilities. --<a href="https://man.cx/gpg-agent">man gpg-agent</a></p>
@@ -3917,16 +3924,17 @@ custom.pgp.enable = true;
 <p><code>gpg --full-generate-key</code> can be used to generate a basic keypair, adding
 <code>--expert</code> gives more options and capabilities needed for <code>gpg-agent</code>.</p>
 <blockquote>
-<p>❗ NOTE: We will first generate our GPG primary key, it is often recommended
-to store your primary key offline and use your subkeys for encrypting and
-signing.</p>
+<p>❗ NOTE: We will first generate our GPG primary key that is required to
+atleast have sign capabilities, we will then derive subkeys from said primary
+key and use them for signing and encrypting. It is recommended to generate a
+revoke certificate right after creating your primary key.</p>
 </blockquote>
 <p>To generate your gpg primary key you can do the following:</p>
 <pre><code class="language-bash">gpg --full-generate-key
 </code></pre>
 <ul>
 <li>
-<p>Choose (9) ECC (sign and encrypt)</p>
+<p>Choose <code>(10) (sign only)</code></p>
 </li>
 <li>
 <p>Give it a name and description</p>
@@ -3952,20 +3960,34 @@ chmod 600 ~/.gnupg/*
 ls -l ~/.gnupg
 # Files should show: -rw-------
 </code></pre>
-<p>After fixing, run <code>gpg --list-keys</code>, which lists your public keys:</p>
+<h3 id="generate-a-revocation-certificate"><a class="header" href="#generate-a-revocation-certificate">Generate a Revocation Certificate</a></h3>
+<p><code>mykey</code> must be a key specifier, either the keyID of the primary keypair or any
+part of the user ID which identifies the keypair:</p>
+<pre><code class="language-bash">gpg --output revoke.asc --gen-revoke mykey
+</code></pre>
+<p>The certificate will be output to a file <code>revoke.asc</code>. If the <code>--output</code> is
+ommitted, the result will be placed on stdout.</p>
+<p>Since it's a short certificate, you can print a hardcopy and store it somewhere
+safe. The cert shouldn't be somewhere that others can access it since anyone
+could publish the revoke cert and render the corresponding public key useless.</p>
+<hr />
+<p>After fixing, run <code>gpg --list-keys --with-fingerprint</code>, which lists your public
+keys:</p>
 <pre><code class="language-bash"># Take note of your public key
-gpg --list-keys
+gpg --list-keys --with-fingerprint
 /home/jr/.gnupg/pubring.kbx
 ---------------------------
-pub   ed25519/0x095722C1A124CF15 2025-08-23 [SCA] [expires: 2026-08-23]
+pub   ed25519/0x095782A1B124AF15 2025-08-23 [SCA] [expires: 2026-08-23]
+Key fingerprint = 5908 9C5B FEC8 0D75 FCB0  E206 0958 82C1 A124 CF15
+uid                   [ultimate] Jr (08-23-25) &lt;sayls8@proton.me&gt;
 </code></pre>
 <ul>
-<li>Copy the KeyID, in this example it would be <code>0x095722C1A124CF15</code>. We will use
+<li>Copy the KeyID, in this example it would be <code>0x095722B2A123CF15</code>. We will use
 it for the command below.</li>
 </ul>
 <p>The warning should be gone.</p>
 <p>Now we will generate 2 subkeys, 1 for encryption and 1 for authentication.</p>
-<pre><code class="language-bash">gpg --expert --edit-key 0x095722C1A124CF15
+<pre><code class="language-bash">gpg --expert --edit-key 0x095722B2A123CF15
 </code></pre>
 <p>Choose 11 (set your own capabilities) and add A (Authenticate) and type <code>save</code>
 to save and exit. Repeat this again and choose ECC (encrypt only).</p>
@@ -4185,16 +4207,24 @@ in the example)</p>
 <p>You can also use your email or name to refer to the key in most commands.</p>
 </li>
 </ul>
-<h3 id="encrypt-a-file-for-yourself"><a class="header" href="#encrypt-a-file-for-yourself">Encrypt a file for yourself</a></h3>
+<h3 id="encrypt-a-file"><a class="header" href="#encrypt-a-file">Encrypt a file</a></h3>
+<p>In order to encrypt a document you must have the public keys of the intended
+recipients.</p>
 <pre><code class="language-bash">echo "This file will be encrypted" &gt; file.txt
 </code></pre>
+<p>Encrypting for yourself (using a key ID as recipient):</p>
 <pre><code class="language-bash">gpg --encrypt --recipient ABCDEF1234567890 file.txt
 </code></pre>
-<p>If you have someone's public key, you can just as easily encrypt a file that
-only they can decrypt. This is where public keyservers come in handy.</p>
 <pre><code class="language-bash">ls
 │  7 │ file.txt            │ file │     28 B │ now           │
 │  8 │ file.txt.gpg        │ file │    191 B │ now           │
+</code></pre>
+<p>Encrypting for someone else with their email (public key identifier):</p>
+<pre><code class="language-bash">gpg --output file.gpg --encrypt --recipient jake@proton.me file.txt
+</code></pre>
+<pre><code class="language-bash">ls
+file.txt
+file.gpg
 </code></pre>
 <p><code>gpg --encrypt</code> doesn't modify the original file. It creates a new encrypted
 file by default with <code>gpg</code> amended to the filename.</p>
@@ -4214,6 +4244,29 @@ This file will be encrypted
 <li>You will be asked for the passphrase you used when creating the key in order
 to decrypt the file.</li>
 </ul>
+<h3 id="sign-and-verify-signatures"><a class="header" href="#sign-and-verify-signatures">Sign and Verify Signatures</a></h3>
+<p>When you sign a document it is certified and timestamped. If after the doc is
+signed, if the doc is further modified in any way the verification of the
+signature will fail.</p>
+<p>A signature is created using the private key of the signer, and verified with
+the corresponding public key. For example, to verify Jakes signature you would
+use Jake's public key to see that the work indeed came from him and hasn't been
+modified since.</p>
+<p>To sign the above <code>file.txt</code>:</p>
+<pre><code class="language-bash">gpg output doc.sig --sign file.txt
+# To clearsign use:
+gpg --clearsign file.txt
+# For a detached signature use:
+gpg --output doc.sig --detach-sig file.txt
+</code></pre>
+<p>You will be prompted for your passphrase.</p>
+<p>You can either check the signature or check the signature and recover the
+original document.</p>
+<pre><code class="language-bash"># To only check:
+gpg --output doc --verify doc.sig
+# To verify and extract the document
+gpg --output doc --decrypt doc.sig
+</code></pre>
 <h2 id="email-encryption"><a class="header" href="#email-encryption">Email Encryption</a></h2>
 <p>Email is inherently insecure, and email-based attacks remain one of the top
 vectors for data breaches. Encrypting your email protects your privacy by
@@ -4270,11 +4323,40 @@ public keys of your correspondents.</p>
 <p>If you're sending encrypted emails to someone you'll need their public key,
 there are a few methods of doing this just ensure you verify the Fingerprint
 with the person your talking to.</p>
+<p>Exporting your public key means creating a copy of the public part of your
+cryptographic key pair that you can share with others.</p>
+<p>For example, say that Jake wants to send you his public key. First he has to
+export his key:</p>
+<pre><code class="language-bash">gpg --output jake.gpg --export jake@proton.me
+</code></pre>
+<p>The key is exported in binary format, to export in ASCII-armored format use:</p>
+<pre><code class="language-bash">gpg --armor --export jake@proton.me
+</code></pre>
+<p>Now, once he sends this to you, you'll need to import and validate it:</p>
+<pre><code class="language-bash">gpg --import jake.gpg
+</code></pre>
+<p>Once the key is imported it should be validated. If you need to validate a key
+manually, it is done by verifying the key's fingerprint and then signing the key
+to certify it as a valid key.</p>
+<p>Check that it exists in your keychain:</p>
+<pre><code class="language-bash">gpg --list-keys
+</code></pre>
+<p>You should see Jakes key in the above list.</p>
+<p>To certify the key you need to edit it:</p>
+<pre><code class="language-bash">gpg --edit-key jake@proton.me
+# List the fingerprint
+Command&gt; fpr
+# once the fingerprint is verified with the owner, sign it
+Command&gt; sign
+# once signed, you can check the key to list signatures on it
+Command&gt; check
+</code></pre>
 <blockquote>
 <p>❗ NOTE: You can use PGP to encrypt any message and paste it into <strong>any</strong>
 software and send it. As long as only you and your recipient are the only
 people to have the private keys, you will be the only people able to decrypt
-the messages.</p>
+the messages. Implementing this correctly is a good way to stop government
+mass surveillance.</p>
 </blockquote>
 <h2 id="make-your-public-key-highly-available"><a class="header" href="#make-your-public-key-highly-available">Make your Public Key Highly Available</a></h2>
 <p>There's nothing malicious that can happen if unknown people have your public
@@ -4330,6 +4412,10 @@ set up, these capabilities become easy to add to your workflow.</p>
 <li><a href="nix/hardening_networking.html#choosing-secureprivate-browsers-and-search-engines">Choosing Secure/Private Browsers and Search Engines</a>
 <ul>
 <li><a href="nix/hardening_networking.html#tor-browser">Tor Browser</a></li>
+</ul>
+</li>
+<li><a href="nix/hardening_networking.html#torplusvpn">TorPlusVPN</a>
+<ul>
 <li><a href="nix/hardening_networking.html#mullvad-browser">Mullvad-Browser</a></li>
 </ul>
 </li>
@@ -4456,6 +4542,8 @@ time. You can choose a password, a keyfile, and a security key where it won't
 open unless all 3 are present giving you additional security. All 3 might not be
 necessary but it's possible. It's also easy to migrate to KeePassXC, you can
 import your vault from many different managers.</p>
+<p>KeepassXC also makes it easy to keep your complete password database offline
+which can significantly reduce the risk of a breach.</p>
 <p>With Bitwarden, to enable 2 factor authentication, you need to log in with your
 master password through the web interface.</p>
 <ul>
@@ -4517,6 +4605,18 @@ Bridges are only necessary in countries that don't allow people to use Tor.
 Using Bridges when they aren't needed takes resources away from people in
 oppressive regimes that need, only use them if necessary. Read the guides, and
 use Tails OS when it really matters.</p>
+<p>You will see a lot of conflicting information about using Tor with a VPN. If you
+are in an area that blocks access to Tor or it is dangerous to use Tor, by all
+means use a trusted VPN.</p>
+<h3 id="torplusvpn"><a class="header" href="#torplusvpn">TorPlusVPN</a></h3>
+<ul>
+<li>
+<p><a href="https://gitlab.torproject.org/legacy/trac/-/wikis/doc/TorPlusVPN">Tor Project Wiki TorPlusVPN</a></p>
+</li>
+<li>
+<p><a href="https://www.privacyguides.org/en/advanced/tor-overview/#safely-connecting-to-tor">Safely Connecting to Tor</a></p>
+</li>
+</ul>
 <p><strong>Learn about Tor</strong></p>
 <p>I recommend starting with
 <a href="https://www.privacyguides.org/articles/2025/04/30/in-praise-of-tor/#onion-sites-you-can-visit-using-the-tor-browser">Privacy Guides In Praise of Tor</a>
@@ -4771,6 +4871,13 @@ to the VPN), and can help circumvent some regional restrictions or filtering.</p
 your VPN provider can, so you must trust their privacy policies and
 infrastructure. Quality and privacy protections vary widely from one VPN company
 to another.</p>
+<p>I see over and over again that Mullvad VPN is the best, I am in no way
+affiliated with them this is just what I hear. They allow you to pay with cash
+completely anonymously and keep very minimal metadata. Metadata is a big deal,
+the US gov has admitted to killing people based solely on their metadata.</p>
+<p>Your ISP almost certainly does sketchy stuff with your data, personally I would
+rather trust a company like Mullvad whose whole reputation is based on their
+trustworthiness, transparency, and data protection.</p>
 <p>You can use a VPN with Tor, but it's not recommended unless you're an advanced
 user who knows how to configure both in a way that doesn't compromise your
 privacy.</p>
