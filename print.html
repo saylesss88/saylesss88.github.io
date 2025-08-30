@@ -3709,7 +3709,11 @@ hardening.There are recommendations for hardening all kinds of software in the
 </ul>
 </li>
 <li><a href="nix/gpg-agent.html#email-encryption">Email Encryption</a></li>
-<li><a href="nix/gpg-agent.html#make-your-public-key-highly-available">Make your Public Key Highly Available</a></li>
+<li><a href="nix/gpg-agent.html#make-your-public-key-highly-available">Make your Public Key Highly Available</a>
+<ul>
+<li><a href="nix/gpg-agent.html#bonus-verifying-arch-linux-download">Bonus Verifying Arch Linux Download</a></li>
+</ul>
+</li>
 </ul>
 </details>
 <blockquote>
@@ -4401,6 +4405,60 @@ history.</p>
 </ul>
 <p>This guide only scratches the surface — once your PGP key and <code>gpg-agent</code> are
 set up, these capabilities become easy to add to your workflow.</p>
+<h3 id="bonus-verifying-arch-linux-download"><a class="header" href="#bonus-verifying-arch-linux-download">Bonus Verifying Arch Linux Download</a></h3>
+<p>First, download both the arch <code>.iso</code> and <code>.sig</code> files.</p>
+<p>I tried a few different methods from <a href="https://archlinux.org/download/#checksums">https://archlinux.org/download/#checksums</a>
+and the easiest by far was using Sequoia available in Nixpkgs as
+<code>pkgs.sequoia-sq</code>:</p>
+<p>Download the archlinux public key:</p>
+<pre><code class="language-bash">sq network wkd search pierre@archlinux.org --output release-key.pgp
+
+Found 2 certificates related to the query:
+
+ - 3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
+   - Pierre Schmitz &lt;pierre@archlinux.org&gt; (UNAUTHENTICATED)
+   - created 2022-10-31 09:11:51 UTC
+   - found via: WKD
+
+ - 4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC
+   - Pierre Schmitz &lt;pierre@archlinux.de&gt; (UNAUTHENTICATED)
+   - created 2011-04-10 09:35:33 UTC
+   - found via: WKD
+
+Hint: To extract a particular certificate from release-key.pgp, use any of:
+
+  $ sq cert export --keyring=release-key.pgp --cert=3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
+
+  $ sq cert export --keyring=release-key.pgp --cert=4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC
+</code></pre>
+<p>Export the chosen key to a <code>.pgp</code> file:</p>
+<pre><code class="language-bash">sq cert export --keyring=release-key.pgp --cert=3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C &gt; pierre-archlinux.pgp
+</code></pre>
+<p>Import into your keychain:</p>
+<pre><code class="language-bash"> gpg --import pierre-archlinux.pgp
+gpg: key 0x76A5EF9054449A5C: 9 signatures not checked due to missing keys
+gpg: key 0x76A5EF9054449A5C: public key "Pierre Schmitz &lt;pierre@archlinux.org&gt;" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   3  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 3u
+gpg: next trustdb check due at 2026-08-23
+</code></pre>
+<p>Now, you should see <code>&lt;pierre@archlinux.org&gt;</code> and his keys when you run
+<code>gpg --list-keys</code></p>
+<p>Finally, verify the signature:</p>
+<pre><code class="language-bash">sq verify --signer-file release-key.pgp --signature-file archlinux-2025.08.01-x86_64.iso.sig archlinux-2025.08.01-x86_64.iso
+Authenticated signature made by 3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C (Pierre Schmitz &lt;pierre@archlinux.org&gt;)
+
+1 authenticated signature.
+</code></pre>
+<p>This shows that the signature was made by the key with the ID
+<code>3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C</code> (Pierre Schmitz).</p>
+<p>GPG authenticated that the signature is valid and that the key used to sign is
+trusted in our keyring.</p>
+<p>1 authenticated signature confirms the files integrity and authenticity.</p>
+<p>We have successfully verified that the file was signed by Pierr's official Arch
+Linux key and has not been tampered with.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-networking"><a class="header" href="#hardening-networking">Hardening Networking</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
