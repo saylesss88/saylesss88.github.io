@@ -3695,7 +3695,7 @@ hardening.There are recommendations for hardening all kinds of software in the
 <li><a href="nix/gpg-agent.html#remove-and-store-your-primary-key-offline">Remove and Store your Primary Key offline</a></li>
 </ul>
 </li>
-<li><a href="nix/gpg-agent.html#add-your-pgp-key-to-github">Add your PGP Key to GitHub</a>
+<li><a href="nix/gpg-agent.html#add-your-gpg-key-to-github">Add your GPG Key to GitHub</a>
 <ul>
 <li><a href="nix/gpg-agent.html#sign-your-commits-for-git">Sign your Commits for Git</a></li>
 <li><a href="nix/gpg-agent.html#backing-up-your-keys">Backing up Your Keys</a></li>
@@ -3931,8 +3931,9 @@ imports = [
 custom.pgp.enable = true;
 # ... snip ...
 </code></pre>
-<p><code>gpg --full-generate-key</code> can be used to generate a basic keypair, adding
-<code>--expert</code> gives more options and capabilities needed for <code>gpg-agent</code>.</p>
+<p><code>gpg --full-generate-key</code> can be used to generate a basic keypair.</p>
+<p><code>gpg --expert --full-generate-key</code> can be used for keys that require more
+capabilities.</p>
 <blockquote>
 <p>❗ NOTE: We will first generate our GPG primary key that is required to
 atleast have sign capabilities, we will then derive subkeys from said primary
@@ -3972,7 +3973,7 @@ ls -l ~/.gnupg
 </code></pre>
 <h3 id="generate-a-revocation-certificate"><a class="header" href="#generate-a-revocation-certificate">Generate a Revocation Certificate</a></h3>
 <p><code>mykey</code> must be a key specifier, either the keyID of the primary keypair or any
-part of the user ID which identifies the keypair:</p>
+part of the user ID that identifies the keypair:</p>
 <pre><code class="language-bash">gpg --output revoke.asc --gen-revoke mykey
 </code></pre>
 <p>The certificate will be output to a file <code>revoke.asc</code>. If the <code>--output</code> is
@@ -4001,6 +4002,9 @@ it for the command below.</li>
 </code></pre>
 <p>Choose 11 (set your own capabilities) and add A (Authenticate) and type <code>save</code>
 to save and exit. Repeat this again and choose ECC (encrypt only).</p>
+<blockquote>
+<p>❗ <code>gpg --edit-key</code> has many more capabilities, after launching type <code>help</code>.</p>
+</blockquote>
 <p><strong>Add Keygrip of Authenticate Subkey to <code>sshcontrol</code> for gpg-agent</strong></p>
 <pre><code class="language-bash">gpg --list-secret-keys --with-keygrip --keyid-format LONG
 </code></pre>
@@ -4034,7 +4038,7 @@ gpg.settings = {
     trusted-key = "Ox37ACA569C5C44787";
 };
 </code></pre>
-<p>This key should be signed, ensure that it is:</p>
+<p>This key should be signed automatically, ensure that it is:</p>
 <pre><code class="language-bash">gpg --sign-key Ox37ACA569C5C44787
 </code></pre>
 <p>Rebuild, and check that everything is correct with:</p>
@@ -4111,7 +4115,6 @@ used for tasks such as file decryption.</p>
 <p>❗ NOTE: After you remove your primary key, you will no longer be able to
 derive subkeys from it or sign keys unless you re-import it.</p>
 </blockquote>
-<p>Since we added our Subkeys keygrip to our <code>gpg-agent.nix</code> and :</p>
 <pre><code class="language-bash"># extract the primary key
 gpg -a --export-secret-key sayls8@proton.me &gt; secret_key
 # extract the subkeys, which we will reimport later
@@ -4127,6 +4130,8 @@ gpg --list-secret-keys
 # remove the subkeys from disk
 rm secret_subkeys.gpg
 </code></pre>
+<p>I recommend also keeping a <code>.gpg</code> version to make it easy to re-import your
+primary key: <code>gpg --export-secret-keys --armor --output private-key-bak.gpg</code></p>
 <p>Then store <code>secret_key</code> on an encrypted USB drive or somewhere offline. If you
 want to protect it for now, you can just use the encryption subkey that we
 created to encrypt <code>secret_key</code> with a passphrase:</p>
@@ -4146,7 +4151,7 @@ sec#  ed25519/0x
 </code></pre>
 <p>The above set of commands are from the
 <a href="https://riseup.net/ru/security/message-security/openpgp/gpg-best-practices#keep-your-primary-key-entirely-offline">RiseUp Keep your primary key offline</a></p>
-<h2 id="add-your-pgp-key-to-github"><a class="header" href="#add-your-pgp-key-to-github">Add your PGP Key to GitHub</a></h2>
+<h2 id="add-your-gpg-key-to-github"><a class="header" href="#add-your-gpg-key-to-github">Add your GPG Key to GitHub</a></h2>
 <p>Plug your own public key from <code>gpg --list-keys</code> in the following command:</p>
 <pre><code class="language-bash">gpg --armor --export &lt;Public-Key&gt;
 </code></pre>
@@ -4493,6 +4498,9 @@ sub   cv25519/0x7F56ADE50CA3D899 2022-10-31 [E] [expires: 2037-10-27]
 <pre><code class="language-bash">gpg --export --armor 0x76A5EF9054449A5C &gt; archlinux-signed.asc
 gpg --send-keys 0x76A5EF9054449A5C
 </code></pre>
+<p>The more people that verify, sign, and re-export and publish their keys the
+better for the web of trust that gpg uses making the network more secure for
+everyone.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-networking"><a class="header" href="#hardening-networking">Hardening Networking</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
@@ -5434,6 +5442,15 @@ secure and harden DoD information systems and software.</p>
 <p><a href="https://relay.firefox.com/accounts/profile/">Firefox Relay</a> can be used to
 create email aliases that forward to your real email address. The paid plan
 also lets you create phone number aliases that forward to your phone number.</p>
+</li>
+<li>
+<p><a href="https://zebracrossing.narwhalacademy.org/">Zebra Crossing digital safety checklist</a></p>
+</li>
+<li>
+<p><a href="https://datadetoxkit.org/en/privacy/essentials#step-1">DataDetoxKit</a></p>
+</li>
+<li>
+<p><a href="https://datadetoxkit.org/en/privacy/degooglise/">DataDetox Degooglise</a></p>
 </li>
 </ul>
 </details>
