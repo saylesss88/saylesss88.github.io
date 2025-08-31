@@ -3688,9 +3688,9 @@ hardening.There are recommendations for hardening all kinds of software in the
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <ul>
-<li><a href="nix/gpg-agent.html#-tools-of-the-trade">🛠️ Tools of the trade</a></li>
-<li><a href="nix/gpg-agent.html#asymmetric-encryption-public-key-cryptography">Asymmetric Encryption (Public-Key cryptography)</a>
+<li><a href="nix/gpg-agent.html#-key-concepts">🔑 Key Concepts</a>
 <ul>
+<li><a href="nix/gpg-agent.html#asymmetric-encryption-public-key-cryptography">Asymmetric Encryption (Public-Key cryptography)</a></li>
 <li><a href="nix/gpg-agent.html#generate-a-revocation-certificate">Generate a Revocation Certificate</a></li>
 <li><a href="nix/gpg-agent.html#remove-and-store-your-primary-key-offline">Remove and Store your Primary Key offline</a></li>
 </ul>
@@ -3711,7 +3711,8 @@ hardening.There are recommendations for hardening all kinds of software in the
 <li><a href="nix/gpg-agent.html#email-encryption">Email Encryption</a></li>
 <li><a href="nix/gpg-agent.html#make-your-public-key-highly-available">Make your Public Key Highly Available</a>
 <ul>
-<li><a href="nix/gpg-agent.html#bonus-verifying-arch-linux-download">Bonus Verifying Arch Linux Download</a></li>
+<li><a href="nix/gpg-agent.html#example-verifying-arch-linux-download">Example: Verifying Arch Linux Download</a></li>
+<li><a href="nix/gpg-agent.html#edit-your-trust-level-of-the-key">Edit your trust level of the key</a></li>
 </ul>
 </li>
 </ul>
@@ -3721,7 +3722,7 @@ hardening.There are recommendations for hardening all kinds of software in the
 <strong>Never share your private key or passphrase</strong>. Backup your keys and handle
 them with extreme care.</p>
 </blockquote>
-<h2 id="-tools-of-the-trade"><a class="header" href="#-tools-of-the-trade">🛠️ Tools of the trade</a></h2>
+<h2 id="-key-concepts"><a class="header" href="#-key-concepts">🔑 Key Concepts</a></h2>
 <p><strong>GnuPG</strong> is a complete and free implementation of the OpenPGP standard. It
 allows you to encrypt and sign your data and communications, has a versatile key
 management system, and access modules for many kinds of public key directories.
@@ -3741,13 +3742,17 @@ zero or more additional subordinate keypairs.</p>
 <p>Signing public keys with the corresponding private key is called <em>self-signing</em>,
 and a public key that has self-signed user IDs bound to it is called a
 <em>certificate</em>.</p>
+<p><strong>Web of Trust</strong>: Rather than validate every single key individually, you can
+rely on other factors such as if it has been signed by a key that you fully
+trust or if it has been signed by three marginally trusted keys to validate
+keys.</p>
 <p><code>gpg-agent</code> is a daemon to manage secret (private) keys independently from any
-protocol. It is used as a backed for gpg and gpgsm as well as for a couple of
-other utilities. --<a href="https://man.cx/gpg-agent">man gpg-agent</a></p>
+protocol. It is used as a backed for <code>gpg</code> and <code>gpgsm</code> as well as for a couple
+of other utilities. --<a href="https://man.cx/gpg-agent">man gpg-agent</a></p>
 <p>There are numerous front-ends for gpg as well, i.e., GUI apps that simplify many
-of the commands and processes. Two that I touch on in this overview are seahorse
-and kleopatra.</p>
-<h2 id="asymmetric-encryption-public-key-cryptography"><a class="header" href="#asymmetric-encryption-public-key-cryptography">Asymmetric Encryption (Public-Key cryptography)</a></h2>
+of the commands and processes. Two that I touch on in this overview are
+<code>seahorse</code> and <code>kleopatra</code>.</p>
+<h3 id="asymmetric-encryption-public-key-cryptography"><a class="header" href="#asymmetric-encryption-public-key-cryptography">Asymmetric Encryption (Public-Key cryptography)</a></h3>
 <p>E2ee requires that every sender and recipient does a one time preparation, which
 involves the generation of personal random numbers. Two such random numbers are
 necessary, one will be called your secret key and another one will be called
@@ -3774,10 +3779,13 @@ key or the private keys passphrase with anyone else</strong>.</p>
 <ul>
 <li>
 <p>Your private (secret) key, usually in your <code>~/.gnupg/private-keys-v1.d/</code>
-directory. Usually called your <em>keyring</em>.</p>
+directory. Usually called your <em>private keyring</em>. <strong>Your main goal should be
+the protection of your private key</strong>.</p>
 </li>
 <li>
-<p>Your passphrase for your private key.</p>
+<p><strong>Your passphrase for your private key</strong>. Even if someone is able to somehow
+get your private key, they need to break the passphrase to access it
+unencrypted. <strong>Protect this passphrase</strong>!</p>
 </li>
 </ul>
 <p><strong>Best Practices</strong></p>
@@ -3786,15 +3794,15 @@ directory. Usually called your <em>keyring</em>.</p>
 the fingerprint.This is accomplished in the configuration with
 <code>keyid-format = "0xlong";</code>, and <code>with-fingerprint</code>.</p>
 <p>Always sign your public keys before you publish them to prevent man in the
-middle attacks and other modifications. When a subkey or userid is generated it
+middle attacks and other modifications. When a subkey or userID is generated it
 is self-signed automatically, which is why you need to enter your password.</p>
 <p>Don't blindly trust keys from keyservers. You should verify the full key
 fingerprint with the owner over the phone if possible.</p>
-<p>Use a strong primary key, 1024-bit DSA, 1024-bit RSA, and the use of SHA-1 for
-signing are no longer recommended. We use <code>AES256</code> (Advanced Encryption Standard
-256-bit key), and <code>SHA512</code> by default in the following configuration.</p>
+<p>Use a strong primary key, don't use 1024-bit DSA, 1024-bit RSA, or SHA-1 for
+signing they are no longer recommended.</p>
 <p>Choose an expiration date less than 2 years, you can add time if needed.
 Remember this date.</p>
+<p>Rotate your subkeys.</p>
 <p>Keep your primary key offline, this ensures that it can't be stolen by an
 attacker allowing him to create new identities. We accomplish this by creating
 subkeys and only adding the subkeys keygrip and the subkeys <code>default-key</code> to our
@@ -4292,6 +4300,9 @@ ensuring that only the intended recipient can read it. Encrypting your emails
 with PGP provides valuable security benefits but also has inherent limitations
 that prevent it from being considered truly “secure communication” by modern
 standards.</p>
+<ul>
+<li><a href="https://emailselfdefense.fsf.org/en/">Email Self-Defense</a></li>
+</ul>
 <p>What its Good for:</p>
 <ul>
 <li>
@@ -4363,11 +4374,11 @@ to certify it as a valid key.</p>
 <p>To certify the key you need to edit it:</p>
 <pre><code class="language-bash">gpg --edit-key jake@proton.me
 # List the fingerprint
-Command&gt; fpr
+gpg&gt; fpr
 # once the fingerprint is verified with the owner, sign it
-Command&gt; sign
+gpg&gt; sign
 # once signed, you can check the key to list signatures on it
-Command&gt; check
+gpg&gt; check
 </code></pre>
 <blockquote>
 <p>❗ NOTE: You can use PGP to encrypt any message and paste it into <strong>any</strong>
@@ -4399,31 +4410,11 @@ the <code>/</code>.</p>
 servers around the world. This is why expiration dates are important, if your
 key is lost or stolen, the damage window is limited to the expiration period.
 Also remember, you can add more time even after the key has expired.</p>
-<p>There is much more you can do with PGP beyond simple file encryption:</p>
-<ul>
-<li>
-<p>Encrypt for multiple recipients: Share encrypted data with teammates using
-their public keys.</p>
-</li>
-<li>
-<p>Use smartcards or YubiKeys: Store your private key on hardware for extra
-security.</p>
-</li>
-<li>
-<p>Verify software releases: Check that downloaded files are genuine using the
-developer’s signature.</p>
-</li>
-<li>
-<p>Integrate with Git: Sign tags and commits so others can trust your repository
-history.</p>
-</li>
-<li>
-<p>Encrypt Email</p>
-</li>
-</ul>
-<p>This guide only scratches the surface — once your PGP key and <code>gpg-agent</code> are
-set up, these capabilities become easy to add to your workflow.</p>
-<h3 id="bonus-verifying-arch-linux-download"><a class="header" href="#bonus-verifying-arch-linux-download">Bonus Verifying Arch Linux Download</a></h3>
+<h3 id="example-verifying-arch-linux-download"><a class="header" href="#example-verifying-arch-linux-download">Example: Verifying Arch Linux Download</a></h3>
+<details>
+<summary>
+<p>✔️ Click to Expand Example of verifying and signing the archlinux public key</p>
+</summary>
 <p>First, download both the arch <code>.iso</code> and <code>.sig</code> files.</p>
 <p>I tried a few different methods from <a href="https://archlinux.org/download/#checksums">https://archlinux.org/download/#checksums</a>
 and the easiest by far was using Sequoia available in Nixpkgs as
@@ -4501,6 +4492,27 @@ gpg --send-keys 0x76A5EF9054449A5C
 <p>The more people that verify, sign, and re-export and publish their keys the
 better for the web of trust that gpg uses making the network more secure for
 everyone.</p>
+<h3 id="edit-your-trust-level-of-the-key"><a class="header" href="#edit-your-trust-level-of-the-key">Edit your trust level of the key</a></h3>
+<pre><code class="language-bash">gpg --edit-key pierre@archlinux.org
+gpg&gt; trust
+Please decide how far you trust this user to correctly verify other users' keys
+(by looking at passports, checking fingerprints from different sources, etc.)
+
+  1 = I don't know or won't say
+  2 = I do NOT trust
+  3 = I trust marginally
+  4 = I trust fully
+  5 = I trust ultimately
+  m = back to the main menu
+
+Your decision? 3
+# Output:
+pub  ed25519/0x76A5EF9054449A5C
+     created: 2022-10-31  expires: 2037-10-27  usage: SC
+     trust: marginal      validity: full
+</code></pre>
+<p>You can see that the trust is <code>marginal</code> and validity is <code>full</code>.</p>
+</details>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardening-networking"><a class="header" href="#hardening-networking">Hardening Networking</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
@@ -6397,7 +6409,7 @@ snapshot.</p>
 jj git init --help
 jj git push --help
 </code></pre>
-<h2 id="-key-concepts"><a class="header" href="#-key-concepts">🔑 Key Concepts</a></h2>
+<h2 id="-key-concepts-1"><a class="header" href="#-key-concepts-1">🔑 Key Concepts</a></h2>
 <details>
 <summary> ✔️ Click to Expand Key Concepts </summary>
 <ol>
