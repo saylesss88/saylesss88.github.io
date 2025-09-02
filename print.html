@@ -5486,9 +5486,15 @@ trust.</p>
 <ul>
 <li><a href="https://www.whonix.org/wiki/Comparison_with_Others">Whonix Compared to Tails</a></li>
 </ul>
+<h2 id="-key-terms"><a class="header" href="#-key-terms">🔑 Key Terms</a></h2>
 <p>Whonix is an operating system based on Debian base (Kicksecure Hardened) and the
 Tor network, which is designed for maximum anonymity and security. Whonix
 consists of two Debian based VMs, the <code>Whonix-Gateway</code> and <code>Whonix-Workstation</code>.</p>
+<p>In this case NixOS is the <strong>Host Operating System</strong>, NixOS runs the KVM kernel
+module, libvirtd service, and QEMU virtualization service which together enable
+hosting VMs.</p>
+<p><strong>Guests</strong> are the virtualized operating systems running inside the host's
+virtual machines. In this case the Whonix VMs are the <strong>Guest Machines</strong>.</p>
 <p><code>Whonix-Gateway</code> the first of 2 VMs runs Tor processes and forces all traffic
 through the Tor network using iptables.</p>
 <p><code>Whonix-Workstation</code> the second VM, is responsible for running user applications
@@ -5580,7 +5586,20 @@ app from Whonix-Gateway.)</p>
 are forced to go through the Whonix-Gateway where they are torrified and routed
 to the internet.</p>
 <h2 id="whonix-kvm-kernel-virtual-machine-on-nixos"><a class="header" href="#whonix-kvm-kernel-virtual-machine-on-nixos">Whonix KVM (Kernel Virtual Machine) on NixOS</a></h2>
-<p>Install Qemu-KVM:</p>
+<p><strong>KVM</strong> (Kernel-based Virtual Machine) is a Linux kernel module that provides
+hardware-assisted virtualization.</p>
+<p>It allows the Linux kernel to act as a hypervisor, enabling virtual machines
+(VMs) to run with near-native speeds by using CPU virtualization extensions
+(Intel VT-x or AMD-V).</p>
+<p>KVM itself doesn’t handle the entire VM lifecycle; it provides the core
+virtualization infrastructure.</p>
+<p><strong>QEMU</strong> (Quick Emulator) is an open-source user-space program that emulates
+hardware for virtual machines.</p>
+<p>When combined with KVM, QEMU uses hardware acceleration to run VMs much faster
+by offloading CPU virtualization to KVM.</p>
+<p>So, QEMU provides the device emulation and VM management interface, while KVM
+provides the fast virtualization engine within the kernel.</p>
+<p><strong>Install Qemu-KVM</strong>:</p>
 <pre><code class="language-nix">{
   config,
   pkgs,
@@ -5612,6 +5631,9 @@ to the internet.</p>
 }
 </code></pre>
 <hr />
+<p>The <strong>libvirtd</strong> is the primary daemon (service) in the libvirt virtualization
+management system. It runs on your host machine and acts as the core management
+component for virtual machines (VMs).</p>
 <p>Add <code>libvirtd</code> &amp; <code>kvm</code> to your users <code>extraGroups</code>:</p>
 <pre><code class="language-nix">users.users = {
     your-user = {
