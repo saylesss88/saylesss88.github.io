@@ -5469,6 +5469,175 @@ also lets you create phone number aliases that forward to your phone number.</p>
 </li>
 </ul>
 </details>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="whonix-kvm-on-nixos"><a class="header" href="#whonix-kvm-on-nixos">Whonix KVM on NixOS</a></h1>
+<p>Whonix is an operating system based on Debian base (Kicksecure Hardened) and the
+Tor network, which is designed for maximum anonymity and security. Whonix
+consists of two Debian based VMs, the <code>Whonix-Gateway</code> and <code>Whonix-Workstation</code>.</p>
+<p><code>Whonix-Gateway</code> the first of 2 VMs runs Tor processes and forces all traffic
+through the Tor network using iptables.</p>
+<p><code>Whonix-Workstation</code> the second VM, is responsible for running user applications
+such as the Tor Browser. The Whonix-Workstation is isolated from both the
+Whonix-Gateway and the Host OS, if an app misbehaves, it is contained within the
+isolated Whonix-Workstation. It is largely unaware of sensitive info and won't
+leak unless an advanced adversary is able to break out of the VM.</p>
+<p>The primary goal of Whonix is to be safer than Tor alone and that no one can
+find out the user's IP, location, or de-anonymize the user. It offers full
+spectrum anti-tracking protection that is much safer than VPNs. Whonix provides
+this through security by isolation, no app is trusted.</p>
+<p><code>Whonix Concept</code>: Whonix is an Isolating Proxy with an additional Transparent
+Proxy, which can be optionally disabled. --Whonix Docs</p>
+<p>Since Whonix is based on Kicksecure which is based on Debian stable, you can
+typically look up solutions in an Ubuntu forum.</p>
+<h2 id="whonix-gateway"><a class="header" href="#whonix-gateway">Whonix-Gateway</a></h2>
+<p>The whonix-gateway is software designed to run Tor.</p>
+<p>The Gateway acts as a firewall and is what is routing all your traffic through
+Tor.</p>
+<p>You will spend minimal time in the Gateway, it's mainly used for Tor
+configuration which is reserved for advanced users.</p>
+<h3 id="whonix-workstation"><a class="header" href="#whonix-workstation">Whonix-Workstation</a></h3>
+<p>All user applications should only be launched from Whonix-Workstation to ensure
+they utilize the Tor network. (Never launch the Tor browser or any other user
+app from Whonix-Gateway.)</p>
+<p>Leaky applications can't breakout of the Workstation, all network connections
+are forced to go through the Whonix-Gateway where they are torrified and routed
+to the internet.</p>
+<h2 id="whonix-kvm-kernel-virtual-machine-on-nixos"><a class="header" href="#whonix-kvm-kernel-virtual-machine-on-nixos">Whonix KVM (Kernel Virtual Machine) on NixOS</a></h2>
+<p>Install Qemu-KVM:</p>
+<pre><code class="language-nix">{
+  config,
+  pkgs,
+  ...
+}: {
+  ##  QEMU-KVM
+  environment.systemPackages = with pkgs; [
+    qemu
+    # Optional
+    virt-viewer
+  ];
+
+  # Virt-Manager GUI
+  programs.virt-manager.enable = true;
+  virtualisation = {
+    # libvirtd daemon
+    libvirtd = {
+      enable = true;
+      qemu = {
+        # enables a TPM emulator
+        swtpm.enable = true;
+      };
+    };
+    # allow USB device to be forwarded
+    spiceUSBRedirection.enable = true;
+  };
+  # Spice protocol improves VM display and input responsiveness
+  services.spice-vdagentd.enable = true;
+}
+</code></pre>
+<hr />
+<p>Add <code>libvirtd</code> &amp; <code>kvm</code> to your users <code>extraGroups</code>:</p>
+<pre><code class="language-nix">users.users = {
+    your-user = {
+        extraGroups = [
+            "libvirtd"
+            "kvm"
+        ];
+    };
+};
+</code></pre>
+<p>Restart <code>libvirtd</code>:</p>
+<pre><code class="language-bash">sudo systemctl restart libvirtd
+</code></pre>
+<hr />
+<h2 id="network-start"><a class="header" href="#network-start">Network Start</a></h2>
+<p>Ensure KVM's / QEMU's default network is enabled and has started:</p>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-autostart default
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-start default
+</code></pre>
+<hr />
+<h3 id="download-whonix-kvm-stable"><a class="header" href="#download-whonix-kvm-stable">Download Whonix (KVM) (stable)</a></h3>
+<ul>
+<li>
+<p><a href="https://www.whonix.org/download/libvirt/17.4.4.6/Whonix-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz">Whonix (KVM) (stable) Download</a></p>
+</li>
+<li>
+<p>Go to <a href="https://www.whonix.org/wiki/KVM">whoniix.org</a> to verify the signature.</p>
+</li>
+<li>
+<p><a href="https://www.whonix.org/wiki/KVM#Decompress">Decompress the Image</a> and follow
+the rest of the Whonix KVM install instructions from there.</p>
+</li>
+</ul>
+<p>Nixpkgs doesn't have the <code>xz-utils</code> package but it does have the <code>xz</code> package.</p>
+<pre><code class="language-bash">tar -xvf Whonix*.libvirt.xz
+</code></pre>
+<hr />
+<h3 id="import-the-whonix-vm-templates"><a class="header" href="#import-the-whonix-vm-templates">Import the Whonix VM Templates</a></h3>
+<ul>
+<li>Follow steps 1 thru 3 in
+<a href="https://www.whonix.org/wiki/KVM#Importing_Whonix_VM_Templates">Importing Whonix VM Templates</a></li>
+</ul>
+<p>After the above steps, either copy or move the <code>qcow2</code> images to
+<code>/var/lib/libvirt/images</code>:</p>
+<pre><code class="language-bash">sudo mv Whonix-Gateway*.qcow2 /var/lib/libvirt/images/Whonix-Gateway.qcow2
+</code></pre>
+<pre><code class="language-bash">sudo mv Whonix-Workstation*.qcow2 /var/lib/libvirt/images/Whonix-Workstation.qcow2
+</code></pre>
+<h3 id="launch-virt-manager-and-start-the-vms"><a class="header" href="#launch-virt-manager-and-start-the-vms">Launch virt-manager and start the VMs</a></h3>
+<pre><code class="language-bash">virt-manager
+</code></pre>
+<h2 id="start-whonix-gateway"><a class="header" href="#start-whonix-gateway">Start Whonix-Gateway</a></h2>
+<p>Always start the Whonix-Gateway first.</p>
+<p>Click on Whonix-Gateway, press Play, and choose the default Persistent VM.</p>
+<p>To view the gateway press <code>Open</code>.</p>
+<p>You can use the "System Maintenance Panel" to <code>Check for Updates</code> and then
+<code>Install Updates</code>. This can also be used for user and password creation, the
+default user is <code>user</code> with a passwordless login.</p>
+<p>Change the password manually:</p>
+<pre><code class="language-bash">sudo passwd
+changeme
+</code></pre>
+<ul>
+<li><a href="https://www.whonix.org/wiki/Common_CLI_Commands">Whonix Common CLI Commands</a></li>
+</ul>
+<h2 id="whonix-workstation-1"><a class="header" href="#whonix-workstation-1">Whonix-Workstation</a></h2>
+<p>Whonix-Workstation is another VM, designed to provide users with a secure and
+anonymous environment for running applications and performing online tasks.</p>
+<p>When you first launch <code>Whonix-Workstation</code>, choose the second option down or
+reboot, then choose "Persistent Mode Sysmaint Session".</p>
+<p>With the workstation, a security feature disables sudo for the default user.
+Instead of the <code>user</code> account, a separate <code>sysmaint</code> (system maintenance)
+account is used for administrative tasks that require root privileges, such as
+updates and package installations.</p>
+<p>Once Workstation is running and both VMs are updated and upgraded, check that
+your IP address is a Tor IP:</p>
+<pre><code class="language-bash">curl ip.me
+</code></pre>
+<p>Start Tor and check what you are fingerprinted as by typing <code>deviceinfo.me</code> into
+the URL.</p>
+<h4 id="launching-tor"><a class="header" href="#launching-tor">Launching Tor</a></h4>
+<p>Click the Xfce logo and choose Tor Browser. On the first launch, you will need
+to update Tor by clicking in the top right corner.</p>
+<p>Or you can open the terminal and type:</p>
+<pre><code class="language-bash">update-torbrowser
+</code></pre>
+<p>Make sure you don't forget to go to the Settings, Privacy and Security, and set
+the <code>Security Level</code> to <code>Safest</code> to disable JavaScript and more before exploring
+the dark web.</p>
+<p>If you need a place to start, check out <code>tor.taxi</code> by plugging that into the
+URL.</p>
+<h3 id="resources-4"><a class="header" href="#resources-4">Resources</a></h3>
+<ul>
+<li>
+<p><a href="https://www.whonix.org/wiki/Documentation">Whonix Docs</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Computer_Security_Introduction">Kicksecure Computer Security Intro</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Computer_Security_Introduction#Advanced_Security_Guide">Kicksecure Advanced Security Guide</a></p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-control-with-git"><a class="header" href="#version-control-with-git">Version Control with Git</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
@@ -6323,7 +6492,7 @@ equivalent.</p>
     # ... snip ...
 </code></pre>
 <p>You can enable git, and set your git username as well as git email right here.</p>
-<h3 id="resources-4"><a class="header" href="#resources-4">Resources</a></h3>
+<h3 id="resources-5"><a class="header" href="#resources-5">Resources</a></h3>
 <ul>
 <li>
 <p><a href="https://gist.github.com/luismts/495d982e8c5b1a0ced4a57cf3d93cf60">GitCommitBestPractices</a></p>
@@ -7334,7 +7503,7 @@ reason about. Its workflows, operation log, and conflict handling provide a
 safer and more flexible environment for managing code changes, making it a
 compelling alternative for both new and experienced developers.</p>
 <hr />
-<h3 id="resources-5"><a class="header" href="#resources-5">Resources</a></h3>
+<h3 id="resources-6"><a class="header" href="#resources-6">Resources</a></h3>
 <ul>
 <li>
 <p><a href="https://steveklabnik.github.io/jujutsu-tutorial/">steves_jj_tutorial</a></p>
@@ -10793,7 +10962,7 @@ In the next chapter,
 <a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
 We will learn about NixOS Modules which are themselves functions most of the
 time.</p>
-<h4 id="resources-6"><a class="header" href="#resources-6">Resources</a></h4>
+<h4 id="resources-7"><a class="header" href="#resources-7">Resources</a></h4>
 <details>
 <summary> ✔️ Resources (Click to Expand) </summary>
 <ul>
@@ -15749,7 +15918,7 @@ we will delve deeper into the structure and components of these derivations. We
 will explore the attributes that define a build process, how dependencies are
 managed within a derivation, and how Nix ensures the reproducibility and
 isolation of your software builds through this fundamental concept.</p>
-<h2 id="resources-7"><a class="header" href="#resources-7">Resources</a></h2>
+<h2 id="resources-8"><a class="header" href="#resources-8">Resources</a></h2>
 <ul>
 <li><a href="https://nix.dev/tutorials/packaging-existing-software.html">Packaging Existing Software</a></li>
 </ul>
@@ -19932,7 +20101,7 @@ valuable resources to explore, from official documentation to community-driven
 configurations.</p>
 </li>
 </ul>
-<h4 id="resources-8"><a class="header" href="#resources-8">Resources</a></h4>
+<h4 id="resources-9"><a class="header" href="#resources-9">Resources</a></h4>
 <details>
 <summary> ✔️ Click to Expand Resources </summary>
 <ul>
