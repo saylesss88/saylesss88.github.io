@@ -5488,6 +5488,50 @@ this through security by isolation, no app is trusted.</p>
 Proxy, which can be optionally disabled. --Whonix Docs</p>
 <p>Since Whonix is based on Kicksecure which is based on Debian stable, you can
 typically look up solutions in an Ubuntu forum.</p>
+<ul>
+<li>The Whonix Team recommends KVM over VirtualBox for a number of
+reasons:<a href="https://www.whonix.org/wiki/KVM#Why_Use_KVM_Over_VirtualBox?">Why choose KVM over VirtualBox</a></li>
+</ul>
+<p>If you really want to use VirtualBox, I got it working off of this config:</p>
+<details>
+<summary> ✔️ Click to Expand VirtualBox Example </summary>
+<p>Change <code>your-user</code> to your username</p>
+<pre><code class="language-nix"># vbox.nix
+{
+  config,
+  lib,
+  ...
+}: let
+  cfg = config.custom.virtualbox;
+in {
+  options.custom.virtualbox = {
+    enable = lib.mkEnableOption "Enable VirtualBox";
+  };
+
+  config = lib.mkIf cfg.enable {
+    virtualisation.virtualbox.host = {
+      enable = false;
+      # enableExtensionPack = true;
+    };
+
+    user.user.your-user.extraGroups = ["vboxusers"];
+
+    boot.kernelModules =
+      if config.hardware.cpu.amd.updateMicrocode
+      then ["kvm-amd"]
+      else ["kvm-intel"];
+  };
+}
+</code></pre>
+<p>Enable it with <code>custom.virtualbox.enable = true;</code>.</p>
+<ul>
+<li><a href="https://www.whonix.org/wiki/VirtualBox">Whonix VBox Download</a></li>
+</ul>
+<p>After rebuilding with virtualbox enabled and downloading the virtualbox whonix,
+open VirtualBox and import the Whonix file.</p>
+<p>There is an opposite viewpoint,
+<a href="https://www.whonix.org/wiki/Dev/VirtualBox#Why_use_VirtualBox_over_KVM?">Why choose VirtualBox over KVM</a></p>
+</details>
 <h2 id="whonix-gateway"><a class="header" href="#whonix-gateway">Whonix-Gateway</a></h2>
 <p>The whonix-gateway is software designed to run Tor.</p>
 <p>The Gateway acts as a firewall and is what is routing all your traffic through
