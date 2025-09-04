@@ -5763,15 +5763,46 @@ Whonix.</p>
 </code></pre>
 <hr />
 <h3 id="import-the-whonix-vm-templates"><a class="header" href="#import-the-whonix-vm-templates">Import the Whonix VM Templates</a></h3>
-<ul>
-<li>Follow steps 1 thru 3 in
-<a href="https://www.whonix.org/wiki/KVM#Importing_Whonix_VM_Templates">Importing Whonix VM Templates</a></li>
-</ul>
+<p>The following commands come directly from the
+<a href="https://www.whonix.org/wiki/KVM#Importing_Whonix_VM_Templates">Whonix KVM Docs Importing Whonix VM Templates</a></p>
+<ol>
+<li>Add the virtual networks. This step only needs to be done once and not with
+every upgrade.</li>
+</ol>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-define Whonix_external*.xml
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-define Whonix_internal*.xml
+</code></pre>
+<ol start="2">
+<li>Activate the virtual networks:</li>
+</ol>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-autostart Whonix-External
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-start Whonix-External
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-autostart Whonix-Internal
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-start Whonix-Internal
+</code></pre>
+<ol start="3">
+<li>Import the Whonix Gateway and Workstation images:</li>
+</ol>
+<pre><code class="language-bash">sudo virsh -c qemu:///system define Whonix-Gateway*.xml
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system define Whonix-Workstation*.xml
+</code></pre>
 <p>After the above steps, either copy or move the <code>qcow2</code> images to
 <code>/var/lib/libvirt/images</code>:</p>
+<pre><code class="language-bash">sudo mkdir -p /var/lib/libvirt/images
+</code></pre>
 <pre><code class="language-bash">sudo mv Whonix-Gateway*.qcow2 /var/lib/libvirt/images/Whonix-Gateway.qcow2
 </code></pre>
 <pre><code class="language-bash">sudo mv Whonix-Workstation*.qcow2 /var/lib/libvirt/images/Whonix-Workstation.qcow2
+</code></pre>
+<h3 id="cleanup"><a class="header" href="#cleanup">Cleanup</a></h3>
+<pre><code class="language-bash">safe-rm Whonix*
+</code></pre>
+<pre><code class="language-bash">safe-rm -r WHONIX*
 </code></pre>
 <h3 id="launch-virt-manager-and-start-the-vms"><a class="header" href="#launch-virt-manager-and-start-the-vms">Launch virt-manager and start the VMs</a></h3>
 <pre><code class="language-bash">virt-manager
