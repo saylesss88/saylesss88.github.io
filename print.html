@@ -3985,13 +3985,29 @@ ls -l ~/.gnupg
 <h3 id="generate-a-revocation-certificate"><a class="header" href="#generate-a-revocation-certificate">Generate a Revocation Certificate</a></h3>
 <p><code>mykey</code> must be a key specifier, either the keyID of the primary keypair or any
 part of the user ID that identifies the keypair:</p>
-<pre><code class="language-bash">gpg --output revoke.asc --gen-revoke mykey
+<p>Replace <code>mykeyID</code> with the keyID of your primary key and store the cert in a
+safe place:</p>
+<pre><code class="language-bash">gpg --output revoke.asc --gen-revoke mykeyID
+Create a revocation certificate for this key? (y/N)
+Please select the reason for the revocation:
+  0 = No reason specified
+  1 = Key has been compromised
+  2 = Key is superseded
+  3 = Key is no longer used
+  Q = Cancel
+(Probably you want to select 1 here)
+Your decision?
 </code></pre>
 <p>The certificate will be output to a file <code>revoke.asc</code>. If the <code>--output</code> is
 ommitted, the result will be placed on stdout.</p>
 <p>Since it's a short certificate, you can print a hardcopy and store it somewhere
 safe. The cert shouldn't be somewhere that others can access it since anyone
 could publish the revoke cert and render the corresponding public key useless.</p>
+<p>To apply the revoke cert, import it:</p>
+<pre><code class="language-bash">gpg --import revoke.asc
+# And optionally push the revoked key to public keyservers to notify others:
+gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEYID
+</code></pre>
 <hr />
 <p>After fixing, run <code>gpg --list-keys --with-fingerprint</code>, which lists your public
 keys:</p>
@@ -4708,9 +4724,12 @@ anonymity when browsing, communicating, or using online services.</p>
 <p>Adding browser plugins to Tor can de-anonymize you, don't do it. Tor is already
 built with the necessary plugins and privacy protecting rules, so adding more is
 unnecessary and actually dangerous for your anonymity.</p>
-<p>You can visit both the regular web and <code>.onion</code> sites on Tor. Only the hidden
-<code>.onion</code> and <code>HTTPS</code> sites are end-to-end encrypted making https essential.
-Bridges are only necessary in countries that don't allow people to use Tor.
+<p>You can visit both the clear web and <code>.onion</code> sites on Tor. Whenever possible
+you should utilize Onion Services (<code>.onion</code> addresses) so communications and web
+browsing stay within the Tor network. <code>.onion</code> URLS form a tunnel that is
+end-to-end encrypted using a random rendezvous point and incorporate
+<a href="https://en.wikipedia.org/wiki/Forward_secrecy">perfect forward secrecy (PFS)</a>.</p>
+<p>Bridges are only necessary in countries that don't allow people to use Tor.
 Using Bridges when they aren't needed takes resources away from people in
 oppressive regimes that need, only use them if necessary. Read the guides, and
 use Tails OS when it really matters.</p>
@@ -4987,9 +5006,9 @@ the US gov has admitted to killing people based solely on their metadata.</p>
 <p>Your ISP almost certainly does sketchy stuff with your data, personally I would
 rather trust a company like Mullvad whose whole reputation is based on their
 trustworthiness, transparency, and data protection.</p>
-<p>You can use a VPN with Tor, but it's not recommended unless you're an advanced
-user who knows how to configure both in a way that doesn't compromise your
-privacy.</p>
+<p>You can use a VPN with Tor, but it's not recommended by the Tor Project unless
+you're an advanced user who knows how to configure both in a way that doesn't
+compromise your privacy.</p>
 <p><strong>Popular VPNs on NixOS</strong></p>
 <ul>
 <li>

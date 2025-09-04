@@ -468,13 +468,29 @@ ls -l ~/.gnupg
 <h3 id="generate-a-revocation-certificate"><a class="header" href="#generate-a-revocation-certificate">Generate a Revocation Certificate</a></h3>
 <p><code>mykey</code> must be a key specifier, either the keyID of the primary keypair or any
 part of the user ID that identifies the keypair:</p>
-<pre><code class="language-bash">gpg --output revoke.asc --gen-revoke mykey
+<p>Replace <code>mykeyID</code> with the keyID of your primary key and store the cert in a
+safe place:</p>
+<pre><code class="language-bash">gpg --output revoke.asc --gen-revoke mykeyID
+Create a revocation certificate for this key? (y/N)
+Please select the reason for the revocation:
+  0 = No reason specified
+  1 = Key has been compromised
+  2 = Key is superseded
+  3 = Key is no longer used
+  Q = Cancel
+(Probably you want to select 1 here)
+Your decision?
 </code></pre>
 <p>The certificate will be output to a file <code>revoke.asc</code>. If the <code>--output</code> is
 ommitted, the result will be placed on stdout.</p>
 <p>Since it's a short certificate, you can print a hardcopy and store it somewhere
 safe. The cert shouldn't be somewhere that others can access it since anyone
 could publish the revoke cert and render the corresponding public key useless.</p>
+<p>To apply the revoke cert, import it:</p>
+<pre><code class="language-bash">gpg --import revoke.asc
+# And optionally push the revoked key to public keyservers to notify others:
+gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEYID
+</code></pre>
 <hr />
 <p>After fixing, run <code>gpg --list-keys --with-fingerprint</code>, which lists your public
 keys:</p>
