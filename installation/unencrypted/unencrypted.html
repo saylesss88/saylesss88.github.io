@@ -555,16 +555,23 @@ don't set your hostname it will be <code>nixos</code>.</p>
 <p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
 </li>
 <li>
-<p><code>initialHashedPassword</code>: Run <code>mkpasswd -m SHA-512 -s</code>, then enter your desired
-password. Example output,</p>
+<p><code>initialHashedPassword</code>: Run <code>mkpasswd --method=yescrypt</code>, then enter your
+desired password. Example output,</p>
 </li>
 </ul>
-<pre><code class="language-bash">Password: your_secret_password
-Retype password: your_secret_password
-$6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
+<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 </code></pre>
-<p>copy the hashed password and use it for the value of your
-<code>initialHashedPassword</code></p>
+<ul>
+<li>You can check the quality with <code>pwscore</code>:</li>
+</ul>
+<pre><code class="language-bash">nix-shell -p libpwquality
+
+pwscore
+very-secure-password
+100
+</code></pre>
+<p>read the hashed password into the file with <code>:r /tmp/pass.txt</code> and move it into
+place.</p>
 <pre><code class="language-nix"># configuration.nix
 {
   config,
@@ -607,6 +614,10 @@ $6$random_salt$your_hashed_password_string_here_this_is_very_long_and_complex
 
   system.stateVersion = "25.05";
 }
+</code></pre>
+<p>Shred <code>pass.txt</code>:</p>
+<pre><code class="language-bash">shred /tmp/pass.txt
+rm /tmp/pass.txt
 </code></pre>
 <ol start="10">
 <li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
