@@ -4706,6 +4706,7 @@ pub  ed25519/0x76A5EF9054449A5C
 </ul>
 </li>
 <li><a href="nix/hardening_networking.html#encrypted-dns">Encrypted DNS</a></li>
+<li><a href="nix/hardening_networking.html#mac-randomization">MAC Randomization</a></li>
 <li><a href="nix/hardening_networking.html#firewalls">Firewalls</a></li>
 <li><a href="nix/hardening_networking.html#nixos-firewall-vs-nftables-ruleset">NixOS Firewall vs <code>nftables</code> Ruleset</a></li>
 <li><a href="nix/hardening_networking.html#testing">Testing</a></li>
@@ -5424,6 +5425,27 @@ sudo journalctl -u dnscrypt-proxy2
 from connecting to unwanted or harmful domains.</p>
 <p><code>dnscrypt-proxy2</code> then encrypts and forwards our DNS requests to third-party
 public DNSCrypt or DoH servers.</p>
+<h2 id="mac-randomization"><a class="header" href="#mac-randomization">MAC Randomization</a></h2>
+<p>Android and iPhone already implement MAC Randomization by default.</p>
+<p>MAC Randomization enhances privacy by making it harder for third parties to
+track users across different networks.</p>
+<p>Randomizing MAC adresses obscures a device's unique hardware identity when
+scanning for or connecting to Wi-Fi, blocking passive tracking as well as
+location tracking across networks.</p>
+<p>If you use NetworkManager you can set MAC randomization with:</p>
+<pre><code class="language-nix">    networking = {
+      networkmanager = {
+        enable = true;
+        wifi.scanRandMacAddress = true;
+        wifi.macAddress = "random";
+        plugins = [];
+      };
+</code></pre>
+<p>Right when I rebuilt, I got an alert from my router saying that a new device
+just connected to the network.</p>
+<p>There is also a utility for viewing/manipulating the MAC adress of network
+interfaces, <code>pkgs.macchanger</code>. This is less reliable than the NetworkManager
+setting.</p>
 <h2 id="firewalls"><a class="header" href="#firewalls">Firewalls</a></h2>
 <p>NixOS includes an integrated firewall based on iptables/nftables.</p>
 <details>
