@@ -5087,11 +5087,75 @@ custom.librewolf.enable = true;
 turn off "Allow Mozilla accounts to send technical and interaction data to
 Mozilla". Also set 2-fa in
 <a href="https://accounts.firefox.com/settings#security">Security Settings</a></p>
-<p>I always set <code>Max Protection</code> for DNS over HTTPS and personally choose
-<code>Mullvad (No Filtering)</code></p>
+<p>I always set <code>Max Protection</code> for DNS over HTTPS and personally set a custom
+resolver to <code>https://dns.quad9.net/dns-query</code></p>
 <ul>
 <li><a href="https://mullvad.net/en/help/no-logging-data-policy">Mullvad no-logging-data-policy</a></li>
 </ul>
+<details>
+<summary> ✔️ Alternative LibreWolf Configuration utilizing Arkenfox </summary>
+<pre><code class="language-nix">{
+  pkgs,
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.librewolf;
+in {
+  options.custom.librewolf = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable the LibreWolf Module";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    programs.librewolf = {
+      enable = true;
+      policies = {
+        DontCheckDefaultBrowser = true;
+        DisablePocket = true;
+        DisableAppUpdate = true;
+      };
+      profiles.default = {
+        isDefault = true;
+        name = "Default Profile";
+        extraConfig = ''
+          ${builtins.readFile ./user.js}
+        '';
+
+        settings = {
+          # Use dnscrypt
+          # "network.trr.mode" = 2;
+          # "network.trr.uri" = "https://127.0.0.1:3000/dns-query";
+
+          "general.autoScroll" = true;
+          "sidebar.verticalTabs" = true;
+        };
+      };
+    };
+    xdg.desktopEntries.librewolf = {
+      name = "LibreWolf";
+      exec = "${pkgs.librewolf}/bin/librewolf";
+    };
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "text/html" = "librewolf.desktop";
+        "x-scheme-handler/http" = "librewolf.desktop";
+        "x-scheme-handler/https" = "librewolf.desktop";
+        "x-scheme-handler/about" = "librewolf.desktop";
+        "x-scheme-handler/unknown" = "librewolf.desktop";
+      };
+    };
+  };
+}
+</code></pre>
+<p>In the Firefox section I better explain how to set up the <code>user.js</code> required for
+Arkenfox. I have been able to use the same <code>profiles.default</code> for both LibreWolf
+and Firefox.</p>
+</details>
 <p>Firefox Relay is a pretty cool privacy tool too, it gives you temporary email
 and phone number aliases so you don't have to give out your real ones. There is
 an autofill option available also, but you can just click on the Relay button
