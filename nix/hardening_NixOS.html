@@ -824,10 +824,10 @@ harden settings for systemd services.</p>
 <h2 id="lynis-and-other-tools"><a class="header" href="#lynis-and-other-tools">Lynis and other tools</a></h2>
 <p>Lynis is a security auditing tool for systems based on UNIX like Linux, macOS,
 BSD, and others.--<a href="https://github.com/CISOfy/lynis">lynis repo</a></p>
+<p><code>chkrootkit</code> was removed as it is unmaintained and archived upstream.</p>
 <p>Installation:</p>
 <pre><code class="language-nix">environment.systemPackages = [
 pkgs.lynis
-pkgs.chkrootkit
 pkgs.clamav
 pkgs.aide
  ];
@@ -1046,25 +1046,18 @@ a system with more than average safety measures implemented.</p>
 <p>If you use <code>clamscan</code>, create the following log file:</p>
 <pre><code class="language-bash">sudo touch /var/log/clamscan.log
 </code></pre>
-<p>Example cron job for <code>chkrootkit</code> &amp; <code>clamav</code>:</p>
+<p>Example cron job for <code>clamav</code> &amp; <code>aide</code>:</p>
 <pre><code class="language-nix">{pkgs, ...}: {
   services.cron = {
     enable = true;
     # messages.enable = true;
     systemCronJobs = [
-      # Every Sunday at 2:10 AM, run chkrootkit as root, log output for review
-      "10 2 * * 0 root ${pkgs.chkrootkit}/bin/chkrootkit | logger -t chkrootkit"
       # Every day at 2:00 AM, run clamscan as root and append output to a log file
       "0 2 * * * root ${pkgs.clamav}/bin/clamscan -r /home &gt;&gt; /var/log/clamscan.log"
       "0 11 * * * ${pkgs.aide}/bin/aide --check --config /var/lib/aide/aide.conf"
     ];
   };
 }
-</code></pre>
-<p>The above cron job will use <code>chkrootkit</code> to automatically scan for known rootkit
-signatures. It can detect hidden processes and network connections. To run
-manually:</p>
-<pre><code class="language-bash">sudo chkrootkit
 </code></pre>
 <p>ClamAV usage:</p>
 <p>You can run <code>clamav</code> manually with:</p>

@@ -189,6 +189,8 @@
 </li>
 <li><a href="#librewolf">LibreWolf</a>
 <ul>
+<li><a href="#firefox">Firefox</a></li>
+<li><a href="#arkenfox">Arkenfox</a></li>
 <li><a href="#fingerprint-testing">Fingerprint Testing</a></li>
 <li><a href="#virtual-private-networks-vpns">Virtual Private Networks (VPNs)</a></li>
 <li><a href="#setting-up-tailscale">Setting up Tailscale</a></li>
@@ -359,9 +361,6 @@ expression.--<a href="https://theintercept.com/2016/04/28/new-study-shows-mass-s
 to the internet, and so security, privacy, and anti-tracking features of
 browsers are now as important, or even more important than platform-level
 protections.</p>
-<blockquote>
-<p>❗</p>
-</blockquote>
 <h4 id="tor-browser"><a class="header" href="#tor-browser">Tor Browser</a></h4>
 <blockquote>
 <p>❗ NOTE: Tor is <strong>not</strong> the most secure browser, anonymity and security can
@@ -468,7 +467,7 @@ as:</p>
 results from various search services, such as Google, DuckDuckGo, etc without
 tracking you or profiling your searches. You can add SearXNG to firefox by going
 to <code>about:preferences#search</code> and at the bottom click <code>Add</code>, URL will be
-<code>searx.be/search?q=%s</code>.</p>
+<code>https://searx.be/search?q=%s</code>.</p>
 <p>Searx is a bit different, you can choose which search engine you want for your
 current search with <code>!ddg search term</code> to use duckduckgo for example.</p>
 <p>Example LibreWolf config implementing many of the STIG recommendations:</p>
@@ -589,6 +588,92 @@ and phone number aliases so you don't have to give out your real ones. There is
 an autofill option available also, but you can just click on the Relay button
 and generate a new alias and use it like your normal email.</p>
 </details>
+<h3 id="firefox"><a class="header" href="#firefox">Firefox</a></h3>
+<p>Firefox's defaults are not as privacy respecting as LibreWolf's but can be
+manually configured to be fairly private and secure.</p>
+<ul>
+<li>
+<p>Switch to a privacy respecting search engine such as duckduckgo.</p>
+</li>
+<li>
+<p>Add some privacy respecting search engines in <code>about:preferences#search</code> at
+the bottom of the screen click <code>Add</code>. A few good ones are <code>searx</code> and
+<code>startpage</code>:</p>
+<ul>
+<li>
+<p>Search engine name: <code>SearXNG</code>, URL: <code>https://searx.be/search?q=%s</code></p>
+</li>
+<li>
+<p>Search engine name: <code>StartPage</code>, URL:
+<code>https://www.startpage.com/do/search?q=%s</code></p>
+</li>
+</ul>
+</li>
+<li>
+<p>Disable search suggestions</p>
+</li>
+<li>
+<p>In <code>about:preferences#search</code>, disable Address Bar suggestions. Disabls Search
+Suggestions.</p>
+</li>
+<li>
+<p>Disable all Firefox Data Collection. Disabls Search Suggestions.</p>
+</li>
+<li>
+<p>Disable all Firefox Data Collection</p>
+</li>
+<li>
+<p>Ensure that HTTPS-Only Mode is set in all windows</p>
+</li>
+<li>
+<p>Avoid untrusted extensions!</p>
+</li>
+<li>
+<p><code>about:config</code> set <code>fission.autostart</code> to true.</p>
+</li>
+</ul>
+<h3 id="arkenfox"><a class="header" href="#arkenfox">Arkenfox</a></h3>
+<p>If you want to use this, it requires adding <code>firefox-addons</code> to your <code>flake.nix</code></p>
+<pre><code class="language-nix"># firefox.nix
+{
+  config,
+  inputs,
+  pkgs,
+  ...
+}: let
+  # Extract the firefoxAddons package set from the flake input for your system
+  firefoxAddons = inputs.firefox-addons.packages."x86_64-linux";
+in {
+  programs.firefox = {
+    enable = true;
+
+    profiles.default = {
+      isDefault = true;
+      name = "Default Profile";
+      extraConfig = ''
+        ${builtins.readFile ./user.js}
+      '';
+      # Example, override Arkenfox Settings
+      settings = {
+        # Example, this is already set
+        "privacy.resistFingerprinting" = true;
+      };
+      extensions.packages = with firefoxAddons; [ublock-origin];
+    };
+  };
+}
+</code></pre>
+<p>Download the
+<a href="https://github.com/arkenfox/user.js/blob/master/user.js">Arkenfox user.js</a> and
+review it making sure that you agree with the settings. If you do, place it in
+the same directory as your <code>firefox.nix</code>.</p>
+<p>Rebuild, launch Firefox, and check your <code>~/.mozilla/firefox/default/user.js</code>. It
+should match the Arkenfox settings. The <code>prefs.js</code> should also match.</p>
+<p>In Firefox type <code>Ctrl + Shift + J</code> and look for any errors. I had to create a
+<code>mkdir -p ~/.mozilla/firefox/default/thumbnails</code> to remove a warning.</p>
+<p>Type <code>about:config</code> into the address bar and search a few of the settings that
+Arkenfox changes, do they match?</p>
+<p>Read the <a href="https://github.com/arkenfox/user.js/wiki">Arkenfox Wiki</a></p>
 <h3 id="fingerprint-testing"><a class="header" href="#fingerprint-testing">Fingerprint Testing</a></h3>
 <p>You can test your browser to see how well you are protected from tracking and
 fingerprinting at <a href="https://coveryourtracks.eff.org/">Cover Your Tracks</a>.</p>
@@ -909,7 +994,10 @@ sudo journalctl -u dnscrypt-proxy2
 <p><code>dnscrypt-proxy2</code> acts as your local DNS resolver listening on your machine
 (<code>127.0.0.1</code>) for IPv4 and <code>::1</code> for iPv6.</p>
 <p>The system's DNS settings (<code>networking.nameservers</code>) point to localhost, so
-<strong>all DNS queries from the computer</strong> go to dnscrypt-proxy.</p>
+<strong>all DNS queries</strong> go to dnscrypt-proxy accept for your browser. Your browser
+has to be configured separately with a local resolver in which I haven't figured
+out yet. I recommend setting your browsers DNS over HTTPS to strict with a
+respected custom DNS resolver such as <code>https://dns.quad9.net/dns-query</code>.</p>
 <p><code>inputs.oisd</code> refers to the flake input oisd blocklist, it prevents your device
 from connecting to unwanted or harmful domains.</p>
 <p><code>dnscrypt-proxy2</code> then encrypts and forwards our DNS requests to third-party
