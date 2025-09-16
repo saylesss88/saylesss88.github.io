@@ -4698,7 +4698,6 @@ pub  ed25519/0x76A5EF9054449A5C
 </li>
 <li><a href="nix/hardening_networking.html#librewolf">LibreWolf</a>
 <ul>
-<li><a href="nix/hardening_networking.html#firefox">Firefox</a></li>
 <li><a href="nix/hardening_networking.html#fingerprint-testing">Fingerprint Testing</a></li>
 <li><a href="nix/hardening_networking.html#virtual-private-networks-vpns">Virtual Private Networks (VPNs)</a></li>
 <li><a href="nix/hardening_networking.html#setting-up-tailscale">Setting up Tailscale</a></li>
@@ -5089,57 +5088,98 @@ Mozilla". Also set 2-fa in
 <p>I always set <code>Max Protection</code> for DNS over HTTPS and personally set a custom
 resolver to <code>https://dns.quad9.net/dns-query</code></p>
 <ul>
-<li><a href="https://mullvad.net/en/help/no-logging-data-policy">Mullvad no-logging-data-policy</a></li>
+<li>Mullvad is also a good option:
+<a href="https://mullvad.net/en/help/no-logging-data-policy">Mullvad no-logging-data-policy</a></li>
 </ul>
 <p>Firefox Relay is a pretty cool privacy tool too, it gives you temporary email
 and phone number aliases so you don't have to give out your real ones. There is
 an autofill option available also, but you can just click on the Relay button
 and generate a new alias and use it like your normal email.</p>
+<details>
+<summary> ✔️ Alternative LibreWolf Configuration utilizing Arkenfox </summary>
+<pre><code class="language-nix">{
+  pkgs,
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.librewolf;
+in {
+  options.custom.librewolf = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable the LibreWolf Module";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    programs.librewolf = {
+      enable = true;
+      policies = {
+        DontCheckDefaultBrowser = true;
+        DisablePocket = true;
+        DisableAppUpdate = true;
+      };
+      profiles.my-default = {
+        isDefault = true;
+        name = "Default Profile";
+        extraConfig = ''
+          ${builtins.readFile ./user.js}
+          "general.autoScroll" = true;
+          "sidebar.verticalTabs" = true;
+        '';
+
+        settings = {
+        };
+      };
+    };
+    xdg.desktopEntries.librewolf = {
+      name = "LibreWolf";
+      exec = "${pkgs.librewolf}/bin/librewolf";
+    };
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "text/html" = "librewolf.desktop";
+        "x-scheme-handler/http" = "librewolf.desktop";
+        "x-scheme-handler/https" = "librewolf.desktop";
+        "x-scheme-handler/about" = "librewolf.desktop";
+        "x-scheme-handler/unknown" = "librewolf.desktop";
+      };
+    };
+  };
+}
+</code></pre>
+<p>Download the
+<a href="https://github.com/arkenfox/user.js/blob/master/user.js">Arkenfox user.js</a> and
+review it making sure that you agree with the settings. If you do, place it in
+the same directory as your <code>librewolf.nix</code>.</p>
+<p>Read the <a href="https://github.com/arkenfox/user.js/wiki">Arkenfox Wiki</a></p>
+<p>The <code>user.js</code> is full of comments and information, read it and adjust it for
+your needs. The following enables RFP fingerprint protection:</p>
+<pre><code class="language-js">***/ user.js ***/
+user_pref("privacy.resistFingerprinting", true); // [FF41+]
+user_pref("privacy.resistFingerprinting.pbmode", true); // [FF114+]
+</code></pre>
+<p>As you learn more, you can get more strict if you so choose.</p>
+<p>Rebuild, launch LibreWolf, and check your <code>~/.librewolf/my-default/user.js</code>. It
+should match the Arkenfox settings. Initially, only the <code>user.js</code> will be
+listed, as you run LibreWolf other profile files and folders are created
+dynamically.</p>
+<p>In LibreWolf type <code>Ctrl + Shift + J</code> and look for any errors.</p>
+<p>Type <code>about:config</code> into the address bar and search a few of the settings that
+Arkenfox changes, do they match?</p>
+<p>The <code>user.js</code> is read <strong>in order</strong>, if there are 2 of the same setting, the last
+one will be applied. Adding overrides to the settings attribute above places the
+changes at the <strong>beginning</strong> of the <code>user.js</code> which isn't what we want. Placing
+them after the <code>${builtins.readFile ./user.js}</code> in <code>extraConfig</code> amends them to
+the <strong>end</strong> of the <code>user.js</code> allowing us to override the defaults.</p>
+<p>The process is the same with Firefox but since Arkenfox strongly recommends
+Ublock Origin and it is built into LibreWolf it makes sense to use the browser
+with the stronger defaults.</p>
 </details>
-<h3 id="firefox"><a class="header" href="#firefox">Firefox</a></h3>
-<p>Firefox's defaults are not as privacy respecting as LibreWolf's but can be
-manually configured to be fairly private and secure.</p>
-<ul>
-<li>
-<p>Switch to a privacy respecting search engine such as duckduckgo.</p>
-</li>
-<li>
-<p>Add some privacy respecting search engines in <code>about:preferences#search</code> at
-the bottom of the screen click <code>Add</code>. A few good ones are <code>searx</code> and
-<code>startpage</code>:</p>
-<ul>
-<li>
-<p>Search engine name: <code>SearXNG</code>, URL: <code>https://searx.be/search?q=%s</code></p>
-</li>
-<li>
-<p>Search engine name: <code>StartPage</code>, URL:
-<code>https://www.startpage.com/do/search?q=%s</code></p>
-</li>
-</ul>
-</li>
-<li>
-<p>Disable search suggestions</p>
-</li>
-<li>
-<p>In <code>about:preferences#search</code>, disable Address Bar suggestions. Disabls Search
-Suggestions.</p>
-</li>
-<li>
-<p>Disable all Firefox Data Collection. Disabls Search Suggestions.</p>
-</li>
-<li>
-<p>Disable all Firefox Data Collection</p>
-</li>
-<li>
-<p>Ensure that HTTPS-Only Mode is set in all windows</p>
-</li>
-<li>
-<p>Avoid untrusted extensions!</p>
-</li>
-<li>
-<p><code>about:config</code> set <code>fission.autostart</code> to true.</p>
-</li>
-</ul>
+</details>
 <h3 id="fingerprint-testing"><a class="header" href="#fingerprint-testing">Fingerprint Testing</a></h3>
 <p>You can test your browser to see how well you are protected from tracking and
 fingerprinting at <a href="https://coveryourtracks.eff.org/">Cover Your Tracks</a>.</p>
