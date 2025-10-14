@@ -662,14 +662,23 @@ still refers to the <strong>outer</strong> <code>let</code> binding, not the one
 <li>Default values aren't bound in <code>@-patterns</code></li>
 </ol>
 <p>In the following example, calling a function that binds a default value <code>"baz"</code>
-to the argument's attribute <code>b</code> with an empty attribute set as argument will
-produce an empty attribute set <code>inputs</code> rather than the desired
-<code>{ b = "baz"; }</code>:</p>
+to the attribute <code>b</code> of an argument using an alias (<code>@</code>) pattern, with an empty
+attribute set as argument, results in the alias variable inputs being bound to
+the original empty attribute set instead of including the default value:</p>
 <pre><code class="language-nix">(inputs@(b ? "baz"): inputs) {}
 </code></pre>
 <p>Output:</p>
 <pre><code class="language-nix">{}
 </code></pre>
+<p>This happens because the alias <code>inputs@</code> binds to the argument as passed, before
+the default value for <code>b</code> is applied.</p>
+<p>The syntax requires curly brackets around the attribute set pattern for
+correctness, so the fixed syntax would be:</p>
+<pre><code class="language-nix">(inputs@{b ? "baz"}: inputs) {}
+</code></pre>
+<p>However, even with this fix, the inputs alias still refers to the original
+argument without defaults applied. So the quirk persists, showing how default
+values in <code>@-patterns</code> do not propagate into the aliased variable.</p>
 <ol start="3">
 <li>Destructuring function arguments:</li>
 </ol>
