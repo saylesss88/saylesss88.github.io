@@ -2227,6 +2227,13 @@ that most users should follow to harden their stance.</p>
 <p>Before diving into advanced or specialized hardening, apply these baseline
 security measures suitable for all NixOS users. These settings help protect your
 system with minimal risk of breaking workflows or causing admin headaches.</p>
+<p>There is something to be said about the window manager you use. GNOME, KDE
+Plasma, and Sway secure privileged Wayland protocols like screencopy. This means
+that on environments outside of GNOME, KDE, and Sway, applications can access
+screen content of the entire desktop. This implicitly includes the content of
+other applications. It's primarily for this reason that Silverblue, Kinoite, and
+Sericea images are recommended. COSMIC has plans to fix this.
+--<a href="https://secureblue.dev/images">secureblue Images</a></p>
 <ul>
 <li>
 <p>Use Disk Encryption (LUKS) to protect your data at rest.</p>
@@ -2464,6 +2471,13 @@ more robust and secure system.</p>
 <p>Check out the
 <a href="https://saylesss88.github.io/nix/index.html">Hardening NixOS Baseline Hardening README</a>
 for baseline hardening recommendations and best practices.</p>
+<p>There is something to be said about the window manager you use. GNOME, KDE
+Plasma, and Sway secure privileged Wayland protocols like screencopy. This means
+that on environments outside of GNOME, KDE, and Sway, applications can access
+screen content of the entire desktop. This implicitly includes the content of
+other applications. It's primarily for this reason that Silverblue, Kinoite, and
+Sericea images are recommended. COSMIC has plans to fix this.
+--<a href="https://secureblue.dev/images">secureblue Images</a></p>
 <h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
 <p>Begin with NixOS’s minimal installation image. This gives you a base system with
 only essential tools and no extras that could introduce vulnerabilities.</p>
@@ -3763,6 +3777,8 @@ userspace tool and can potentially be bypassed by privilege escalation exploits.
 <p>❗️NOTE: You cannot effectively use Firejail with Flatpak apps because of how
 their sandboxing technologies operate.</p>
 </blockquote>
+<p>Apps that don't have a flatpak equivalent can be further hardened with
+bubblewrap independently but bubblewrap is not needed on Flatpak apps.</p>
 <p>Because of this limited native MAC (Mandatory Access Control) support on NixOS,
 using Flatpak is often a good approach to get sandboxing and isolation for many
 GUI apps.</p>
@@ -3785,9 +3801,19 @@ and restrict access to user/home and system resources.</p>
     path = [ pkgs.flatpak ];
     script = ''
       flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      # Only apps that are verified
+      # flatpak remote-add --if-not-exists --subset=verified flathub-verified https://flathub.org/repo/flathub.flatpakrepo
     '';
   };
 </code></pre>
+<ul>
+<li>
+<p><a href="https://docs.flathub.org/docs/for-users/verification">Flathub Verified Apps</a></p>
+</li>
+<li>
+<p><a href="https://secureblue.dev/articles/flatpak">Flatpak the good the bad the ugly</a></p>
+</li>
+</ul>
 <p>Then you can either find apps through <a href="https://flathub.org/en">FlatHub</a> or on
 the cmdline with <code>flatpak search &lt;app&gt;</code>. Flatpak is best used for GUI apps, some
 cli apps can be installed through it but not all.</p>
