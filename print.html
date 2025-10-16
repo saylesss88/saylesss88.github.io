@@ -2401,6 +2401,7 @@ platform-specific tools.
 <li><a href="nix/hardening_NixOS.html#usb-port-protection">USB Port Protection</a></li>
 <li><a href="nix/hardening_NixOS.html#doas-over-sudo">Doas over sudo</a></li>
 <li><a href="nix/hardening_NixOS.html#firejail">Firejail</a></li>
+<li><a href="nix/hardening_NixOS.html#flatpak">Flatpak</a></li>
 <li><a href="nix/hardening_NixOS.html#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></li>
 <li><a href="nix/hardening_NixOS.html#resources">Resources</a>
 <ul>
@@ -3689,6 +3690,9 @@ attack surface.</p>
 <a href="https://github.com/Naxdy/nix-bwrapper">nix-bwrapper</a> myself yet, but it's
 another sandboxing option that looks interesting. Bubblewrap is known for
 having a more minimal design and smaller attack surface.</p>
+<ul>
+<li>Also see: <a href="nix/hardening_NixOS.html#flatpak">Flatpak section</a> for another option for sandboxing.</li>
+</ul>
 </li>
 <li>
 <p><a href="https://sr.ht/~fgaz/nix-bubblewrap/">nix-bubblewrap</a> is another option.</p>
@@ -3753,6 +3757,60 @@ restricting the running environment of untrusted applications using
 AppArmor/SELinux does at a kernel level. However, it's not as secure or
 comprehensive as kernel-enforced MAC systems (AppArmor/SELinux), since it's a
 userspace tool and can potentially be bypassed by privilege escalation exploits.</p>
+<hr />
+<h2 id="flatpak"><a class="header" href="#flatpak">Flatpak</a></h2>
+<blockquote>
+<p>❗️NOTE: You cannot effectively use Firejail with Flatpak apps because of how
+their sandboxing technologies operate.</p>
+</blockquote>
+<p>Because of this limited native MAC (Mandatory Access Control) support on NixOS,
+using Flatpak is often a good approach to get sandboxing and isolation for many
+GUI apps.</p>
+<ul>
+<li>
+<p>Flatpak bundles runtimes and sandbox mechanisms that provide app isolation
+independently of the host system's AppArmor or SELinux infrastructure. This
+can improve security and containment for GUI applications running on NixOS
+despite the system lacking full native MAC coverage.</p>
+</li>
+<li>
+<p>Flatpak apps benefit from sandboxing through bubblewrap, which isolate apps
+and restrict access to user/home and system resources.</p>
+</li>
+</ul>
+<p>Add Flatpak with the FlatHub repository for all users:</p>
+<pre><code class="language-nix">services.flatpak.enable = true;
+  systemd.services.flatpak-repo = {
+    wantedBy = [ "multi-user.target" ];
+    path = [ pkgs.flatpak ];
+    script = ''
+      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    '';
+  };
+</code></pre>
+<p>Then you can either find apps through <a href="https://flathub.org/en">FlatHub</a> or on
+the cmdline with <code>flatpak search &lt;app&gt;</code>. Flatpak is best used for GUI apps, some
+cli apps can be installed through it but not all.</p>
+<ul>
+<li>
+<p>There is also <a href="https://github.com/gmodena/nix-flatpak">nix-flatpak</a>, which
+enables you to manage your flatpaks declaratively.</p>
+</li>
+<li>
+<p><a href="https://flathub.org/en/apps/com.github.tchx84.Flatseal">Flatseal</a> is GUI
+utility that enables you to review and modify permissions from your Flatpak
+apps.</p>
+</li>
+<li>
+<p><a href="https://flathub.org/en/apps/io.github.flattool.Warehouse">Warehouse</a> provides
+a simple UI to control complex Flatpak options, no cmdline required.</p>
+</li>
+</ul>
+<p>Considering that your browser is likely the most vulnerable piece of your whole
+setup, it can be beneficial to install it with Flatpak, effectively sandboxing
+it. You may have to adjust some of the "portals", flatpaks way of accessing
+system resources.</p>
+<hr />
 <h2 id="selinuxapparmor-mac-mandatory-access-control"><a class="header" href="#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></h2>
 <p><strong>AppArmor</strong> is available on NixOS, but is still in a somewhat experimental and
 evolving state. There are only a few profiles that have been adapted to NixOS,
@@ -4866,6 +4924,10 @@ huge settlement for selling peoples information that had already opted out.</p>
 <ul>
 <li><a href="https://techstory.in/eu-hits-google-with-3-5-billion-antitrust-fine-over-adtech-practices/">EU Hits Google with 3.5 Billion Antitrust</a></li>
 </ul>
+<p>This <a href="https://grapheneos.org/usage#web-browsing">GrapheneOS article</a>, breaks
+down why they use Chromium-based browsers and specifically mentions that it's
+not recommended to use Firefox, especially on Linux because of the weak
+sandboxing.</p>
 <details>
 <summary> ✔️ Click To Expand United States Patriot Act Overview </summary>
 <p><a href="https://www.csis.org/analysis/fact-sheet-section-215-usa-patriot-act">Section 215 USA Patriot Act</a>
@@ -4896,6 +4958,8 @@ to the internet, and so security, privacy, and anti-tracking features of
 browsers are now as important, or even more important than platform-level
 protections.</p>
 <h4 id="firefox"><a class="header" href="#firefox">Firefox</a></h4>
+<p>My understanding here is evolving, Firefox on Linux may be very privacy friendly
+but is not necessarily a secure browser.</p>
 <p>Firefox's defaults are not privacy respecting or secure but allows a high level
 of customization to make it so. Firefox will be patched with security fixes
 sooner than any fork, and some forks are slow to apply the updates leaving a
@@ -5013,6 +5077,10 @@ technologies.--<a href="https://www.privacyguides.org/articles/2025/04/30/in-pra
 </li>
 </ul>
 <h4 id="mullvad-browser"><a class="header" href="#mullvad-browser">Mullvad-Browser</a></h4>
+<p>Rather than try to tweak a browser into fingerprinting submission, I recommend
+using either Tor or Mullvad-Browser when fingerprintability is the highest
+issue. Both Tor and Mullvad-Browser were designed specifically for this purpose
+and you likely won't get as much out of tweaking another browser.</p>
 <p>Mullvad-Browser is free and open-source and was developed by the Tor Project in
 collaboration with Mullvad VPN.(Another Firefox Derivative). It is also the top
 recommended browser from PrivacyGuides.</p>
@@ -5567,6 +5635,12 @@ in {
   systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
 }
 </code></pre>
+<blockquote>
+<p>❗️ NOTE: Upon testing dnscrypt-proxy on Arch, it was able to route the browser
+through the proxy, removing the need for Max Protection. I'm still currently
+on Arch and plan to test this further ASAP. We test the above settings further
+down, but I'm curious why the browser isn't routed correctly...</p>
+</blockquote>
 <ul>
 <li>Above, we have a local DNS proxy that encrypts and forwards queries.</li>
 </ul>
@@ -5608,7 +5682,7 @@ location tracking across networks.</p>
 </code></pre>
 <p>Right when I rebuilt, I got an alert from my router saying that a new device
 just connected to the network.</p>
-<p>There is also a utility for viewing/manipulating the MAC adress of network
+<p>There is also a utility for viewing/manipulating the MAC address of network
 interfaces, <code>pkgs.macchanger</code>. This is less reliable than the NetworkManager
 setting.</p>
 <h2 id="firewalls"><a class="header" href="#firewalls">Firewalls</a></h2>
