@@ -2390,6 +2390,7 @@ platform-specific tools.
 <li><a href="nix/hardening_NixOS.html#kernel-security-settings">Kernel Security Settings</a></li>
 <li><a href="nix/hardening_NixOS.html#further-hardening-with-sysctl">Further Hardening with sysctl</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-boot-parameters">Hardening Boot Parameters</a></li>
+<li><a href="nix/hardening_NixOS.html#hardened-memory-allocator">Hardened Memory Allocator</a></li>
 <li><a href="nix/hardening_NixOS.html#hardening-systemd">Hardening Systemd</a></li>
 <li><a href="nix/hardening_NixOS.html#lynis-and-other-tools">Lynis and other tools</a></li>
 <li><a href="nix/hardening_NixOS.html#securing-ssh">Securing SSH</a></li>
@@ -2944,6 +2945,44 @@ issues.</p>
 <a href="https://github.com/secureblue/secureblue/blob/live/files/system/etc/modprobe.d/blacklist.conf">SecureBlue's blacklist.conf</a>
 for more ideas.</p>
 <hr />
+<h2 id="hardened-memory-allocator"><a class="header" href="#hardened-memory-allocator">Hardened Memory Allocator</a></h2>
+<blockquote>
+<p>NOTE: There is a performance cost to enabling a hardened memory allocator, and
+some apps will not work without a workaround such as Firefox, Thunderbird,
+Torbrowser, LibreWolf, and ZenBrowser to name a few.</p>
+</blockquote>
+<p>The grapheneOS <code>hardened_malloc</code> is available for NixOS in two variants, add
+either to your <code>configuration.nix</code> or equivalent to apply them:</p>
+<ol>
+<li>
+<p><code>environment.memoryAllocator.provider = "graphene-hardened";</code>: This is the
+default configuration template that has all normal optional security features
+enabled. It's aggressive, you can expect app breakage and a performance cost.</p>
+</li>
+<li>
+<p><code>environment.memoryAllocator.provider = "graphene-hardened-light";</code>: The
+light template disables the slap quarantines, write after free check, slot
+randomization and raises the guard slab interval from 1 to 8 but leaves
+zero-on-free and slab canaries enabled. This version has solid performance
+and is still far more secure than the standard allocator.</p>
+</li>
+</ol>
+<p><code>libhardened_malloc.so</code> is typically installed to
+<code>/usr/local/lib/libhardened_malloc.so</code> and referenced from <code>/etc/ld.so.preload</code>.</p>
+<ul>
+<li>
+<p><a href="https://nixos.org/manual/nixos/stable/options#opt-environment.memoryAllocator.provider">NixOS Manual memoryAllocator</a></p>
+</li>
+<li>
+<p><a href="https://github.com/GrapheneOS/hardened_malloc?tab=readme-ov-file#traditional-linux-based-operating-systems">GrapheneOS hardened_malloc</a></p>
+</li>
+<li>
+<p><a href="https://github.com/secureblue/secureblue/issues/193#issuecomment-1953323680">GrapheneOS/secureblue discussion on hardened_malloc issues</a></p>
+</li>
+<li>
+<p><a href="https://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so man page</a></p>
+</li>
+</ul>
 <h2 id="hardening-systemd"><a class="header" href="#hardening-systemd">Hardening Systemd</a></h2>
 <!-- ![Hacker](../images/hacker.png) -->
 <p><code>systemd</code> is the core "init system" and service manager that controls how
