@@ -167,16 +167,172 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="running-nixos-as-a-vm-for-added-isolation"><a class="header" href="#running-nixos-as-a-vm-for-added-isolation">Running NixOS as a VM for added isolation</a></h1>
+                        <h1 id="running-nixos-in-a-vm-with-maximum-isolation-beginner-guide"><a class="header" href="#running-nixos-in-a-vm-with-maximum-isolation-beginner-guide">Running NixOS in a VM with Maximum Isolation (Beginner Guide)</a></h1>
+<h2 id="why-this-setup"><a class="header" href="#why-this-setup">Why This Setup?</a></h2>
 <ul>
-<li><a href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/6/pdf/virtualization_administration_guide/virtualization-administration-guide.pdf">Redhat virtualization administration</a></li>
+<li>
+<p><strong>Host</strong>: <code>secureblue</code> = Fedora Atomic with <strong>SELinux enforcing</strong>, <strong>sVirt</strong>,
+<strong>Secure Boot</strong>, and hardened defaults.</p>
+</li>
+<li>
+<p><strong>Guest</strong>: NixOS in a VM → full declarative power, zero risk to host.</p>
+</li>
+<li>
+<p><strong>Isolation</strong>: MAC via SELinux + KVM + no direct hardware access.</p>
+</li>
 </ul>
-<h2 id="secureblue"><a class="header" href="#secureblue">Secureblue</a></h2>
-<p>I recommend using Secureblue as your host, Fedora is one of the few distros that
-enable SELinux at a system level by default and Secureblue takes many more
-hardening steps. Fedora also uses sVirt, a technolocy that integrates SELinux
-and virtualization. sVirt applies Mandatory Access Control (MAC) to improve
-security when using guest virtual machines.</p>
+<hr />
+<h2 id="step-1-install-secureblue-hardened-host"><a class="header" href="#step-1-install-secureblue-hardened-host">Step 1: Install secureblue (Hardened Host)</a></h2>
+<ol>
+<li>
+<p>Download a secureblue image:<br />
+<a href="https://secureblue.dev/install">https://secureblue.dev/install</a></p>
+</li>
+<li>
+<p>Use <strong>Fedora Media Writer</strong> (Flatpak):</p>
+</li>
+</ol>
+<pre><code class="language-bash">flatpak install flathub org.fedoraproject.MediaWriter
+</code></pre>
+<ol start="3">
+<li>
+<p>Flash the secureblue image &amp; enable Secure Boot in UEFI before install.</p>
+</li>
+<li>
+<p>On first boot:</p>
+</li>
+</ol>
+<pre><code class="language-bash">ujust enroll-secureblue-secure-boot-key
+</code></pre>
+<ul>
+<li>Reboot -&gt; Enroll key in MOK manager with password: <code>secureblue</code></li>
+</ul>
+<ol start="5">
+<li>
+<p>Post-install hardening: <a href="https://secureblue.dev/post-install">https://secureblue.dev/post-install</a></p>
+</li>
+<li>
+<p>Install virtualization stack:</p>
+</li>
+</ol>
+<pre><code class="language-bash">ujust install-libvirt-packages
+</code></pre>
+<ul>
+<li>
+<p>The above command enables <code>qemu</code>, <code>libvirt</code>, &amp; <code>virt-manager</code> with SELinux
+labels.</p>
+</li>
+<li>
+<p>Read the <a href="https://secureblue.dev/faq">secureblue FAQ</a> to learn the quirks of
+an atomic fedora image.</p>
+</li>
+</ul>
+<p>Secureblue recommends installing GUI apps with Flatpak, CLI apps with homebrew,
+and apps that require more system access to be layered with rpm-ostree. It takes
+some getting used to but is very stable.</p>
+<hr />
+<h2 id="create-nixos-vm-via-virt-manager"><a class="header" href="#create-nixos-vm-via-virt-manager">Create NixOS VM (via virt-manager)</a></h2>
+<ol>
+<li>
+<p>Download: NixOS Graphical ISO (GNOME): <a href="https://nixos.org/download/">https://nixos.org/download/</a></p>
+</li>
+<li>
+<p>Open <code>virt-manager</code> -&gt; File -&gt; New Virtual Machine</p>
+</li>
+</ol>
+<ul>
+<li>
+<p>Select ISO</p>
+</li>
+<li>
+<p>CPU: <code>host-passthrough</code> (optional, for performance)</p>
+</li>
+<li>
+<p>Do some research to find the ideal Memory and Storage for your system.</p>
+</li>
+</ul>
+<ol start="3">
+<li>
+<p>Ensure SELinux is enabled (the default for secureblue) with: <code>getenforce</code></p>
+</li>
+<li>
+<p>Ensure sVirt is enabled with <code>run0 ps -eZ | grep qemu</code>.</p>
+</li>
+</ol>
+<pre><code class="language-bash">run0 ps -eZ | grep qemu
+# Output
+system_u:system_r:svirt_t:s0:c383,c416 14793 ?   00:01:37 qemu-system-x86
+</code></pre>
+<ol start="5">
+<li>Boot -&gt; Follow graphical installer:</li>
+</ol>
+<ul>
+<li>
+<p>Enable LUKS</p>
+</li>
+<li>
+<p>Create an admin user</p>
+</li>
+<li>
+<p>Optionally skip desktop -&gt; install your own after first boot.</p>
+</li>
+</ul>
+<hr />
+<h2 id="-how-host-mac-secures-the-nixos-vm"><a class="header" href="#-how-host-mac-secures-the-nixos-vm">🔒 How Host MAC Secures the NixOS VM</a></h2>
+<p>The core security principle here is defense-in-depth, where the outer, hardened
+layer (the host) compensates for potential weaknesses in the inner layer (the
+guest).</p>
+<ol>
+<li>MAC Confinement via SELinux and sVirt sVirt (Secure Virtualization): This is
+a critical component running on the secureblue host. It automatically assigns
+unique SELinux labels to all virtualization components.</li>
+</ol>
+<p><strong>QEMU Process Confinement</strong>: The entire QEMU process that runs the NixOS VM is
+confined by a specific SELinux type, typically <code>svirt_t</code>. This means:</p>
+<p>The host's MAC policy strictly controls what the QEMU process can access and do
+on the host system.</p>
+<p>If an attacker were to achieve a "VM breakout" (a worst-case scenario where they
+escape the VM and try to interact with the host OS), their activity would still
+be confined by the extremely strict rules of the <code>svirt_t</code> label. They would not
+be able to arbitrarily read host files or compromise the host kernel.</p>
+<p><strong>Disk Image Confinement</strong>: The VM's disk images are also labeled, typically as
+virt_image_t, preventing other processes on the host from accessing or tampering
+with them.</p>
+<ol start="2">
+<li>KVM and Host Hardening KVM: KVM provides the low-level, hardware-assisted
+virtualization. It is an extremely secure and audited hypervisor that creates
+a strong barrier between the guest and the host kernel.</li>
+</ol>
+<p><strong>Secureblue Hardening</strong>: The secureblue host is designed with SELinux
+enforcing, Secure Boot, a hardened kernel, and hardened_malloc by default, which
+minimizes the attack surface and ensures the integrity of the base operating
+system that's running the VM.</p>
+<ol start="3">
+<li><strong>Isolation and Zero Host Risk Decoupling Security</strong>: The security of the
+host is completely decoupled from the security of the NixOS guest.</li>
+</ol>
+<p>Any compromise within the NixOS VM (e.g., a service vulnerability,
+misconfiguration, or user error) will be contained by the host's isolation
+mechanisms (KVM + SELinux + sVirt). This containment means the host remains
+secure ("Zero host compromise"), regardless of the NixOS VM's internal security
+settings, including its lack of default MAC.</p>
+<p>In short, the security boundary isn't the guest OS's (NixOS) configuration, but
+the hypervisor and the host's MAC policy that enforces the complete isolation of
+the VM</p>
+<h2 id="its-still-recommended-to-harden-the-guest-vm-nixos"><a class="header" href="#its-still-recommended-to-harden-the-guest-vm-nixos">It's still recommended to harden the Guest VM (NixOS)</a></h2>
+<p>Hardening the NixOS guest creates an additional, independent layer of defense.</p>
+<ul>
+<li>
+<p>Helps mitigate VM Breakout: If a zero-day allows an attacker to acheive a VM
+breakout, the security of your system depends entirely on the host's controls.
+Hardening the guest makes it much harder to compromise the initial VM,
+reducing the chance of even attempting to breakout.</p>
+</li>
+<li>
+<p>Containment within the VM: Hardening prevents an attacker from gaining full
+control or moving laterally within the VM.</p>
+</li>
+</ul>
 
                     </main>
 
