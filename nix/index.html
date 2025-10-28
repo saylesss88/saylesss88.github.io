@@ -196,6 +196,9 @@ screen content of the entire desktop. This implicitly includes the content of
 other applications. It's primarily for this reason that Silverblue, Kinoite, and
 Sericea images are recommended. COSMIC has plans to fix this.
 --<a href="https://secureblue.dev/images">secureblue Images</a></p>
+<p>Secureblue recommends disabling Xwayland and finding alternatives for those apps
+as well as disabling <code>xdg-desktop-portal-wlr</code>, this is because the wlroots
+desktop portal reintroduces the screencopy vulnerability.</p>
 <ul>
 <li>
 <p>Use Disk Encryption (LUKS) to protect your data at rest.</p>
@@ -252,7 +255,8 @@ users.users.admin = {
     isNormalUser = true;
     description  = "System administrator";
     extraGroups  = [ "wheel" "libvirtd" ];   # wheel = sudo, libvirtd for VMs
-    initialPassword = "changeme";           # change with `passwd admin` later
+    # run `mkpasswd --method=yescrypt` and replace "changeme" w/ the result
+    initialHashedPassword = "changeme";           # change with `passwd admin` later
     openssh.authorizedKeys.keys = [
       # (optional) paste your SSH public key here
       # "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..."
@@ -271,6 +275,7 @@ users.users.admin = {
 
 security.polkit.enable = true;
 security.sudo.enable = false;
+# Required for swaylock re-login
 security.pam.services.swaylock = {
   text = ''
     auth include login
@@ -284,6 +289,12 @@ security.pam.services.swaylock = {
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
 <pre><code class="language-bash">run0 nixos-rebuild switch --flake .
 </code></pre>
+<p>You can still use <code>nh</code> and will be prompted for your admin password to
+authenticate. I have noticed when installing multiple packages, you will be
+prompted for your password multiple times. This is a security feature, and
+happens because <code>run0</code> does not inherit or cache the authentication credentials
+of the previous invocation, it prompts you for the password every time a new
+isolated privileged process is required.</p>
 <p>You can safely completely disable <code>sudo</code> now with:</p>
 <pre><code class="language-nix">security.sudo.enable = false;
 </code></pre>
@@ -296,6 +307,9 @@ back in.</p>
 future. It can be more secure by prohibiting UID/GID re-use and giving
 warnings about insecure password hashing schemes.</p>
 </blockquote>
+<p>I have personally had nothing but problems with <code>userborn</code> and find the docs
+extremely lacking, you need to read the source code to figure anything out which
+is ridiculous. Needless to say, I don't personally use this.</p>
 <p>To enable <code>userborn</code>, just add the following to your <code>configuration.nix</code> or
 equivalent:</p>
 <pre><code class="language-nix"># users.nix

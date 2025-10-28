@@ -2234,6 +2234,9 @@ screen content of the entire desktop. This implicitly includes the content of
 other applications. It's primarily for this reason that Silverblue, Kinoite, and
 Sericea images are recommended. COSMIC has plans to fix this.
 --<a href="https://secureblue.dev/images">secureblue Images</a></p>
+<p>Secureblue recommends disabling Xwayland and finding alternatives for those apps
+as well as disabling <code>xdg-desktop-portal-wlr</code>, this is because the wlroots
+desktop portal reintroduces the screencopy vulnerability.</p>
 <ul>
 <li>
 <p>Use Disk Encryption (LUKS) to protect your data at rest.</p>
@@ -2290,7 +2293,8 @@ users.users.admin = {
     isNormalUser = true;
     description  = "System administrator";
     extraGroups  = [ "wheel" "libvirtd" ];   # wheel = sudo, libvirtd for VMs
-    initialPassword = "changeme";           # change with `passwd admin` later
+    # run `mkpasswd --method=yescrypt` and replace "changeme" w/ the result
+    initialHashedPassword = "changeme";           # change with `passwd admin` later
     openssh.authorizedKeys.keys = [
       # (optional) paste your SSH public key here
       # "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..."
@@ -2309,6 +2313,7 @@ users.users.admin = {
 
 security.polkit.enable = true;
 security.sudo.enable = false;
+# Required for swaylock re-login
 security.pam.services.swaylock = {
   text = ''
     auth include login
@@ -2322,6 +2327,12 @@ security.pam.services.swaylock = {
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
 <pre><code class="language-bash">run0 nixos-rebuild switch --flake .
 </code></pre>
+<p>You can still use <code>nh</code> and will be prompted for your admin password to
+authenticate. I have noticed when installing multiple packages, you will be
+prompted for your password multiple times. This is a security feature, and
+happens because <code>run0</code> does not inherit or cache the authentication credentials
+of the previous invocation, it prompts you for the password every time a new
+isolated privileged process is required.</p>
 <p>You can safely completely disable <code>sudo</code> now with:</p>
 <pre><code class="language-nix">security.sudo.enable = false;
 </code></pre>
@@ -2334,6 +2345,9 @@ back in.</p>
 future. It can be more secure by prohibiting UID/GID re-use and giving
 warnings about insecure password hashing schemes.</p>
 </blockquote>
+<p>I have personally had nothing but problems with <code>userborn</code> and find the docs
+extremely lacking, you need to read the source code to figure anything out which
+is ridiculous. Needless to say, I don't personally use this.</p>
 <p>To enable <code>userborn</code>, just add the following to your <code>configuration.nix</code> or
 equivalent:</p>
 <pre><code class="language-nix"># users.nix
@@ -2517,7 +2531,9 @@ of a typical NixOS configuration. For an immutable distro that implements
 SELinux by default at a system level as well as many other hardening techniques,
 see <a href="https://secureblue.dev/">Fedora secureblue</a>.</p>
 <p>Containers and VMs are beyond the scope of this chapter but can also enhance
-security and sandboxing if configured correctly.</p>
+security and sandboxing if configured correctly. See
+<a href="https://saylesss88.github.io/nix/kvm.html">Running NixOS in a VM</a> for more
+details on running NixOS in a Secureblue VM for additional security.</p>
 <p>It's crucial to <strong>document every change</strong> you make. By creating smaller,
 feature-complete commits, each with a descriptive message, you're building a
 clear history. This approach makes it far simpler to revert a breaking change
@@ -3946,7 +3962,7 @@ and restrict access to user/home and system resources.</p>
 </ul>
 <p>Then you can either find apps through <a href="https://flathub.org/en">FlatHub</a> or on
 the cmdline with <code>flatpak search &lt;app&gt;</code>. Flatpak is best used for GUI apps, some
-cli apps can be installed through it but not all.</p>
+CLI apps can be installed through it but not all.</p>
 <ul>
 <li>
 <p>There is also <a href="https://github.com/gmodena/nix-flatpak">nix-flatpak</a>, which
@@ -3955,17 +3971,18 @@ enables you to manage your flatpaks declaratively.</p>
 <li>
 <p><a href="https://flathub.org/en/apps/com.github.tchx84.Flatseal">Flatseal</a> is GUI
 utility that enables you to review and modify permissions from your Flatpak
-apps.</p>
+apps. Many apps by default come with smart-card support, X11 &amp; Wayland
+support, and more, disabling unnecessary permissions is recommended.</p>
 </li>
 <li>
 <p><a href="https://flathub.org/en/apps/io.github.flattool.Warehouse">Warehouse</a> provides
 a simple UI to control complex Flatpak options, no cmdline required.</p>
 </li>
 </ul>
-<p>Considering that your browser is likely the most vulnerable piece of your whole
-setup, it can be beneficial to install it with Flatpak, effectively sandboxing
-it. You may have to adjust some of the "portals", flatpaks way of accessing
-system resources.</p>
+<p>I have heard that it is not recommended to use Flatpak browsers because in order
+for flatpak to work it has to disable some of the built-in browser sandboxing
+which can reduce security. I haven't found any examples of Flatpak browsers
+being exposed but it's something to keep in mind.</p>
 <hr />
 <h2 id="selinuxapparmor-mac-mandatory-access-control"><a class="header" href="#selinuxapparmor-mac-mandatory-access-control">SeLinux/AppArmor MAC (Mandatory Access Control)</a></h2>
 <p><strong>AppArmor</strong> is available on NixOS, but is still in a somewhat experimental and
@@ -4061,6 +4078,18 @@ hardening.There are recommendations for hardening all kinds of software in the
 </li>
 <li>
 <p><a href="https://github.com/nsacyber">NSA Cybersecurity Directorate</a></p>
+</li>
+<li>
+<p><a href="https://secureblue.dev/faq">secureblue FAQ</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Documentation">Excellent Kicksecure Docs</a></p>
+</li>
+<li>
+<p><a href="https://factorable.net/faq.html">factorable.net (study of RSA and DSA crypto keys) FAQ</a></p>
+</li>
+<li>
+<p><a href="https://blog.cr.yp.to/20140205-entropy.html">The cr.yp.to blog Entropy</a></p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="gnupg--gpg-agent-on-nixos"><a class="header" href="#gnupg--gpg-agent-on-nixos">GnuPG &amp; <code>gpg-agent</code> on NixOS</a></h1>
