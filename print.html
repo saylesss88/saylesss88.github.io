@@ -2281,6 +2281,7 @@ or be reset on rebuild. User and group definitions become entirely controlled by
 your system configuration for maximum reproducibility and security. If you need
 to add, remove, or modify users, you must do so in your <code>configuration.nix</code> and
 rebuild the system.</p>
+<hr />
 <p>Create an admin user for administrative tasks and remove your daily user from
 the <code>wheel</code> group:</p>
 <pre><code class="language-users.nix">{ config, pkgs, lib }:
@@ -2305,7 +2306,16 @@ users.users.admin = {
     extraGroups  = lib.mkForce [ "networkmanager" "audio" "video" ]; # keep useful groups
     # Remove `wheel` by *not* listing it (mkForce overrides any default)
   };
+
+security.polkit.enable = true;
+security.sudo.enable = false;
 }
+</code></pre>
+<p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
+<pre><code class="language-bash">run0 nixos-rebuild switch --flake .
+</code></pre>
+<p>You can safely completely disable <code>sudo</code> now with:</p>
+<pre><code class="language-nix">security.sudo.enable = false;
 </code></pre>
 <hr />
 <blockquote>
