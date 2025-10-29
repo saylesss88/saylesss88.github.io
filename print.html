@@ -2327,15 +2327,32 @@ security.pam.services.swaylock = {
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
 <pre><code class="language-bash">run0 nixos-rebuild switch --flake .
 </code></pre>
-<p>You can still use <code>nh</code> and will be prompted for your admin password to
-authenticate. I have noticed when installing multiple packages, you will be
-prompted for your password multiple times. This is a security feature, and
-happens because <code>run0</code> does not inherit or cache the authentication credentials
-of the previous invocation, it prompts you for the password every time a new
-isolated privileged process is required.</p>
-<p>You can safely completely disable <code>sudo</code> now with:</p>
-<pre><code class="language-nix">security.sudo.enable = false;
+<p>Since <code>run0</code> doesn't cache results and <code>nixos-rebuild</code> calls on Polkit 3 times
+so on every rebuild, you will be asked for your password 3 times which isn't
+ideal. I found the following workaround that will only ask for your password
+once.</p>
+<p>I added the following to my <code>configuration.nix</code>, replacing <code>user-name</code> with your
+username:</p>
+<pre><code class="language-nix"> security.polkit.extraConfig = ''
+     polkit.addRule(function(action, subject) {
+       if (subject.user == "user-name") {
+         if (action.id.indexOf("org.nixos") == 0) {
+           polkit.log("Auto reapprove for user-name");
+           return polkit.Result.YES;
+         }
+       }
+     });
+   '';
+
+# This will cause `nix.settings.allowed-users = [ "@wheel" ]; to fail`
+# Since the main user isn't in the wheel group you need to add `trusted-users`
+nix.settings = {
+  allowed-users = [ "@wheel" ];
+  trusted-users = [ "root" "user-name" ];
+};
 </code></pre>
+<p>Needless to say, this is less secure but much more convenient than entering your
+password 3 times on every single rebuild.</p>
 <p>Without the <code>pam</code> settings for swaylock, it won't accept your password to log
 back in.</p>
 <hr />
@@ -2347,7 +2364,8 @@ warnings about insecure password hashing schemes.</p>
 </blockquote>
 <p>I have personally had nothing but problems with <code>userborn</code> and find the docs
 extremely lacking, you need to read the source code to figure anything out which
-is ridiculous. Needless to say, I don't personally use this.</p>
+is ridiculous. I don't personally use this but if you figure it out, more power
+to ya.</p>
 <p>To enable <code>userborn</code>, just add the following to your <code>configuration.nix</code> or
 equivalent:</p>
 <pre><code class="language-nix"># users.nix
@@ -2375,6 +2393,7 @@ services.userborn = {
 with NixOS with <code>users.users</code>, change <code>"newuser"</code> to your desired username.</p>
 <p>Explicitly setting <code>uid = 1000;</code> is a best practice for compatibility and
 predictability.</p>
+<hr />
 <p>You can also specify which users or groups are allowed to do anything with the
 Nix daemon and Nix package manager. The following setting will only allow
 members of the <code>wheel</code> group access to commands that require elevated
@@ -2436,6 +2455,7 @@ platform-specific tools.
 <li><a href="nix/hardening_NixOS.html#minimal-installation-with-luks">Minimal Installation with LUKS</a></li>
 <li><a href="nix/hardening_NixOS.html#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
 <li><a href="nix/hardening_NixOS.html#guided-encrypted-btrfs-subvol-install-using-disko">Guided Encrypted BTRFS Subvol install using disko</a></li>
+<li><a href="nix/hardening_NixOS.html#installing-software">Installing Software</a></li>
 <li><a href="nix/hardening_NixOS.html#impermanence">Impermanence</a></li>
 <li><a href="nix/hardening_NixOS.html#replace-timesyncd-with-a-chron-job-that-enables-network-time-security-nts">Replace timesyncd with a chron job that enables Network Time Security (NTS)</a></li>
 <li><a href="nix/hardening_NixOS.html#secure-boot">Secure Boot</a>
@@ -2621,6 +2641,95 @@ to protect digital information.</p>
 <p>Use LUKS encryption to protect your data at rest, the following guide is a
 minimal disko encrypted installation:
 <a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+<h2 id="installing-software"><a class="header" href="#installing-software">Installing Software</a></h2>
+<p>Most users don't fully understand that running any software without sandboxing
+gives it unrestricted access to their user data and system resources. There is a
+widespread lack of awareness that Linux apps generally run with the full
+permissions of the user. It's easy to overlook the fact that "trusted source"
+doesn't mean "safe to run uncontained".</p>
+<p>I suggest that you try using an editor from Flatpak so you can see and
+experience running an editor in a sandbox. It felt weird to me because I had
+gotten used to being able to see all my files with Yazi or do insecure
+customizations to my editor unfettered. With Flatseal, you can see which
+permissions the app ships with and adjust them accordingly.</p>
+<p><strong>nixpkgs-unstable Security Overview</strong></p>
+<ul>
+<li>
+<p><code>nixpkgs-unstable</code> tracks the master branch of the Nixpkgs repo and is
+constantly updated.</p>
+</li>
+<li>
+<p>This branch gets security updates faster, patching vulnerabilities faster.</p>
+</li>
+<li>
+<p>Since it's a rolling-release, packages are less thoroughly tested. This
+increases the risk of new, undiscovered bugs or regressions. Some of which
+could have security implications.</p>
+</li>
+<li>
+<p>The packages are generally the most recent upstream versions, which is
+important for security-sensitive software like browsers and kernels, as old
+versions may have publicly known, unpatched vulnerabilities.</p>
+</li>
+<li>
+<p>As the name states, <code>nixpkgs-unstable</code> is less stable and an update is more
+likely to cause your system to fail to build due to breaking changes in Nix
+expressions.</p>
+</li>
+</ul>
+<hr />
+<p><strong>Stable (e.g., <code>nixos-24.05</code>) Security Overview</strong></p>
+<p>Stable Nixpkgs channels correspond to point release (e.g., released every 6
+months) and are supported for a limited period (typically one month past the
+next release).</p>
+<ul>
+<li>
+<p>Stable channels generally only receive conservative bug and security fixes.
+Major version bumps for features are typically avoided to maintain "stability
+against deliberate changes", which means you won't get the latest upstream
+features or general bug fixes.</p>
+</li>
+<li>
+<p>While critical security updates are backported quickly, updates for less
+critical packages may be slower or not happen at all if they require a
+significant refactoring or version bump.</p>
+</li>
+<li>
+<p>Stable channels are generally more stable, meaning updates are less likely to
+introduce breaking changes to your configuration or system environment.</p>
+</li>
+<li>
+<p>Many packages will be older versions. If a critical security vulnerability
+requires a major upstream version update (which is often avoided in a stable
+channel), the maintainers must backport the patch, a process which can
+introduce its own set of risks and delays.</p>
+</li>
+</ul>
+<p><strong>What should you use?</strong></p>
+<p>The primary security trade-off is between <strong>patching speed for known
+vulnerabilities</strong> and <strong>stability/exposure to new bugs</strong>:</p>
+<ul>
+<li>
+<p>Choose <code>unstable</code> if you prioritize getting the latest security fixes
+(especially for end-user apps like browsers) as soon as they are available
+upstream, accepting a higher risk of non-security-related system breakage or
+new, undiscovered bugs.</p>
+</li>
+<li>
+<p>Choose <code>stable</code> if you prioritize system predictability and stability, relying
+on dedicated backports for critical vulnerabilities, while accepting that
+non-critical security and bug fixes will be delayed or absent until the next
+major release.</p>
+</li>
+</ul>
+<p>A common hybrid approach is to use the <code>stable</code> channel as the base for the OS
+and selectively pin specific packages from <code>unstable</code> to ensure they receive
+rapid security updates.</p>
+<p>With flakes it's easy to add both <code>stable</code> and <code>unstable</code> as flake inputs and
+access each with some simple logic.</p>
+<p>For example:</p>
+<details>
+<summary> Click to expand
 <h2 id="impermanence"><a class="header" href="#impermanence">Impermanence</a></h2>
 <p>Impermanence, especially when using a <code>tmpfs</code> as the root filesystem, provides
 several significant security benefits. The core principle is that impermanence
@@ -4208,6 +4317,9 @@ hardening.There are recommendations for hardening all kinds of software in the
 </li>
 <li>
 <p><a href="https://blog.cr.yp.to/20140205-entropy.html">The cr.yp.to blog Entropy</a></p>
+</li>
+<li>
+<p><a href="https://delroth.net/posts/nixos-security-wishlist/">NixOS Security wishlist</a></p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="gnupg--gpg-agent-on-nixos"><a class="header" href="#gnupg--gpg-agent-on-nixos">GnuPG &amp; <code>gpg-agent</code> on NixOS</a></h1>
