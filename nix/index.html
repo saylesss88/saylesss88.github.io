@@ -248,8 +248,16 @@ to add, remove, or modify users, you must do so in your <code>configuration.nix<
 rebuild the system.</p>
 <hr />
 <blockquote>
-<p>NOTE: This reduces the attack surface but</p>
+<p>NOTE: The point here is to avoid using a setuid binary (<code>sudo</code>), <code>run0</code> is a
+wrapper over <code>systemd-run</code> which speaks over IPC to PID1 which is considered
+safer than a setuid binary as they have a long history of vulnerabilities. We
+separate our daily user from administration tasks and authenticate through our
+admin account. This reduces the attack surface by removing sudo but is still
+bigger than <code>doas</code>. The problem with <code>doas</code> is that it's unmaintained within
+nixpkgs.</p>
 </blockquote>
+<p>I rebuild way too often to completely separate the accounts and allow no admin
+tasks for my daily user. That may be a better option for servers, etc.</p>
 <p>Create an admin user for administrative tasks and remove your daily user from
 the <code>wheel</code> group:</p>
 <pre><code class="language-users.nix">{ config, pkgs, lib }:
