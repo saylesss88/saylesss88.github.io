@@ -851,6 +851,33 @@ recommendations in the guide.</p>
 <p>Kernel modules for hardware devices are generally loaded automatically by
 <code>udev</code>. You can force a module to be loaded via <code>boot.kernelModules</code>.</p>
 <hr />
+<p><strong>Hardening Modprobe</strong></p>
+<p>You can use both <code>extraModprobeConfig</code> &amp; <code>blacklistedKernelModules</code> to disable
+different features. If you prefer, you can place these in the next section as
+well.</p>
+<pre><code class="language-nix">boot.extraModprobeConfig = ''
+     # firewire and thunderbolt
+    install firewire-core /bin/false
+    install firewire_core /bin/false
+    install firewire-ohci /bin/false
+    install firewire_ohci /bin/false
+    install firewire_sbp2 /bin/false
+    install firewire-sbp2 /bin/false
+    install firewire-net /bin/false
+    install thunderbolt /bin/false
+    install ohci1394 /bin/false
+    install sbp2 /bin/false
+    install dv1394 /bin/false
+    install raw1394 /bin/false
+    install video1394 /bin/false
+'';
+# OR
+#boot.blacklistedKernelModules = [
+#  "firewire-core"
+#  # ... snip ...
+#];
+</code></pre>
+<hr />
 <p><strong>Blacklisting Kernel Parameters</strong></p>
 <p>Blacklisting unused kernel modules reduces the attack surface.</p>
 <p><a href="https://nixos.org/manual/nixos/stable/options#opt-boot.blacklistedKernelModules">boot.blacklistedKernelModules</a>:
@@ -1657,7 +1684,8 @@ of your keyboard, mouse, etc. when trying to configure this.</li>
 with systemd. It's actually a symlink to the existing <code>systemd-run</code> tool. It
 behaves like a secure <code>sudo</code> alternative: it spawns a transient service under
 PID 1 for privilege escalation, without relying on SUID (set user ID)
-binaries.</p>
+binaries. Also note that the Nixpkgs version of <code>doas</code> is unmaintained and
+hasn't been updated in 4 years.</p>
 </blockquote>
 <ul>
 <li>
