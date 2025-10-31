@@ -3257,6 +3257,38 @@ of basic building blocks for a Linux system as well as a system and service
 manager that runs as <code>PID 1</code> and starts the rest of the system.</p>
 <p>Because it launches and supervises almost all system services, hardening systemd
 means raising the baseline security of your entire system.</p>
+<p>Disable coredumps:</p>
+<pre><code class="language-nix">systemd.coredump.enable = false;
+# ➡️ Sets the kernel's resource limit (ulimit -c 0)
+  security.pam.loginLimits = [
+    {
+      domain = "*"; # Applies to all users/sessions
+      type = "-"; # Set both soft and hard limits
+      item = "core"; # The soft/hard limit item
+      value = "0";   # Core dumps size is limited to 0 (effectively disabled)
+    }
+  ];
+</code></pre>
+<p>Disabling coredumps helps save space and improves security/privacy because when
+a program fails, a coredump contains an exact copy of a programs running memory
+at the time of the crash. This can inadvertently expose sensitive data.</p>
+<p>If a program is handling private information when it crashes, the core dump file
+could contain:</p>
+<ul>
+<li>
+<p>Passwords: Stored in memory before being sent or hashed.</p>
+</li>
+<li>
+<p>Encryption Keys: Used for securing network connections.</p>
+</li>
+<li>
+<p>Personal Info: Chat messages, website forms, etc.</p>
+</li>
+</ul>
+<p>It can give a minor performance upgrade and does reduce the attack surface. If a
+malicious program were to gain access to your system, one of the first things it
+might look for are core dump files to extract sensitive data. By disabling them,
+you eliminate this potential source of information leakage.</p>
 <p><code>dbus-broker</code> is generally considered more secure and robust but isn't the
 default as of yet. To set <code>dbus-broker</code> as the default:</p>
 <pre><code class="language-nix">  users.groups.netdev = {};
@@ -3965,6 +3997,9 @@ binaries. Also note that the Nixpkgs version of <code>doas</code> is unmaintaine
 hasn't been updated in 4 years.</p>
 </blockquote>
 <ul>
+<li>
+<p><a href="https://mastodon.social/@pid_eins/112353324518585654">Why run0</a></p>
+</li>
 <li>
 <p>SUID = "Set User ID": When a binary has the SUID bit set, it runs with the
 privileges of the file's owner (often root). There is a long history of
