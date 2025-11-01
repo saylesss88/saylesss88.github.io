@@ -7487,7 +7487,7 @@ Primary key fingerprint: 916B 8D99 C38E AF5E 8ADC  7A2A 8D66 066A 2EEA CCDA
 <h2 id="why-this-setup"><a class="header" href="#why-this-setup">Why This Setup?</a></h2>
 <ul>
 <li>
-<p><strong>Host</strong>: <code>secureblue</code> = Fedora Atomic with <strong>SELinux enforcing</strong>, <strong>sVirt</strong>,
+<p><strong>Host</strong> <code>secureblue</code> = Fedora Atomic with <strong>SELinux enforcing</strong>, <strong>sVirt</strong>,
 <strong>Secure Boot</strong>, and hardened defaults.</p>
 </li>
 <li>
@@ -7502,13 +7502,14 @@ Primary key fingerprint: 916B 8D99 C38E AF5E 8ADC  7A2A 8D66 066A 2EEA CCDA
 <blockquote>
 <p>NOTE: Secureblue enables the hardened_malloc by default which causes problems
 for many browsers and will cause screen flashing with Firefox and others
-within the VM. See:
-<a href="https://secureblue.dev/faq#standard-malloc">secureblue standard_malloc</a></p>
+within the VM. See:</p>
 </blockquote>
+<ul>
+<li><a href="https://secureblue.dev/faq#standard-malloc">secureblue standard_malloc</a></li>
+</ul>
 <ol>
 <li>
-<p>Download a secureblue image:<br />
-<a href="https://secureblue.dev/install">https://secureblue.dev/install</a></p>
+<p>Download a <a href="https://secureblue.dev/install">secureblue image</a></p>
 </li>
 <li>
 <p>Use <strong>Fedora Media Writer</strong> (Flatpak):</p>
@@ -7518,7 +7519,10 @@ within the VM. See:
 </code></pre>
 <ol start="3">
 <li>
-<p>Flash the secureblue image &amp; enable Secure Boot in UEFI <strong>before</strong> install.</p>
+<p>Flash the secureblue image &amp; enable Secure Boot in UEFI <strong>before</strong> install.
+This is now possible with Fedora, when you boot into Fedora Media Writer (not
+Ventoy or Rufus), you will be allowed to enroll the secure boot key with
+secure boot pre-enabled.</p>
 </li>
 <li>
 <p>On first boot:</p>
@@ -7531,7 +7535,8 @@ within the VM. See:
 </ul>
 <ol start="5">
 <li>
-<p>Post-install hardening: <a href="https://secureblue.dev/post-install">https://secureblue.dev/post-install</a></p>
+<p>Post-install hardening See:
+<a href="https://secureblue.dev/post-install">post-install</a></p>
 </li>
 <li>
 <p>Install virtualization stack:</p>
@@ -7559,7 +7564,7 @@ some getting used to but is very stable.</p>
 <h2 id="create-nixos-vm-via-virt-manager"><a class="header" href="#create-nixos-vm-via-virt-manager">Create NixOS VM (via virt-manager)</a></h2>
 <ol>
 <li>
-<p>Download: NixOS Graphical ISO (GNOME): <a href="https://nixos.org/download/">https://nixos.org/download/</a></p>
+<p>Download: <a href="https://nixos.org/download/">NixOS Graphical ISO</a></p>
 </li>
 <li>
 <p>Open <code>virt-manager</code> -&gt; File -&gt; New Virtual Machine</p>
@@ -7602,6 +7607,22 @@ system_u:system_r:svirt_t:s0:c383,c416 14793 ?   00:01:37 qemu-system-x86
 <p>Optionally skip desktop -&gt; install your own after first boot.</p>
 </li>
 </ul>
+<p>The attack surface is reduced significantly when running NixOS within a hardened
+hosts VM. The VM operates on virtualized hardware, which is a powerful form of
+attack surface reduction.</p>
+<p>Devices like your host's Bluetooth adapter, Wi-Fi card, microphone, webcam, and
+USB ports are not directly exposed to the guest operating system. The VM only
+sees virtual versions of these devices. If an exploit targets a vulnerability in
+the Bluetooth stack within the VM, it compromises the VM environment, but it
+cannot typically reach and exploit the physical Bluetooth hardware on the host.</p>
+<p>You can also choose not to pass through certain devices, like Bluetooth or
+webcam to the VM at all, effectively disabling that attack vector. Since your
+host likely already has these hardened features you may not need the additional
+functionality within the VM.</p>
+<p>If something breaks, you have an option to rollback to the previous generation
+with <code>rpm-ostree rollback</code>. The previous generation will be applied on next
+reboot. You can also just reboot and choose the previous generation through the
+grub menu, this way it is temporary and will revert back on next reboot.</p>
 <hr />
 <h2 id="-how-host-mac-secures-the-nixos-vm"><a class="header" href="#-how-host-mac-secures-the-nixos-vm">🔒 How Host MAC Secures the NixOS VM</a></h2>
 <p>The core security principle here is defense-in-depth, where the outer, hardened
@@ -7667,6 +7688,15 @@ environment.memoryAllocator.provider = "graphene-hardened";
 # OR for a more permissive and better performing allocator:
 # environment.memoryAllocator.provider = "graphene-hardened-light";
 </code></pre>
+<p>I have been able to recover from quite a few missteps with Secureblue. I run a
+mini PC and attempted running <code>ujust update-firmware</code>, some systems allow you to
+update the firmware of a booted system. On reboot I got a message "Something
+went seriously wrong MOK is full", it then forced a shutdown. I was familiar
+with resetting the NVRAM by disassembling the PC and moving the red jumper from
+prongs 1 &amp; 2 to prongs 2 &amp; 3 with the power off for 10 seconds. I then moved the
+jumper back to the default position and rebooted. The PC sounds like it's
+revving up a few times and does a few reboots and allowed me to sign right back
+in and re-enroll the secure boot key.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-control-with-git"><a class="header" href="#version-control-with-git">Version Control with Git</a></h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
