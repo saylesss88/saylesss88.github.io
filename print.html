@@ -2652,6 +2652,8 @@ admin account. This reduces the attack surface by removing sudo but is still
 bigger than <code>doas</code>. The problem with <code>doas</code> is that it's unmaintained within
 nixpkgs and it's still a SUID binary.</p>
 </blockquote>
+<details>
+<summary> Click to Expand SUID and run0 resources </summary>
 <ul>
 <li>
 <p><a href="https://mastodon.social/@pid_eins/112353324518585654">run0 explained by Lennart</a></p>
@@ -2668,6 +2670,7 @@ nixpkgs and it's still a SUID binary.</p>
 <a href="https://www.kicksecure.com/wiki/Dev/secureblue">kicksecure vs secureblue</a></p>
 </li>
 </ul>
+</details>
 <p><code>run0</code> is not a SUID, it asks the service manager to invoke a command or shell
 under the target user's UID. The target command is invoked in an isolated exec
 context, freshly forked off PID1 without inheriting any context from the client</p>
@@ -2773,7 +2776,7 @@ against the root-readable <code>/etc/shadow</code>.</li>
 so on every rebuild, you will be asked for your password 3 times which isn't
 ideal. I found the following workaround that will only ask for your password
 once.</p>
-<p>I added the following to my <code>configuration.nix</code>, replacing <code>user-name</code> with your
+<p>Add the following to your <code>configuration.nix</code>, replacing <code>user-name</code> with your
 username:</p>
 <pre><code class="language-nix"> security.polkit.extraConfig = ''
      polkit.addRule(function(action, subject) {
@@ -2800,6 +2803,34 @@ initContent = ''
 password 3 times on every single rebuild.</p>
 <p>Without the <code>pam</code> settings for swaylock, it won't accept your password to log
 back in.</p>
+<p><strong>run0 Usage Example</strong></p>
+<p>When you are in a privileged shell, <code>run0</code> changes the color of the background
+to red to remind you of this.</p>
+<p>Example creating a user:</p>
+<ol>
+<li>
+<p><code>run0</code></p>
+</li>
+<li>
+<p><code>adduser admin</code></p>
+</li>
+<li>
+<p><code>usermod -aG wheel admin</code></p>
+</li>
+<li>
+<p><code>passwd admin</code></p>
+</li>
+<li>
+<p><code>exit</code></p>
+</li>
+<li>
+<p><code>reboot</code></p>
+</li>
+</ol>
+<p>This is just an example, since we manage our users declaratively the user
+created would be discarded on the next rebuild because of the
+<code>users.mutableUsers = false;</code> setting. You could of course change this to <code>true</code>
+to manage your users imperetively but I don't recommend it.</p>
 <hr />
 <h2 id="impermanence"><a class="header" href="#impermanence">Impermanence</a></h2>
 <p>Impermanence, especially when using a <code>tmpfs</code> as the root filesystem, provides
@@ -3411,12 +3442,22 @@ information.</p>
 # or for a detailed view of individual services security posture
 systemd-analyze security NetworkManager
 </code></pre>
-<p>It is also recommended to disable and mask unused or vulnerable services such as
-cups, geoclue, etc.</p>
-<pre><code class="language-bash">sudo systemctl disable cups
-sudo systemctl mask cups
-# To unmask use unmask:
-# sudo systemctl unmask cups
+<p>Optionally disable vulnerable services to reduce the attack surface, obviously
+don't disable what you need or change your habits:</p>
+<pre><code class="language-nix">services = {
+    # mDNS/DNS-SD
+    avahi.enable = false;
+    # Geoclue (location services)
+    geoclue2.enable = false;
+    udisks2.enable = false;
+    accounts-daemon.enable = false;
+  };
+  # Only needed for WWAN/3G/4G modems, otherwise it runs `mmcli` unnecessarily
+  networking.modemmanager.enable = false;
+  # Bluetooth has a long history of vulnerabilities
+  hardware.bluetooth.enable = false;
+  # Prefer manual upgrades on a hardened system
+  system.autoUpgrade.enable = false;
 </code></pre>
 <p>Further reading on systemd:</p>
 <details>
@@ -3457,6 +3498,394 @@ NixOS format:</p>
     };
 }
 </code></pre>
+<details>
+<summary> Click to expand `systemd.nix` example implementing many of the recommendations </summary>
+<pre><code class="language-nix">{lib, ...}: {
+  systemd.services = {
+    # "home-manager-jr".after = ["network-online.target"];
+    # "home-manager-jr".wantedBy = ["multi-user.target"];
+    "user@".serviceConfig = {
+      ProtectSystem = "strict";
+      ProtectClock = true;
+      ProtectHostname = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectProc = "invisible";
+      PrivateTmp = true;
+      PrivateNetwork = true;
+      MemoryDenyWriteExecute = false;
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_BLUETOOTH"
+      ];
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      RestrictSUIDSGID = true;
+      SystemCallFilter = [
+        "~@keyring"
+        "~@swap"
+        "~@debug"
+        "~@module"
+        "~@obsolete"
+        "~@cpu-emulation"
+      ];
+      SystemCallArchitectures = "native";
+    };
+    acpid.serviceConfig = {
+      ProtectSystem = "full";
+      ProtectHome = true;
+      RestrictAddressFamilies = ["AF_INET" "AF_INET6"];
+      SystemCallFilter = "~@clock @cpu-emulation @debug @module @mount @raw-io @reboot @swap";
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+    };
+
+    auditd.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "full";
+      ProtectHome = true;
+      ProtectHostname = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      ProtectProc = "invisible";
+      ProtectClock = true;
+      PrivateTmp = true;
+      PrivateNetwork = true;
+      PrivateMounts = true;
+      PrivateDevices = true;
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      RestrictSUIDSGID = true;
+      RestrictAddressFamilies = [
+        "~AF_INET6"
+        "~AF_INET"
+        "~AF_PACKET"
+      ];
+      MemoryDenyWriteExecute = true;
+      LockPersonality = true;
+      SystemCallFilter = [
+        "~@clock"
+        "~@module"
+        "~@mount"
+        "~@swap"
+        "~@obsolete"
+        "~@cpu-emulation"
+      ];
+      SystemCallArchitectures = "native";
+      CapabilityBoundingSet = [
+        "~CAP_CHOWN"
+        "~CAP_FSETID"
+        "~CAP_SETFCAP"
+      ];
+    };
+
+    cups.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "full";
+      ProtectHome = true;
+      ProtectKernelModules = true;
+      ProtectKernelTunables = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectHostname = true;
+      ProtectClock = true;
+      ProtectProc = "invisible";
+      RestrictRealtime = true;
+      RestrictNamespaces = true;
+      RestrictSUIDSGID = true;
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_INET"
+        "AF_INET6"
+        "AF_PACKET"
+      ];
+
+      MemoryDenyWriteExecute = true;
+      SystemCallFilter = [
+        "~@clock"
+        "~@reboot"
+        "~@debug"
+        "~@module"
+        "~@swap"
+        "~@obsolete"
+        "~@cpu-emulation"
+      ];
+      SystemCallArchitectures = "native";
+      LockPersonality = true;
+    };
+
+    NetworkManager.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectHome = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectHostname = true;
+      ProtectProc = "invisible";
+      PrivateTmp = true;
+      RestrictRealtime = true;
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_INET"
+        "AF_INET6"
+        "AF_PACKET"
+      ];
+      RestrictNamespaces = true;
+      RestrictSUIDSGID = true;
+      MemoryDenyWriteExecute = true;
+      SystemCallFilter = [
+        "~@mount"
+        "~@module"
+        "~@swap"
+        "~@obsolete"
+        "~@cpu-emulation"
+        "ptrace"
+      ];
+      SystemCallArchitectures = "native";
+      LockPersonality = true;
+    };
+
+    wpa_supplicant.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectHostname = true;
+      ProtectProc = "invisible";
+      PrivateTmp = true;
+      PrivateMounts = true;
+      RestrictRealtime = true;
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_INET"
+        "AF_INET6"
+        "AF_PACKET"
+      ];
+      RestrictNamespaces = true;
+      RestrictSUIDSGID = true;
+      MemoryDenyWriteExecute = true;
+      SystemCallFilter = [
+        "~@mount"
+        "~@raw-io"
+        "~@privileged"
+        "~@keyring"
+        "~@reboot"
+        "~@module"
+        "~@swap"
+        "~@resources"
+        "~@obsolete"
+        "~@cpu-emulation"
+        "ptrace"
+      ];
+      SystemCallArchitectures = "native";
+      LockPersonality = true;
+      CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_RAW";
+    };
+
+    dbus.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "stric";
+      ProtectControlGroups = true;
+      ProtectHome = true;
+      ProtectHostname = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      PrivateMounts = true;
+      PrivateDevices = true;
+      PrivateTmp = true;
+      RestrictSUIDSGID = true;
+      RestrictRealtime = true;
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+      ];
+      RestrictNamespaces = true;
+      SystemCallErrorNumber = "EPERM";
+      SystemCallArchitectures = "native";
+      SystemCallFilter = [
+        "~@obsolete"
+        "~@resources"
+        "~@debug"
+        "~@mount"
+        "~@reboot"
+        "~@swap"
+        "~@cpu-emulation"
+      ];
+      LockPersonality = true;
+      IPAddressDeny = ["0.0.0.0/0" "::/0"];
+      MemoryDenyWriteExecute = true;
+      DevicePolicy = "closed";
+      UMask = 0077;
+    };
+
+    nscd.serviceConfig = {
+      ProtectClock = true;
+      ProtectHostname = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectProc = "invisible";
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      MemoryDenyWriteExecute = true;
+      LockPersonality = true;
+      SystemCallFilter = [
+        "~@mount"
+        "~@swap"
+        "~@clock"
+        "~@obsolete"
+        "~@cpu-emulation"
+      ];
+      SystemCallArchitectures = "native";
+      CapabilityBoundingSet = [
+        "~CAP_CHOWN"
+        "~CAP_FSETID"
+        "~CAP_SETFCAP"
+      ];
+    };
+    bluetooth.serviceConfig = {
+      ProtectKernelTunables = lib.mkDefault true;
+      ProtectKernelModules = lib.mkDefault true;
+      ProtectKernelLogs = lib.mkDefault true;
+      ProtectHostname = true;
+      ProtectControlGroups = true;
+      ProtectProc = "invisible";
+      SystemCallFilter = [
+        "~@obsolete"
+        "~@cpu-emulation"
+        "~@swap"
+        "~@reboot"
+        "~@mount"
+      ];
+      SystemCallArchitectures = "native";
+    };
+    systemd-rfkill.serviceConfig = {
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectProc = "invisible";
+      ProcSubset = "pid";
+      PrivateTmp = true;
+      MemoryDenyWriteExecute = true;
+      NoNewPrivileges = true;
+      LockPersonality = true;
+      RestrictRealtime = true;
+      SystemCallArchitectures = "native";
+      UMask = "0077";
+      IPAddressDeny = "any";
+    };
+    systemd-machined.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ProtectClock = true;
+      ProtectHostname = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectProc = "invisible";
+      PrivateTmp = true;
+      PrivateMounts = true;
+      PrivateUsers = true;
+      PrivateNetwork = true;
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
+      RestrictSUIDSGID = true;
+      RestrictAddressFamilies = ["AF_UNIX"];
+      MemoryDenyWriteExecute = true;
+      SystemCallArchitectures = "native";
+    };
+    systemd-udevd.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectProc = "invisible";
+      RestrictNamespaces = true;
+      CapabilityBoundingSet = "~CAP_SYS_PTRACE ~CAP_SYS_PACCT";
+    };
+    nix-daemon.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectControlGroups = true;
+      ProtectKernelModules = true;
+      PrivateMounts = true;
+      PrivateTmp = true;
+      PrivateDevices = true;
+      RestrictSUIDSGID = true;
+      RestrictRealtime = true;
+      RestrictNamespaces = ["~cgroup"];
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_NETLINK"
+        "AF_INET6"
+        "AF_INET"
+      ];
+      CapabilityBoundingSet = [
+        "~CAP_SYS_CHROOT"
+        "~CAP_BPF"
+        "~CAP_AUDIT_WRITE"
+        "~CAP_AUDIT_CONTROL"
+        "~CAP_AUDIT_READ"
+        "~CAP_SYS_PTRACE"
+        "~CAP_SYS_NICE"
+        "~CAP_SYS_RESOURCE"
+        "~CAP_SYS_RAWIO"
+        "~CAP_SYS_TIME"
+        "~CAP_SYS_PACCT"
+        "~CAP_LINUX_IMMUTABLE"
+        "~CAP_IPC_LOCK"
+        "~CAP_WAKE_ALARM"
+        "~CAP_SYS_TTY_CONFIG"
+        "~CAP_SYS_BOOT"
+        "~CAP_LEASE"
+        "~CAP_BLOCK_SUSPEND"
+        "~CAP_MAC_ADMIN"
+        "~CAP_MAC_OVERRIDE"
+      ];
+      SystemCallErrorNumber = "EPERM";
+      SystemCallArchitectures = "native";
+      SystemCallFilter = [
+        "~@resources"
+        "~@module"
+        "~@obsolete"
+        "~@debug"
+        "~@reboot"
+        "~@swap"
+        "~@cpu-emulation"
+        "~@clock"
+        "~@raw-io"
+      ];
+      LockPersonality = true;
+      MemoryDenyWriteExecute = false;
+      DevicePolicy = "closed";
+      UMask = 0077;
+    };
+    systemd-journald.serviceConfig = {
+      NoNewPrivileges = true;
+      ProtectProc = "invisible";
+      ProtectHostname = true;
+      PrivateMounts = true;
+    };
+  };
+}
+</code></pre>
+</details>
 <p>As you can see from above, you typically use the <code>serviceConfig</code> attribute to
 harden settings for systemd services.</p>
 <pre><code class="language-bash">systemd-analyze security bluetooth
