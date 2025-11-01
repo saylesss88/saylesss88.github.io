@@ -175,7 +175,11 @@
 <li><a href="#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
 <li><a href="#guided-encrypted-btrfs-subvol-install-using-disko">Guided Encrypted BTRFS Subvol install using disko</a></li>
 <li><a href="#installing-software">Installing Software</a></li>
-<li><a href="#users-and-suid-binaries">Users and SUID Binaries</a></li>
+<li><a href="#users-and-suid-binaries">Users and SUID Binaries</a>
+<ul>
+<li><a href="#capabilities">Capabilities</a></li>
+</ul>
+</li>
 <li><a href="#impermanence">Impermanence</a></li>
 <li><a href="#replace-timesyncd-with-a-chron-job-that-enables-network-time-security-nts">Replace timesyncd with a chron job that enables Network Time Security (NTS)</a></li>
 <li><a href="#secure-boot">Secure Boot</a>
@@ -515,17 +519,14 @@ security = {
 polkit.enable = true;
 # Disable sudo
 sudo.enable = false;
-# Disable pkexec
+# Disable pkexec at the package level
 polkit.package = pkgs.polkit.override {
   withPkexec = false;
 };
 wrappers = {
-  pkexec = {
-    setuid = lib.mkForce false;
-  };
-  su = {
-    setuid = lib.mkForce false;
-  };
+# Completely disable SUID for su and pkexec
+  pkexec.setuid = lib.mkForce false;
+  su.setuid = lib.mkForce false;
 };
 pam.services.swaylock = {
   text = ''
@@ -536,7 +537,7 @@ pam.services.swaylock = {
   '';
   };
 };
-# Disable su
+# Disable SUID for su binary provided by util-linux
   environment.systemPackages = [
     (pkgs.util-linux.override {
       enableSu = false;
@@ -575,6 +576,85 @@ containers/namespaces)</p>
 <ul>
 <li><code>unix_chkpwd</code>: This is a core PAM helper to securely check user passwords
 against the root-readable <code>/etc/shadow</code>.</li>
+</ul>
+<h3 id="capabilities"><a class="header" href="#capabilities">Capabilities</a></h3>
+<pre><code class="language-nix">{ lib, pkgs, config, ...}: let
+  findBin = pkg: bin: "${pkg.out or pkg}/bin/${bin}";
+  in {
+security.wrappers = {
+      # 2. Convert Networking Tools from SUID to Capabilities
+
+      # ping needs CAP_NET_RAW to create raw network sockets
+      ping = {
+        owner = "root";
+        group = "root";
+        capabilities = "cap_net_raw+ep"; # e=Effective, p=Permitted
+        source = findBin pkgs.iputils "ping";
+      };
+
+      # mtr-packet needs CAP_NET_RAW as well
+      mtr = {
+        owner = "root";
+        group = "root";
+        capabilities = "cap_net_raw+ep";
+        source = findBin pkgs.mtr "mtr-packet";
+      };
+
+      # Commented out because I haven't tested these yet
+      # 3. Convert FUSE Mount Tools from SUID to Capabilities
+      # Allows non-root users to mount FUSE filesystems like AppImages
+    #  fusermount = {
+    #    owner = "root";
+    #    group = "root";
+    #    capabilities = "cap_sys_admin+ep"; # Required for FUSE mounts
+    #    source = findBin pkgs.fuse "fusermount";
+    #  };
+    #  fusermount3 = {
+    #    owner = "root";
+    #    group = "root";
+    #    capabilities = "cap_sys_admin+ep";
+    #    source = findBin pkgs.fuse3 "fusermount3";
+    #  };
+    };
+  };
+  }
+</code></pre>
+<p><code>cap_net_raw</code>: Allows the program to use raw and unbuffered network sockets,
+which is what <code>ping</code> and <code>mtr-packet</code> need to send ICMP packets.</p>
+<p><code>cap_sys_admin</code>: Grants a variety of system administration operations, including
+the ability to perform FUSE mounts. This is a powerful capability, but it's
+still more restrictive than full root SUID.</p>
+<ul>
+<li><code>+ep</code>: This is crucial. It stands for:
+<ul>
+<li>
+<p><code>e</code> (Effective): The set of capabilities actually used by the process when
+running.</p>
+</li>
+<li>
+<p><code>p</code> (Permitted): The set of capabilities that can be enabled by the process.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>By using this approach, you are following the security principle of least
+privilege, significantly reducing the attack surface compared to traditional
+SUID binaries.</p>
+<blockquote>
+<p>NOTE: When making changes to setuid, setgid or adding capabilities for
+critical network tools like <code>mtr</code> and <code>ping</code> requires a full system rebuild
+and relinking or numerous packages so it takes a while.</p>
+</blockquote>
+<ul>
+<li>
+<p><a href="https://search.nixos.org/options?channel=unstable&amp;show=security.wrappers&amp;query=security.wrappers">security.wrappers</a></p>
+</li>
+<li>
+<p><a href="https://linux-audit.com/kernel/capabilities/linux-capabilities-101/">Linux Audit capabilities 101</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Dev/secureblue#capabilities">Kicksecure's take on capabilities</a></p>
+</li>
 </ul>
 <hr />
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
