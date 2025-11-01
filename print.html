@@ -2660,7 +2660,7 @@ nixpkgs and it's still a SUID binary.</p>
 <p><a href="https://en.wikipedia.org/wiki/Setuid">setuid Wikipedia</a></p>
 </li>
 <li>
-<p>Using <code>run0</code> takes care of these classes of
+<p>Using <code>run0</code> removes of these classes of
 <a href="https://ruderich.org/simon/notes/su-sudo-from-root-tty-hijacking">attacks</a></p>
 </li>
 <li>
@@ -2674,7 +2674,7 @@ context, freshly forked off PID1 without inheriting any context from the client<
 <p>I rebuild way too often to completely separate the accounts and allow no admin
 tasks for my daily user. That may be a better option for servers, etc.</p>
 <p>Create an admin user for administrative tasks and remove your daily user from
-the <code>wheel</code> group, and disable <code>sudo</code>, <code>su</code>, and <code>pkexec</code> SUIDs:</p>
+the <code>wheel</code> group, and disable the <code>sudo</code>, <code>su</code>, and <code>pkexec</code> SUIDs:</p>
 <pre><code class="language-users.nix">{ config, pkgs, lib }:
 {
 users.users.admin = {
@@ -2734,8 +2734,38 @@ pam.services.swaylock = {
 </code></pre>
 <p>The <code>security.wrappers...</code> removes the setuid bit making the commands unusable
 removing the SUID vulnerabilities for <code>su</code> and <code>pkexec</code>. You can find the other
-SUID wrappers in <code>/run/wrappers/bin/</code>, such as <code>fusermount</code> and more. Do your
-research before disabling anything.</p>
+SUID wrappers in <code>/run/wrappers/bin/</code>, such as <code>fusermount</code> and more.</p>
+<p>SUID's that can be disabled:</p>
+<ul>
+<li>
+<p><code>umount</code>: Allows unprivileged users to unmount devices listed in your fstab.</p>
+</li>
+<li>
+<p><code>mount</code>: Same as above but for mounting.</p>
+</li>
+<li>
+<p><code>sg</code>: Executes a command as a different group.</p>
+</li>
+<li>
+<p><code>mtr-packet</code>: Used by mtr to create network sockets.</p>
+</li>
+<li>
+<p><code>fusermount</code>, <code>fusermount3</code>: Allows unprivileged users to mount FUSE
+filesystems. Can be disabled if you don't use FUSE (e.g., Appimages, etc.)</p>
+</li>
+<li>
+<p><code>newuidmap</code>, <code>newgidmap</code>: Used for user namespace creation (Often used for
+unprivileged containers). (Disable if you don't use unprivileged
+containers/namespaces)</p>
+</li>
+</ul>
+<hr />
+<p>Never Disable:</p>
+<ul>
+<li><code>unix_chkpwd</code>: This is a core PAM helper to securely check user passwords
+against the root-readable <code>/etc/shadow</code>.</li>
+</ul>
+<hr />
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
 <pre><code class="language-bash">run0 nixos-rebuild switch --flake .
 </code></pre>
