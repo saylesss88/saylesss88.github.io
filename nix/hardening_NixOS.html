@@ -175,6 +175,7 @@
 <li><a href="#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></li>
 <li><a href="#guided-encrypted-btrfs-subvol-install-using-disko">Guided Encrypted BTRFS Subvol install using disko</a></li>
 <li><a href="#installing-software">Installing Software</a></li>
+<li><a href="#users-and-suid-binaries">Users and SUID Binaries</a></li>
 <li><a href="#impermanence">Impermanence</a></li>
 <li><a href="#replace-timesyncd-with-a-chron-job-that-enables-network-time-security-nts">Replace timesyncd with a chron job that enables Network Time Security (NTS)</a></li>
 <li><a href="#secure-boot">Secure Boot</a>
@@ -449,6 +450,135 @@ access each with some simple logic.</p>
 <p>For example:</p>
 <details>
 <summary> Click to expand
+<h2 id="users-and-suid-binaries"><a class="header" href="#users-and-suid-binaries">Users and SUID Binaries</a></h2>
+<blockquote>
+<p>NOTE: The point here is to avoid using a setuid binary (<code>sudo</code>), <code>run0</code> is a
+wrapper over <code>systemd-run</code> which speaks over IPC to PID1 which is considered
+safer than a setuid binary as they have a long history of vulnerabilities. We
+separate our daily user from administration tasks and authenticate through our
+admin account. This reduces the attack surface by removing sudo but is still
+bigger than <code>doas</code>. The problem with <code>doas</code> is that it's unmaintained within
+nixpkgs and it's still a SUID binary.</p>
+</blockquote>
+<ul>
+<li>
+<p><a href="https://mastodon.social/@pid_eins/112353324518585654">run0 explained by Lennart</a></p>
+</li>
+<li>
+<p><a href="https://en.wikipedia.org/wiki/Setuid">setuid Wikipedia</a></p>
+</li>
+<li>
+<p>Using <code>run0</code> takes care of these classes of
+<a href="https://ruderich.org/simon/notes/su-sudo-from-root-tty-hijacking">attacks</a></p>
+</li>
+<li>
+<p>The following lists some of the downsides
+<a href="https://www.kicksecure.com/wiki/Dev/secureblue">kicksecure vs secureblue</a></p>
+</li>
+</ul>
+<p><code>run0</code> is not a SUID, it asks the service manager to invoke a command or shell
+under the target user's UID. The target command is invoked in an isolated exec
+context, freshly forked off PID1 without inheriting any context from the client</p>
+<p>I rebuild way too often to completely separate the accounts and allow no admin
+tasks for my daily user. That may be a better option for servers, etc.</p>
+<p>Create an admin user for administrative tasks and remove your daily user from
+the <code>wheel</code> group, and disable <code>sudo</code>, <code>su</code>, and <code>pkexec</code> SUIDs:</p>
+<pre><code class="language-users.nix">{ config, pkgs, lib }:
+{
+users.users.admin = {
+    isNormalUser = true;
+    description  = "System administrator";
+    extraGroups  = [ "wheel" ];   # wheel = sudo, libvirtd for VMs
+    # run `mkpasswd --method=yescrypt` and replace "changeme" w/ the result
+    initialHashedPassword = "changeme";           # change with `passwd admin` later
+    openssh.authorizedKeys.keys = [
+      # (optional) paste your SSH public key here
+      # "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..."
+    ];
+  };
+
+  # --------------------------------------------------------------------
+  # 2. Existing daily user – remove from wheel, keep everything else
+  # --------------------------------------------------------------------
+  users.users.daily = {
+    isNormalUser = true;
+    description  = "Daily driver account";
+    extraGroups  = lib.mkForce [ "networkmanager" "audio" "video" ]; # keep useful groups
+    initialHashedPassword = "changeme";
+    # Remove `wheel` by *not* listing it (mkForce overrides any default)
+  };
+
+security = {
+polkit.enable = true;
+# Disable sudo
+sudo.enable = false;
+# Disable pkexec
+polkit.package = pkgs.polkit.override {
+  withPkexec = false;
+};
+wrappers = {
+  pkexec = {
+    setuid = lib.mkForce false;
+  };
+  su = {
+    setuid = lib.mkForce false;
+  };
+};
+pam.services.swaylock = {
+  text = ''
+    auth include login
+    account include login
+    password include login
+    session include login
+  '';
+  };
+};
+# Disable su
+  environment.systemPackages = [
+    (pkgs.util-linux.override {
+      enableSu = false;
+    })
+  ];
+</code></pre>
+<p>The <code>security.wrappers...</code> removes the setuid bit making the commands unusable
+removing the SUID vulnerabilities for <code>su</code> and <code>pkexec</code>. You can find the other
+SUID wrappers in <code>/run/wrappers/bin/</code>, such as <code>fusermount</code> and more. Do your
+research before disabling anything.</p>
+<p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
+<pre><code class="language-bash">run0 nixos-rebuild switch --flake .
+</code></pre>
+<p>Since <code>run0</code> doesn't cache results and <code>nixos-rebuild</code> calls on Polkit 3 times
+so on every rebuild, you will be asked for your password 3 times which isn't
+ideal. I found the following workaround that will only ask for your password
+once.</p>
+<p>I added the following to my <code>configuration.nix</code>, replacing <code>user-name</code> with your
+username:</p>
+<pre><code class="language-nix"> security.polkit.extraConfig = ''
+     polkit.addRule(function(action, subject) {
+       if (subject.user == "user-name") {
+         if (action.id.indexOf("org.nixos") == 0) {
+           polkit.log("Caching admin authentication for single NixOS operation");
+           return polkit.Result.AUTH_ADMIN_KEEP;
+         }
+       }
+     });
+   '';
+
+</code></pre>
+<p>Create a zsh function for easy access:</p>
+<pre><code class="language-nix"># zsh.nix
+#...snip...
+initContent = ''
+  fr() {
+    run0 nixos-rebuild switch --flake "/home/$USER/flake#"$(hostname)
+  }
+'';
+</code></pre>
+<p>Needless to say, this is less secure but much more convenient than entering your
+password 3 times on every single rebuild.</p>
+<p>Without the <code>pam</code> settings for swaylock, it won't accept your password to log
+back in.</p>
+<hr />
 <h2 id="impermanence"><a class="header" href="#impermanence">Impermanence</a></h2>
 <p>Impermanence, especially when using a <code>tmpfs</code> as the root filesystem, provides
 several significant security benefits. The core principle is that impermanence
