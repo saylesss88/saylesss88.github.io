@@ -2643,10 +2643,11 @@ and selectively pin specific packages from <code>unstable</code> to ensure they 
 rapid security updates.</p>
 <p>With flakes it's easy to add both <code>stable</code> and <code>unstable</code> as flake inputs and
 access each with some simple logic.</p>
-<p>For example:</p>
-<details>
-<summary> Click to expand
 <h2 id="users-and-suid-binaries"><a class="header" href="#users-and-suid-binaries">Users and SUID Binaries</a></h2>
+<p>This is more advanced hardening that can cause breakage and may not be for
+everyone. Always do your own research and weigh the pros and cons in relation to
+your workflow and threat model. I used secureblue as a model for implementing
+these capabilities.</p>
 <blockquote>
 <p>NOTE: The point here is to avoid using a setuid binary (<code>sudo</code>), <code>run0</code> is a
 wrapper over <code>systemd-run</code> which speaks over IPC to PID1 which is considered
@@ -2687,7 +2688,7 @@ the <code>wheel</code> group, and disable the <code>sudo</code>, <code>su</code>
 users.users.admin = {
     isNormalUser = true;
     description  = "System administrator";
-    extraGroups  = [ "wheel" ];   # wheel = sudo, libvirtd for VMs
+    extraGroups  = [ "wheel" ];   # wheel = sudo
     # run `mkpasswd --method=yescrypt` and replace "changeme" w/ the result
     initialHashedPassword = "changeme";           # change with `passwd admin` later
     openssh.authorizedKeys.keys = [
@@ -2711,15 +2712,12 @@ security = {
 polkit.enable = true;
 # Disable sudo
 sudo.enable = false;
-# Disable pkexec at the package level
-polkit.package = pkgs.polkit.override {
-  withPkexec = false;
-};
 wrappers = {
 # Completely disable SUID for su and pkexec
   pkexec.setuid = lib.mkForce false;
   su.setuid = lib.mkForce false;
 };
+# Or hyprlock, required for swaylock to accept your password
 pam.services.swaylock = {
   text = ''
     auth include login
@@ -2729,12 +2727,6 @@ pam.services.swaylock = {
   '';
   };
 };
-# Disable SUID for su binary provided by util-linux
-  environment.systemPackages = [
-    (pkgs.util-linux.override {
-      enableSu = false;
-    })
-  ];
 </code></pre>
 <p>The <code>security.wrappers...</code> removes the setuid bit making the commands unusable
 removing the SUID vulnerabilities for <code>su</code> and <code>pkexec</code>. You can find the other
@@ -2771,6 +2763,8 @@ against the root-readable <code>/etc/shadow</code>.</li>
 </ul>
 <hr />
 <h3 id="capabilities"><a class="header" href="#capabilities">Capabilities</a></h3>
+<details>
+<summary> ✔️ Click to expand capabilities examples </summary>
 <p>One way to help get rid of setuid binaries is to replace them with capabilities.</p>
 <p>Capabilities provide a subset of what is available to root to a process. This
 breaks up root privileges into smaller units that can independently grant access
@@ -2886,6 +2880,7 @@ and relinking or numerous packages so it takes a while.</p>
 <p><a href="https://www.kicksecure.com/wiki/Dev/secureblue#capabilities">Kicksecure's take on capabilities</a></p>
 </li>
 </ul>
+</details>
 <hr />
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
 <pre><code class="language-bash">run0 nixos-rebuild switch --flake .
