@@ -177,6 +177,7 @@
 <li><a href="#installing-software">Installing Software</a></li>
 <li><a href="#users-and-suid-binaries">Users and SUID Binaries</a>
 <ul>
+<li><a href="#-the-danger-of-setuid">💥 The Danger of setuid</a></li>
 <li><a href="#capabilities">Capabilities</a></li>
 </ul>
 </li>
@@ -370,12 +371,7 @@ minimal disko encrypted installation:
 gives it unrestricted access to their user data and system resources. There is a
 widespread lack of awareness that Linux apps generally run with the full
 permissions of the user. It's easy to overlook the fact that "trusted source"
-doesn't mean "safe to run uncontained".</p>
-<p>I suggest that you try using an editor from Flatpak so you can see and
-experience running an editor in a sandbox. It felt weird to me because I had
-gotten used to being able to see all my files with Yazi or do insecure
-customizations to my editor unfettered. With Flatseal, you can see which
-permissions the app ships with and adjust them accordingly.</p>
+doesn't mean "safe to run uncontained". --summarized from kicksecure docs</p>
 <p><strong>nixpkgs-unstable Security Overview</strong></p>
 <ul>
 <li>
@@ -399,6 +395,10 @@ versions may have publicly known, unpatched vulnerabilities.</p>
 <p>As the name states, <code>nixpkgs-unstable</code> is less stable and an update is more
 likely to cause your system to fail to build due to breaking changes in Nix
 expressions.</p>
+</li>
+<li>
+<p>I personally use unstable for everything, but I don't mind having to fix
+issues that arise.</p>
 </li>
 </ul>
 <hr />
@@ -451,6 +451,7 @@ and selectively pin specific packages from <code>unstable</code> to ensure they 
 rapid security updates.</p>
 <p>With flakes it's easy to add both <code>stable</code> and <code>unstable</code> as flake inputs and
 access each with some simple logic.</p>
+<hr />
 <h2 id="users-and-suid-binaries"><a class="header" href="#users-and-suid-binaries">Users and SUID Binaries</a></h2>
 <blockquote>
 <p>NOTE: The point here is to avoid using a setuid binary (<code>sudo</code>), <code>run0</code> is a
@@ -483,8 +484,39 @@ nixpkgs and it's still a SUID binary.</p>
 <p><code>run0</code> is not a SUID, it asks the service manager to invoke a command or shell
 under the target user's UID. The target command is invoked in an isolated exec
 context, freshly forked off PID1 without inheriting any context from the client</p>
-<p>I rebuild way too often to completely separate the accounts and allow no admin
-tasks for my daily user. That may be a better option for servers, etc.</p>
+<p>The core danger of <strong>setuid</strong> (Set User ID) lies in its ability to allow a
+low-privilege user to execute a program with the <strong>permissions of the file's
+owner</strong>, which is most often the powerful <strong>root user</strong>.</p>
+<h3 id="-the-danger-of-setuid"><a class="header" href="#-the-danger-of-setuid">💥 The Danger of setuid</a></h3>
+<p>For granting limited, controlled privilege escalation to apps, the primary
+choices are broadly between traditional <strong>setuid/setgid permissions</strong> and more
+modern <strong>Linux capabilities</strong>. <a href="#capabilities">Jump to Capabilities</a></p>
+<ul>
+<li><a href="https://www.cbtnuggets.com/blog/technology/system-admin/linux-file-permissions-understanding-setuid-setgid-and-the-sticky-bit">Understanding setuid/setgid</a></li>
+</ul>
+<p>The <code>setuid</code> permission is dangerous because it creates a privilege escalation
+pathway that can be exploited for malicious purposes.</p>
+<ul>
+<li>
+<p>Temporary Root Access: When a file has the setuid bit set and is owned by
+<code>root</code>, any user who executes that program instantly and temporarily gains the
+full power of the root user while the program runs.</p>
+</li>
+<li>
+<p>If a setuid program (such as <code>passwd</code>, or <code>sudo</code>) contain a security flaw,
+such as a buffer overflow (Common in C) or improper input validation, an
+attacker can exploit the flaw.</p>
+</li>
+<li>
+<p>Since the program is running with root privileges, the attacker can execute
+shell code or commands with root access, completely compromising the entire
+system.</p>
+</li>
+</ul>
+<p>Normally the root user (UID 0) gets unrestricted access to almost everything on
+the entire system.</p>
+<p>I rebuild/update way too often to completely separate the accounts and allow no
+admin tasks for my daily user. That may be a better option for servers, etc.</p>
 <p>Create an admin user for administrative tasks and remove your daily user from
 the <code>wheel</code> group, and disable the <code>sudo</code>, <code>su</code>, and <code>pkexec</code> SUIDs:</p>
 <pre><code class="language-users.nix">{ config, pkgs, lib }:
@@ -586,6 +618,8 @@ breaks up root privileges into smaller units that can independently grant access
 to processes. This reduces the full set of privileges, decreasing the risk of
 exploitation.</p>
 <p>(This is just an example):</p>
+<details>
+<summary> ✔️ Click to Expand Capability example </summary>
 <pre><code class="language-nix">{
   # a setuid root program
   doas =
@@ -670,6 +704,7 @@ SUID binaries.</p>
 <p><a href="https://www.kicksecure.com/wiki/Dev/secureblue#capabilities">Kicksecure's take on capabilities</a></p>
 </li>
 </ul>
+</details>
 </details>
 <hr />
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
