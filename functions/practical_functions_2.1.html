@@ -174,6 +174,7 @@
 If you want to follow along with this example you'll have to place the following
 in your project directory. Section is collapsed to focus on functions:
 </summary>
+<p><img src="images/coding6.png" alt="coding6" /></p>
 <ol>
 <li>
 <p><a href="https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/2.49.3/graphviz-2.49.3.tar.gz">graphviz</a></p>
@@ -293,12 +294,12 @@ mkDerivation {
 <pre><code class="language-bash">nix-build -A hello
 nix-build -A graphviz
 </code></pre>
-<p>As you can see both derivations are dependendent on <code>nixpkgs</code> which they <strong>both</strong>
-import directly. To centralize our dependencies and avoid redundant imports,
-we'll refactor our individual package definitions (<code>hello.nix</code>, <code>graphviz.nix</code>)
-into functions. Our <code>default.nix</code> will then be responsible for setting up the
-common inputs (like <code>pkgs</code> and <code>mkDerivation</code>) and passing them as arguments when
-it imports and calls these package functions.</p>
+<p>As you can see both derivations are dependendent on <code>nixpkgs</code> which they
+<strong>both</strong> import directly. To centralize our dependencies and avoid redundant
+imports, we'll refactor our individual package definitions (<code>hello.nix</code>,
+<code>graphviz.nix</code>) into functions. Our <code>default.nix</code> will then be responsible for
+setting up the common inputs (like <code>pkgs</code> and <code>mkDerivation</code>) and passing them
+as arguments when it imports and calls these package functions.</p>
 <p>Here is what our <code>default.nix</code> will look like:</p>
 <pre><code class="language-nix">let
   pkgs = import &lt;nixpkgs&gt; { };
@@ -341,8 +342,8 @@ mkDerivation {
 }
 </code></pre>
 <p>Now our <code>graphviz</code> attribute expects <code>graphviz.nix</code> to be a function that takes
-the arguments listed in the above <code>default.nix</code>, here's what <code>graphviz.nix</code>
-will look like as a function:</p>
+the arguments listed in the above <code>default.nix</code>, here's what <code>graphviz.nix</code> will
+look like as a function:</p>
 <pre><code class="language-nix"># graphviz.nix
 {
   mkDerivation,
@@ -364,10 +365,10 @@ mkDerivation {
     else [];
 }
 </code></pre>
-<p>We factorized the import of <code>nixpkgs</code> and <code>mkDerivation</code>, and also added a variant
-of <code>graphviz</code> with gd support disabled. The result is that both <code>hello.nix</code> and
-<code>graphviz.nix</code> are independent of the repository and customizable by passing
-specific inputs.</p>
+<p>We factorized the import of <code>nixpkgs</code> and <code>mkDerivation</code>, and also added a
+variant of <code>graphviz</code> with gd support disabled. The result is that both
+<code>hello.nix</code> and <code>graphviz.nix</code> are independent of the repository and
+customizable by passing specific inputs.</p>
 <p>Now, we can build the package with <code>gd</code> support disabled with the <code>graphvizCore</code>
 attribute:</p>
 <pre><code class="language-bash">nix-build -A graphvizCore
