@@ -2262,7 +2262,12 @@ desktop portal reintroduces the screencopy vulnerability.</p>
 <p>Keep your system up to date (update regularly).</p>
 </li>
 <li>
-<p>Use strong, unique passwords.</p>
+<p>Use strong, unique passwords. To generate one from the command-line, there is
+<code>pkgs.diceware</code>. Generate a password with: <code>diceware -n 12 -w en_eff</code>, add
+spaces between the words for higher entropy.</p>
+<ul>
+<li><a href="https://www.kicksecure.com/wiki/Passwords#Password_Generation">Kicksecure Password_Generation</a></li>
+</ul>
 </li>
 <li>
 <p>Avoid reusing passwords, use a password manager.</p>
@@ -2301,6 +2306,11 @@ or be reset on rebuild. User and group definitions become entirely controlled by
 your system configuration for maximum reproducibility and security. If you need
 to add, remove, or modify users, you must do so in your <code>configuration.nix</code> and
 rebuild the system.</p>
+<p>Don't log in as <code>root</code>, it's unnecessary.</p>
+<p>Commands that require <code>root</code> permissions should be run individually using <code>sudo</code>
+in all cases. Avoid logging in as <code>root</code> &amp; using <code>sudo su</code>.</p>
+<p>Never run GUI applications as <code>root</code>. If there is a legitimate reason for doing
+this, use <code>lxsudo</code> instead.</p>
 <hr />
 <blockquote>
 <p>NOTE: There is mention of making
@@ -2340,7 +2350,6 @@ with NixOS with <code>users.users</code>, change <code>"newuser"</code> to your 
 <p>Explicitly setting <code>uid = 1000;</code> is a best practice for compatibility and
 predictability.</p>
 <hr />
-<p>EDITED: 10-29-25 Removed <code>trusted-users</code> section</p>
 <p><strong>Only install, enable, and run what is needed</strong>: Disable or uninstall
 unnecessary software and services to minimize potential vulnerabilities. Take
 advantage of NixOS’s easy package management and minimalism to keep your system
@@ -2741,6 +2750,8 @@ users.users.admin = {
       # "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..."
     ];
   };
+    users.groups.admin = {};
+    users.mutableUsers = false;
 
   # --------------------------------------------------------------------
   # 2. Existing daily user – remove from wheel, keep everything else
@@ -2752,6 +2763,7 @@ users.users.admin = {
     initialHashedPassword = "changeme";
     # Remove `wheel` by *not* listing it (mkForce overrides any default)
   };
+  users.groups.daily = {};
 
 security = {
 polkit.enable = true;
@@ -10220,7 +10232,8 @@ up shortly.</p>
 
   outputs = inputs@{ nixpkgs, ... }: {
     nixosConfigurations = {
-      hostname = nixpkgs.lib.nixosSystem {
+      # Change `my-hostname` to match `networking.hostName`
+      my-hostname = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           ./configuration.nix
@@ -10287,7 +10300,7 @@ place.</p>
     ./disk-config.nix
   ];
 
-  networking.hostName = "magic"; # This will match the `hostname` of your flake
+  networking.hostName = "my-hostname"; # This will match the `hostname` of your flake
 
   networking.networkmanager.enable = true;
 
@@ -10302,12 +10315,15 @@ place.</p>
 
   time.timeZone = "America/New_York";
 
+# Change `nixos` to your chosen username, change the group to match
   users.users.nixos = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
     initialHashedPassword = "COPY_YOUR_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
     # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
   };
+  # Create a matching group
+  users.groups.nixos = {};
 
   console.keyMap = "us";
 
@@ -10339,9 +10355,8 @@ enter your <code>user</code> and <code>password</code> to login to a shell to ge
 <li>
 <p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
 directory. Since the file was first in <code>/etc</code> you'll need to adjust the
-permissions with something like <code>sudo chown username:users ~/flake</code>(<code>username</code>
-will be your username) and then you can work on it without privilege
-escalation.</p>
+permissions with something like <code>sudo chown nixos:nixos ~/flake</code>. This is
+based off of the example above where we created both a <code>nixos</code> user and group.</p>
 </li>
 <li>
 <p>You can check the layout of your btrfs system with:</p>
@@ -11304,6 +11319,8 @@ file.</p>
     initialHashedPassword = "READ_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
     # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
   };
+  # Change me to match your chosen username
+  users.group.nixosUser = {};
 
   console.keyMap = "us";
 
@@ -11400,8 +11417,9 @@ enter your <code>user</code> and <code>password</code> to login to a shell to ge
 <p>The flake will be placed at <code>/etc/nixos/flake</code> after the install and reboot, I
 choose to move it to my home directory. Since the file was first in <code>/etc</code>
 you'll need to adjust the permissions with something like
-<code>sudo chown -R $USER:users ~/flake</code> and then you can work on it without
-privilege escalation.</p>
+<code>sudo chown -R $USER:$USER ~/flake</code> and then you can work on it without
+privilege escalation. This requires that you create a group for your user as
+done in the <code>configuration.nix</code> above.</p>
 </li>
 <li>
 <p>You can check the layout of your btrfs system with:</p>

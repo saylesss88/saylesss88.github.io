@@ -519,7 +519,8 @@ up shortly.</p>
 
   outputs = inputs@{ nixpkgs, ... }: {
     nixosConfigurations = {
-      hostname = nixpkgs.lib.nixosSystem {
+      # Change `my-hostname` to match `networking.hostName`
+      my-hostname = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           ./configuration.nix
@@ -586,7 +587,7 @@ place.</p>
     ./disk-config.nix
   ];
 
-  networking.hostName = "magic"; # This will match the `hostname` of your flake
+  networking.hostName = "my-hostname"; # This will match the `hostname` of your flake
 
   networking.networkmanager.enable = true;
 
@@ -601,12 +602,15 @@ place.</p>
 
   time.timeZone = "America/New_York";
 
+# Change `nixos` to your chosen username, change the group to match
   users.users.nixos = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
     initialHashedPassword = "COPY_YOUR_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
     # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
   };
+  # Create a matching group
+  users.groups.nixos = {};
 
   console.keyMap = "us";
 
@@ -638,9 +642,8 @@ enter your <code>user</code> and <code>password</code> to login to a shell to ge
 <li>
 <p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
 directory. Since the file was first in <code>/etc</code> you'll need to adjust the
-permissions with something like <code>sudo chown username:users ~/flake</code>(<code>username</code>
-will be your username) and then you can work on it without privilege
-escalation.</p>
+permissions with something like <code>sudo chown nixos:nixos ~/flake</code>. This is
+based off of the example above where we created both a <code>nixos</code> user and group.</p>
 </li>
 <li>
 <p>You can check the layout of your btrfs system with:</p>
