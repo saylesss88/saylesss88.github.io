@@ -2273,6 +2273,38 @@ spaces between the words for higher entropy.</p>
 <p>Avoid reusing passwords, use a password manager.</p>
 </li>
 <li>
+<p>Avoid storing files directly in the root home folder (i.e., <code>/home/user</code>),
+create sub-folders instead.(i.e., Instead of creating <code>~/notes.txt</code>, create
+<code>~/my-notes/notes.txt</code> or <code>~/Documents/notes.txt</code>).</p>
+<ul>
+<li>
+<p>If you are able to implement a Mandatory Access Control framework, there are
+more sub-folders that should be avoided such as <code>~/Downloads</code>. Another
+reason to use non-default sub-dirs is to avoid typos deleting important
+files.</p>
+</li>
+<li>
+<p>Home-Manager has an option <code>xdg.userDirs.enable</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-nix"># home.nix or equivalent
+{
+  xdg.userDirs.enable = true;
+  xdg.userDirs.createDirectories = true;
+  # Optionally create non-default sub-dirs
+  # xdg.userDirs.documents = "/home/jr/my-documents";
+  # xdg.userDirs.download = "/home/jr/my-downloads";
+}
+</code></pre>
+<ul>
+<li>
+<p>The XDG Base Directory Specification defines a consistent way for apps and
+desktops to store and find files. It helps prevent "dotfile clutter" by
+directing application files into clear, organized locations.</p>
+</li>
+<li>
 <p>Only enable what you use, and actively disable what's no longer in use.</p>
 </li>
 <li>
@@ -2281,8 +2313,8 @@ utilizes nftables is shared in the
 <a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking Chapter</a></p>
 </li>
 </ul>
-<p>The firewall is enabled by default on NixOS. To explicitly ensure it's enabled,
-add the following to your <code>configuration.nix</code> or equivalent:</p>
+<p>Although the firewall is enabled by default on NixOS, let's be explicit about
+it, add the following to your <code>configuration.nix</code> or equivalent:</p>
 <pre><code class="language-nix"># configuration.nix
 # this denies incoming connections but allows outgoing and established connections
 networking.firewall.enable = true;
@@ -2445,7 +2477,11 @@ platform-specific tools.
 </details>
 <p><img src="nix/../images/guy_fawks.png" alt="guy fawks hacker" /></p>
 <p>Securing your NixOS system begins with a philosophy of minimalism, explicit
-configuration, and proactive control.</p>
+configuration, and proactive control. As desktop Linux attracts more novice
+users, it has become an increasingly valuable target for attackers. This makes
+it crucial to adopt security best practices early to protect your desktop from
+common attack vectors and to avoid configuration mistakes that could expose
+vulnerabilities.</p>
 <blockquote>
 <p>⚠️ Warning: I am not a security expert. This guide presents various options
 for hardening NixOS, but it is your responsibility to evaluate whether each
@@ -2504,6 +2540,13 @@ clear history. This approach makes it far simpler to revert a breaking change
 and quickly identify what went wrong. Over time, this discipline allows you to
 create security-focused checklists and ensure all angles are covered, building a
 more robust and secure system.</p>
+<p>Don't rely on single solutions or products, develop processes and defense in
+depth. Think ahead and fail securely so that a single failure doesn't mean total
+insecurity.</p>
+<p>Attackers often monitor the latest Linux CVEs (Common Vulnerabilities and
+Exposures) and check if and when specific distributions like NixOS have
+implemented fixes. The unstable branch will receive the security patches and
+fixes faster than stable which is another thing to keep in mind.</p>
 <p>Check out the
 <a href="https://saylesss88.github.io/nix/index.html">Hardening NixOS Baseline Hardening README</a>
 for baseline hardening recommendations and best practices.</p>
@@ -2532,10 +2575,13 @@ restart your system and you'll be all set.</li>
 systemd.user.services."xdg-desktop-portal-wlr" = {
   enable = false;  # Masks/stops the wlr service
 };
+xdg.portal.wlr.enable = false;
 </code></pre>
 <h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
 <p>Begin with NixOS’s minimal installation image. This gives you a base system with
 only essential tools and no extras that could introduce vulnerabilities.</p>
+<p>NixOS's declarative model makes auditing the installed packages and services
+easy, do so regularly.</p>
 <h2 id="manual-encrypted-install-following-the-manual"><a class="header" href="#manual-encrypted-install-following-the-manual">Manual Encrypted Install Following the Manual</a></h2>
 <p>Encryption is the process of using an algorithm to scramble plaintext data into
 ciphertext, making it unreadable except to a person who has the key to decrypt
