@@ -170,13 +170,7 @@
                         <h1 id="running-nixos-in-a-vm-with-maximum-isolation-beginner-guide"><a class="header" href="#running-nixos-in-a-vm-with-maximum-isolation-beginner-guide">Running NixOS in a VM with Maximum Isolation (Beginner Guide)</a></h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
-<ul>
-<li><a href="#why-this-setup">Why This Setup?</a></li>
-<li><a href="#step-1-install-secureblue-hardened-host">Step 1: Install secureblue (Hardened Host)</a></li>
-<li><a href="#create-nixos-vm-via-virt-manager">Create NixOS VM (via virt-manager)</a></li>
-<li><a href="#-how-host-mac-secures-the-nixos-vm">🔒 How Host MAC Secures the NixOS VM</a></li>
-<li><a href="#its-still-recommended-to-harden-the-guest-vm-nixos">It's still recommended to harden the Guest VM (NixOS)</a></li>
-</ul>
+<!-- toc -->
 </details>
 <p><img src="images/steampunk5.cleaned.png" alt="sp5" /></p>
 <h2 id="why-this-setup"><a class="header" href="#why-this-setup">Why This Setup?</a></h2>
@@ -340,7 +334,7 @@ be able to arbitrarily read host files or compromise the host kernel.</p>
 virt_image_t, preventing other processes on the host from accessing or tampering
 with them.</p>
 <ol start="2">
-<li>KVM and Host Hardening KVM: KVM provides the low-level, hardware-assisted
+<li><strong>KVM and Host Hardening KVM</strong>: KVM provides the low-level, hardware-assisted
 virtualization. It is an extremely secure and audited hypervisor that creates
 a strong barrier between the guest and the host kernel.</li>
 </ol>
@@ -361,28 +355,64 @@ settings, including its lack of default MAC.</p>
 the hypervisor and the host's MAC policy that enforces the complete isolation of
 the VM</p>
 <h2 id="its-still-recommended-to-harden-the-guest-vm-nixos"><a class="header" href="#its-still-recommended-to-harden-the-guest-vm-nixos">It's still recommended to harden the Guest VM (NixOS)</a></h2>
-<p>Hardening the NixOS guest creates an additional, independent layer of defense.</p>
+<p>Hardening the NixOS guest VM adds an extra, independent layer of defense,
+helping to protect the system beyond what the host provides.</p>
+<p><strong>Best Practices for Minimizing VM Device Exposure</strong></p>
+<blockquote>
+<p>Much of the Host hardening is taken care of by secureblue with the ujust
+command.</p>
+</blockquote>
+<p>Take a VM snapshot right after a fresh install. This snapshot acts as a clean
+restore point. Many people safely test malware or potentially dangerous software
+by running it within the VM, then reverting to the snapshot afterward to wipe
+out any changes or infections caused by the malware.</p>
+<p>Avoid unnecessary device passthrough: Only pass through hardware devices (like
+USB, GPU, or network interfaces) that are essential for your VM's operation. For
+example, if a device isn't needed within the VM, do not passthrough the device
+to reduce attack surface.​</p>
+<p>Use virtual network segmentation: Instead of bridging physical network devices,
+opt for virtual network configurations like isolated networks, VLANs, or
+internal networks that prevent VM-to-VM or VM-to-host communication unless
+explicitly allowed.​</p>
+<p>Implement network filtering and firewall rules: Use libvirt nwfilter, iptables,
+or firewalld rules to restrict communications between VMs and external networks,
+or between guest VMs on the same host.​</p>
 <ul>
-<li>
-<p>Helps mitigate VM Breakout: If a zero-day allows an attacker to acheive a VM
-breakout, the security of your system depends entirely on the host's controls.
-Hardening the guest makes it much harder to compromise the initial VM,
-reducing the chance of even attempting to breakout.</p>
-</li>
-<li>
-<p>Containment within the VM: Hardening prevents an attacker from gaining full
-control or moving laterally within the VM.</p>
-</li>
-<li>
-<p>It's still recommended to enable the <code>graphene-hardened</code> memory allocator on
-the NixOS guest machine as well.</p>
-</li>
+<li><a href="https://libvirt.org/firewall.html">libvirt Firewall and network filtering</a></li>
+</ul>
+<p>Use virtual device models with minimal capabilities: Prefer virtio or similar
+paravirtualized devices that have a smaller attack surface. Avoid emulated
+devices when not necessary.​</p>
+<p>Disable features like USB debugging, audio, or PnP devices: These can
+potentially be exploited or leak information if enabled unnecessarily.</p>
+<ul>
+<li>It's still recommended to enable either the <code>graphene-hardened</code> or
+<code>graphene-hardened-light</code> memory allocators on the NixOS guest machine as
+well.</li>
 </ul>
 <pre><code class="language-nix"># configuration.nix
 environment.memoryAllocator.provider = "graphene-hardened";
 # OR for a more permissive and better performing allocator:
 # environment.memoryAllocator.provider = "graphene-hardened-light";
 </code></pre>
+<p>Continue
+<a href="https://saylesss88.github.io/nix/hardening_NixOS.html">hardening NixOS</a></p>
+<blockquote>
+<p>❗️ NOTE: It’s generally recommended not to enable GPU drivers inside the VM
+unless you are specifically doing GPU passthrough, as this often causes
+stability and compatibility issues. GPU passthrough itself requires careful
+configuration and dedicated hardware, and introduces additional attack
+surfaces.</p>
+</blockquote>
+<blockquote>
+<p>Regarding IPv6 networking, enabling it typically requires using a bridged
+network setup rather than NAT, which connects the VM more directly to the
+host's network. While bridged networking enables full IPv6 functionality, it
+also reduces the network isolation between the VM and host, potentially
+increasing security risks. For maximum isolation, consider carefully whether
+you need IPv6 connectivity inside the VM and weigh that against your security
+goals.</p>
+</blockquote>
 <p>I have been able to recover from quite a few missteps with Secureblue. I run a
 mini PC and attempted running <code>ujust update-firmware</code>, some systems allow you to
 update the firmware of a booted system. On reboot I got a message "Something
@@ -392,6 +422,18 @@ prongs 1 &amp; 2 to prongs 2 &amp; 3 with the power off for 10 seconds. I then m
 jumper back to the default position and rebooted. The PC sounds like it's
 revving up a few times and does a few reboots and allowed me to sign right back
 in and re-enroll the secure boot key.</p>
+<h3 id="resources"><a class="header" href="#resources">Resources</a></h3>
+<ul>
+<li>
+<p><a href="https://www.redhat.com/en/topics/virtualization/what-is-virtualization">RedHat What is virtualization?</a></p>
+</li>
+<li>
+<p><a href="https://sumit-ghosh.com/posts/virtualization-hypervisors-explaining-qemu-kvm-libvirt/">virtualization &amp; hypervisors</a></p>
+</li>
+<li>
+<p><a href="https://bitgrounds.tech/posts/kvm-qemu-libvirt-virtualization/">Virtualization on Linux using the KVM/QEMU/Libvirt stack</a></p>
+</li>
+</ul>
 
                     </main>
 
