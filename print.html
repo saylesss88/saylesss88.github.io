@@ -2195,6 +2195,13 @@ understand the consequences.</p>
 <p>There is a lot covered in this guide which can get overwhelming when trying to
 decide what is worth implementing. Here, I will list some common recommendations
 that most users should follow to harden their stance.</p>
+<blockquote>
+<p>"The major problem with current systems is their inability to provide
+effective isolation between various programs running on one machine. E.g. if
+the user's Web browser gets compromised (due to a bug exploited by a malicious
+web site), the OS is usually unable to protect other user's applications and
+data from also being compromised."--Qubes arch-spec</p>
+</blockquote>
 <h3 id="baseline-hardening"><a class="header" href="#baseline-hardening">Baseline Hardening</a></h3>
 <p>Before diving into advanced or specialized hardening, apply these baseline
 security measures suitable for all NixOS users. These settings help protect your
@@ -2533,6 +2540,33 @@ to protect digital information.</p>
 minimal disko encrypted installation:
 <a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
 <h2 id="installing-software"><a class="header" href="#installing-software">Installing Software</a></h2>
+<blockquote>
+<p>⚠️ For system security it is strongly advised to not install
+<a href="https://en.wikipedia.org/wiki/Proprietary_software">proprietary</a>,
+<a href="https://www.gnu.org/proprietary/proprietary.html">non-freedom</a> software.
+Instead, use of
+<a href="https://www.fsf.org/about/what-is-free-software">Free Software</a> is
+<a href="https://www.gnu.org/philosophy/shouldbefree.html">recommended</a> --Kicksecure</p>
+</blockquote>
+<ul>
+<li><a href="https://www.gnu.org/proprietary/proprietary.html">Proprietary Software is Often Malware</a>
+NOTE: While I respect the importance of software freedom, I choose to focus on
+practical, technical solutions rather than engage with the ideological tone
+often present in related advocacy.</li>
+</ul>
+<pre><code class="language-nix"># configuration.nix
+nixpkgs.config.allowUnfree = false;
+</code></pre>
+<p>To explicitly disable it for flakes:</p>
+<pre><code class="language-nix"># ...snip...
+pkgs = import nixpkgs {
+  system = "x86_64-linux";
+  config = {
+    allowUnfree = false;
+  };
+};
+# ...snip...
+</code></pre>
 <p>Most users don't fully understand that running any software without sandboxing
 gives it unrestricted access to their user data and system resources. There is a
 widespread lack of awareness that Linux apps generally run with the full
@@ -7616,13 +7650,15 @@ Primary key fingerprint: 916B 8D99 C38E AF5E 8ADC  7A2A 8D66 066A 2EEA CCDA
 <strong>Secure Boot</strong>, and hardened defaults.</p>
 </li>
 <li>
-<p><strong>Guest</strong>: NixOS in a VM → full declarative power, zero risk to host.</p>
+<p><strong>Guest</strong>: NixOS in a VM → full declarative power, near zero risk to host.</p>
 </li>
 <li>
-<p><strong>Isolation</strong>: MAC via SELinux + KVM + no direct hardware access.</p>
+<p><strong>Isolation</strong>: Mandatory Access Control (MAC) via SELinux + KVM + no direct
+hardware access.</p>
 </li>
 </ul>
 <hr />
+<h3 id="-key-terms-1"><a class="header" href="#-key-terms-1">🔑 Key Terms</a></h3>
 <h2 id="step-1-install-secureblue-hardened-host"><a class="header" href="#step-1-install-secureblue-hardened-host">Step 1: Install secureblue (Hardened Host)</a></h2>
 <blockquote>
 <p>NOTE: Secureblue enables the hardened_malloc by default which causes problems
