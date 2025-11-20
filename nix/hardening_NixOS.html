@@ -658,14 +658,26 @@ so:</p>
 <h2 id="users-and-suid-binaries"><a class="header" href="#users-and-suid-binaries">Users and SUID Binaries</a></h2>
 <p><strong>Replacing sudo with run0</strong></p>
 <blockquote>
-<p>NOTE: The point here is to avoid using a setuid binary (<code>sudo</code>), <code>run0</code> is a
-wrapper over <code>systemd-run</code> which speaks over IPC to PID1 which is considered
-safer than a setuid binary as they have a long history of vulnerabilities. We
-separate our daily user from administration tasks and authenticate through our
-admin account. This reduces the attack surface by removing sudo but is still
-bigger than <code>doas</code>. The problem with <code>doas</code> is that it's unmaintained within
-nixpkgs and it's still a SUID binary.</p>
+<p>NOTE: The point here is to avoid using the setuid binary (<code>sudo</code>), <code>run0</code> is a
+wrapper over <code>systemd-run</code> which speaks over Inter-process Communication
+Mechanisms (IPC) to PID1 which is considered safer than running a setuid
+binary. We separate our daily user from administration tasks and authenticate
+through our admin account. This reduces the attack surface by removing sudo as
+well as reduces the risk of local privilege escalation.</p>
 </blockquote>
+<ul>
+<li>
+<p><strong>IPC</strong> is the mechanism that allows processes to communicate. There are two
+methods of IPC, shared memory and message passing. An OS can implement both.</p>
+</li>
+<li>
+<p><strong>PID 1</strong> is the first userspace process the kernel starts (the init system),
+which becomes the ancestor and reaper of all other processes; because it runs
+as root, is always present, and controls the system lifecycle, any bugs or
+design issues in PID 1 have outsized security impact and can translate into
+system-wide compromise or denial of service.</p>
+</li>
+</ul>
 <details>
 <summary> Click to Expand SUID and run0 resources </summary>
 <ul>
@@ -687,7 +699,7 @@ nixpkgs and it's still a SUID binary.</p>
 </details>
 <p><code>run0</code> is not a SUID, it asks the service manager to invoke a command or shell
 under the target user's UID. The target command is invoked in an isolated exec
-context, freshly forked off PID1 without inheriting any context from the client</p>
+context, freshly forked off PID1 without inheriting any context from the client.</p>
 <p>The core danger of <strong>setuid</strong> (Set User ID) lies in its ability to allow a
 low-privilege user to execute a program with the <strong>permissions of the file's
 owner</strong>, which is most often the powerful <strong>root user</strong>.</p>
@@ -2955,6 +2967,8 @@ may introduce stability issues or unexpected behavior.</li>
 refer directly to its
 <a href="https://github.com/cynicsketch/nix-mineral">GitHub repository</a>.</p>
 </details>
+<details>
+<summary> ✔️ Click to Expand Resources </summary>
 <ul>
 <li>
 <p><a href="https://hedgedoc.grimmauld.de/s/hWcvJEniW#">AppArmor and apparmor.d on NixOS</a></p>
@@ -2999,19 +3013,6 @@ refer directly to its
 <p><a href="https://wiki.gentoo.org/wiki/Security_Handbook/Concepts">Gentoo Security_Handbook Concepts</a></p>
 </li>
 <li>
-<p>STIGs are configuration standards developed by the Defense Information Systems
-Agency (DISA) to secure systems and software for the U.S. Department of
-Defense (DoD). They are considered a highly authoritative source for system
-hardening.There are recommendations for hardening all kinds of software in the
-<a href="https://stigviewer.com/stigs">Stig Viewer</a></p>
-</li>
-<li>
-<p><a href="https://www.cisecurity.org/cis-benchmarks">CIS Benchmarks</a></p>
-</li>
-<li>
-<p><a href="https://github.com/nsacyber">NSA Cybersecurity Directorate</a></p>
-</li>
-<li>
 <p><a href="https://secureblue.dev/faq">secureblue FAQ</a></p>
 </li>
 <li>
@@ -3027,7 +3028,10 @@ hardening.There are recommendations for hardening all kinds of software in the
 <p><a href="https://delroth.net/posts/nixos-security-wishlist/">NixOS Security wishlist</a></p>
 </li>
 <li>
-<p><a href="https://stigviewer.com/stigs/anduril_nixos">NixOS STIG</a></p>
+<p><a href="https://beej.us/guide/bgipc/html/">Beejus IPC guide</a></p>
+</li>
+<li>
+<p><a href="https://www.geeksforgeeks.org/operating-systems/inter-process-communication-ipc/">GeeksforGeeks IPC</a></p>
 </li>
 </ul>
 <p>neal.codes vulnerability scan script:</p>
@@ -3044,6 +3048,44 @@ hardening.There are recommendations for hardening all kinds of software in the
 <p><a href="https://www.suse.com/c/linux-hardeningthe-complete-guide-to-securing-your-systems/">Suse Linux Hardening Guide</a></p>
 </li>
 </ul>
+<p><strong>Government Resources 1st 6 come from gentoo's Security_Handbook)</strong></p>
+<ul>
+<li>
+<p><a href="https://www.cyber.gov.au/sites/default/files/2023-03/Information%20Security%20Manual%20-%20%28March%202023%29.pdf">The Austrailian Cyber Security Centre's Informational Security Manual (ISM)</a></p>
+</li>
+<li>
+<p><a href="https://www.protectivesecurity.gov.au/policies">The Australian Government's Protective Security Policy Framework (PSPF)</a></p>
+</li>
+<li>
+<p><a href="https://www.cyber.gov.au/protect-yourself">The Australian Cyber Security Centre's Protect Yourself page</a></p>
+</li>
+<li>
+<p><a href="https://www.gov.uk/government/publications/security-policy-framework/hmg-security-policy-framework">The UK Government's Security Policy Framework (SPF)</a></p>
+</li>
+<li>
+<p><a href="https://www.gov.uk/government/publications/information-security-policy-framework">The UK Government's Information Security Policy Framework (ISF)</a></p>
+</li>
+<li>
+<p><a href="https://www.nist.gov/cybersecurity">The US National Institute of Standards and Technology's Cybersecurity page</a></p>
+</li>
+<li>
+<p><a href="https://stigviewer.com/stigs/anduril_nixos">NixOS STIG</a></p>
+</li>
+<li>
+<p>STIGs are configuration standards developed by the Defense Information Systems
+Agency (DISA) to secure systems and software for the U.S. Department of
+Defense (DoD). They are considered a highly authoritative source for system
+hardening.There are recommendations for hardening all kinds of software in the
+<a href="https://stigviewer.com/stigs">Stig Viewer</a></p>
+</li>
+<li>
+<p><a href="https://www.cisecurity.org/cis-benchmarks">CIS Benchmarks</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nsacyber">NSA Cybersecurity Directorate</a></p>
+</li>
+</ul>
+</details>
 
                     </main>
 
