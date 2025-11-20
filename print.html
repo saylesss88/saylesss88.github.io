@@ -2508,6 +2508,82 @@ systemd.user.services."xdg-desktop-portal-wlr" = {
 };
 xdg.portal.wlr.enable = false;
 </code></pre>
+<h2 id="common-attack-vectors-for-linux"><a class="header" href="#common-attack-vectors-for-linux">Common Attack Vectors for Linux</a></h2>
+<p><strong>Privilege escalation</strong>: The unauthorized act of gaining elevated permissions
+rather than legitimate, controlled privilege use. It's a very common tactic that
+threat actors use to take over a system, steal data, delete files, and more.</p>
+<p><strong>Processes to protect against Privilege escalation</strong></p>
+<ul>
+<li>
+<p>Adopt the principle of least privilege, only giving users the permissions that
+they require to perform their duties.</p>
+</li>
+<li>
+<p>Harden your system: Minimize the attack surface, use strong passwords, and
+follow best practices.</p>
+</li>
+<li>
+<p>Monitor relevant sources such as the
+<a href="https://www.strongdm.com/nist-compliance">NIST National Vulnerability Database</a>,
+<a href="https://github.com/NixOS/nix/security/advisories">NixOS Security Advisories</a>,
+and
+<a href="https://discourse.nixos.org/c/announcements/security/56">NixOS Discourse Security</a>
+So you'll know the latest CVEs and vulnerabilities in Linux and NixOS.</p>
+</li>
+<li>
+<p>While not made for NixOS the
+<a href="https://github.com/peass-ng/PEASS-ng/tree/master/linPEAS">linPEAS Privilege Escalation Awesome Script</a>
+gives you some useful info such as active capabilities and potential risks.</p>
+</li>
+<li>
+<p>Remove unnecessary SUID binaries to reduce the attack surface.</p>
+</li>
+</ul>
+<hr />
+<p><strong>Use after Free/Double free</strong>:</p>
+<p><strong>Use-After-Free (UAF)</strong> is a type of software vulnerability that occurs in
+memory unsafe languages (C C++) when a program continues to use a memory
+location after it has been freed or deallocated.</p>
+<p><strong>Double free</strong>: is a flaw where a program frees the same memory block twice
+using <code>free()</code> or <code>delete</code>, leading to undefined behavior and potential
+exploitation.</p>
+<p>Mitigation techniques include the use of hardened allocators such as
+<code>hardened_malloc</code>, which improve memory management to detect and prevent UAF and
+double-free bugs. Recent versions of <code>glibc</code> also incorporate built-in checks to
+catch double frees.</p>
+<hr />
+<p><strong>Unauthorized Access</strong>:</p>
+<p>Unauthorized access is the entry or use of your system, networks, or data by
+individuals without permission. It's a common way for adversaries to exfiltrate
+data, execute malicious code, and cause damage.</p>
+<p><strong>Protections against Unauthorized Access</strong></p>
+<ul>
+<li>
+<p>Strong Passwords, MFA, and robust Secrets management</p>
+</li>
+<li>
+<p>Close unused ports with a Firewall</p>
+</li>
+<li>
+<p>Encrypt data in transit and at rest</p>
+</li>
+<li>
+<p>Watch your Logs, and deploy intrusion detection systems such as AIDE.</p>
+</li>
+</ul>
+<hr />
+<p><strong>Misconfiguration</strong></p>
+<ul>
+<li>
+<p>With many new users trying NixOS, misconfiguration is common and an easy way
+for an attacker to gain control over your system.</p>
+</li>
+<li>
+<p>It is recommended to start slowly and try to ensure that you understand your
+configuration. Avoid copy-pasting config files that you don't understand yet.</p>
+</li>
+</ul>
+<hr />
 <h2 id="minimal-installation-with-luks"><a class="header" href="#minimal-installation-with-luks">Minimal Installation with LUKS</a></h2>
 <p>Begin with NixOS’s minimal installation image. This gives you a base system with
 only essential tools and no extras that could introduce vulnerabilities.</p>
@@ -2738,6 +2814,7 @@ so:</p>
 </details>
 <hr />
 <h2 id="users-and-suid-binaries"><a class="header" href="#users-and-suid-binaries">Users and SUID Binaries</a></h2>
+<p><strong>Replacing sudo with run0</strong></p>
 <blockquote>
 <p>NOTE: The point here is to avoid using a setuid binary (<code>sudo</code>), <code>run0</code> is a
 wrapper over <code>systemd-run</code> which speaks over IPC to PID1 which is considered
@@ -2779,6 +2856,9 @@ modern <strong>Linux capabilities</strong>. <a href="nix/hardening_NixOS.html#ca
 <ul>
 <li><a href="https://www.cbtnuggets.com/blog/technology/system-admin/linux-file-permissions-understanding-setuid-setgid-and-the-sticky-bit">Understanding setuid/setgid</a></li>
 </ul>
+<p>Use the following command to find all SUID binaries:</p>
+<pre><code class="language-bash">sudo find / -perm -4000 -type f -ls 2&gt;/dev/null
+</code></pre>
 <p>The <code>setuid</code> permission is dangerous because it creates a privilege escalation
 pathway that can be exploited for malicious purposes.</p>
 <ul>
@@ -2893,6 +2973,8 @@ containers/namespaces)</p>
 <li><code>unix_chkpwd</code>: This is a core PAM helper to securely check user passwords
 against the root-readable <code>/etc/shadow</code>.</li>
 </ul>
+<pre><code class="language-bash">sudo find / -perm -4000 -type f -ls 2&gt;/dev/null
+</code></pre>
 <hr />
 <h3 id="capabilities"><a class="header" href="#capabilities">Capabilities</a></h3>
 <details>
@@ -7181,7 +7263,11 @@ enough of either, eventual compromise is probable. However, by layering
 defenses and following best practices, we can make attacks costly and
 time-consuming, deterring all but highly targeted adversaries.</p>
 </blockquote>
-<p>It is highly recommended to harden your Host Machine to strengthen your opsec.</p>
+<p>It is highly recommended to harden your Host Machine as Type 2 hypervisors are
+only as secure as their host. KVM is actually a type 1 hypervisor but relies on
+QEMU for emulation which is a Type 2 hypervisor. This actually makes it a sort
+of hybrid in between Type 1 and Type 2 but is in theory less secure than running
+a Xen hypervisor (Type 1) on bare-metal.</p>
 <p>Whonix offers many benefits, including the convenience of running within your
 current operating system without needing to reboot or use a separate Tails USB.
 It provides similar strong anonymity protections by routing all traffic through
@@ -7274,6 +7360,7 @@ typically look up solutions in a Kicksecure, Debian, or Ubuntu forum.</p>
 reasons:<a href="https://www.whonix.org/wiki/KVM#Why_Use_KVM_Over_VirtualBox?">Why choose KVM over VirtualBox</a></li>
 </ul>
 <p>If you really want to use VirtualBox, I got it working off of this config:</p>
+<p>VirtualBox = Type 2 hypervisor</p>
 <details>
 <summary> ✔️ Click to Expand VirtualBox Example </summary>
 <p>Change <code>your-user</code> to your username</p>
