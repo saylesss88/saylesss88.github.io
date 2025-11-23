@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-40fcc5f5.js";
+            window.path_to_searchindex_js = "../searchindex-54abb052.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2308c437.js"></script>
@@ -241,38 +241,38 @@ structure.</p>
 <h2 id="helix-flakenix"><a class="header" href="#helix-flakenix">Helix <code>flake.nix</code></a></h2>
 <p>Let’s look at the relevant section of Helix’s <code>flake.nix</code> click the eye to see
 the full flake:</p>
-<pre><code class="language-nix">~ {
-~   description = "A post-modern text editor.";
-~
-~   inputs = {
-~     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-~     rust-overlay = {
-~       url = "github:oxalica/rust-overlay";
-~       inputs.nixpkgs.follows = "nixpkgs";
-~     };
-~   };
-~
-~   outputs = {
-~     self,
-~     nixpkgs,
-~     rust-overlay,
-~     ...
-~   }: let
-~     inherit (nixpkgs) lib;
-~     systems = [
-~       "x86_64-linux"
-~       "aarch64-linux"
-~       "x86_64-darwin"
-~       "aarch64-darwin"
-~     ];
-~     eachSystem = lib.genAttrs systems;
-~     pkgsFor = eachSystem (system:
-~       import nixpkgs {
-~         localSystem.system = system;
-~         overlays = [(import rust-overlay) self.overlays.helix];
-~       });
-~     gitRev = self.rev or self.dirtyRev or null;
-   in {
+<pre><code class="language-nix"><span class="boring"> {
+</span><span class="boring">   description = "A post-modern text editor.";
+</span><span class="boring">
+</span><span class="boring">   inputs = {
+</span><span class="boring">     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+</span><span class="boring">     rust-overlay = {
+</span><span class="boring">       url = "github:oxalica/rust-overlay";
+</span><span class="boring">       inputs.nixpkgs.follows = "nixpkgs";
+</span><span class="boring">     };
+</span><span class="boring">   };
+</span><span class="boring">
+</span><span class="boring">   outputs = {
+</span><span class="boring">     self,
+</span><span class="boring">     nixpkgs,
+</span><span class="boring">     rust-overlay,
+</span><span class="boring">     ...
+</span><span class="boring">   }: let
+</span><span class="boring">     inherit (nixpkgs) lib;
+</span><span class="boring">     systems = [
+</span><span class="boring">       "x86_64-linux"
+</span><span class="boring">       "aarch64-linux"
+</span><span class="boring">       "x86_64-darwin"
+</span><span class="boring">       "aarch64-darwin"
+</span><span class="boring">     ];
+</span><span class="boring">     eachSystem = lib.genAttrs systems;
+</span><span class="boring">     pkgsFor = eachSystem (system:
+</span><span class="boring">       import nixpkgs {
+</span><span class="boring">         localSystem.system = system;
+</span><span class="boring">         overlays = [(import rust-overlay) self.overlays.helix];
+</span><span class="boring">       });
+</span><span class="boring">     gitRev = self.rev or self.dirtyRev or null;
+</span>   in {
      packages = eachSystem (system: {
        inherit (pkgsFor.${system}) helix;
        /*
@@ -289,61 +289,61 @@ the full flake:</p>
        */
       default = self.packages.${system}.helix;
     });
-~    checks =
-~      lib.mapAttrs (system: pkgs: let
-~        # Get Helix's MSRV toolchain to build with by default.
-~        msrvToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-~        msrvPlatform = pkgs.makeRustPlatform {
-~          cargo = msrvToolchain;
-~          rustc = msrvToolchain;
-~        };
-~      in {
-~        helix = self.packages.${system}.helix.override {
-~          rustPlatform = msrvPlatform;
-~        };
-~      })
-~      pkgsFor;
-~
-~    # Devshell behavior is preserved.
-~    devShells =
-~      lib.mapAttrs (system: pkgs: {
-~        default = let
-~          commonRustFlagsEnv = "-C link-arg=-fuse-ld=lld -C target-cpu=native --cfg tokio_unstable";
-~          platformRustFlagsEnv = lib.optionalString pkgs.stdenv.isLinux "-Clink-arg=-Wl,--no-rosegment";
-~        in
-~          pkgs.mkShell {
-~            inputsFrom = [self.checks.${system}.helix];
-~            nativeBuildInputs = with pkgs;
-~              [
-~                lld
-~                cargo-flamegraph
-~                rust-bin.nightly.latest.rust-analyzer
-~              ]
-~              ++ (lib.optional (stdenv.isx86_64 &amp;&amp; stdenv.isLinux) cargo-tarpaulin)
-~              ++ (lib.optional stdenv.isLinux lldb)
-~              ++ (lib.optional stdenv.isDarwin darwin.apple_sdk.frameworks.CoreFoundation);
-~            shellHook = ''
-~              export RUST_BACKTRACE="1"
-~              export RUSTFLAGS="''${RUSTFLAGS:-""} ${commonRustFlagsEnv} ${platformRustFlagsEnv}"
-~            '';
-~          };
-~      })
-~      pkgsFor;
-~
-~    overlays = {
-~      helix = final: prev: {
-~        helix = final.callPackage ./default.nix {inherit gitRev;};
-~      };
-~
-~      default = self.overlays.helix;
-~    };
-~  };
-~  nixConfig = {
-~    extra-substituters = ["https://helix.cachix.org"];
-~    extra-trusted-public-keys = ["helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="];
-~  };
-~}
-</code></pre>
+<span class="boring">    checks =
+</span><span class="boring">      lib.mapAttrs (system: pkgs: let
+</span><span class="boring">        # Get Helix's MSRV toolchain to build with by default.
+</span><span class="boring">        msrvToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+</span><span class="boring">        msrvPlatform = pkgs.makeRustPlatform {
+</span><span class="boring">          cargo = msrvToolchain;
+</span><span class="boring">          rustc = msrvToolchain;
+</span><span class="boring">        };
+</span><span class="boring">      in {
+</span><span class="boring">        helix = self.packages.${system}.helix.override {
+</span><span class="boring">          rustPlatform = msrvPlatform;
+</span><span class="boring">        };
+</span><span class="boring">      })
+</span><span class="boring">      pkgsFor;
+</span><span class="boring">
+</span><span class="boring">    # Devshell behavior is preserved.
+</span><span class="boring">    devShells =
+</span><span class="boring">      lib.mapAttrs (system: pkgs: {
+</span><span class="boring">        default = let
+</span><span class="boring">          commonRustFlagsEnv = "-C link-arg=-fuse-ld=lld -C target-cpu=native --cfg tokio_unstable";
+</span><span class="boring">          platformRustFlagsEnv = lib.optionalString pkgs.stdenv.isLinux "-Clink-arg=-Wl,--no-rosegment";
+</span><span class="boring">        in
+</span><span class="boring">          pkgs.mkShell {
+</span><span class="boring">            inputsFrom = [self.checks.${system}.helix];
+</span><span class="boring">            nativeBuildInputs = with pkgs;
+</span><span class="boring">              [
+</span><span class="boring">                lld
+</span><span class="boring">                cargo-flamegraph
+</span><span class="boring">                rust-bin.nightly.latest.rust-analyzer
+</span><span class="boring">              ]
+</span><span class="boring">              ++ (lib.optional (stdenv.isx86_64 &amp;&amp; stdenv.isLinux) cargo-tarpaulin)
+</span><span class="boring">              ++ (lib.optional stdenv.isLinux lldb)
+</span><span class="boring">              ++ (lib.optional stdenv.isDarwin darwin.apple_sdk.frameworks.CoreFoundation);
+</span><span class="boring">            shellHook = ''
+</span><span class="boring">              export RUST_BACKTRACE="1"
+</span><span class="boring">              export RUSTFLAGS="''${RUSTFLAGS:-""} ${commonRustFlagsEnv} ${platformRustFlagsEnv}"
+</span><span class="boring">            '';
+</span><span class="boring">          };
+</span><span class="boring">      })
+</span><span class="boring">      pkgsFor;
+</span><span class="boring">
+</span><span class="boring">    overlays = {
+</span><span class="boring">      helix = final: prev: {
+</span><span class="boring">        helix = final.callPackage ./default.nix {inherit gitRev;};
+</span><span class="boring">      };
+</span><span class="boring">
+</span><span class="boring">      default = self.overlays.helix;
+</span><span class="boring">    };
+</span><span class="boring">  };
+</span><span class="boring">  nixConfig = {
+</span><span class="boring">    extra-substituters = ["https://helix.cachix.org"];
+</span><span class="boring">    extra-trusted-public-keys = ["helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="];
+</span><span class="boring">  };
+</span><span class="boring">}
+</span></code></pre>
 <p>Dissecting <code>inherit (pkgsFor.${system}) helix;</code></p>
 <p>Imagine the Nix evaluation process for Helix <code>flake.nix</code> in the <code>outputs</code>
 section:</p>
@@ -372,44 +372,44 @@ is explicitly defined under
 <h2 id="yazi-flakenix"><a class="header" href="#yazi-flakenix">Yazi <code>flake.nix</code></a></h2>
 <p>Now this is yazi’s <code>flake.nix</code>, yazi’s documentation tells you to use <code>.default</code>
 but lets examine the flake and see why:</p>
-<pre><code class="language-nix">~{
-~  inputs = {
-~    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-~    flake-utils.url = "github:numtide/flake-utils";
-~    rust-overlay = {
-~      url = "github:oxalica/rust-overlay";
-~      inputs.nixpkgs.follows = "nixpkgs";
-~    };
-~  };
-~
-~  outputs =
-~    {
-~      self,
-~      nixpkgs,
-~      rust-overlay,
-~      flake-utils,
-~      ...
-~    }:
-~    flake-utils.lib.eachDefaultSystem (
-~      system:
-~      let
-~        pkgs = import nixpkgs {
-~          inherit system;
-~          overlays = [ rust-overlay.overlays.default ];
-~        };
-~        toolchain = pkgs.rust-bin.stable.latest.default;
-~        rustPlatform = pkgs.makeRustPlatform {
-~          cargo = toolchain;
-~          rustc = toolchain;
-~        };
-~
-~        rev = self.shortRev or self.dirtyShortRev or "dirty";
-~        date = self.lastModifiedDate or self.lastModified or "19700101";
-~        version =
-~          (builtins.fromTOML (builtins.readFile ./yazi-fm/Cargo.toml)).package.version
-~          + "pre${builtins.substring 0 8 date}_${rev}";
-~      in
-      {
+<pre><code class="language-nix"><span class="boring">{
+</span><span class="boring">  inputs = {
+</span><span class="boring">    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+</span><span class="boring">    flake-utils.url = "github:numtide/flake-utils";
+</span><span class="boring">    rust-overlay = {
+</span><span class="boring">      url = "github:oxalica/rust-overlay";
+</span><span class="boring">      inputs.nixpkgs.follows = "nixpkgs";
+</span><span class="boring">    };
+</span><span class="boring">  };
+</span><span class="boring">
+</span><span class="boring">  outputs =
+</span><span class="boring">    {
+</span><span class="boring">      self,
+</span><span class="boring">      nixpkgs,
+</span><span class="boring">      rust-overlay,
+</span><span class="boring">      flake-utils,
+</span><span class="boring">      ...
+</span><span class="boring">    }:
+</span><span class="boring">    flake-utils.lib.eachDefaultSystem (
+</span><span class="boring">      system:
+</span><span class="boring">      let
+</span><span class="boring">        pkgs = import nixpkgs {
+</span><span class="boring">          inherit system;
+</span><span class="boring">          overlays = [ rust-overlay.overlays.default ];
+</span><span class="boring">        };
+</span><span class="boring">        toolchain = pkgs.rust-bin.stable.latest.default;
+</span><span class="boring">        rustPlatform = pkgs.makeRustPlatform {
+</span><span class="boring">          cargo = toolchain;
+</span><span class="boring">          rustc = toolchain;
+</span><span class="boring">        };
+</span><span class="boring">
+</span><span class="boring">        rev = self.shortRev or self.dirtyShortRev or "dirty";
+</span><span class="boring">        date = self.lastModifiedDate or self.lastModified or "19700101";
+</span><span class="boring">        version =
+</span><span class="boring">          (builtins.fromTOML (builtins.readFile ./yazi-fm/Cargo.toml)).package.version
+</span><span class="boring">          + "pre${builtins.substring 0 8 date}_${rev}";
+</span><span class="boring">      in
+</span>      {
         packages = {
           yazi-unwrapped = pkgs.callPackage ./nix/yazi-unwrapped.nix {
             inherit
@@ -423,21 +423,21 @@ but lets examine the flake and see why:</p>
           default = self.packages.${system}.yazi;
         };
 
-~        devShells = {
-~          default = pkgs.callPackage ./nix/shell.nix { };
-~        };
-~
-~        formatter = pkgs.nixfmt-rfc-style;
-~      }
-~    )
-~    // {
-~      overlays = {
-~        default = self.overlays.yazi;
-~        yazi = _: prev: { inherit (self.packages.${prev.stdenv.system}) yazi yazi-unwrapped; };
-~      };
-~    };
-~}
-</code></pre>
+<span class="boring">        devShells = {
+</span><span class="boring">          default = pkgs.callPackage ./nix/shell.nix { };
+</span><span class="boring">        };
+</span><span class="boring">
+</span><span class="boring">        formatter = pkgs.nixfmt-rfc-style;
+</span><span class="boring">      }
+</span><span class="boring">    )
+</span><span class="boring">    // {
+</span><span class="boring">      overlays = {
+</span><span class="boring">        default = self.overlays.yazi;
+</span><span class="boring">        yazi = _: prev: { inherit (self.packages.${prev.stdenv.system}) yazi yazi-unwrapped; };
+</span><span class="boring">      };
+</span><span class="boring">    };
+</span><span class="boring">}
+</span></code></pre>
 <p>In this case using <code>inputs.yazi.packages.${pkgs.system}.yazi</code> would also work</p>
 <ul>
 <li>
