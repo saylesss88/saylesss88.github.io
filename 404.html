@@ -185,62 +185,54 @@
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
-            <div id="content-collections-list" class="content-collections-list">
-              <!-- Populated by mdbook-content-collections -->
-            </div>
-             <script>
-                  (function () {
-                    var indexUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '') + '/content-collections.json';
+                        <div id="content-collections-list" class="content-collections-list">
+                      <!-- Populated by mdbook-content-loader -->
+                    </div>
 
-                    if (window.location.protocol === 'file:') {
-                      indexUrl = 'content-collections.json';
-                    }
-
-                    fetch(indexUrl)
-                      .then(function (res) {
-                        if (!res.ok) throw new Error('Failed to load content-collections.json');
-                        return res.json();
-                      })
-                      .then(function (data) {
-                        if (!data || !Array.isArray(data.entries)) return;
-
-                        var container = document.getElementById('content-collections-list');
-                        if (!container) return;
-
-                        var entries = data.entries
-                          .filter(function (e) {
-                            return !e.draft && (!e.collection || e.collection === 'blog');
-                          })
-                          .slice(0, 10);
-
-                        if (entries.length === 0) {
-                          container.textContent = 'No posts yet.';
+                    <script>
+                      (function () {
+                        if (!window.CONTENT_COLLECTIONS) {
+                          console.warn("mdbook-content-loader: CONTENT_COLLECTIONS not found");
                           return;
                         }
 
-                        var list = document.createElement('ul');
-                        list.className = 'content-collections-items';
+                        var data = window.CONTENT_COLLECTIONS;
+                        var entries = (data.entries || [])
+                          .filter(function (e) {
+                            return !e.draft && (!e.collection || e.collection === "blog");
+                          })
+                          .slice(0, 10);
+
+                        var container = document.getElementById("content-collections-list");
+                        if (!container) return;
+
+                        if (entries.length === 0) {
+                          container.textContent = "No posts yet.";
+                          return;
+                        }
+
+                        var list = document.createElement("ul");
+                        list.className = "content-collections-items";
 
                         entries.forEach(function (e) {
-                          var li = document.createElement('li');
-                          li.className = 'content-collections-item';
+                          var li = document.createElement("li");
+                          li.className = "content-collections-item";
 
-                          var link = document.createElement('a');
-                          var htmlPath = e.path.replace(/\.md(?:own|arkdown)?$/i, '.html');
+                          var link = document.createElement("a");
+                          var htmlPath = e.path.replace(/\.md(?:own|arkdown)?$/i, ".html");
                           link.href = htmlPath;
                           link.textContent = e.title || e.path;
 
-                          var meta = document.createElement('div');
-                          meta.className = 'content-collections-meta';
-
+                          var meta = document.createElement("div");
+                          meta.className = "content-collections-meta";
                           if (e.date) {
                             var d = new Date(e.date);
                             meta.textContent = d.toISOString().slice(0, 10);
                           }
 
-                          var preview = document.createElement('div');
-                          preview.className = 'content-collections-preview';
-                          preview.innerHTML = e.preview_html || '';
+                          var preview = document.createElement("div");
+                          preview.className = "content-collections-preview";
+                          preview.innerHTML = e.preview_html || "";
 
                           li.appendChild(link);
                           if (meta.textContent) li.appendChild(meta);
@@ -248,14 +240,11 @@
                           list.appendChild(li);
                         });
 
-                        container.innerHTML = '';
+                        container.innerHTML = "";
                         container.appendChild(list);
-                      })
-                      .catch(function (err) {
-                        console.warn('mdbook-content-collections:', err);
-                      });
-                  })();
-                </script>
+                      })();
+                    </script>
+
 
                         <div style="clear: both"></div>
                     </nav>
