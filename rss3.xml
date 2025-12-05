@@ -1,39 +1,3751 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 0.1.0</generator><item><title>Specialisations</title><link>https://saylesss88.github.io/flakes/specialisations_4.6.html</link><description><![CDATA[<p><strong>NixOS specialisations</strong> are a powerful feature that allow you to define
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Specialisations</title><link>https://saylesss88.github.io/flakes/specialisations_4.6.html</link><description><![CDATA[<h1>NixOS Specialisations For Multiple Profiles</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><strong>NixOS specialisations</strong> are a powerful feature that allow you to define
 alternative system configurations variations within a single NixOS setup. Each
 specialisation can modify or extend the base configuration, and NixOS will
 generate separate boot entries for each, letting you choose at boot time (or
 switch at runtime) which environment to use. This is ideal for testing,
 hardware-specific tweaks, or separating work and personal environments without
-maintaining multiple configuration files</p><p>Specialisations are defined as attributes under the <code>specialisation</code> option in
+maintaining multiple configuration files</p>
+<h2>How Specialisations Work</h2>
+<p>Specialisations are defined as attributes under the <code>specialisation</code> option in
 your configuration. Each key (e.g., <code>niri-test</code>) represents a named
 specialisation, and its configuration attribute contains the NixOS options to
-apply on top of the base system</p]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/specialisations_4.6.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Overlays</title><link>https://saylesss88.github.io/flakes/overlays_4.5.html</link><description><![CDATA[<p><img src="../images/pokego.png" alt="Pokego Logo" />–<a href="https://github.com/rubiin/pokego">pokego repo</a></p><p>Overlays are Nix functions that accept two arguments, <code>final</code> and <code>prev</code> and
+apply on top of the base system</p>
+<p>By default, a specialisation inherits the parent configuration and applies its
+changes on top. You can also set <code>inheritParentConfig = false;</code> to create a
+completely separate configuration.</p>
+<p>After running <code>nixos-rebuild boot</code>, your bootloader will present extra entries
+for each specialisation. Selecting one boots into the system with that
+specialisation’s settings applied</p>
+<p>Runtime Switching: You can switch to a specialisation at runtime using
+activation scripts, e.g.:</p>
+<pre><code class="language-bash">nixos-rebuild switch --specialisation niri-test
+</code></pre>
+<p>or</p>
+<pre><code class="language-bash">/run/current-system/specialisation/niri-test/bin/switch-to-configuration switch
+</code></pre>
+<blockquote>
+<p>Note: Some changes (like kernel switches) require a reboot to take effect</p>
+</blockquote>
+<p>Example: Let’s create a basic specialisation to try out the Niri Window Manager:</p>
+<p>First we have to add the <code>niri-flake</code> as an input to our <code>flake.nix</code> and add the
+module to install it:</p>
+<pre><code class="language-nix"># flake.nix
+inputs = {
+     niri.url = "github:sodiboo/niri-flake";
+};
+</code></pre>
+<pre><code class="language-nix"># configuration.nix
+{ pkgs, inputs, ... }: {
+# ... snip ...
+imports = [
+    inputs.niri.nixosModules.niri
+];
+
+# This is the top-level overlay
+  nixpkgs.overlays = [inputs.niri.overlays.niri];
+
+# ... snip ...
+
+  specialisation = {
+    niri-test.configuration = {
+      system.nixos.tags = ["niri"];
+
+      # Add the Niri overlay for this specialisation
+      nixpkgs.overlays = [inputs.niri.overlays.niri];
+
+      # Enable Niri session
+      programs.niri = {
+        enable = true;
+        package = pkgs.niri-unstable;
+      };
+
+      # Optionally, add a test user and greetd for login
+      users.users.niri = {
+        isNormalUser = true;
+        extraGroups = ["networkmanager" "video" "wheel"];
+        initialPassword = "test"; # for testing only!
+        createHome = true;
+      };
+
+      services.greetd = {
+        enable = true;
+        settings = rec {
+          initial_session = {
+            command = lib.mkForce "${pkgs.niri}/bin/niri";
+            user = lib.mkForce "niri";
+          };
+          default_session = initial_session;
+        };
+      };
+
+      environment.etc."niri/config.kdl".text = ''
+        binds {
+          Mod+T { spawn "alacritty"; }
+          Mod+D { spawn "fuzzel"; }
+          Mod+Q { close-window; }
+          Mod+Shift+Q { exit; }
+        }
+      '';
+      environment.systemPackages = with pkgs; [
+        alacritty
+        waybar
+        fuzzel
+        mako
+        firefox
+      ];
+
+      programs.firefox.enable = true;
+
+      services.pipewire = {
+        enable = true;
+        alsa.enable = true;
+        pulse.enable = true;
+        # Optionally:
+        jack.enable = true;
+      };
+
+      hardware.alsa.enablePersistence = true;
+
+      networking.networkmanager.enable = true;
+    };
+  };
+}
+</code></pre>
+<p>I chose to use the nightly version so it was required to add the overlay at the
+top-level as well as inside the <code>specialisation</code> block.</p>
+<p>On my system it sped up build times to first run:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake .
+# And Then Run
+sudo nixos-rebuild boot --flake .
+</code></pre>
+<p><strong>What this does</strong>:</p>
+<ul>
+<li>
+<p>Creates a boot entry called <code>niri-test</code> with the Niri Wayland compositor, a
+test user, and a <code>greetd</code> login manager.</p>
+</li>
+<li>
+<p>Installs a set of packages and enables PipeWire with ALSA, PulseAudio, and
+JACK support.</p>
+</li>
+<li>
+<p>Provides a custom Niri configuration file for a few keybinds and enables
+NetworkManager.</p>
+</li>
+</ul>
+<h2>Using Your Specialisation After Boot</h2>
+<p>Once you have rebooted and selected your specialisation from the boot menu, you
+can use your system as usual. If you want to add or remove programs, change
+settings, or update your environment within a specialisation, simply:</p>
+<ol>
+<li>
+<p>Edit your configuration: Add or remove packages (e.g., add <code>ghostty</code> to
+<code>environment.systemPackages</code>) or change any other options inside the
+relevant <code>specialisation</code> block in your NixOS configuration.</p>
+</li>
+<li>
+<p>Apply changes with a rebuild: Run the standard NixOS rebuild command. If you
+are currently running the specialisation you want to update, use:</p>
+</li>
+</ol>
+<pre><code class="language-bash">sudo nixos-rebuild switch
+</code></pre>
+<p>This will apply your changes to the current specialisation</p>
+<p>If you want to build and activate a different specialisation from your current
+session, use:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --specialisation name
+</code></pre>
+<p>Or, you can activate a specialisation directly with:</p>
+<pre><code class="language-bash">sudo /run/current-system/specialisation/&lt;name&gt;/bin/switch-to-configuration switch
+</code></pre>
+<p>Replace <code>&lt;name&gt;</code> with your specialisation’s name.</p>
+<p>Reboot if needed: Most changes apply immediately, but some (like kernel or
+<code>initrd</code> changes) require a reboot for the specialisation to fully take effect</p>
+<p><strong>Tip</strong>:</p>
+<p>Each specialisation can have its own set of installed programs. Only those
+listed in the <code>environment.systemPackages</code> (or enabled via modules) inside the
+<code>specialisation</code> block will be available when you boot into that context.</p>
+<p>You manage and update your specialisation just like your main NixOS system no
+special commands or workflow are required beyond specifying the specialisation
+when rebuilding or switching.</p>
+<h2>Use Cases for Specialisations</h2>
+<ul>
+<li>
+<p><strong>Hardware Profiles</strong>: Enable/disable drivers or services for specific
+hardware (e.g., eGPU, WiFi, or SR-IOV setups)</p>
+</li>
+<li>
+<p><strong>Desktop Environments</strong>: Quickly switch between different desktop
+environments or compositors (e.g., GNOME, Plasma, Niri)</p>
+</li>
+<li>
+<p><strong>Testing</strong>: Safely try out unstable packages, new kernels, or experimental
+features without risking your main environment</p>
+</li>
+<li>
+<p><strong>User Separation</strong>: Create profiles for different users, each with their own
+settings, packages, and auto-login</p>
+</li>
+<li>
+<p><strong>Secure Environments</strong>: Combine with encrypted partitions for more secure,
+isolated setups</p>
+</li>
+</ul>
+<h2>Securely Separated Contexts with NixOS Specialisations</h2>
+<p>I will just explain the concept here for completeness, if you want to implement
+this I recommend following:</p>
+<p><a href="https://www.tweag.io/blog/2022-11-01-hard-user-separation-with-nixos/">Tweag Hard User Separation with NixOS</a></p>
+<details>
+<summary> ✔️ Click To Expand Section on Separate Contexts </summary>
+<p>If you use the same computer in different contexts such as for work and for your
+private life you may worry about the risks of mixing sensitive environments. For
+example, a cryptolocker received through a compromised work email could
+potentially encrypt your personal files, including irreplaceable family photos.</p>
+<p>A common solution is to install two different operating systems and dual-boot
+between them, keeping work and personal data isolated. However, this approach
+means you have two systems to maintain, update, and configure, which can be a
+significant hassle.</p>
+<p>NixOS offers a third alternative: With NixOS specialisations, you can manage two
+(or more) securely separated contexts within a single operating system. At boot
+time, you select which context you want to use work or personal. Each context
+can have its own encrypted root partition, user accounts, and configuration, but
+both share the same Nix store for packages. This means:</p>
+<ul>
+<li>
+<p>No duplicated packages: Both contexts use the same system-wide package store,
+saving space and simplifying updates.</p>
+</li>
+<li>
+<p>Single system to maintain: You update and manage only one NixOS installation,
+not two.</p>
+</li>
+<li>
+<p>Strong security boundaries: Each context can have its own encrypted root, so a
+compromise in one context (such as malware in your work environment) cannot
+access the data in the other context.</p>
+</li>
+<li>
+<p>Flexible management: You can configure both contexts from either environment,
+making administration easier.</p>
+</li>
+</ul>
+<p>This approach combines the security of dual-booting with the convenience and
+efficiency of a single, unified system.</p>
+<p><strong>How It Works</strong>:</p>
+<ul>
+<li>
+<p>Encrypted Partitions: Each context (work and personal) has its own encrypted
+root partition. The shared /nix/store partition is also encrypted, but can be
+unlocked by either context.</p>
+</li>
+<li>
+<p>Specialisations at Boot: NixOS generates multiple boot entries, one for each
+context. You simply choose your desired environment at boot time.</p>
+</li>
+<li>
+<p>Separation of Data: Your work and personal home directories, settings, and
+documents remain isolated from each other, while still benefiting from shared
+system packages.</p>
+</li>
+</ul>
+<p>Benefits Over Traditional Dual-Boot</p>
+<ul>
+<li>
+<p>Only one system to update and configure.</p>
+</li>
+<li>
+<p>No wasted disk space on duplicate packages.</p>
+</li>
+<li>
+<p>Seamless switching between contexts with a reboot.</p>
+</li>
+<li>
+<p>Consistent NixOS tooling and workflows in both environments.</p>
+</li>
+</ul>
+<p>What You Need</p>
+<ul>
+<li>
+<p>A physical or virtual machine supported by NixOS.</p>
+</li>
+<li>
+<p>Willingness to erase the system disk during setup.</p>
+</li>
+<li>
+<p>LVM (Logical Volume Manager) support: This setup requires using LVM for disk
+partitioning and management. LVM allows you to create multiple logical volumes
+on a single physical disk, making it possible to securely separate your work
+and personal environments while sharing a common Nix store. You will use LVM
+commands such as <code>pvcreate</code>, <code>vgcreate</code>, and <code>lvcreate</code> to prepare your disk
+layout</p>
+</li>
+</ul>
+<p>In summary: With NixOS specialisations and careful disk partitioning, you can
+achieve secure, convenient, and efficient context separation—no need to
+compromise between security and manageability.</p>
+</details>
+<h3>Tips and Best Practices</h3>
+<ul>
+<li>
+<p>Overriding Values: Use <code>lib.mkDefault</code> or <code>lib.mkForce</code> to make options
+overridable or forced in specialisations. I had to do it above because I have
+greetd setup for my main configuration as well.</p>
+</li>
+<li>
+<p>Selective Configuration: If you want certain options only in the default
+(non-specialised) system, use:</p>
+</li>
+</ul>
+<pre><code class="language-nix">config = lib.mkIf (config.specialisation != {}) { ... }
+</code></pre>
+<ul>
+<li>
+<p>This condition checks if you’re in a specialisation.</p>
+</li>
+<li>
+<p>Any settings inside this block will <strong>not</strong> be inherited by specialisations,
+keeping them exclusive to the main system.</p>
+</li>
+<li>
+<p>Runtime Limitations: Not all changes (e.g., kernel or <code>initrd</code>) can be fully
+applied at runtime; a reboot is required for those.</p>
+</li>
+<li>
+<p>Modularity: Specialisations work well with modular NixOS configs keep
+hardware, user, and service configs in separate files for easier management</p>
+</li>
+</ul>
+<p>References to Official Documentation and Community Resources</p>
+<ul>
+<li>
+<p><a href="https://www.tweag.io/blog/2022-08-18-nixos-specialisations/">Tweag: Introduction to NixOS specialisations</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Specialisation">NixOS Wiki: Specialisation</a></p>
+</li>
+<li>
+<p><a href="https://www.tweag.io/blog/2022-11-01-hard-user-separation-with-nixos/">Tweag Hard User Separation with NixOS</a></p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/specialisations_4.6.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Overlays</title><link>https://saylesss88.github.io/flakes/overlays_4.5.html</link><description><![CDATA[<h1>Extending Flakes with Custom Packages using Overlays</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="../images/pokego.png" alt="Pokego Logo" />–<a href="https://github.com/rubiin/pokego">pokego repo</a></p>
+<p>Overlays are Nix functions that accept two arguments, <code>final</code> and <code>prev</code> and
 return a set of packages. Overlays are similar to <code>packageOverrides</code> as a way to
 customize Nixpkgs, <code>packageOverrides</code> acts as an overlay with only the <code>prev</code>
 argument. Therefore, <code>packageOverrides</code> is appropriate for basic use, but
-overlays are more powerful and easier to distribute.</p><p>Example:</p>]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/overlays_4.5.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Package Definitions Explained</title><link>https://saylesss88.github.io/Package_Definitions_Explained_6.html</link><description><![CDATA[<p><img src="images/coding2.png" alt="coding2" /></p><p>In Nix, the concept of a <strong>package</strong> can refer to two things:</p><p>A collection of files and data that constitute a piece of software or an
-artifact.</p>]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Package_Definitions_Explained_6.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Top-Level Attributes</title><link>https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html</link><description><![CDATA[<p>This explanation is based on insights from Infinisil, a prominent figure in the
+overlays are more powerful and easier to distribute.</p>
+<p>Example:</p>
+<pre><code class="language-nix">final: prev: {
+  firefox = prev.firefox.overrideAttrs (old: {
+    buildInputs = (old.buildInputs or []) ++ [ prev.vlc ];
+    env.FIREFOX_DISABLE_GMP_UPDATER = "1";
+  });
+}
+</code></pre>
+<p>To see the original derivation, run <code>nix edit -f "&lt;nixpkgs&gt;" firefox</code>.</p>
+<p>This modifies Firefox by:</p>
+<ul>
+<li>
+<p>Adding <code>vlc</code> to <code>buildInputs</code>, useful if a package requires additional
+dependencies.</p>
+</li>
+<li>
+<p>Setting an environment variable (<code>FIREFOX_DISABLE_GMP_UPDATER=1</code>) to disable
+automatic updates of the Gecko Media Plugin.</p>
+</li>
+</ul>
+<p>It is very common to use overlays in Nix to install packages that aren’t
+available in the standard Nixpkgs repository.</p>
+<p><strong>Overlays</strong> are one of the primary and recommended ways to extend and customize
+your Nix environment. It’s important to remember that Nix overlays are made to
+allow you to modify or extend the package set provided by Nixpkgs (or other Nix
+sources) without directly altering the original package definitions. This is
+crucial for maintaining reproducibility and avoiding conflicts. Overlays are
+essentially functions that take the previous package set and allow you to add,
+modify, or remove packages.</p>
+<ul>
+<li>To better understand the structure of my <code>flake.nix</code> it may be helpful to
+first read <a href="https://tsawyer87.github.io/posts/nix_flakes_tips/">This</a> blog
+post first.</li>
+</ul>
+<h2>Adding the overlays output to your Flake</h2>
+<p>I’ll show the process of adding the <code>pokego</code> package that is not in Nixpkgs:</p>
+<ol>
+<li>In my <code>flake.nix</code> I have a custom inputs variable within my let block of my
+flake like so just showing the necessary parts for brevity:</li>
+</ol>
+<pre><code class="language-nix"># flake.nix
+  outputs = my-inputs @ {
+    self,
+    nixpkgs,
+    treefmt-nix,
+    ...
+  }: let
+    system = "x86_64-linux";
+    host = "magic";
+    userVars = {
+      username = "jr";
+      gitUsername = "saylesss88";
+      editor = "hx";
+      term = "ghostty";
+      keys = "us";
+      browser = "firefox";
+      flake = builtins.getEnv "HOME" + "/flake";
+    };
+
+    inputs =
+      my-inputs
+      // {
+        pkgs = import inputs.nixpkgs {
+          inherit system;
+        };
+        lib = {
+          overlays = import ./lib/overlay.nix;
+          nixOsModules = import ./nixos;
+          homeModules = import ./home;
+          inherit system;
+        };
+      };
+      # ... snip ...
+</code></pre>
+<ul>
+<li>Why I Created <code>inputs.lib</code> in My <code>flake.nix</code>. In the above example, you’ll
+notice a <code>lib</code> attribute defined within the main <code>let</code> block.
+<ul>
+<li>
+<p>This might seem a bit unusual at first, as inputs are typically defined at
+the top level of a flake. However, this structure provides a powerful way to
+organize and reuse common Nix functions and configurations across my flake.</p>
+</li>
+<li>
+<p>By bundling my custom logic and modules into <code>inputs.lib</code>, I can pass
+<code>inputs</code> (which now includes my custom <code>lib</code>) as a <code>specialArgs</code> to other
+modules. This provides a clean way for all modules to access these shared
+resources. For example, in <code>configuration.nix</code>, <code>inputs.lib.overlays</code>
+directly references my custom overlay set.</p>
+</li>
+<li>
+<p>My <code>inputs.lib</code> is my own project-specific library, designed to hold
+functions and attribute sets relevant to my flake’s custom configurations.
+While <code>nixpkgs.lib</code> is globally available, my custom <code>lib</code> contains my
+unique additions.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>While defining <code>inputs</code> within the <code>let</code> block to achieve this structure is a
+personal preference and works well for my setup, the core benefit is the
+creation of a dedicated, centralized <code>lib</code> attribute that encapsulates my
+flake’s reusable Nix code, leading to a more organized and maintainable
+configuration.</p>
+<h2>The Actual Overlay</h2>
+<ol start="2">
+<li>In the <code>overlay.nix</code> I have this helper function and the defined package:</li>
+</ol>
+<pre><code class="language-nix"># overlay.nix
+_final: prev: let
+  # Helper function to import a package
+  callPackage = prev.lib.callPackageWith (prev // packages);
+
+  # Define all packages
+  packages = {
+    # Additional packages
+    pokego = callPackage ./pac_defs/pokego.nix {};
+  };
+in
+  packages
+</code></pre>
+<ol>
+<li><code>_final: prev:</code>: This is the function definition of the overlay.</li>
+</ol>
+<ul>
+<li>
+<p><code>_final</code>: This argument represents the final, merged package set after all
+overlays have been applied. It’s often unused within a single overlay, hence
+the <code>_</code> prefix (a Nix convention for unused variables).</p>
+</li>
+<li>
+<p><code>prev</code>: This is the crucial argument. It represents the package set before
+this overlay is applied. This allows you to refer to existing packages and
+functions from Nixpkgs.</p>
+</li>
+</ul>
+<ol start="2">
+<li>
+<p><code>let ... in packages</code>: This introduces a <code>let</code> expression, which defines
+local variables within the scope of this overlay function. The <code>in packages</code>
+part means that the overlay function will ultimately return the <code>packages</code>
+attribute set defined within the <code>let</code> block.</p>
+</li>
+<li>
+<p><code>callPackage = prev.lib.callPackageWith (prev // packages)</code>: This line
+defines a helper function called <code>callPackage</code>.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><code>prev.lib.callPackageWith</code> Is a function provided by Nixpkgs’ <code>lib</code>.
+<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing of
+additional arguments that will then be passed to the package definition.</p>
+</li>
+<li>
+<p><code>(prev // packages)</code>: This is an attribute set merge operation. It takes the
+<code>prev</code> package set (Nixpkgs before this overlay) and merges it with the
+<code>packages</code> attribute set defined later in this overlay.</p>
+</li>
+<li>
+<p>By using <code>callPackageWith</code> with this merged attribute set, the <code>callPackage</code>
+function defined here is set up to correctly import package definitions,
+ensuring they have access to both the original Nixpkgs and any other packages
+defined within this overlay.</p>
+</li>
+</ul>
+<ol start="4">
+<li>
+<p><code>packages = { ... };</code>: This defines an attribute set named <code>packages</code>. This
+set will contain all the new or modified packages introduced by this overlay.</p>
+</li>
+<li>
+<p><code>pokego = callPackages ./pac_defs/pokego.nix { };</code>: This is the core of how
+the <code>pokego</code> package is added.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><code>pokego =</code>: This defines a new attribute named <code>pokego</code> within the packages
+attribute set. This name will be used to refer to the pokego package later.</p>
+</li>
+<li>
+<p><code>callPackage ./pac_defs/pokego.nix {}</code>: This calls the callPackage helper
+function defined earlier.</p>
+</li>
+<li>
+<p><code>./pac_defs/pokego.nix</code>: This is the path to another Nix file(<code>pokego.nix</code>)
+that contains the actual package definition for pokego. This file would define
+how to fetch, build, and install the pokego software</p>
+</li>
+<li>
+<p><code>{}</code>: This is an empty attribute set passed as additional arguments to the
+<code>pokego.nix</code> package definition. If <code>pokego.nix</code> expected any specific
+parameters (like versions or dependencies), you would provide them here. Since
+it’s empty, it implies pokego.nix either has no required arguments or uses
+default values.</p>
+</li>
+</ul>
+<ol start="6">
+<li><code>in packages</code>: As mentioned earlier, the overlay function returns the
+packages attribute set. When this overlay is applied, the packages defined
+within this packages set (including pokego) will be added to the overall Nix
+package set.</li>
+</ol>
+<h2>The pokego Package definition</h2>
+<p>The following is the <code>./pac_defs/pokego.nix</code>:</p>
+<pre><code class="language-nix"># pokego.nix
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
+buildGoModule rec {
+  pname = "pokego";
+  version = "0.3.0";
+
+  src = fetchFromGitHub {
+    owner = "rubiin";
+    repo = "pokego";
+    rev = "v${version}";
+    hash = "sha256-cFpEi8wBdCzAl9dputoCwy8LeGyK3UF2vyylft7/1wY=";
+  };
+
+  vendorHash = "sha256-7SoKHH+tDJKhUQDoVwAzVZXoPuKNJEHDEyQ77BPEDQ0=";
+
+  # Install shell completions
+  postInstall = ''
+    install -Dm644 completions/pokego.bash "$out/share/bash-completion/completions/pokego"
+    install -Dm644 completions/pokego.fish "$out/share/fish/vendor_completions.d/pokego.fish"
+    install -Dm644 completions/pokego.zsh "$out/share/zsh/site-functions/_pokego"
+  '';
+
+  meta = with lib; {
+    description = "Command-line tool that lets you display Pokémon sprites in color directly in your terminal";
+    homepage = "https://github.com/rubiin/pokego";
+    license = licenses.gpl3Only;
+    maintainers = with maintainers; [
+      rubiin
+      jameskim0987
+      vinibispo
+    ];
+    mainProgram = "pokego";
+    platforms = platforms.all;
+  };
+}
+</code></pre>
+<h2>Adding the overlay to your configuration</h2>
+<p>There are a few places you could choose to put the following, I choose to use my
+<code>configuration.nix</code> because of my setup:</p>
+<pre><code class="language-nix"># configuration.nix
+nixpkgs.overlays = [inputs.lib.overlays]
+</code></pre>
+<h2>Installing Pokego</h2>
+<ul>
+<li>If you are managing your entire system configuration with NixOS, you would
+typically add <code>pokego</code> to your <code>environment.systemPackages</code>.</li>
+</ul>
+<pre><code class="language-nix"># configuration.nix
+environment.systemPackages = with pkgs; [
+  pokego
+]
+</code></pre>
+<ul>
+<li>If you prefer home-manager you can install <code>pokego</code> with home-manager also:</li>
+</ul>
+<pre><code class="language-nix"># home.nix
+home.packages = [
+  pkgs.pokego
+]
+</code></pre>
+<h3>Another Overlay Example</h3>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "https://flakehub.com/NixOS/nixpkgs/*.tar.gz";
+
+    nix.url = "https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz";
+  };
+
+  outputs = { self, nixpkgs, nix }:
+
+    let
+      system = "aarch64-darwin";
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          nix.overlays.default
+        ];
+      };
+    in
+    {
+     # `pkgs` is nixpkgs for the system, with nix's overlay applied
+    };
+}
+</code></pre>
+<ul>
+<li>
+<p>Normally,
+<code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments:  </code>pkgs
+= import nixpkgs { inherit system; overlays = [
+nix.overlays.default];}<code>.  This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin`
+system, with the overlay from the nix flake applied.</p>
+</li>
+<li>
+<p>Consequently, any packages built using this customized <code>pkgs</code> will now depend
+on or use the specific nix version (<code>2.17.0</code>) provided by the nix flake,
+instead of the version that comes with the fetched <code>nixpkgs</code>. This technique
+can be useful for ensuring a consistent environment or testing specific
+package versions.</p>
+</li>
+</ul>
+<h2>Customizing Nixpkgs Imports and Overlays</h2>
+<p>While overlays are typically used to add or modify packages within a single
+<code>nixpkgs</code> instance, Nix’s lazy evaluation and flake inputs allow for even more
+powerful scenarios. You can have multiple versions of nixpkgs in a single flake,
+and they will only be evaluated when a package from that specific version is
+actually referenced. This complements overlays by giving you fine-grained
+control over which nixpkgs instance an overlay applies to, or which <code>nixpkgs</code>
+version a specific part of your project depends on.</p>
+<p>Consider this example where we import nixpkgs with a specific overlay applied
+directly at the import site:</p>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "[https://flakehub.com/NixOS/nixpkgs/*.tar.gz](https://flakehub.com/NixOS/nixpkgs/*.tar.gz)"; # This will be the base nixpkgs
+
+    nix.url = "[https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz](https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz)"; # This flake provides an overlay for a specific Nix version
+  };
+
+  outputs = { self, nixpkgs, nix }:
+
+    let
+      system = "aarch64-darwin";
+      # Here, we import nixpkgs and apply the 'nix' flake's overlay.
+      # This 'pkgs' variable now holds a customized Nix package set.
+      # In this 'pkgs' set, the 'nix' package (and anything that depends on it)
+      # will be version 2.17.0 as defined by the 'nix' flake's overlay.
+      pkgs_with_custom_nix = import nixpkgs {
+        inherit system;
+        overlays = [
+          nix.overlays.default # Apply the overlay from the 'nix' flake here
+        ];
+      };
+    in
+    {
+      # We can then expose packages or devShells that use this customized `pkgs` set.
+      devShells.${system}.default = pkgs_with_custom_nix.mkShell {
+        packages = [
+          pkgs_with_custom_nix.nix # This 'nix' package is now version 2.17.0 due to the overlay!
+        ];
+        shellHook = ''
+          echo "Using Nix version: &lt;span class="math-inline"&gt;\(nix \-\-version\)"
+'';
+};
+# You can also make this customized package set available as a top-level overlay
+# if other parts of your flake or configuration want to use it.
+# overlays.custom-nix-version = final: prev: {
+#   inherit (pkgs_with_custom_nix) nix; # Expose the specific nix package from our overlayed pkgs
+# };
+# You can also import multiple versions of nixpkgs and select packages from them:
+# pkgs-2505 = import (inputs.nixpkgs-2505 or nixpkgs) { inherit system; }; # Example, assuming 2505 is an input
+# packages.&lt;/span&gt;{system}.my-tool-2505 = pkgs-2505.myTool; # Using a package from a specific stable version
+    };
+}
+</code></pre>
+<p>Normally, <code>pkgs = import nixpkgs { }</code> imports Nixpkgs with default settings.
+However, the example above customizes this import by passing arguments:
+<code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}</code>.
+This makes the <code>pkgs_with_custom_nix</code> variable represent Nixpkgs specifically
+for the <code>aarch64-darwin</code> system, with the overlay from the nix flake applied at
+the time of import.</p>
+<p>Consequently, any packages built using this customized <code>pkgs_with_custom_nix</code>
+will now depend on or use the specific Nix version (<code>2.17.0</code>) provided by the
+nix flake’s overlay, instead of the version that comes with the base <code>nixpkgs</code>
+input. This technique is highly useful for ensuring a consistent environment or
+testing specific package versions without affecting the entire system’s
+<code>nixpkgs</code> set.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/overlays_4.5.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Package Definitions Explained</title><link>https://saylesss88.github.io/Package_Definitions_Explained_6.html</link><description><![CDATA[<h1>Chapter 8</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="images/coding2.png" alt="coding2" /></p>
+<!-- ![gruv1](images/gruv1.png) -->
+<h2>Package Definitions Explained</h2>
+<p>In Nix, the concept of a <strong>package</strong> can refer to two things:</p>
+<ul>
+<li>
+<p>A collection of files and data that constitute a piece of software or an
+artifact.</p>
+</li>
+<li>
+<p>A Nix <strong>expression</strong> that describes how to create such a collection. This
+expression acts as a blueprint before the package exists in a tangible form.</p>
+</li>
+</ul>
+<p>The process begins with writing a <strong>package definition</strong> using the Nix language.
+This definition contains the necessary instructions and metadata about the
+software you intend to “package.”</p>
+<h2>The Journey from Definition to Package</h2>
+<details>
+<summary> ✔️ Click to Expand</summary>
+<ol>
+<li>
+<p><strong>Package Definition:</strong></p>
+<ul>
+<li>
+<p>This is essentially a function written in the Nix language.</p>
+</li>
+<li>
+<p>Nix language shares similarities with JSON but includes the crucial
+addition of functions.</p>
+</li>
+<li>
+<p>It acts as the blueprint for creating a package.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Derivation:</strong></p>
+<ul>
+<li>
+<p>When the package definition is evaluated by Nix, it results in a
+<strong>derivation</strong>.</p>
+</li>
+<li>
+<p>A derivation is a concrete and detailed build plan.</p>
+</li>
+<li>
+<p>It outlines the exact steps Nix needs to take: fetching source code,
+building dependencies, compiling code, and ultimately producing the
+desired output (the package).</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Realization (Building the Package):</strong></p>
+<ul>
+<li>
+<p>You don’t get a pre-built “package” directly from the definition or the
+derivation.</p>
+</li>
+<li>
+<p>The package comes into being when Nix <strong>executes</strong> the derivation. This
+process is often referred to as “realizing” the derivation.</p>
+</li>
+</ul>
+</li>
+</ol>
+<p><strong>Analogy:</strong> Think of a package definition as an architectural blueprint, the
+derivation as the detailed construction plan, and the realized package as the
+finished building.</p>
+</details>
+## Skeleton of a Derivation
+<p>The most basic derivation structure in Nix looks like this:</p>
+<pre><code class="language-nix">{ stdenv }:
+
+stdenv.mkDerivation { }
+</code></pre>
+<ul>
+<li>
+<p>This is a function that expects an attribute set containing <code>stdenv</code> as its
+argument.</p>
+</li>
+<li>
+<p>It then calls <code>stdenv.mkDerivation</code> (a function provided by <code>stdenv</code>) to
+produce a derivation.</p>
+</li>
+<li>
+<p>Currently, this derivation doesn’t specify any build steps or outputs.</p>
+</li>
+<li>
+<p>Further Reading:</p>
+</li>
+<li>
+<p><a href="https://ryantm.github.io/nixpkgs/stdenv/stdenv/">The Standard Environment</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/nix-pills/19-fundamentals-of-stdenv.html">Fundamentals of Stdenv</a></p>
+</li>
+</ul>
+<h2>Example: A Simple “Hello” Package Definition</h2>
+<p>Here’s a package definition for the classic “hello” program:</p>
+<pre><code class="language-nix"># hello.nix
+{
+  stdenv,
+  fetchzip,
+}:
+
+stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = fetchzip {
+    url = "[https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz](https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz)";
+    sha256 = "";
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p>This is a Nix function that takes stdenv and fetchzip as arguments.</p>
+</li>
+<li>
+<p>It uses <code>stdenv.mkDerivation</code> to define the build process for the “hello”
+package.</p>
+<ul>
+<li>
+<p><code>pname</code>: The package name.</p>
+</li>
+<li>
+<p><code>version</code>: The package version.</p>
+</li>
+<li>
+<p><code>src</code>: Specifies how to fetch the source code using <code>fetchzip</code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>Handling Dependencies: Importing Nixpkgs</strong></p>
+<ul>
+<li>
+<p>If you try to build <code>hello.nix</code> directly with <code>nix-build hello.nix</code>, it will
+fail because <code>stdenv</code> and <code>fetchzip</code> are part of Nixpkgs, which isn’t included
+in this isolated file.</p>
+</li>
+<li>
+<p>To make this package definition work, you need to pass the correct arguments
+(<code>stdenv</code>, <code>fetchzip</code>) to the function.</p>
+</li>
+</ul>
+<p>The recommended approach is to create a <code>default.nix</code> file in the same
+directory:</p>
+<pre><code class="language-nix"># default.nix
+
+let
+  nixpkgs = fetchTarball "[https://github.com/NixOS/nixpkgs/tarball/nixos-24.05](https://github.com/NixOS/nixpkgs/tarball/nixos-24.05)";
+  pkgs = import nixpkgs { config = {}; overlays = []; };
+in
+{
+  hello = pkgs.callPackage ./hello.nix { };
+}
+</code></pre>
+<ul>
+<li>
+<p>This <code>default.nix</code> imports Nixpkgs.</p>
+</li>
+<li>
+<p>It then uses <code>pkgs.callPackage</code> to call the function in <code>hello.nix</code>, passing
+the necessary dependencies from Nixpkgs.</p>
+</li>
+<li>
+<p>You can now build the “hello” package using: <code>nix-build -A hello</code>. The <code>-A</code>
+flag tells Nix to build the attribute named hello from the top-level
+expression in default.nix.</p>
+</li>
+</ul>
+<p><strong>Realizing the Derivation and Handling sha256</strong></p>
+<ul>
+<li>
+<p><strong>Evaluation vs. Realization</strong>: While “evaluate” refers to Nix processing an
+expression, “realize” often specifically means building a derivation and
+producing its output in the Nix store.</p>
+</li>
+<li>
+<p>When you first run <code>nix-build -A hello</code>, it will likely fail due to a missing
+sha256 hash for the source file. Nix needs this hash for security and
+reproducibility. The error message will provide the correct sha256 value.</p>
+</li>
+<li>
+<p><strong>Example Error</strong>:</p>
+</li>
+</ul>
+<pre><code class="language-bash">  nix-build -A hello
+  error: hash mismatch in fixed-output derivation '/nix/store/pd2kiyfa0c06giparlhd1k31bvllypbb-source.drv':
+  specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  got: sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=
+  error: 1 dependencies of derivation '/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv' failed to build
+</code></pre>
+<ul>
+<li>Replace the empty <code>sha256 = "";</code> in <code>hello.nix</code> with the provided correct
+value: <code>sha256 = "1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=";</code>.</li>
+</ul>
+<p><strong>Building and Running the Result</strong></p>
+<p>After updating the <code>sha256</code>, you can successfully build the package:</p>
+<pre><code class="language-bash">nix-build -A hello
+</code></pre>
+<p>The output will be a result symlink pointing to the built package in the Nix
+store. You can then run the “hello” program:</p>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
+<h3>Swaytools Package Definition</h3>
+<p><strong>Example: The swaytools Package Definition</strong></p>
+<p>Let’s examine a more complex, real-world package definition from Nixpkgs:
+<code>nixpkgs/pkgs/tools/wayland/swaytools/default.nix</code>.</p>
+<pre><code class="language-nix"># default.nix
+{
+  lib,
+  setuptools,
+  buildPythonApplication,
+  fetchFromGitHub,
+  slurp,
+}:
+
+buildPythonApplication rec {
+  pname = "swaytools";
+  version = "0.1.2";
+
+  format = "pyproject";
+
+  src = fetchFromGitHub {
+    owner = "tmccombs";
+    repo = "swaytools";
+    rev = version;
+    sha256 = "sha256-UoWK53B1DNmKwNLFwJW1ZEm9dwMOvQeO03+RoMl6M0Q=";
+  };
+
+  nativeBuildInputs = [ setuptools ];
+
+  propagatedBuildInputs = [ slurp ];
+
+  meta = with lib; {
+    homepage = "https://github.com/tmccombs/swaytools";
+    description = "Collection of simple tools for sway (and i3)";
+    license = licenses.gpl3Only;
+    maintainers = with maintainers; [ atila ];
+    platforms = platforms.linux;
+  };
+}
+</code></pre>
+<h3>Breakdown of the Above default.nix</h3>
+<details>
+<summary>Click to Expand</summary>
+<p>1 <strong>Function Structure</strong>:</p>
+<ul>
+<li>
+<dl>
+<dt>The file starts with a function taking an attribute set of dependencies from
+Nixpkgs: <code>{ lib, setuptools, buildPythonApplication, fetchFromGitHub, slurp }</code></dt>
+<dd>.</dd>
+</dl>
+</li>
+</ul>
+<ol start="2">
+<li><strong>Derivation Creation</strong>:</li>
+</ol>
+<ul>
+<li>It calls <code>buildPythonApplication</code>, a specialized helper for Python packages
+(similar to <code>stdenv.mkDerivation</code> but pre-configured for Python). The <code>rec</code>
+keyword allows attributes within the derivation to refer to each other.</li>
+</ul>
+<ol start="3">
+<li><strong>Package Metadata</strong>:</li>
+</ol>
+<ul>
+<li>
+<p><code>pname</code> and <code>version</code> define the package’s name and version.</p>
+</li>
+<li>
+<p>The <code>meta</code> attribute provides standard package information like the homepage,
+description, license, maintainers, and supported platforms.</p>
+</li>
+</ul>
+<ol start="4">
+<li><strong>Source Specification</strong>:</li>
+</ol>
+<ul>
+<li>The <code>src</code> attribute uses <code>fetchFromGitHub</code> to download the source code from
+the specified repository and revision, along with its <code>sha256</code> hash for
+verification.</li>
+</ul>
+<ol start="5">
+<li><strong>Build and Runtime Dependencies</strong>:</li>
+</ol>
+<ul>
+<li>
+<p><code>nativeBuildInputs</code>: Lists tools required during the build process (e.g.,
+<code>setuptools</code> for Python).</p>
+</li>
+<li>
+<p><code>propagatedBuildInputs</code>: Lists dependencies needed at runtime (e.g., <code>slurp</code>).</p>
+</li>
+</ul>
+<ol start="6">
+<li><strong>Build Format</strong>:</li>
+</ol>
+<ul>
+<li><code>format = "pyproject";</code> indicates that the package uses a <code>pyproject.toml</code>
+file for its Python build configuration.</li>
+</ul>
+<p><strong>Integration within Nixpkgs</strong></p>
+<ul>
+<li>
+<p><strong>Location</strong>: The swaytools definition resides in
+<code>pkgs/tools/wayland/swaytools/default.nix</code>.</p>
+</li>
+<li>
+<p><strong>Top-Level Inclusion</strong>: It’s made available as a top-level package in
+<code>pkgs/top-level/all-packages.nix</code> like this:</p>
+</li>
+</ul>
+<pre><code class="language-nix"># all-packages.nix
+swaytools = python3Packages.callPackage ../tools/wayland/swaytools { };
+</code></pre>
+<ul>
+<li><code>python3Packages.callPackage</code> is used here because <code>swaytools</code> is a Python
+package, and it ensures the necessary Python-related dependencies are correctly
+passed to the <code>swaytools</code> definition.</li>
+</ul>
+</details>
+<h2>Conclusion</h2>
+<p>In this chapter, we’ve journeyed through the fundamental concept of package
+definitions in Nix. We’ve seen how these Nix expressions act as blueprints,
+leading to the creation of derivations – the detailed plans for building
+software. Finally, we touched upon the realization process where Nix executes
+these derivations to produce tangible packages in the Nix store. Examining the
+simple “hello” package and the more complex “swaytools” definition provided
+practical insights into the structure and key attributes involved in defining
+software within the Nix ecosystem.</p>
+<p>The crucial step in this process, the transformation from a package definition
+to a concrete build plan, is embodied by the <strong>derivation</strong>. This detailed
+specification outlines every step Nix needs to take to fetch sources, build
+dependencies, compile code, and produce the final package output. Understanding
+the anatomy and lifecycle of a derivation is key to unlocking the full power and
+flexibility of Nix.</p>
+<p>In the <strong>next chapter</strong>,
+<a href="https://saylesss88.github.io/Intro_to_Nix_Derivations_7.html">Introduction to Nix Derivations</a>,
+we will delve deeper into the structure and components of these derivations. We
+will explore the attributes that define a build process, how dependencies are
+managed within a derivation, and how Nix ensures the reproducibility and
+isolation of your software builds through this fundamental concept.</p>
+<h2>Resources</h2>
+<ul>
+<li><a href="https://nix.dev/tutorials/packaging-existing-software.html">Packaging Existing Software</a></li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Package_Definitions_Explained_6.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Top-Level Attributes</title><link>https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html</link><description><![CDATA[<h1>Chapter 5</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![coding1](images/coding1.png) -->
+<img src="images/gruv9.png" width="800" height="600">
+<h2>Understanding Top-Level Attributes in NixOS Modules</h2>
+<p>This explanation is based on insights from Infinisil, a prominent figure in the
 Nix community, to help clarify the concept of top-level attributes within NixOS
-modules.</p><p>In a NixOS system, everything is built from a single “system derivation.” The
-command <code>nix-build '&lt;nixpkgs/nixos&gt;' -A system</code> initiates this build process.</p><p>The <code>-A system</code> part tells Nix to focus on the <code>system</code> attribute defined in the
+modules.</p>
+<h3>The Core of a NixOS System: <code>system.build.toplevel</code></h3>
+<details>
+<summary> ✔️ `system.build.toplevel` Explained (Click to Expand) </summary>
+<p>In a NixOS system, everything is built from a single “system derivation.” The
+command <code>nix-build '&lt;nixpkgs/nixos&gt;' -A system</code> initiates this build process.</p>
+<p>The <code>-A system</code> part tells Nix to focus on the <code>system</code> attribute defined in the
 <code>'&lt;nixpkgs/nixos&gt;'</code> file (which is essentially <code>./default.nix</code> within the
-Nixpkgs repository).</p>]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Flakes Explained</title><link>https://saylesss88.github.io/Nix_Flakes_Explained_4.html</link><description><![CDATA[<p><img src="images/trees3.cleaned.png" alt="trees3" /></p><p>If you’re completely new, take a look at
+Nixpkgs repository).</p>
+<p>This <code>system</code> attribute is specifically the NixOS option <code>system.build.toplevel</code>
+. Think of <code>system.build.toplevel</code> as the <strong>very top of the configuration
+hierarchy</strong> for your entire NixOS system. Almost every setting you configure
+eventually influences this top-level derivation, often through a series of
+intermediate steps.</p>
+<p><strong>Key Takeaway:</strong> <code>system.build.toplevel</code> is the ultimate output that defines
+your entire NixOS system.</p>
+</details>
+<h3>How Options Relate: A Chain of Influence</h3>
+<p>Options in NixOS are not isolated; they often build upon each other.</p>
+<details>
+<summary>Example: Nginx Option Chain (Click to Expand)</summary>
+<p>Here’s an example of how a high-level option can lead down to a low-level system
+configuration:</p>
+<ul>
+<li>You enable Nginx with <code>services.nginx.enable = true;</code>.</li>
+<li>This setting influences the lower-level option <code>systemd.services.nginx</code>.</li>
+<li>Which, in turn, affects the even lower-level option
+<code>systemd.units."nginx.service"</code>.</li>
+<li>Ultimately, this leads to the creation of a systemd unit file within
+<code>environment.etc."systemd/system"</code>.</li>
+<li>Finally, this unit file ends up as <code>result/etc/systemd/system/nginx.service</code>
+within the final <code>system.build.toplevel</code> derivation.</li>
+</ul>
+</details>
+<p><strong>Key Takeaway:</strong> Higher-level, user-friendly options are translated into
+lower-level system configurations that are part of the final system build.</p>
+<h3>The NixOS Module System: Evaluating Options</h3>
+<p>So, how do these options get processed and turned into the final system
+configuration? That’s the job of the <strong>NixOS module system</strong>, located in the
+<code>./lib</code> directory of Nixpkgs (specifically in <code>modules.nix</code>, <code>options.nix</code>, and
+<code>types.nix</code>).</p>
+<p>Interestingly, the module system isn’t exclusive to NixOS; you can use it to
+manage option sets in your own Nix projects.</p>
+<p>Here’s a simplified example of using the module system outside of NixOS:</p>
+<pre><code class="language-nix">let
+  systemModule = { lib, config, ... }: {
+    options.toplevel = lib.mkOption {
+      type = lib.types.str;
+    };
+
+    options.enableFoo = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+    };
+
+    config.toplevel = ''
+      Is foo enabled? ${lib.boolToString config.enableFoo}
+    '';
+  };
+
+  userModule = {
+    enableFoo = true;
+  };
+
+in (import &lt;nixpkgs/lib&gt;).evalModules {
+  modules = [ systemModule userModule ];
+}
+</code></pre>
+<p><strong>You can evaluate the <code>config.toplevel</code> option from this example using:</strong></p>
+<pre><code class="language-bash">nix-instantiate --eval file.nix -A config.toplevel
+</code></pre>
+<p><strong>Key Takeaway</strong>: The NixOS module system is responsible for evaluating and
+merging option configurations from different modules.</p>
+<h3>How the Module System Works: A Simplified Overview</h3>
+<p>The module system processes a set of “modules” through these general steps:</p>
+<details>
+<summary> ✔️ Detailed Steps (Click to Expand)</summary>
+<ol>
+<li>
+<p><strong>Importing Modules</strong>: It recursively finds and includes all modules
+specified in <code>imports = [ ... ];</code> statements.</p>
+</li>
+<li>
+<p><strong>Declaring Options</strong>: It collects all option declarations defined using
+<code>options = { ... };</code> from all the modules and merges them. If the same option
+is declared in multiple modules, the module system handles this (details
+omitted for simplicity).</p>
+</li>
+<li>
+<p><strong>Defining Option Values</strong>: For each declared option, it gathers all the
+value assignments (defined using <code>config = { ... };</code> or directly at the top
+level if no <code>options</code> or <code>config</code> are present) from all modules and merges
+them according to the option’s defined type.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>Important Note</strong>: Option evaluation is lazy, meaning an option’s value is
+only computed when it’s actually needed. It can also depend on the values of
+other options.</p>
+</blockquote>
+</details>
+<p><strong>Key Takeaway</strong>: The module system imports, declares, and then evaluates option
+values from various modules to build the final configuration.</p>
+<p><strong>Top-Level Attributes in a Module: <code>imports</code>, <code>options</code>, and <code>config</code></strong></p>
+<p>Within a NixOS module (the files that define parts of your system configuration)
+, the attributes defined directly at the top level of the module’s function have
+specific meanings:</p>
+<ul>
+<li>
+<p><code>imports</code>: This attribute is a list of other module files to include. Their
+options and configurations will also be part of the evaluation.</p>
+</li>
+<li>
+<p><code>options</code>: This attribute is where you declare new configuration options. You
+define their type, default value, description, etc., using functions like
+<code>lib.mkOption</code> or <code>lib.mkEnableOption</code>.</p>
+</li>
+<li>
+<p><code>config</code>: This attribute is where you assign values to the options that have
+been declared (either in the current module or in imported modules).</p>
+</li>
+</ul>
+<p><strong>Key Takeaway</strong>: The top-level attributes <code>imports</code>, <code>options</code>, and <code>config</code>
+are the primary ways to structure a NixOS module.</p>
+<p><strong>The Rule: Move Non-Option Attributes Under <code>config</code></strong></p>
+<p>If you define either an <code>options</code> or a <code>config</code> attribute at the top level of
+your module, any other attributes that are not option declarations must be moved
+inside the config attribute.</p>
+<details>
+<summary> ✔️ Examples of Correct and Incorrect Usage (Click to Expand)</summary>
+<p>Let’s look at an example of what not to do:</p>
+<pre><code class="language-nix">{ pkgs, lib, config, ... }:
+{
+imports = [];
+
+# Defining an option at the top level
+
+options.mine.desktop.enable = lib.mkEnableOption "desktop settings";
+
+# This will cause an error because 'environment' and 'appstream'
+
+# are not 'options' and 'config' is also present at the top level.jjjj
+
+environment.systemPackages =
+lib.mkIf config.appstream.enable [ pkgs.git ];
+
+appstream.enable = true;
+}
+</code></pre>
+<p>This will result in the error:
+<code>error: Module has an unsupported attribute 'appstream' This is caused by introducing a top-level 'config' or 'options' attribute. Add configuration attributes immediately on the top level instead, or move all of them into the explicit 'config' attribute</code>.</p>
+<p><strong>Key Takeaway</strong>: When you have <code>options</code> or <code>config</code> at the top level, all
+value assignments need to go inside the config block.</p>
+<p><strong>The Correct Way</strong>): Using the <code>config</code> Attribute</p>
+<p>To fix the previous example, you need to move the value assignments for
+<code>environment.systemPackages</code> and <code>appstream.enable</code> inside the config attribute:</p>
+<pre><code class="language-nix">{ pkgs, lib, config, ... }:
+{
+imports = [];
+
+# Defining an option at the top level
+
+options.mine.desktop.enable = lib.mkEnableOption "desktop settings";
+
+config = {
+environment.systemPackages =
+lib.mkIf config.appstream.enable [ pkgs.git ];
+
+    appstream.enable = true;
+
+};
+}
+</code></pre>
+<p>Now, Nix knows that you are declaring an option (<code>options.mine.desktop.enable</code>)
+and then setting values for other options (<code>environment.systemPackages</code>,
+<code>appstream.enable</code>) within the <code>config</code> block.</p>
+<p><strong>Key Takeaway</strong>: The <code>config</code> attribute is used to define the values of
+options.</p>
+<p><strong>Implicit <code>config</code>: When <code>options</code> is Absent</strong></p>
+<p>If your module does not define either <code>options</code> or <code>config</code> at the top level,
+then any attributes you define directly at the top level are implicitly treated
+as being part of the config.</p>
+<p>For example, this is valid:</p>
+<pre><code class="language-nix">{ pkgs, lib, config, ... }:
+{
+environment.systemPackages =
+lib.mkIf config.appstream.enable [ pkgs.git ];
+
+appstream.enable = true;
+}
+</code></pre>
+<p>Nix will implicitly understand that <code>environment.systemPackages</code> and
+<code>appstream.enable</code> are configuration settings.</p>
+<p><strong>Key Takeaway</strong>: If no explicit options or config are present, top-level
+attributes are automatically considered part of the configuration.</p>
+<p><strong>Removing an Option: What Happens to <code>config</code></strong></p>
+<p>Even if you remove the <code>options</code> declaration from a module that has a <code>config</code>
+section, the <code>config = { environment.systemPackages = ... };</code> part will still
+function correctly, assuming the option it’s referencing (<code>appstream.enable</code> in
+this case) is defined elsewhere (e.g., in an imported module).</p>
+</details>
+<p><strong>Key Takeaway</strong>: The <code>config</code> section defines values for options, regardless of
+whether those options are declared in the same module.</p>
+<h4>Conclusion</h4>
+<p>Understanding the nuances of top-level attributes within NixOS modules,
+particularly <code>imports</code>, <code>options</code>, and <code>config</code>, is fundamental to structuring
+and managing your system’s configuration effectively. As we’ve seen, the module
+system provides a powerful and declarative way to define and evaluate system
+settings, ultimately contributing to the construction of the
+<code>system.build.toplevel</code> derivation that represents your entire NixOS
+environment.</p>
+<p>The concepts of option declaration and value assignment, along with the crucial
+rule of organizing non-option attributes under the <code>config</code> attribute when
+<code>options</code> is present, provide a clear framework for building modular and
+maintainable configurations.</p>
+<p>Now that we have a solid grasp of how NixOS modules are structured and how they
+contribute to the final system derivation, it’s a natural next step to explore
+the tangible results of these configurations: the software and system components
+themselves. These are built and managed by a core concept in Nix, known as
+<strong>derivations</strong>.</p>
+<p>In the next chapter,
+<a href="https://saylesss88.github.io/Package_Definitions_Explained_6.html">Package Definitions Explained</a>
+we will shift our focus from the abstract configuration to the concrete software
+packages. We will learn how Nix uses <em>package definitions</em> to create
+<em>derivations</em>, which are the actual build plans that produce the software we use
+on our NixOS systems. This will bridge the gap between configuring your system
+and understanding how the software within it is managed.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Flakes Explained</title><link>https://saylesss88.github.io/Nix_Flakes_Explained_4.html</link><description><![CDATA[<h1>Chapter 4</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="images/trees3.cleaned.png" alt="trees3" /></p>
+<!-- <img src="images/gruv15.png" width="800" height="600"> -->
+<h2>Nix Flakes Explained</h2>
+<p>If you’re completely new, take a look at
 <a href="https://nixos.wiki/wiki/flakes#Installing_flakes">this</a> to get flakes on your
-system.</p><p>For the Nix Flake man page type <code>man nix3 flake</code> and for a specific feature,
-type something like <code>man nix3 flake-lock</code>.</p>]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Nix_Flakes_Explained_4.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Module System Explained</title><link>https://saylesss88.github.io/NixOS_Modules_Explained_3.html</link><description><![CDATA[<p><img src="images/buildings1.png" alt="buildings" /></p><p><strong>TL;DR</strong>: In this chapter, we will break down the Nix module system used by
+system.</p>
+<p>For the Nix Flake man page type <code>man nix3 flake</code> and for a specific feature,
+type something like <code>man nix3 flake-lock</code>.</p>
+<p>Flakes replace stateful channels (which cause much confusion among novices) and
+introduce a more intuitive and consistent CLI, making them a perfect opportunity
+to start using Nix. – Alexander Bantyev
+<a href="https://serokell.io/blog/practical-nix-flakes">Practical Nix Flakes</a></p>
+<p>The “state” being remembered and updated by channels is the specific revision of
+the Nixpkgs repository that your local Nix installation considers “current” for
+a given channel. When this state changes on your machine, your builds diverge
+from others whose machines have a different, independently updated channel
+state.</p>
+<p>Channels are also constantly updated on the remote servers. So, “nixos-unstable”
+today refers to a different set of packages and versions than “nixos-unstable”
+did yesterday or will tomorrow.</p>
+<p>Flakes solve this by making the exact revision of <code>nixpkgs</code> (and other
+dependencies) an explicit input within your <code>flake.nix</code> file, pinned in the
+<code>flake.lock</code>. This means the state is explicitly defined in the configuration
+itself, not implicitly managed by a global system setting.</p>
+<p>Evaluation time is notoriously slow on NixOS, the problem was that in the past
+Nix evaluation wasn’t hermetic preventing effective evaluation caching. A <code>.nix</code>
+file can import other Nix files or by looking them up in the Nix search path
+(<code>$NIX_PATH</code>). This causes a cached result to be inconsistent unless every file
+is perfectly kept track of. Flakes solve this problem by ensuring fully hermetic
+evaluation.</p>
+<p>“Hermetic” means that the output of an evaluation (the derivation itself)
+depends <em>only</em> on the explicit inputs provided, not on anything external like
+environment variables or pulling in files only on your system. This is the
+problem that Nix solves and the problem that flakes are built around.</p>
+<h2>What is a Nix Flake?</h2>
+<p><strong>Nix flakes</strong> are independent components in the Nix ecosystem. They define
+their own <strong>dependencies</strong> (inputs) and what they produce (outputs), which can
+include <strong>packages</strong>, <strong>deployment configurations</strong>, or <strong>Nix functions</strong> for
+other flakes to use.</p>
+<p>Flakes provide a standardized framework for building and managing software,
+making all project inputs explicit for greater reproducibility and
+self-containment.</p>
+<p>At its core, a flake is a source tree (like a Git repository) that contains a
+<code>flake.nix</code> file in its root directory. This file provides a standardized way to
+access Nix artifacts such as packages and modules.</p>
+<p>Flakes provide a standard way to write Nix expressions (and therefore packages)
+whose dependencies are version-pinned in a lock file, improving reproducibility
+of Nix installations. – NixOS Wiki</p>
+<p>Think of <code>flake.nix</code> as the central entry point of a flake. It not only defines
+what the flake produces but also declares its dependencies.</p>
+<h3>Key Concepts</h3>
+<p><code>flake.nix</code>: <strong>The Heart of a Flake</strong></p>
+<p>The <code>flake.nix</code> file is mandatory for any flake. It must contain an attribute
+set with at least one required attribute: <code>outputs</code>. It can also optionally
+include <code>description</code> and <code>inputs</code>.</p>
+<p><strong>Basic Structure:</strong></p>
+<pre><code class="language-nix">{
+  description = "Package description";
+  inputs = { /* Dependencies go here */ };
+  outputs = { /* What the flake produces */ };
+  nixConfig = { /* Advanced configuration options */ };
+}
+</code></pre>
+<p>I typically see <code>nixConfig</code> used for extra-substituters for cachix. This is a
+general-purpose way to define Nix configuration options that apply when this
+flake is evaluated or built. It ties into your <code>/etc/nix/nix.conf</code> or
+<code>~/.config/nix/nix.conf</code>.</p>
+<p>For example, create a directory and add a <code>flake.nix</code> with the following
+contents, yes this is a complete <code>flake.nix</code> demonstrating <em>outputs</em> being the
+only required attribute:</p>
+<pre><code class="language-nix"># flake.nix
+{
+  outputs = _: { multiply = 2 * 2; };
+}
+</code></pre>
+<p>Now evaluate it with:</p>
+<pre><code class="language-bash">nix eval .#multiply
+4
+</code></pre>
+<p>In the <code>outputs = _: { ... };</code> line, the <code>_</code> (underscore) is a placeholder
+argument. It represents the inputs that the outputs function could receive (like
+<code>inputs</code>, <code>self</code>, <code>pkgs</code>, etc.), but in this specific case, we’re not using any
+of them to define the multiply attribute. It’s a common convention in Nix to use
+<code>_</code> when an argument is required by a function but intentionally ignored.</p>
+<p>In the command <code>nix eval .#multiply</code>:</p>
+<ul>
+<li>
+<p>the <code>.</code> signifies the current directory, indicating that Nix should look for a
+<code>flake.nix</code> file in the directory where you’re running the command.</p>
+</li>
+<li>
+<p>The <code>#</code> is used to select a specific attribute from the <code>outputs</code> of the
+flake. In this case, it’s telling Nix to evaluate the <code>multiply</code> attribute.</p>
+</li>
+</ul>
+<p>In the next example we will create a <code>devShells</code> output as well as a <code>packages</code>
+output.</p>
+<p><strong><code>flake.lock</code> auto-generated lock file</strong></p>
+<p>All flake inputs are pinned to specific revisions in a lockfile called
+<code>flake.lock</code> This file stores the revision info as JSON.</p>
+<p>The <code>flake.lock</code> file ensures that Nix flakes have purely deterministic outputs.
+A <code>flake.nix</code> file without an accompanying <code>flake.lock</code> should be considered
+incomplete and a kind of proto-flake. Any Nix CLI command that is run against
+the flake—like <code>nix build</code>, <code>nix develop</code>, or even <code>nix flake show</code>—generates a
+<code>flake.lock</code> for you.</p>
+<p>Here’s an example section of a <code>flake.lock</code> file that pins Nixpkgs to a specific
+revision:</p>
+<pre><code class="language-bash">$ cat flake.lock
+{
+  "nodes": {
+    "nixpkgs": {
+      "info": {
+        "lastModified": 1587398327,
+        "narHash": "sha256-mEKkeLgUrzAsdEaJ/1wdvYn0YZBAKEG3AN21koD2AgU="
+      },
+      "locked": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "5272327b81ed355bbed5659b8d303cf2979b6953",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-20.03",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 5
+}
+</code></pre>
+<p>Any future build of this flake will use the version of <code>nixpkgs</code> recorded in the
+lock file. If you add new inputs, they will be automatically added when you run
+a nix flake command like <code>nix flake show</code>. But it won’t replace existing locks.</p>
+<p>If you need to update a locked input to the latest version:</p>
+<pre><code class="language-bash">nix flake lock --update-input nixpkgs
+nix build
+</code></pre>
+<p>The above command allows you to update individual inputs, and <code>nix flake update</code>
+will update the whole lock file.</p>
+<h3>Helper functions that are good to know for working with Flakes</h3>
+<p><code>lib.genAttrs</code>: A function, given the name of the attribute, returns the
+attribute’s value</p>
+<p>Example:</p>
+<pre><code class="language-nix">nix repl
+nix-repl&gt; :l &lt;nixpkgs&gt;
+nix-repl&gt; lib.genAttrs [ "boom" "bash" ] (name: "sonic" + name)
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{
+  bash = "sonicbash";
+  boom = "sonicboom";
+}
+</code></pre>
+<p>You will often see the following:</p>
+<p>A common use for this with flakes is to have a list of different systems:</p>
+<pre><code class="language-nix">     systems = [
+       "x86_64-linux"
+       "aarch64-linux"
+       "x86_64-darwin"
+       "aarch64-darwin"
+     ];
+</code></pre>
+<p>And use it to generate an attribute set for each listed system:</p>
+<pre><code class="language-nix">eachSystem = lib.genAttrs systems;
+</code></pre>
+<p>The above command creates an attribute set by mapping over a list of system
+strings. If you notice, you provide it a list (i.e. [ 1 2 3 ]) and the function
+returns a set (i.e. <code>{ ... }</code>)</p>
+<p>Why <code>genAttrs</code> is useful:</p>
+<ul>
+<li>
+<p>It lets you define attributes (like <code>packages</code>, <code>checks</code>, <code>devShells</code>) per
+supported system in a DRY(don’t repeat yourself), structured way.</p>
+</li>
+<li>
+<p><code>lib.mapAttrs</code>: A function, given an attribute’s name and value, returns a new
+<code>nameValuePair</code>.</p>
+</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-nix">nix-repl&gt; builtins.mapAttrs (name: value: name + "-" + value) { x = "foo"; y = "bar"; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{
+  x = "x-foo";
+  y = "y-bar";
+}
+</code></pre>
+<p><code>pkgs.mkShell</code>: is a specialized <code>stdenv.mkDerivation</code> that removes some
+repetition when using it with <code>nix-shell</code> (or <code>nix develop</code>)</p>
+<p>Example:</p>
+<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+pkgs.mkShell {
+  packages = [ pkgs.gnumake ];
+
+  inputsFrom = [ pkgs.hello pkgs.gnutar ];
+
+  shellHook = ''
+    export DEBUG=1
+  '';
+}
+</code></pre>
+<h4>A Simple flake that outputs a devshell and a package</h4>
+<p>In a new directory create a <code>flake.nix</code></p>
+<pre><code class="language-nix"># flake.nix
+{
+  outputs = {
+    self,
+    nixpkgs,
+  }: let
+    pkgs = nixpkgs.legacyPackages.x86_64-linux;
+  in {
+
+    packages.x86_64-linux.default = pkgs.kakoune; # You could define a meta-package here
+
+    devShells.x86_64-linux.default = pkgs.mkShell {
+      packages = [
+        pkgs.kakoune
+        pkgs.git
+        pkgs.ripgrep
+        pkgs.fzf
+      ];
+    };
+  };
+}
+</code></pre>
+<p><code>mkShell</code> is a wrapper around <code>mkDerivation</code></p>
+<p>This flake offers two main outputs for <code>x86_64-linux</code> systems:</p>
+<ol>
+<li>
+<p>A <strong>standard package</strong> (<code>packages.x86_64-linux.default</code>): This simple example
+just re-exports <code>kakoune</code> from <code>nixpkgs</code>. You could build your own apps here.</p>
+</li>
+<li>
+<p>A <strong>development shell</strong> (<code>devShells.x86_64-linux.default</code>): This provides a
+convenient environment where you have specific tools available without
+installing them globally on your system.</p>
+</li>
+</ol>
+<p>To use this flake you have a few options:</p>
+<ul>
+<li>
+<p><code>nix run</code> will launch kakoune</p>
+</li>
+<li>
+<p><code>nix develop</code> will activate the development environment providing all of the
+pkgs listed under <code>mkShell</code>.</p>
+</li>
+<li>
+<p>Or more explicitly <code>nix develop .#devShells.x86_64-linux.default</code>, does the
+same thing as the command above.</p>
+</li>
+</ul>
+<h4>Flake References</h4>
+<details>
+<summary> ✔️ Flake References (Click to Expand) </summary>
+<p><strong>Flake references</strong> (flakerefs) are a way to specify the location of a flake.
+They have two different formats:</p>
+<blockquote>
+<p><strong>Attribute set representation</strong>:</p>
+<pre><code class="language-nix">{
+  type = "github";
+  owner = "NixOS";
+  repo = "nixpkgs";
+}
+</code></pre>
+<p>or <strong>URL-like syntax</strong>:</p>
+<pre><code class="language-nix">github:NixOS/nixpkgs
+</code></pre>
+<p>These are used on the command line as a more convenient alternative to the
+attribute set representation. For instance, in the command</p>
+<pre><code class="language-nix">nix build github:NixOS/nixpkgs#hello
+</code></pre>
+<p><code>github:NixOS/nixpkgs</code> is a flake reference (while <code>hello</code> is an output
+attribute). They are also allowed in the <code>inputs</code> attribute of a flake, e.g.</p>
+<pre><code class="language-nix">inputs.nixpkgs.url = "github:NixOS/nixpkgs";
+</code></pre>
+<p>is equivalent to</p>
+<pre><code class="language-nix">inputs.nixpkgs = {
+  type = "github";
+  owner = "NixOS";
+  repo = "nixpkgs";
+};
+</code></pre>
+<p>–
+<a href="https://nix.dev/manual/nix/2.24/command-ref/new-cli/nix3-flake#flake-references">nix.dev flake-references</a></p>
+</blockquote>
+</details>
+<h4>Nix Flake Commands</h4>
+<details>
+<summary> ✔️ Flake Commands (Click to Expand) </summary>
+<blockquote>
+<p><code>nix flake</code> provides subcommands for creating, modifying and querying <em>Nix
+Flakes</em>. Flakes are the unit for packaging Nix code in a reproducible and
+discoverable way. They can have dependencies on other flakes, making it
+possible to have multi-repository Nix projects.</p>
+</blockquote>
+<p>— From
+<a href="https://nix.dev/manual/nix/2.28/command-ref/new-cli/nix3-flake">nix.dev Reference Manual</a></p>
+<ul>
+<li>
+<p>The main thing to note here is that <code>nix flake</code> is used to manage Nix flakes
+and that Flake commands are whitespace separated rather than hyphen <code>-</code>
+separated.</p>
+</li>
+<li>
+<p>Flakes do provide some advantages when it comes to discoverability of outputs.</p>
+</li>
+<li>
+<p>For Example, two helpful commands to inspect a flake are:</p>
+<ul>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.28/command-ref/new-cli/nix3-flake-show">nix flake show</a>
+command: Show the outputs provided by a flake.</p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.28/command-ref/new-cli/nix3-flake-check">nix flake check</a>
+command: check whether the flake evaluates and run its tests.</p>
+</li>
+<li>
+<p>Any Nix CLI command that is run against a flake – like <code>nix build</code>,
+<code>nix develop</code>, <code>nix flake show</code> – generate a <code>flake.lock</code> file for you.</p>
+<ul>
+<li>The <code>flake.lock</code> file ensures that all flake inputs are pinned to specific
+revisions and that Flakes have purely deterministic outputs.</li>
+</ul>
+</li>
+</ul>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-bash">nix shell nixpkgs#ponysay --command ponysay "Flakes Rock!"
+</code></pre>
+<p>This works because of the [flake registry] that maps symbolic identifiers like
+<code>nixpkgs</code> to actual locations such as <code>https://github.com/NixOS/nixpkgs</code>. So the
+following are equivalent:</p>
+<pre><code class="language-bash">nix shell nixpkgs#ponysay --command ponysay Flakes Rock!
+nix shell github:NixOS/nixpkgs#ponysay --command ponysay Flakes Rock!
+</code></pre>
+<p>To override the <code>nixpkgs</code> registry with your own local copy you could:</p>
+<pre><code class="language-bash">nix registry add nixpkgs ~/src/local-nixpkgs
+</code></pre>
+</details>
+<h3>Attribute Sets: The Building Blocks</h3>
+<details>
+<summary> ✔️ Attribute set Refresher (Click to Expand) </summary>
+<p><strong>Attribute sets</strong> are fundamental in Nix. They are simply collections of
+name-value pairs wrapped in curly braces <code>{}</code>.</p>
+<ul>
+<li>Example, (click to see Output):</li>
+</ul>
+<pre><code class="language-nix">let
+  my_attrset = { foo = "bar"; };
+in
+my_attrset.foo
+~ "bar"
+</code></pre>
+<p><strong>Top-Level Attributes of a Flake</strong>:</p>
+<p>Flakes have specific <strong>top-level attributes</strong> that can be accessed directly
+(without dot notation). The most common ones are <code>inputs</code>, <code>outputs</code>, and
+<code>nixConfig</code>.</p>
+  </details>
+<h3>Deeper Dive into the Structure of <code>flake.nix</code></h3>
+<!-- ![Flakes](images/Flakes.png) -->
+<p><code>inputs</code>: <strong>Declaring Dependencies</strong></p>
+<p>The <code>inputs</code> attribute set specifies the other flakes that your current flake
+depends on.</p>
+<p>Each key in the <code>inputs</code> set is a name you choose for the dependency, and the
+value is a reference to that flake (usually a URL or a Git Repo).</p>
+<p>To access something from a dependency, you generally go through the <code>inputs</code>
+attribute (e.g., <code>inputs.helix.packages</code>).</p>
+<p>See
+<a href="https://saylesss88.github.io/flakes/flake_inputs_4.1.html">Nix Flake inputs</a>
+for a flake inputs deep dive.</p>
+<p><strong>Example:</strong> This declares dependencies on the <code>nixpkgs</code> and <code>import-cargo</code>
+flakes:</p>
+<pre><code class="language-nix">inputs = {
+  import-cargo.url = "github:edolstra/import-cargo";
+  nixpkgs.url = "nixpkgs";
+};
+</code></pre>
+<p>When Nix evaluates your flake, it fetches and evaluates each input. These
+evaluated inputs are then passed as an attribute set to the outputs function,
+with the keys matching the names you gave them in the inputs set.</p>
+<p>The special input <code>self</code> is a reference to the <code>outputs</code> and the source tree of
+the current flake itself.</p>
+<p><strong><code>outputs</code>: Defining What Your Flake Provides</strong></p>
+<p>The <strong><code>outputs</code></strong> attribute defines what your flake makes available. This can
+include packages, NixOS modules, development environments (<code>devShells</code>) and
+other Nix derivations.</p>
+<p>Flakes can output arbitrary Nix values. However, certain outputs have specific
+meanings for Nix commands and must adhere to particular types (often
+derivations, as described in the
+<a href="https://nixos.wiki/wiki/Flakes">output schema</a>).</p>
+<p>You can inspect the outputs of a flake using the command:</p>
+<pre><code class="language-nix">nix flake show
+</code></pre>
+<blockquote>
+<p>This command takes a flake URI and displays its outputs in a tree structure,
+showing the attribute paths and their corresponding types.</p>
+</blockquote>
+<p><strong>Understanding the <code>outputs</code> Function</strong></p>
+<p>Beginners often mistakenly think that self and nixpkgs within
+<code>outputs = { self, nixpkgs, ... }: { ... }</code> are the outputs themselves. Instead,
+they are the <em>input arguments</em> (often called <em>output arguments</em>) to the outputs
+function.</p>
+<p>The outputs function in <code>flake.nix</code> always takes a single argument, which is an
+attribute set. The syntax <code>{ self, nixpkgs, ... }</code> is Nix’s way of destructuring
+this single input attribute set to extract the values associated with the keys
+<code>self</code> and <code>nixpkgs</code>.</p>
+<p>Flakes output your whole system configuration, packages, as well as Nix
+functions for use elsewhere.</p>
+<ul>
+<li>
+<p>For example, the <code>nixpkgs</code> repository has its own <code>flake.nix</code> file that
+outputs many helper functions via the <code>lib</code> attribute.</p>
+</li>
+<li>
+<p>For a deep dive into flake outputs, see
+<a href="https://saylesss88.github.io/flakes/flake_outputs_4.2.html">Nix Flake Outputs</a></p>
+</li>
+</ul>
+<blockquote>
+<p>The <code>lib</code> convention The convention of using <code>lib</code> to output functions is
+observed not just by Nixpkgs but by many other Nix projects. You’re free,
+however, to output functions via whichever attribute you prefer. –
+<a href="https://zero-to-nix.com/concepts/flakes/#inputs">Zero to Nix Flakes</a></p>
+</blockquote>
+<p>Some flake outputs are required to be system specific (i.e. “x86_64-linux” for
+(64-bit AMD/Intel Linux) including packages, development environments, and NixOS
+configurations)</p>
+<p><strong>Variadic Attributes (…) and @-patterns</strong></p>
+<p>The <code>...</code> syntax in the input arguments of the outputs function indicates
+variadic attributes, meaning the input attribute set can contain more attributes
+than just those explicitly listed (like <code>lib</code> and <code>nixpkgs</code>).</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-nix">mul = { a, b, ... }: a * b;
+mul { a = 3; b = 4; c = 2; } # 'c' is an extra attribute
+</code></pre>
+<p>However, you cannot directly access these extra attributes within the function
+body unless you use the @-pattern:</p>
+<ul>
+<li>(Click for Output)</li>
+</ul>
+<pre><code class="language-nix">mul = s@{ a, b, ... }: a  b  s.c; # 's' now refers to the entire input set
+mul { a = 3; b = 4; c = 2; } # Output: 24
+~ 24
+</code></pre>
+<p>When used in the outputs function argument list (e.g.,
+<code>outputs = { pkgs, ... } @ inputs)</code>, the @-pattern binds the entire input
+attribute set to a name (in this case, <code>inputs</code>) while also allowing you to
+destructure specific attributes like pkgs.</p>
+<p><strong>What <code>outputs = { pkgs, ... } @ inputs: { ... };</code> does:</strong></p>
+<ol>
+<li>
+<p><strong>Destructuring:</strong> It tries to extract the value associated with the key
+<code>pkgs</code> from the input attribute set and binds it to the variable <code>pkgs</code>. The
+<code>...</code> allows for other keys in the input attribute set to be ignored during
+this direct destructuring.</p>
+</li>
+<li>
+<p><strong>Binding the Entire Set:</strong> It binds the entire input attribute set to the
+variable inputs.</p>
+<ul>
+<li>Example <code>flake.nix</code>:</li>
+</ul>
+</li>
+</ol>
+<pre><code class="language-nix">{
+inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+inputs.home-manager.url = "github:nix-community/home-manager";
+
+outputs = { self, nixpkgs, ... } @ attrs: { # A `packages` output for the x86_64-linux platform
+packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
+
+    # A `nixosConfigurations` output (for a NixOS system named "fnord")
+    nixosConfigurations.fnord = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = attrs;
+      modules = [ ./configuration.nix ];
+    };
+
+};
+}
+</code></pre>
+<p><strong>Platform Specificity in Outputs</strong></p>
+<p>Flakes ensure that their outputs are consistent across different evaluation
+environments. Therefore, any package-related output must explicitly specify the
+target platform (a combination of architecture and OS, <code>x86_64-linux</code>).</p>
+<p><strong>legacyPackages Explained</strong></p>
+<p><code>legacyPackages</code> is a way for flakes to interact with the traditional, less
+structured package organization of nixpkgs. Instead of packages being directly
+at the top level (e.g., <code>pkgs.hello</code>), <code>legacyPackages</code> provides a
+platform-aware way to access them within the flake’s structured output format
+(e.g., <code>nixpkgs.legacyPackages.x86_64-linux.hello</code>). It acts as a bridge between
+the flake’s expected output structure and nixpkgs’s historical organization.</p>
+<p><strong>The Sole Argument of outputs</strong></p>
+<p>It’s crucial to remember that the outputs function accepts only one argument,
+which is an attribute set. The <code>{ self, nixpkgs, ... }</code> syntax is simply
+destructuring that single input attribute set.</p>
+<p><strong>Outputs of the Flake (Return Value)</strong></p>
+<p>The outputs of the flake refer to the attribute set that is returned by the
+<code>outputs</code> function. This attribute set can contain various named outputs like
+<code>packages</code>, <code>nixosConfigurations</code>, <code>devShells</code>, etc.</p>
+<p><strong>Imports: Including Other Nix Expressions</strong></p>
+<p>The <code>import</code> function in Nix is used to evaluate the Nix expression found at a
+specified path (usually a file or directory) and return its value.</p>
+<p>Basic Usage: import <code>./path/to/file.nix</code></p>
+<p><strong>Passing Arguments During Import</strong></p>
+<p><code>import &lt;nixpkgs&gt; {}</code> is calling two functions, not one.</p>
+<ol>
+<li><code>import &lt;nixpkgs&gt;</code>: The first function call</li>
+</ol>
+<ul>
+<li>
+<p><code>import</code> is a built-in Nix function. Its job is to load and evaluate a Nix
+expression from a specified path.</p>
+</li>
+<li>
+<p><code>&lt;nixpkgs&gt;</code> is a flake reference. When you use <code>import &lt;nixpkgs&gt;</code>, Nix
+evaluates the <code>default.nix</code> file (or sometimes <code>lib/default.nix</code>) found at
+that location.</p>
+</li>
+<li>
+<p>The <code>default.nix</code> in <code>nixpkgs</code> evaluates to a function. This function is
+designed to be configurable, allowing you to pass arguments like <code>system</code>,
+<code>config</code>, etc. to customize how <code>nixpkgs</code> behaves and what packages it
+provides.</p>
+</li>
+<li>
+<p>So, <code>import &lt;nixpkgs&gt;</code> doesn’t give you the <code>nixpkgs</code> package set directly; it
+gives you the function that generates the <code>nixpkgs</code> package set derivation.</p>
+</li>
+</ul>
+<ol start="2">
+<li><code>{}</code>: The second function call (and its argument)</li>
+</ol>
+<ul>
+<li>
+<p><code>{}</code> denotes an empty attribute set</p>
+</li>
+<li>
+<p>When an attribute set immediately follows a function, it means you are calling
+that function and passing the attribute set as its single argument.</p>
+</li>
+</ul>
+<p>So, the <code>{}</code> after <code>import &lt;nixpkgs&gt;</code> is not part of the <code>import</code> function
+iteself. It’s the argument being passed to the function that <code>import &lt;nixpkgs&gt;</code>
+just returned.</p>
+<p>You can also pass an attribute set as an argument to the Nix expression being
+imported:</p>
+<pre><code class="language-nix">let
+myHelpers = import ./lib/my-helpers.nix { pkgs = nixpkgs; };
+in
+# ... use myHelpers
+</code></pre>
+<p>In this case, the Nix expression in <code>./lib/my-helpers.nix</code> is likely a function
+that expects an argument (often named <code>pkgs</code> by convention):</p>
+<pre><code class="language-nix"># ./lib/my-helpers.nix
+
+{ pkgs }:
+let
+myPackage = pkgs.stdenv.mkDerivation {
+name = "my-package"; # ...
+};
+in
+myPackage
+</code></pre>
+<p>By passing <code>{ pkgs = nixpkgs; }</code> during the import, you are providing the
+nixpkgs value from your current <code>flake.nix</code> scope to the pkgs parameter expected
+by the code in <code>./lib/my-helpers.nix</code>.</p>
+<p><strong>Importing Directories (<code>default.nix</code>)</strong></p>
+<p>When you use import with a path that points to a directory, Nix automatically
+looks for a file named <code>default.nix</code> within that directory. If found, Nix
+evaluates the expressions within <code>default.nix</code> as if you had specified its path
+directly in the import statement.</p>
+<ul>
+<li>For more advanced examples see
+<a href="https://saylesss88.github.io/flakes/flake_examples_4.3.html">Nix Flake Examples</a></li>
+</ul>
+<h5>Conclusion: Unifying Your Nix Experience with Flakes</h5>
+<p>For some examples of more advanced outputs like <code>devShells</code> and <code>checks</code>, check
+out this blog post that I wrote:
+<a href="https://tsawyer87.github.io/posts/nix_flakes_tips/">Nix Flakes Tips and Tricks</a></p>
+<p>In this chapter, we’ve explored Nix Flakes as a powerful and modern approach to
+managing Nix projects, from development environments to entire system
+configurations. We’ve seen how they provide structure, dependency management,
+and reproducibility through well-defined inputs and outputs. Flakes offer a
+cohesive way to organize your Nix code and share it with others.</p>
+<p>As we’ve worked with the flake.nix file, you’ve likely noticed its structure – a
+top-level attribute set defining various outputs like devShells, packages,
+nixosConfigurations, and more. These top-level attributes are not arbitrary;
+they follow certain conventions and play specific roles within the Flake
+ecosystem.</p>
+<p>In the next chapter,
+<a href="https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html">Understanding Top-Level Attributes</a>
+we will delve deeper into the meaning and purpose of these common top-level
+attributes. We’ll explore how they are structured, what kind of expressions they
+typically contain, and how they contribute to the overall functionality and
+organization of your Nix Flakes. Understanding these attributes is key to
+effectively leveraging the full potential of Nix Flakes.</p>
+<h5>Further Resources</h5>
+<details>
+<summary> ✔️ Resources (Click to Expand)</summary>
+<ul>
+<li>
+<p><a href="https://serokell.io/blog/practical-nix-flakes">practical-nix-flakes</a></p>
+</li>
+<li>
+<p><a href="https://xeiaso.net/blog/nix-flakes-1-2022-02-21/">Nix Flakes an Introduction</a></p>
+</li>
+<li>
+<p><a href="https://www.tweag.io/blog/2020-07-31-nixos-flakes/">tweag nix-flakes</a></p>
+</li>
+<li>
+<p><a href="https://nixos.wiki/wiki/Flakes">NixOS-wiki Flakes</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/concepts/flakes.html">nix.dev flakes</a></p>
+</li>
+<li>
+<p><a href="https://vtimofeenko.com/posts/practical-nix-flake-anatomy-a-guided-tour-of-flake.nix/">anatomy-of-a-flake</a></p>
+</li>
+<li>
+<p><a href="https://jade.fyi/blog/flakes-arent-real/">flakes-arent-real</a></p>
+</li>
+<li>
+<p><a href="https://mhwombat.codeberg.page/nix-book/#_attribute_set_operations">wombats-book-of-nix</a></p>
+</li>
+<li>
+<p><a href="https://zero-to-nix.com/concepts/flakes/">zero-to-nix flakes</a></p>
+</li>
+<li>
+<p><a href="https://nixos-and-flakes.thiscute.world/">nixos-and-flakes-book</a></p>
+</li>
+<li>
+<p><a href="https://flakehub.com/">FlakeHub</a></p>
+</li>
+</ul>
+<p><img src="images/nixosnix.png" alt="FlakeHub" /></p>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Nix_Flakes_Explained_4.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Module System Explained</title><link>https://saylesss88.github.io/NixOS_Modules_Explained_3.html</link><description><![CDATA[<h1>Chapter 3</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<h2>Nix Module System Explained</h2>
+<!-- ![gruv3](images/gruv3.png) -->
+<p><img src="images/buildings1.png" alt="buildings" /></p>
+<p><strong>TL;DR</strong>: In this chapter, we will break down the Nix module system used by
 both NixOS and Home-Manager. We will discuss using home-manager as a module and
 the flexibility that modules give us. We will touch on options and break down
 the <code>vim</code> module from the Nixpkgs collection. Finally we will display how to
-test modules with the repl.</p><p>Your <code>configuration.nix</code> is a module. For the Nixpkgs collection most modules
-are in <code>nixos/modules</code>.</p>]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/NixOS_Modules_Explained_3.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Understanding Nix Functions</title><link>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</link><description><![CDATA[<p><img src="images/trees2.cleaned.png" alt="trees2" /></p><p><strong>Functions</strong> are the building blocks of Nix, appearing everywhere in Nix
+test modules with the repl.</p>
+<p>Your <code>configuration.nix</code> is a module. For the Nixpkgs collection most modules
+are in <code>nixos/modules</code>.</p>
+<p>The suggested way of using <code>home-manager</code> according to their manual is as a
+<a href="https://nix-community.github.io/home-manager/index.xhtml#sec-install-nixos-module">NixOS module</a>.
+Both home-manager and NixOS use the same module system.</p>
+<h2>Module Structure</h2>
+<pre><code class="language-nix">{
+  imports = [
+    # Paths to other modules.
+    # Compose this module out of smaller ones.
+  ];
+
+  options = {
+    # Option declarations.
+    # Declare what settings a user of this module can set.
+    # Usually this includes a global "enable" option which defaults to false.
+  };
+
+  config = {
+    # Option definitions.
+    # Define what other settings, services and resources should be active.
+    # Usually these depend on whether a user of this module chose to "enable" it
+    # using the "option" above.
+    # Options for modules imported in "imports" can be set here.
+  };
+}
+</code></pre>
+<p><code>imports</code>, <code>options</code>, and <code>config</code> are the top-level attributes of a Nix module.
+They are the primary, reserved keys that the Nix module system recognizes and
+processes to combine different configurations into a single, cohesive system or
+user environment. <code>config</code> is the same <code>config</code> you receive as a module argument
+(e.g. <code>{ pkgs, config, ... }:</code> at the top of your module function)</p>
+<p>Understanding <code>config</code>:</p>
+<p><code>config</code> is the big constantly updated blueprint of your entire system.</p>
+<p>Every time you bring in a new module, it adds its own settings and options to
+this blueprint. So, when a module receives the <code>config</code> argument, it’s getting
+the complete picture of everything you’ve asked NixOS to set up so far.</p>
+<p>This allows the module to:</p>
+<ul>
+<li>
+<p>See what other parts of your system are doing.</p>
+</li>
+<li>
+<p>Make smart decisions based on those settings.</p>
+</li>
+<li>
+<p>Add its own pieces to the overall plan, building on what’s already there.</p>
+</li>
+<li>
+<p>Most modules are functions that take an attribute set and return an attribute
+set.</p>
+</li>
+</ul>
+<p>To turn the above module into a function accepting an attribute set just add the
+function arguments to the top, click the eye to see the whole module:</p>
+<pre><code class="language-nix">{ config, pkgs, ... }:
+~ {
+~   imports = [
+~     # Paths to other modules.
+~     # Compose this module out of smaller ones.
+~   ];
+~
+~   options = {
+~     # Option declarations.
+~     # Declare what settings a user of this module can set.
+~     # Usually this includes a global "enable" option which defaults to false.
+~   };
+~
+~   config = {
+~     # Option definitions.
+~     # Define what other settings, services and resources should be active.
+~     # Usually these depend on whether a user of this module chose to "enable" it
+~     # using the "option" above.
+~     # Options for modules imported in "imports" can be set here.
+~   };
+~ }
+</code></pre>
+<p>It may require the attribute set to contain:</p>
+<ul>
+<li>
+<p><code>config</code>: The configuration of the entire system.</p>
+</li>
+<li>
+<p><code>options</code>: All option declarations refined with all definition and declaration
+references.</p>
+</li>
+<li>
+<p><code>pkgs</code>: The attribute set extracted from the Nix package collection and
+enhanced with the <code>nixpkgs.config</code> option.</p>
+</li>
+<li>
+<p><code>modulesPath</code>: The location of the module directory of NixOS.</p>
+</li>
+</ul>
+<h2>Modularize your configuration.nix</h2>
+<p>Many people start of using a single <code>configuration.nix</code> and eventually their
+single file configuration gets too large to search through and maintain
+conveniently.</p>
+<p>This is where <strong>modules</strong> come in allowing you to break up your configuration
+into logical parts. Your <code>boot.nix</code> will contain settings and options related to
+the actual boot process. You’re <code>services.nix</code> will only have services and so
+on…</p>
+<ul>
+<li>These modules are placed in a logical path relative to either your
+<code>configuration.nix</code> or equivalent or if you’re using flakes relative to your
+<code>flake.nix</code> or equivalent.
+<ul>
+<li>The <code>imports</code> mechanism takes paths to other modules as its argument and
+combines them to be included in the evaluation of the system configuration.</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<pre><code class="language-nix">{ ... }:
+{
+  imports = [
+     # Paths to other modules
+
+     # They can be relative paths
+     ./otherModule.nix
+
+     # Or absolute
+     /path/to/otherModule.nix
+
+     # Or to a directory
+     ../modules/home/shells/nushell
+  ];
+}
+</code></pre>
+</blockquote>
+<blockquote>
+<p>❗: The <strong>imports</strong> mechanism includes and evaluates the Nix expression found
+at the given path <em>as a module</em>. If that path is a directory, it will
+automatically look for and evaluate a <code>default.nix</code> file within that directory
+<em>as a module</em>. It is common to have that <code>default.nix</code> be a function that only
+imports and combines all the modules in said directory. Like the above
+example, in the nushell directory would be a <code>default.nix</code> that is
+automatically imported and evaluated.</p>
+</blockquote>
+<p><strong>Crucial Distinction: <code>imports</code> vs. <code>import</code></strong>:</p>
+<p>Beginners often confuse the modules attribute <code>imports = [./module.nix]</code> here
+with the Nix builtins function <code>import module.nix</code>. The first expects a path to
+a file containing a NixOS module (having the same specific structure we’re
+describing here), while the second loads whatever Nix expression is in that file
+(no expected structure). –NixOS Wiki.</p>
+<p>Considering <code>configuration.nix</code> is a module, it can be imported like any other
+module and this is exactly what you do when getting started with flakes.</p>
+<pre><code class="language-nix"># flake.nix
+{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  outputs = inputs@{ nixpkgs, home-manager, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.jdoe = ./home.nix;
+
+            # Optionally, use home-manager.extraSpecialArgs to pass
+            # arguments to home.nix
+          }
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p><code>modules = [...]</code> in <code>flake.nix</code>: This is effectively the initial <code>imports</code> list
+for your entire NixOS system or Home Manager user configuration. It tells the
+Nix module system: “Start by collecting and merging the configurations defined
+in these specific modules.”</p>
+<p>The above example is what you get from running:
+<code>nix flake new /etc/nixos -t github:nix-community/home-manager#nixos</code></p>
+<p>If you notice the <code>home-manager.nixosModules.home-manager</code>, that is what imports
+home-manager as a module.</p>
+<p>You could also make the actual home-manager module and import it like this:</p>
+<pre><code class="language-nix"># home-manager.nix
+{ inputs, outputs, ... }: {
+  imports = [
+    # Import home-manager's NixOS module
+    inputs.home-manager.nixosModules.home-manager
+  ];
+
+  home-manager = {
+    extraSpecialArgs = { inherit inputs outputs; };
+    users = {
+      # Import your home-manager configuration
+      your-username = import ../home-manager/home.nix;
+    };
+  };
+}
+</code></pre>
+<p>This “module” isn’t much different from the one included in the <code>flake.nix</code>
+above, it is just shown here to show the flexibility of modules. They can be as
+big and complex or as small and simple as you want. You can break up every
+single program or component of your configuration into individual modules or
+have modules that bundle similar programs the choice is yours.</p>
+<p>Then in your <code>configuration.nix</code> or equivalent you would add <code>home-manager.nix</code>
+to your imports list and you would have home-manager as a NixOS module.</p>
+<details>
+<summary>
+✔️ Refresher (Click to Expand):
+</summary>
+<p>An <strong>attribute set</strong> is a collection of name-value pairs called <em>attributes</em>:</p>
+<p>Attribute sets are written enclosed in curly braces <code>{}</code>. Attribute names and
+attribute values are separated by an equal sign <code>=</code>. Each value can be an
+arbitrary expression, terminated by a semicolon <code>;</code>.</p>
+<blockquote>
+<p><strong>Example</strong>:<a href="https://nix.dev/manual/nix/2.24/language/syntax#attrs-literal">nix.dev reference</a>
+This defines an attribute set with attributes named:</p>
+<ul>
+<li><code>x</code> with the value <code>123</code>, an integer</li>
+<li><code>text</code> with the value <code>"Hello"</code>, a string</li>
+<li><code>y</code> where the value is the result of applying the function <code>f</code> to the
+attribute set <code>{bla = 456; }</code></li>
+</ul>
+<pre><code class="language-nix">{
+ x = 123;
+ text = "Hello";
+ y = f { bla = 456; };
+}
+</code></pre>
+<pre><code class="language-nix">{ a = "Foo"; b = "Bar"}.a
+~ "Foo"
+</code></pre>
+</blockquote>
+<p>Attributes can appear in any order. An attribute name may only occur once in
+each attribute set.</p>
+<blockquote>
+<p>❗ Remember <code>{}</code> is a valid attribute set in Nix.</p>
+</blockquote>
+<p>The following is a <strong>function</strong> with an attribute set argument, remember that
+anytime you see a <code>:</code> in Nix code it means this is a function. To the left is
+the <strong>function arguments</strong> and to the right is the <strong>function body</strong>:</p>
+<pre><code class="language-nix">{ a, b }: a + b
+</code></pre>
+<p>The simplest possible <strong>NixOS Module</strong>:</p>
+<pre><code class="language-nix">{ ... }:
+{
+}
+</code></pre>
+</details>
+<p>NixOS produces a full system configuration by combining smaller, more isolated
+and reusable components: <strong>Modules</strong>. If you want to understand Nix and NixOS
+make sure you grasp modules!</p>
+<p>A NixOS module defines configuration options and behaviors for system
+components, allowing users to extend, customize, and compose configurations
+declaratively.</p>
+<p>A <strong>module</strong> is a file containing a Nix expression with a specific structure. It
+<em>declares</em> options for other modules to define (give a value). Modules were
+introduced to allow extending NixOS without modifying its source code.</p>
+<p>To define any values, the module system first has to know which ones are
+allowed. This is done by declaring options that specify which attributes can be
+set and used elsewhere.</p>
+<p>If you want to write your own modules, I recommend setting up
+<a href="https://github.com/nix-community/nixd?tab=readme-ov-file">nixd</a> or
+<a href="https://github.com/oxalica/nil">nil</a> with your editor of choice. This will
+allow your editor to warn you about missing arguments and dependencies as well
+as syntax errors.</p>
+<h3>Declaring Options</h3>
+<p>Options are declared under the top-level <code>options</code> attribute with
+<code>lib.mkOption</code>.</p>
+<p><a href="https://nixos.org/manual/nixpkgs/stable/#function-library-lib.options.mkOption">mkOption</a>
+Creates an Option attribute set. It accepts an attribute set with certain keys
+such as, <code>default</code>, <code>package</code>, and <code>example</code>.</p>
+<pre><code class="language-nix"># options.nix
+{ lib, ... }:
+{
+  options = {
+    name = lib.mkOption { type = lib.types.str; };
+  };
+}
+</code></pre>
+<blockquote>
+<p><code>lib</code> provides helper functions from <code>nixpkgs.lib</code> and the ellipsis (<code>...</code>) is
+for arbitrary arguments which means that this function is prepared to accept
+<strong>any additional arguments</strong> that the caller might provide, even if those
+arguments are not explicitly named or used within the module’s body. They make
+the modules more flexible, without the <code>...</code> each module would have to
+explicitly list every possible argument it might receive, which would be
+cumbersome and error-prone. So <code>{lib, ... }:</code> means that “I need the <code>lib</code>
+argument” <strong>and</strong> I acknowledge that the module system might pass other
+arguments automatically (like <code>config</code>, <code>pkgs</code>, etc.) and I’m fine with them
+being there, even if I don’t use them directly in this specific module file.</p>
+</blockquote>
+<h3>Defining Values</h3>
+<p>Options are <strong>set</strong> or <strong>defined</strong> under the top-level <code>config</code> attribute:</p>
+<pre><code class="language-nix"># config.nix
+{ ... }:
+{
+  config = {
+    name = "Slick Jones";
+  };
+}
+</code></pre>
+<p>In this <strong>option declaration</strong>, we created an option <code>name</code> of type <em>string</em> and
+set that same option to a string.</p>
+<p><strong>Option Definitions</strong> can be in a separate file than <strong>Option Declarations</strong></p>
+<h3>Evaluating Modules</h3>
+<p>Modules are <strong>evaluated</strong> with
+<a href="https://nixos.org/manual/nixpkgs/stable/#module-system-lib-evalModules">lib.evalModules</a>
+<code>lib.evalModules</code> evaluates a set of modules, typically once per application
+(e.g. once for NixOS and once for Home-Manager).</p>
+<h2>Checking out the Vim module provided by Nixpkgs</h2>
+<p>The following is <code>nixpkgs/nixos/modules/programs/vim.nix</code>, a module that is
+included in the Nixpkgs collection:</p>
+<pre><code class="language-nix">{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+
+let
+  cfg = config.programs.vim;
+in
+{
+  options.programs.vim = {
+    enable = lib.mkEnableOption "Vi IMproved, an advanced text";
+
+    defaultEditor = lib.mkEnableOption "vim as the default editor";
+
+    package = lib.mkPackageOption pkgs "vim" { example = "vim-full"; };
+  };
+
+  # TODO: convert it into assert after 24.11 release
+  config = lib.mkIf (cfg.enable || cfg.defaultEditor) {
+    warnings = lib.mkIf (cfg.defaultEditor &amp;&amp; !cfg.enable) [
+      "programs.vim.defaultEditor will only work if programs.vim.enable is
+       enabled, which will be enforced after the 24.11 release"
+    ];
+    environment = {
+      systemPackages = [ cfg.package ];
+      variables.EDITOR = lib.mkIf cfg.defaultEditor (lib.mkOverride 900 "vim");
+      pathsToLink = [ "/share/vim-plugins" ];
+    };
+  };
+}
+</code></pre>
+<p>It provides options to enable Vim, set it as the default editor, and specify the
+Vim package to use.</p>
+<details>
+<summary> ✔️ Breakdown of the vim module.(Click to Expand)</summary>
+1. Module Inputs and Structure:
+<pre><code class="language-nix">{
+  config,
+  lib,
+  pkgs,
+  ...
+}
+</code></pre>
+<p><strong>Inputs</strong>: The module takes the above inputs and <code>...</code> (catch-all for other
+args)</p>
+<ul>
+<li>
+<p><code>config</code>: Allows the module to read option values (e.g.
+<code>config.programs.vim.enable</code>). It provides access to the evaluated
+configuration.</p>
+</li>
+<li>
+<p><code>lib</code>: The Nixpkgs library, giving us helper functions like <code>mkEnableOption</code> ,
+<code>mkIf</code>, and <code>mkOverride</code>.</p>
+</li>
+<li>
+<p><code>pkgs</code>: The Nixpkgs package set, used to access packages like <code>pkgs.vim</code></p>
+</li>
+<li>
+<p><code>...</code>: Allows the module to accept additional arguments, making it flexible
+for extension in the future.</p>
+</li>
+</ul>
+<blockquote>
+<p>Key Takeaways: A NixOS module is typically a function that can include
+<code>config</code>, <code>lib</code>, and <code>pkgs</code>, but it doesn’t require them. The <code>...</code> argument
+ensures flexibility, allowing a module to accept extra inputs without breaking
+future compatibility. Using <code>lib</code> simplifies handling options (mkEnableOption,
+mkIf, mkOverride) and helps follow best practices. Modules define options,
+which users can set in their configuration, and <code>config</code>, which applies
+changes based on those options.</p>
+</blockquote>
+<ol start="2">
+<li>Local Configuration Reference:</li>
+</ol>
+<pre><code class="language-nix">let
+  cfg = config.programs.vim;
+in
+</code></pre>
+<p>This is a local alias. Instead of typing <code>config.programs.vim</code> over and over,
+the module uses <code>cfg</code>.</p>
+<ol start="3">
+<li>Option Declaration</li>
+</ol>
+<pre><code class="language-nix">options.programs.vim = {
+  enable = lib.mkEnableOption "Vi IMproved, an advanced text";
+  defaultEditor = lib.mkEnableOption "vim as the default editor";
+  package = lib.mkPackageOption pkgs "vim" { example = "vim-full"; };
+};
+</code></pre>
+<p>This defines three user-configurable options:</p>
+<ul>
+<li>
+<p><code>enable</code>: Turns on Vim support system-wide.</p>
+</li>
+<li>
+<p><code>defaultEditor</code>: Sets Vim as the system’s default <code>$EDITOR</code>.</p>
+</li>
+<li>
+<p><code>package</code>: lets the user override which Vim package is used.</p>
+</li>
+</ul>
+<blockquote>
+<p><code>mkPackageOption</code> is a helper that defines a package-typed option with a
+default (<code>pkgs.vim</code>) and provides docs + example. Using <code>lib.mkEnableOption</code>
+makes it clear exactly where this function is coming from. Same with
+<code>lib.mkIf</code> and as you can see they can be further down the configuration,
+further from where you defined <code>with lib;</code> making it less clear where they
+come from. Explicitness is your friend when it comes to reproducability and
+clarity.</p>
+</blockquote>
+<ol start="4">
+<li>Conditional Configuration</li>
+</ol>
+<pre><code class="language-nix">config = lib.mkIf (cfg.enable || cfg.defaultEditor) {
+</code></pre>
+<ul>
+<li>This block is only activated if <em>either</em> <code>programs.vim.enable</code> or
+<code>defaultEditor</code> is set.</li>
+</ul>
+<ol start="5">
+<li>Warnings</li>
+</ol>
+<pre><code class="language-nix">warnings = lib.mkIf (cfg.defaultEditor &amp;&amp; !cfg.enable) [
+  "programs.vim.defaultEditor will only work if programs.vim.enable is enabled,
+   which will be enforced after the 24.11 release"
+];
+</code></pre>
+<p>Gives you a soft warning if you try to set <code>defaultEditor = true</code> without also
+enabling Vim.</p>
+<ol start="6">
+<li>Actual System Config Changes</li>
+</ol>
+<pre><code class="language-nix">environment = {
+  systemPackages = [ cfg.package ];
+  variables.EDITOR = lib.mkIf cfg.defaultEditor (lib.mkOverride 900 "vim");
+  pathsToLink = [ "/share/vim-plugins" ];
+};
+</code></pre>
+<p>It adds Vim to your <code>systemPackages</code>, sets <code>$EDITOR</code> if <code>defaultEditor</code> is true,
+and makes <code>/share/vim-plugins</code> available in the environment.</p>
+</details>
+<p>The following is a bat home-manager module that I wrote:</p>
+<pre><code class="language-nix"># bat.nix
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}: let
+  cfg = config.custom.batModule;
+in {
+  options.custom.batModule.enable = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Enable bat module";
+  };
+
+  config = lib.mkIf cfg.enable {
+    programs.bat = {
+      enable = true;
+      themes = {
+        dracula = {
+          src = pkgs.fetchFromGitHub {
+            owner = "dracula";
+            repo = "sublime"; # Bat uses sublime syntax for its themes
+            rev = "26c57ec282abcaa76e57e055f38432bd827ac34e";
+            sha256 = "019hfl4zbn4vm4154hh3bwk6hm7bdxbr1hdww83nabxwjn99ndhv";
+          };
+          file = "Dracula.tmTheme";
+        };
+      };
+      extraPackages = with pkgs.bat-extras; [
+        batdiff
+        batman
+        prettybat
+        batgrep
+      ];
+    };
+  };
+}
+</code></pre>
+<p>Now I could add this to my <code>home.nix</code> to enable it:</p>
+<pre><code class="language-nix"># home.nix
+custom = {
+  batModule.enable = true;
+}
+</code></pre>
+<p>If I set this option to true the bat configuration is dropped in place. If it’s
+not set to true, it won’t put the bat configuration in the system. Same as with
+options defined in modules within the Nixpkgs repository.</p>
+<p>If I had set the default to <code>true</code>, it would automatically enable the module
+without requiring an explicit <code>custom.batModule.enable = true;</code> call in my
+<code>home.nix</code>.</p>
+<h3>Module Composition</h3>
+<p>NixOS achieves its full system configuration by combining the configurations
+defined in various modules. This composition is primarily handled through the
+<code>imports</code> mechanism.</p>
+<p><code>imports</code>: This is a standard option within a NixOS or Home Manager
+configuration (often found in your configuration.nix or home.nix). It takes a
+list of paths to other Nix modules. When you include a module in the imports
+list, the options and configurations defined in that module become part of your
+overall system configuration.</p>
+<p>You declaratively state the desired state of your system by setting options
+across various modules. The NixOS build system then evaluates and merges these
+option settings. The culmination of this process, which includes building the
+entire system closure, is represented by the derivation built by
+<code>config.system.build.toplevel</code>.</p>
+<h3>NixOS Modules and Dependency Locking with npins</h3>
+<details>
+<summary> ✔️ npins example (Click to Expand)</summary>
+As our NixOS configurations grow in complexity, so too does the challenge of
+managing the dependencies they rely on. Ensuring consistency and reproducibility
+not only applies to individual packages but also to the versions of Nixpkgs and
+other external resources our configurations depend upon.
+<p>Traditionally, NixOS configurations often implicitly rely on the version of
+Nixpkgs available when <code>nixos-rebuild</code> is run. However, for more robust and
+reproducible setups, especially in collaborative environments or when rolling
+back to specific configurations, explicitly locking these dependencies to
+specific versions becomes crucial.</p>
+<p>In the following example, we’ll explore how to use a tool called <code>npins</code> to
+manage and lock the dependencies of a NixOS configuration, ensuring a more
+predictable and reproducible system. This will involve setting up a project
+structure and using npins to pin the specific version of Nixpkgs our
+configuration relies on.</p>
+<p>This is the file structure:</p>
+<pre><code class="language-bash">❯ tree
+.
+├── configuration.nix
+├── default.nix
+├── desktop.nix
+└── npins
+    ├── default.nix
+    └── sources.json
+</code></pre>
+<p>This uses <code>npins</code> for dependency locking. Install it and run this in the project</p>
+<p>directory:</p>
+<pre><code class="language-bash">npins init
+</code></pre>
+<p>Create a <code>default.nix</code> with the following:</p>
+<pre><code class="language-nix"># default.nix
+{ system ? builtins.currentSystem, sources ? import ./npins, }:
+let
+  pkgs = import sources.nixpkgs {
+    config = { };
+    overlays = [ ];
+  };
+  inherit (pkgs) lib;
+in lib.makeScope pkgs.newScope (self: {
+
+  shell = pkgs.mkShell { packages = [ pkgs.npins self.myPackage ]; };
+
+    # inherit lib;
+
+  nixosSystem = import (sources.nixpkgs + "/nixos") {
+    configuration = ./configuration.nix;
+  };
+
+  moduleEvale = lib.evalModules {
+    modules = [
+      # ...
+    ];
+  };
+})
+</code></pre>
+<p>A <code>configuration.nix</code> with the following:</p>
+<pre><code class="language-nix"># configuration.nix
+{
+  boot.loader.grub.device = "nodev";
+  fileSystems."/".device = "/devst";
+  system.stateVersion = "25.05";
+
+  # declaring options means to declare a new option
+  # defining options means to define a value of an option
+  imports = [
+    # ./main.nix
+     ./desktop.nix # Files
+    # ./minimal.nix
+  ];
+
+  # mine.desktop.enable = true;
+}
+</code></pre>
+<p>And a <code>desktop.nix</code> with the following:</p>
+<pre><code class="language-nix"># desktop.nix
+{ pkgs, lib, config, ... }:
+
+{
+  imports = [];
+
+  # Define an option to enable or disable desktop configuration
+  options.mine.desktop.enable = lib.mkEnableOption "desktop settings";
+
+  # Configuration that applies when the option is enabled
+  config = lib.mkIf config.mine.desktop.enable {
+    environment.systemPackages = [ pkgs.git ];
+  };
+}
+</code></pre>
+<p><code>mkEnableOption</code> defaults to false. Now in your <code>configuration.nix</code> you can
+uncomment <code>mine.desktop.enable = true;</code> to enable the desktop config and
+vice-versa.</p>
+<p>You can test that this works by running:</p>
+<pre><code class="language-bash">nix-instantiate -A nixosSystem.system
+</code></pre>
+<p><code>nix-instantiate</code> performs only the evaluation phase of Nix expressions. During
+this phase, Nix interprets the Nix code, resolves all dependencies, and
+constructs derivations but does not execute any build actions. Useful for
+testing.</p>
+<p>To check if this worked and <code>git</code> is installed in systemPackages you can load it
+into <code>nix repl</code> but first you’ll want <code>lib</code> to be available so uncomment this in
+your <code>default.nix</code>:</p>
+<pre><code class="language-nix"># default.nix
+inherit lib;
+</code></pre>
+<p>Rerun <code>nix-instantiate -A nixosSystem.system</code></p>
+<p>Then load the repl and check that <code>git</code> is in <code>systemPackages</code>:</p>
+<pre><code class="language-bash">nix repl -f .
+nix-repl&gt; builtins.filter (pkg: lib.hasPrefix "git" pkg.name) nixosSystem.config.environment.systemPackages
+</code></pre>
+<p>This shows the path to the derivation</p>
+<p>Check that mine.desktop.enable is true</p>
+<pre><code class="language-nix">nix-repl&gt; nixosSystem.config.mine.desktop.enable
+true
+</code></pre>
+<p>As demonstrated with npins, explicitly managing the dependencies of your NixOS
+modules is a powerful technique for ensuring the long-term stability and
+reproducibility of your system configurations. By pinning specific versions of
+Nixpkgs and other resources, you gain greater control over your environment and
+reduce the risk of unexpected changes due to upstream updates.</p>
+</details>
+<h3>Best Practices</h3>
+<p>You’ll see the following all throughout Nix code and is convenient although it
+doesn’t follow best practices. One reason is static analysis can’t reason about
+the code (e.g. Because it implicitly brings all attributes into scope, tools
+can’t verify which ones are actually being used), because it would have to
+actually evaluate the files to see which names are in scope:</p>
+<pre><code class="language-nix"># utils.nix
+{ pkgs, ... }: {
+  environment.systemPackages = with pkgs; [
+    rustup
+    evcxr
+    nix-prefetch-git
+  ];
+}
+</code></pre>
+<p>Another reason the above expression is considered an “anti-pattern” is when more
+then one <code>with</code> is used, it’s no longer clear where the names are coming from.</p>
+<p>Scoping rules for <code>with</code> are not intuitive, see
+<a href="https://github.com/NixOS/nix/issues/490">issue</a> –nix.dev This can make
+debugging harder, as searching for variable origins becomes ambiguous (i.e. open
+to more than one interpretation).</p>
+<p>The following follows best practices:</p>
+<pre><code class="language-nix">{pkgs, ... }: {
+  environment.systemPackages = builtins.attrValues {
+    inherit (pkgs)
+      rustup
+      evcxr
+      nix-prefetch-git;
+  };
+}
+</code></pre>
+<ul>
+<li><a href="https://noogle.dev/f/builtins/attrValues">Noogle builtins.attrValues</a></li>
+</ul>
+<details>
+<summary> ✔️ Above Command Summary (Click to Expand) </summary>
+<pre><code class="language-nix">{
+  inherit (pkgs) rustup evcxr nix-prefetch-git;
+}
+</code></pre>
+<p>is equivalent to:</p>
+<pre><code class="language-nix">{
+  rustup = pkgs.rustup;
+  evcxr = pkgs.evcxr;
+  nix-prefetch-git = pkgs.nix-prefetch-git;
+}
+</code></pre>
+<p>Applying <code>builtins.attrValues</code> produces:</p>
+<pre><code class="language-nix">[ pkgs.evcxr pkgs.nix-prefetch-git pkgs.rustup ]
+</code></pre>
+<p>As you can see only the values are included in the list, not the keys. This is
+more explicit and declarative but can be more complicated, especially for a
+beginner.</p>
+<p><code>builtins.attrValues</code> returns the values of all attributes in the given set,
+sorted by attribute name. The above expression turns into something like the
+following avoiding bringing every attribute name from <code>nixpkgs</code> into scope.</p>
+<p>A more straightforward example:</p>
+<pre><code class="language-nix">attrValues {c = 3; a = 1; b = 2;}
+=&gt; [1 2 3]
+</code></pre>
+</details>
+<p>This approach avoids unintended name clashes or confusion when debugging.</p>
+<p>Upon looking into this a bit further, most people use the following format to
+avoid the “anti-pattern” from using <code>with pkgs;</code>:</p>
+<pre><code class="language-nix"># utils.nix
+{ pkgs, ... }: {
+  environment.systemPackages = [
+    pkgs.rustup
+    pkgs.evcxr
+    pkgs.nix-prefetch-git
+  ];
+}
+</code></pre>
+<p>While the performance differences might be negligible on modern computers,
+adopting this best practice from the start is highly recommended. The above
+approach is more explicit, it’s clear exactly where each package is coming from.</p>
+<p>If maintaining strict scope control matters, use <code>builtins.attrValues</code>.</p>
+<p>If readability and simplicity are more your priority, explicitly referencing
+<code>pkgs.&lt;packageName&gt;</code> might be better. Now you can choose for yourself.</p>
+<h4>Conclusion</h4>
+<p>As we have seen throughout this chapter, modules are the building blocks of your
+NixOS system and are themselves often functions. There are a few different ways
+to use these modules to build your system. In the next chapter,
+<a href="https://saylesss88.github.io/Nix_Flakes_Explained_4.html">Nix Flakes Explained</a>
+we will learn about Nix Flakes as a more modern and comprehensive entrypoint for
+managing your entire system and its dependencies.</p>
+<p>To further deepen your understanding of NixOS Modules and the broader ecosystem
+of tools and best practices surrounding them, the following resources offer
+valuable insights and information.</p>
+<h4>Resources on Modules</h4>
+<details>
+<summary> ✔️ Resources (Click to Expand) </summary>
+<ul>
+<li>
+<p><a href="https://nixos.org/manual/nixos/stable/#sec-writing-modules">WritingNixOsModules</a></p>
+</li>
+<li>
+<p><a href="https://nixos.wiki/wiki/NixOS_modules">NixWikiNixOSModules</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/tutorials/module-system/a-basic-module/index.html">nix.dev A basic module</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/tutorials/module-system/deep-dive#module-system-deep-dive">ModuleSystemDeepDive</a></p>
+</li>
+<li>
+<p><a href="https://xeiaso.net/talks/asg-2023-nixos/">xeiaso Nixos Modules for fun &amp; profit</a></p>
+</li>
+<li>
+<p><a href="https://nixos-and-flakes.thiscute.world/other-usage-of-flakes/module-system">NixOS Flakes Book Module System</a></p>
+</li>
+</ul>
+<h1>Videos</h1>
+<p><a href="https://www.youtube.com/watch?v=N7hFP_40DJo&amp;t=17s">NixHour Writing NixOS modules</a>
+– This example is from this video
+<a href="https://infinisil.com/modules.mp4">infinisilModules</a></p>
+<p><a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion</a></p>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/NixOS_Modules_Explained_3.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Understanding Nix Functions</title><link>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</link><description><![CDATA[<h1>Chapter 2</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- <img src="images/nixLogo.png" width="400" height="300"> -->
+<p><img src="images/trees2.cleaned.png" alt="trees2" /></p>
+<h2>Understanding Nix Functions</h2>
+<p><strong>Functions</strong> are the building blocks of Nix, appearing everywhere in Nix
 expressions and configurations. Mastering them is essential for writing
 effective Nix code and understanding tools like NixOS and Home Manager. This
 chapter explores how Nix functions work, focusing on their <strong>single-argument
-nature</strong>, <strong>currying</strong>, <strong>partial application</strong>, and their role in <strong>modules</strong>.</p><p>A <strong>Nix Function</strong> is a rule that takes an input (called an <strong>argument</strong>) and
+nature</strong>, <strong>currying</strong>, <strong>partial application</strong>, and their role in <strong>modules</strong>.</p>
+<h2>What are Nix Functions?</h2>
+<p>A <strong>Nix Function</strong> is a rule that takes an input (called an <strong>argument</strong>) and
 produces an <strong>output</strong> based on that input. Unlike many programming languages,
 Nix functions are designed to take exactly one argument at a time. This unique
-approach, co]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Intro to Nix</title><link>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</link><description><![CDATA[<p><img src="images/trees1.cleaned.png" alt="trees" /></p><p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
+approach, combined with a technique called currying, allows Nix to simulate
+multi-argument functions in a flexible and reusable way.</p>
+<h2>Builtins</h2>
+<details>
+<summary> ✔️ Nix Builtin Functions (Click to Expand)</summary>
+<p>The Nix expression evaluator has a bunch of functions and constants built in:</p>
+<ul>
+<li>
+<p><code>toString e</code>: (Convert the expression <code>e</code> to a string)</p>
+</li>
+<li>
+<p><code>import path</code>: (Load, parse and return the Nix expression in the file <code>path</code>)</p>
+</li>
+<li>
+<p><code>throw x</code>: (Throw an error message <code>x</code>. Usually stops evaluation)</p>
+</li>
+<li>
+<p><code>map f list</code>: (Apply the function <code>f</code> to each element in the <code>list</code>)</p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.18/language/builtins">Built-in Functions</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.26/language/operators">Nix Operators</a></p>
+</li>
+</ul>
+</details>
+<h2>Lambdas</h2>
+<p>Nix functions are anonymous (lambdas) (e.g., <code>x: x + 2</code>), and technically take a
+single parameter. However, that single parameter is very often an attribute set,
+allowing you to effectively pass multiple named inputs by destructuring (e.g.,
+<code>{ arg1, arg2 }: arg1 + arg2</code>).</p>
+<p>Type the parameter name, followed by a colon, and finally the body of the
+function.</p>
+<pre><code class="language-nix">nix-repl&gt; param: param * 2
+&lt;&lt;lambda @ &lt;&lt;string&gt;&gt;:1:1&gt;&gt;
+
+nix-repl&gt; (param: param * 2) 2
+4
+</code></pre>
+<p>The above example shows that everything in Nix returns a value. When you call a
+function directly (without first assigning the function itself to a variable),
+the result of that call is immediately evaluated and displayed/used.</p>
+<p>In order to make our function reusable and be able to pass different values at
+different times we have to assign our function to a variable:</p>
+<pre><code class="language-nix">nix-repl&gt; twoTimes = param: param * 2
+</code></pre>
+<p>Now, we can reference our function by it’s name and pass our required parameter:</p>
+<pre><code class="language-nix">nix-repl&gt; twoTimes
+«lambda @ «string»:1:2»
+nix-repl&gt; twoTimes 2
+4
+nix-repl&gt; twoTimes 4
+8
+</code></pre>
+<p>We defined a function <code>param: param * 2</code> takes one parameter <code>param</code>, and
+returns <code>param * 2</code>. We then assigned this function to the variable <code>twoTimes</code>.
+Lastly, we called the function with a few different arguments showing it’s
+reusability.</p>
+<h2>Understanding Function Structure: The Role of the Colon</h2>
+<p>The colon (<code>:</code>) acts as a clear separator within a function definition:</p>
+<ul>
+<li>
+<p><strong>Left of the Colon:</strong> This is the function’s <strong>argument</strong>. It’s a placeholder
+name for a value that will be provided when the function is called.</p>
+</li>
+<li>
+<p><strong>Right of the Colon:</strong> This is the <strong>function body</strong>. It’s the expression
+that will be evaluated when the function is invoked.</p>
+</li>
+</ul>
+<p><strong>Think of function arguments as naming values that aren’t known in advance.</strong>
+These names are placeholders that get filled with specific values when the
+function is used.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-nix">greet = personName: "Hello, ${personName}!";
+</code></pre>
+<ul>
+<li>
+<p>Here, <code>personName</code> is the <strong>argument</strong> (the placeholder).</p>
+</li>
+<li>
+<p><code>"Hello, ${personName}!"</code>, is the <strong>function body</strong> (which uses the
+placeholder to create the greeting).</p>
+</li>
+</ul>
+<p>When you call the function, (click to see Output):</p>
+<pre><code class="language-nix">greet "Anonymous"
+~ "Hello, Anonymous!"
+</code></pre>
+<ul>
+<li>
+<p>The value <code>"Anonymous"</code> is substituted for the <code>personName</code> placeholder within
+the function body.</p>
+</li>
+<li>
+<p>This structure is the foundation of all Nix functions, whether simple or
+complex.</p>
+</li>
+</ul>
+<h3>Single-Argument Functions: The Basics</h3>
+<p>The simplest form of a Nix function takes a single argument. In Nix, function
+definitions like <code>x: x + 1</code> or <code>personName: "Hello, ${personName}!";</code> are
+<strong>anonymous lambda functions</strong>. They exist as values until they are assigned to
+a variable.</p>
+<ul>
+<li>Click to see Output:</li>
+</ul>
+<pre><code class="language-nix"># This is an anonymous lambda function value:
+# x: x + 1
+inc = x: x + 1;          # here we assigned our lambda to a variable `inc`
+inc 5
+~ 6
+</code></pre>
+<ul>
+<li>
+<p><code>x</code> is the argument.</p>
+</li>
+<li>
+<p><code>x + 1</code> is the function body.</p>
+</li>
+</ul>
+<p>This straightforward design makes single-argument functions easy to understand
+and use. But what if you need a function that seems to take multiple arguments?
+That’s where <strong>currying</strong> comes in.</p>
+<h3>Simulating Multiple Arguments: Currying</h3>
+<p>To create functions that appear to take multiple arguments, Nix uses currying.
+This involves nesting single-argument functions, where each function takes one
+argument and returns another function that takes the next argument, and so on.</p>
+<pre><code class="language-nix">nix-repl&gt; multiply = x: (y: x*y)
+nix-repl&gt; multiply
+«lambda»
+nix-repl&gt; multiply 4
+«lambda»
+nix-repl&gt; (mul 4) 5
+20
+</code></pre>
+<p>We defined a function that takes the parameter <code>x</code>, the body returns another
+function. This other function takes a parameter <code>y</code> and returns <code>x*y</code>.
+Therefore, calling <code>multiply 4</code> returns a function like: <code>x: 4*y</code>. In turn, we
+call the returned function with <code>5</code>, and get the expected result.</p>
+<h4>Currying example 2</h4>
+<pre><code class="language-nix"># concat is equivalent to:
+# concat = x: (y: x + y);
+concat = x: y: x + y;
+concat 6 6    # Evaluates to 12
+12
+</code></pre>
+<p>Here, <code>concat</code> is actually <strong>two nested functions</strong></p>
+<ol>
+<li>
+<p>The <strong>first function</strong> takes <code>x</code> and returns another function.</p>
+</li>
+<li>
+<p>The <strong>second function</strong> takes <code>y</code> and performs <code>x + y</code></p>
+</li>
+</ol>
+<p>Nix interprets the colons (<code>:</code>) as separators for this chain of single-argument
+functions.</p>
+<p>Here’s how it works step by step:</p>
+<ul>
+<li>
+<p>When you call <code>concat 6</code>, the outer function binds <code>x</code> to <code>6</code> and returns a
+new function: <code>y: 6 + y</code>.</p>
+</li>
+<li>
+<p>When you call that function with <code>6</code> (i.e., <code>concat 6 6</code>), it computes
+<code>6 + 6</code>, resulting in <code>12</code>.</p>
+</li>
+</ul>
+<p>This chaining is why Nix functions are so powerful—it allows you to build
+flexible, reusable functions.</p>
+<p>Currying is a powerful feature in Nix that enables you to partially apply
+arguments to functions, leading to increased reusability. This behavior is a
+direct consequence of Nix functions being “first-class citizens” (a concept
+we’ll delve into later), and it proves invaluable for decomposing intricate
+logic into a series of smaller, more focused functions.</p>
+<p><strong>Key Insight</strong>: Every colon in a function definition separates a <strong>single
+argument</strong> from its <strong>function body</strong>, even if that body is another function
+definition.</p>
+<h4>Greeting Example</h4>
+<p>Let’s explore currying with a more relatable example in the <code>nix repl</code>:</p>
+<pre><code class="language-nix">nix repl
+nix-repl&gt; greeting = prefix: name: "${prefix}, ${name}!";
+
+nix-repl&gt; greeting "Hello"
+&lt;&lt;lambda @ &lt;&lt;string&gt;&gt;:1:10&gt;&gt; # partial application returns a lambda
+
+nix-repl&gt; greeting "Hello" "Alice"
+"Hello, Alice!"         # providing both arguments returns the expected result
+</code></pre>
+<p>This function is a chain of two single-argument functions:</p>
+<ol>
+<li>
+<p>The outer function takes <code>prefix</code> (e.g. <code>"Hello"</code>) and returns a function
+that expects <code>name</code>.</p>
+</li>
+<li>
+<p>The inner function takes <code>name</code> (e.g. <code>"Alice"</code>) and combines it with
+<code>prefix</code> to produce the final string.</p>
+</li>
+</ol>
+<p>Thanks to <strong>lexical scope</strong> (where inner functions can access variables from
+outer functions), the inner function “remembers” the <code>prefix</code> value.</p>
+<h4>Partial Application: Using Functions Incrementally</h4>
+<p>Because of <strong>currying</strong>, you can apply arguments to a Nix function one at a
+time. This is called <em>partial application</em>. When you provide only some of the
+expected arguments, you get a new function that “remembers” the provided
+arguments and waits for the rest.</p>
+<p><strong>Example:</strong></p>
+<p>Using our <code>greeting</code> function again:</p>
+<pre><code class="language-nix">nix repl
+nix-repl&gt; greeting = prefix: name: "${prefix}, ${name}!";
+nix-repl&gt; helloGreeting = greeting "Hello";
+nix-repl&gt; helloGreeting "Alice"
+"Hello, Alice"
+</code></pre>
+<ul>
+<li><code>helloGreeting</code> is now a new function. It has already received the <code>prefix</code>
+argument (<code>"Hello"</code>), when we provide the second argument we get
+<code>"Hello, Alice!"</code></li>
+</ul>
+<p><strong>Benefits of Partial Application:</strong></p>
+<p>Partial application provides significant benefits by enabling you to derive
+specialized functions from more general ones through the process of fixing
+certain parameters. Additionally, it serves as a powerful tool for adapting
+existing functions to fit the precise argument requirements of higher-order
+functions like <code>map</code> and <code>filter</code>.</p>
+<h4>Nix Functions being “first class citizens”</h4>
+<p>In the context of Nix, the phrase “Nix treats functions as first-class citizens”
+means that functions in Nix are treated as values, just like numbers, strings,
+or lists. They can be manipulated, passed around, and used in the same flexible
+ways as other data types. This concept comes from functional programming and has
+specific implications in Nix.</p>
+<p><strong>What It Means in Nix</strong></p>
+<ol>
+<li>Functions Can Be <strong>Assigned to Variables</strong>:</li>
+</ol>
+<ul>
+<li>
+<p>You can store a function in a variable, just like you would store a number or
+string.</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">greet = name: "Hello, ${name}!";
+</code></pre>
+<ul>
+<li>Here, greet is a variable that holds a function.</li>
+</ul>
+<ol start="2">
+<li>Functions Can Be <strong>Passed as Arguments</strong>:</li>
+</ol>
+<ul>
+<li>
+<p>You can pass a function to another function as an argument, allowing for
+higher-order functions (functions that operate on other functions).</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">applyTwice = f: x: f (f x);
+inc = x: x + 1;
+applyTwice inc 5 # Output: 7 (increments 5 twice: 5 → 6 → 7)
+~ 7
+</code></pre>
+<ul>
+<li>Here, applyTwice takes a function <code>f</code> (in this case, <code>inc</code>) and applies it to
+<code>x</code> twice.</li>
+</ul>
+<ol start="3">
+<li>Functions Can Be <strong>Returned from Functions</strong>:</li>
+</ol>
+<ul>
+<li>
+<p>Functions can produce other functions as their output, which is key to
+currying in Nix.</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">greeting = prefix: name: "${prefix}, ${name}!";
+helloGreeting = greeting "Hello";  # Returns a function
+helloGreeting "Alice"  # Output: "Hello, Alice!"
+~ "Hello, Alice!"
+</code></pre>
+<ul>
+<li>The greeting function returns another function when partially applied with
+prefix.</li>
+</ul>
+<ol start="4">
+<li>Functions <strong>Are Values in Expressions</strong>:</li>
+</ol>
+<ul>
+<li>
+<p>Functions can be used anywhere a value is expected, such as in attribute sets
+or lists.</p>
+</li>
+<li>
+<p>Example:</p>
+</li>
+</ul>
+<pre><code class="language-nix">myFuncs = {
+  add = x: y: x + y;
+  multiply = x: y: x * y;
+};
+myFuncs.add 3 4  # Output: 7
+~ 7
+</code></pre>
+<ul>
+<li>
+<p>Here, functions are stored as values in an attribute set.</p>
+</li>
+<li>
+<p>To try this in the <code>repl</code> just remove the semi-colon (<code>;</code>)</p>
+</li>
+</ul>
+<p><strong>Why This Matters in Nix</strong>:</p>
+<p>This functional approach is fundamental to Nix’s unique build system. In Nix,
+<strong>package builds (called derivations)</strong> are essentially functions. They take
+specific <strong>inputs</strong> (source code, dependencies, build scripts) and
+deterministically produce <strong>outputs</strong> (a built package).</p>
+<p>This design ensures <strong>atomicity</strong>: if a build does not succeed completely and
+perfectly, it produces no output at all. This prevents situations common in
+other package managers where partial updates or corrupted builds can leave your
+system in an inconsistent or broken state.</p>
+<p>Many NixOS and Home Manager modules are functions, and their first-class status
+means they can be combined, reused, or passed to other parts of the
+configuration system.</p>
+<p>Now that we understand the “first-class” nature of Nix Functions let’s see how
+they fit into NixOS and Home Manager modules.</p>
+<h4>The Function Nature of NixOS and Home Manager Modules</h4>
+<p>It’s crucial to understand that most NixOS and Home Manager modules are
+fundamentally <strong>functions</strong>.</p>
+<p>These module functions typically accept a single argument: <strong>an attribute set</strong>
+(remember this, it’s important to understand).</p>
+<p><strong>Example</strong>:</p>
+<p>A practical NixOS module example for Thunar with plugins:</p>
+<pre><code class="language-nix"># thunar.nix
+{pkgs, ...}: {
+  programs = {
+    thunar = {
+      enable = true;
+      plugins = with pkgs.xfce; [
+        thunar-archive-plugin
+        thunar-volman
+      ];
+    };
+  };
+}
+</code></pre>
+<ul>
+<li>To use this module I would need to import it into my <code>configuration.nix</code> or
+equivalent, shown here for completeness.</li>
+</ul>
+<pre><code class="language-nix"># configuration.nix
+# ... snip ...
+imports = [ ../nixos/thunar.nix ];
+# ... snip ...
+</code></pre>
+<ul>
+<li>
+<p>This is actually a pretty good example of <code>with</code> making it a bit harder to
+reason where the plugins are from. You might instinctively try to trace a path
+like <code>programs.thunar.plugins.pkgs.xfce</code> because you saw <code>pkgs.xfce</code> in the
+<code>with</code> statement. But that’s now how <code>with</code> works. The <code>pkgs.xfce</code> path exists
+<em>outside</em> the <code>plugins</code> list, defining the source of the items, not their
+nested structure within the list.</p>
+</li>
+<li>
+<p>To follow best practices you could write the above plugins section as:</p>
+</li>
+</ul>
+<pre><code class="language-nix">plugins = [
+  pkgs.xfce.thunar-archive-plugin
+  pkgs.xfce.thunar-volman
+];
+</code></pre>
+<ul>
+<li>Now it’s clear that each plugin comes directly from <code>pkgs</code> and each will
+resolve to a derivation.
+<ul>
+<li>To be clear either way is fine, especially in such a small self contained
+module. If it were in a single file <code>configuration.nix</code> it would be a bit
+more confusing to trace. Explicitness is your friend with Nix and
+maintaining reproducability. <code>with</code> isn’t always bad but should be avoided
+at the top of a file for example to bring <code>nixpkgs</code> into scope, use <code>let</code>
+instead.</li>
+</ul>
+</li>
+</ul>
+<p>The entire module definition is a function that takes one argument (an attribute
+set):<code>{ pkgs, ... }</code>. When this module is included in your configuration, the
+NixOS module system calls this function with a specific attribute set. This
+attribute set contains the available packages (<code>pkgs</code>), and other relevant
+information. The module then uses these values to define parts of your system.</p>
+<h3>Understanding passing and getting back arguments</h3>
+<p>For this example we will build the Hello derivation from the Nix Pills series.</p>
+<p>Create an <code>autotools.nix</code> with the following contents:</p>
+<pre><code class="language-nix">pkgs: attrs: let
+  defaultAttrs = {
+    builder = "${pkgs.bash}/bin/bash";
+    args = [./builder.sh];
+    baseInputs = with pkgs; [
+      gnutar
+      gzip
+      gnumake
+      gcc
+      coreutils
+      gawk
+      gnused
+      gnugrep
+      binutils.bintools
+    ];
+    buildInputs = [];
+    system = builtins.currentSystem;
+  };
+in
+  derivation (defaultAttrs // attrs)
+</code></pre>
+<p>Let’s create the hello derivation:</p>
+<pre><code class="language-nix">let
+  pkgs = import &lt;nixpkgs&gt; {};
+  mkDerivation = import ./autotools.nix pkgs;
+in
+  mkDerivation {
+    name = "hello";
+    src = ./hello-2.12.1.tar.gz;
+  }
+</code></pre>
+<ul>
+<li>You can get the tarball
+<a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a>, place it in the
+same directory as <code>autotools.nix</code></li>
+</ul>
+<p>And finally the <code>builder.sh</code> that <code>autotools.nix</code> declares for the <code>args</code>
+attribute:</p>
+<pre><code class="language-bash">#!/bin/bash
+set -e
+unset PATH
+for p in $buildInputs $baseInputs; do
+    export PATH=$p/bin${PATH:+:}$PATH
+done
+
+tar -xf $src
+
+for d in *; do
+    if [ -d "$d" ]; then
+        cd "$d"
+        break
+    fi
+done
+
+./configure --prefix=$out
+make
+make install
+</code></pre>
+<p>When you write:</p>
+<pre><code class="language-nix">mkDerivation = import ./autotools.nix pkgs;
+</code></pre>
+<ul>
+<li>
+<p><code>import ./autotools.nix</code>: This evaluates the <code>autotools.nix</code> file. Because it
+starts with <code>pkgs: attrs: ...</code>, it means that <code>autotools.nix</code> evaluates to a
+function that expects one argument named <code>pkgs</code>.</p>
+</li>
+<li>
+<p><code>... pkgs</code>: We are immediately calling that function (the one returned by
+<code>import ./autotools.nix</code>) and passing it our <code>pkgs</code> variable (which is the
+result of <code>import &lt;nixpkgs&gt; {}</code>).</p>
+</li>
+</ul>
+<p><strong>This illustrates the concept of Currying in Nix</strong>:</p>
+<p>The function defined in <code>autotools.nix</code> (<code>pkgs: attrs: ...</code>) is a curried
+function. It’s a function that, when given its first argument (<code>pkgs</code>), returns
+another function (which then expects <code>attrs</code>).</p>
+<p>The result of import <code>./autotools.nix pkgs</code> is that second, inner function:
+<code>attrs: derivation (defaultAttrs // attrs)</code>. This inner function is then bound
+to the <code>mkDerivation</code> variable, making it ready to be called with just the
+specific attributes for your package (like <code>name</code> and <code>src</code>).</p>
+<p><strong>Understanding the <code>attrs</code> Argument</strong></p>
+<p>Now let’s focus on the second argument of our <code>autotools.nix</code> function: <code>attrs</code>.</p>
+<p>Recall the full function signature in <code>autotools.nix</code>:</p>
+<pre><code class="language-nix">pkgs: attrs: let
+  # ... defaultAttrs definition ...
+in
+  derivation (defaultAttrs // attrs)
+</code></pre>
+<ol>
+<li>What <code>attrs</code> Represents:</li>
+</ol>
+<ul>
+<li>
+<p>Once <code>autotools.nix</code> has received its <code>pkgs</code> argument (and returned the inner
+function), this inner function is waiting for its final argument, which we
+call <code>attrs</code>.</p>
+</li>
+<li>
+<p><code>attrs</code> is simply an attribute set (a key-value map in Nix). It’s designed to
+receive all the specific properties of the individual package you want to
+build using this helper.</p>
+</li>
+</ul>
+<ol start="2">
+<li>How <code>attrs</code> is Used:</li>
+</ol>
+<ul>
+<li>
+<p>Look at the final line of <code>autotools.nix</code>:
+<code>derivation (defaultAttrs // attrs)</code>.</p>
+</li>
+<li>
+<p>The <code>//</code> operator in Nix performs an attribute set merge. It takes all
+attributes from <code>defaultAttrs</code> and combines them with all attributes from
+<code>attrs</code>.</p>
+</li>
+<li>
+<p>Crucially, if an attribute exists in both <code>defaultAttrs</code> and <code>attrs</code>, the
+value from <code>attrs</code> (the second operand) takes precedence and overrides the
+default value.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Applying attrs in the hello Derivation:</li>
+</ol>
+<ul>
+<li>In the <code>hello</code> derivation, we call <code>mkDerivation</code> like this:</li>
+</ul>
+<pre><code class="language-nix">        mkDerivation {
+          name = "hello";
+          src = ./hello-2.12.1.tar.gz;
+        }
+</code></pre>
+<ul>
+<li>
+<p>The attribute set <code>{ name = "hello"; src = ./hello-2.12.1.tar.gz; }</code> is what
+gets passed as the <code>attrs</code> argument to the <code>mkDerivation</code> function (which,
+remember, is the inner function returned by <code>autotools.nix</code>).</p>
+</li>
+<li>
+<p>When derivation <code>(defaultAttrs // attrs)</code> is evaluated for “hello”, the <code>name</code>
+and <code>src</code> provided in the <code>attrs</code> set will be merged with all the
+<code>defaultAttrs</code> (like <code>builder</code>, <code>args</code>, <code>baseInputs</code>, etc.).</p>
+</li>
+</ul>
+<p>In summary:</p>
+<ul>
+<li>
+<p>The <code>pkgs</code> argument configures the general environment and available tools for
+the builder.</p>
+</li>
+<li>
+<p>The <code>attrs</code> argument is where you provide the unique details for each specific
+package you intend to build using this <code>autotools.nix</code> helper. It allows you
+to specify things like the package’s name, source code, version, and any
+custom build flags, while still benefiting from all the sensible defaults
+provided by <code>autotools.nix</code>. This separation makes <code>autotools.nix</code> a reusable
+and flexible “template” for creating derivations.</p>
+</li>
+</ul>
+<h4>Conclusion</h4>
+<p>Having explored the fundamental nature of functions in Nix, we can now see this
+concept applies to more complex areas like NixOS configuration and derivations.
+In the next chapter,
+<a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">NixOS Modules Explained</a>.
+We will learn about NixOS Modules which are themselves functions most of the
+time.</p>
+<h4>Resources</h4>
+<details>
+<summary> ✔️ Resources (Click to Expand) </summary>
+<ul>
+<li>
+<p><a href="https://nix.dev/tutorials/nix-language.html">nix.dev Nix Lang Basics</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/nix-pills/05-functions-and-imports.html">nix pills Functions and Imports</a></p>
+</li>
+<li>
+<p><a href="https://zero-to-nix.com/concepts/nix-language/">zero-to-nix Nix Lang</a></p>
+</li>
+<li>
+<p><a href="https://nixcloud.io/tour/?id=functions%2Fintroduction">A tour of Nix “Functions”</a></p>
+</li>
+<li>
+<p><a href="https://learnxinyminutes.com/nix/">learn Nix in y minutes</a></p>
+</li>
+<li>
+<p><a href="https://noogle.dev/">noogle function library</a></p>
+</li>
+</ul>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Intro to Nix</title><link>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</link><description><![CDATA[<h1>Chapter1</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![gruv13](images/gruv13.png) -->
+<p><img src="images/trees1.cleaned.png" alt="trees" /></p>
+<h2>Intro</h2>
+<p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
 towards using Flakes but will contrast traditional Nix where beneficial.
 Originally, this content started as a blog. I’m refining its flow to make it
-more cohesive.</p><p>In this chapter, I will touch on the different parts of the Nix ecosystem, give
-a quick example of each and explain how they fit together.</p>]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>
+more cohesive.</p>
+<p>In this chapter, I will touch on the different parts of the Nix ecosystem, give
+a quick example of each and explain how they fit together.</p>
+<ul>
+<li>Click <a href="https://saylesss88.github.io/rss.xml">Here</a>, or the logo on the top
+right, next to print for the RSS feed.</li>
+</ul>
+<details>
+<summary>
+- ✔️: Will indicate an expandable section, click the little triangle to expand.
+</summary>
+<ul>
+<li>These sections are expandable!</li>
+</ul>
+</details>
+<p>The code blocks have an option to hide code, where I find it reasonable I will
+hide the outputs of the expressions. Click the eye in the right corner of the
+code block next to the copy clipboard.</p>
+<p>Example hover over top-right corner of code block and click the eye to see
+hidden text:</p>
+<pre><code class="language-nix">{
+  attrset = { a = 2; b = 4; };
+~  hidden_set = { a = hidden; b = set; };
+}
+</code></pre>
+<blockquote>
+<p>❗ If you’re new to Nix, think of it as a recipe book for software: you
+describe what you want (declarative), and Nix ensures it’s built the same way
+every time (reproducible).</p>
+</blockquote>
+<h3>Why Learn Nix?</h3>
+<p>The main reason to learn Nix is that it allows you to write declarative scripts
+for reproducible software builds. Rather than mutate the global state and
+install packages to a global location such as <code>/usr/bin</code> Nix stores packages in
+the Nix store, usually the directory <code>/nix/store</code>, where each package has its
+own unique subdirectory. This paradigm gives you some powerful features, such
+as:</p>
+<ul>
+<li>
+<p>Allowing multiple versions or variants of the same package at the same time.
+This prevents “DLL hell” from different applications having dependencies on
+different versions of the same package.</p>
+</li>
+<li>
+<p>Atomic upgrades: Upgrading or uninstalling an application cannot break other
+applications and either succeed completely or fail completely preventing
+partial upgrades breaking your system. The nix store is immutable preventing
+package management operations from overwriting other packages. They wouldn’t
+overwrite each other anyways because the hashing scheme ensures that new
+versions or repeat packages end up at different paths.</p>
+</li>
+<li>
+<p>Nix is designed to provide hermetic builds that aren’t affected by the
+environment, this helps you make sure that when packaging software that the
+dependencies are complete because they must be explicitly declared as inputs.
+With other package managers it is more difficult to be sure that an
+environment variable or something in your <code>$PATH</code> isn’t affecting your build.</p>
+</li>
+</ul>
+<p>Let’s dive into the key characteristics of Nix:</p>
+<table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody>
+<tr><td><strong>Pure</strong></td><td>Functions don’t cause side effects.</td></tr>
+<tr><td><strong>Functional</strong></td><td>Functions can be passed as arguments and returned as results.</td></tr>
+<tr><td><strong>Lazy</strong></td><td>Not evaluated until needed to complete a computation.</td></tr>
+<tr><td><strong>Declarative</strong></td><td>Describing a system outcome.</td></tr>
+<tr><td><strong>Reproducible</strong></td><td>Operations that are performed twice return same results</td></tr>
+</tbody></table>
+<blockquote>
+<p>❗ Important: In Nix, everything is an expression, there are no statements.</p>
+<p>❗ Important: Values in Nix are immutable.</p>
+</blockquote>
+<h3>The Nix Ecosystem</h3>
+<p>The <strong>Nix Language</strong> is the foundation of the ecosystem and is used to write
+<strong>Nix Expressions</strong>.</p>
+<p>Example of a simple nix expression:</p>
+<pre><code class="language-nix">{ hello = "world"; }
+# or
+"foo" + "bar"
+</code></pre>
+<p>While the Nix language provides the foundation for writing expressions, it is
+only part of the ecosystem. These expressions become powerful when used within
+the Nix Package Manager, which evaluates and realizes them into tangible
+software builds and system configurations. This is where Nixpkgs and NixOS come
+into play.</p>
+<h3>The Nix Package Manager, Nixpkgs, and NixOS</h3>
+<p>At the heart of the Nix ecosystem is <strong>Nix Package Manager</strong>. This powerful
+engine is responsible for orchestrating the entire process: taking <strong>Nix
+expressions</strong> (like <em>package definitions</em> and <em>configuration modules</em>),
+evaluating them into precise <em>derivations</em>, executing their build steps (the
+<em>realization phase</em>), and meticulously managing the immutable Nix store.</p>
+<p>A cornerstone of the Nix ecosystem is <strong>Nixpkgs</strong>. This vast collection
+comprises tens of thousands of Nix expressions that describe how to build a wide
+array of software packages from source. Nixpkgs is more than just a package
+repository—it also contains <strong>NixOS Modules</strong>, declarative configurations that
+define system behavior, ensuring a structured and reproducible environment.
+These modules enable users to declaratively describe a Linux system, with each
+module contributing to the desired state of the overall system by leveraging
+<em>package definitions</em> and <em>derivations</em>. This is how NixOS emerges: it is quite
+simply the natural consequence of applying the Nix philosophy to building an
+entire Linux operating system.</p>
+<p>We will further expand our understanding of modules in
+<a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">Chapter 3</a></p>
+<p>The following is an example of a NixOS module that is part of the <code>nixpkgs</code>
+collection:</p>
+<pre><code class="language-nix"># nixpkgs/nixos/modules/programs/zmap.nix
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.programs.zmap;
+in
+{
+  options.programs.zmap = {
+    enable = lib.mkEnableOption "ZMap, a network scanner designed for Internet-wide network surveys";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [ pkgs.zmap ];
+
+    environment.etc."zmap/blacklist.conf".source = "${pkgs.zmap}/etc/zmap/blacklist.conf";
+    environment.etc."zmap/zmap.conf".source = "${pkgs.zmap}/etc/zmap.conf";
+  };
+}
+</code></pre>
+<ul>
+<li>This module, <code>programs.zmap.nix</code>, demonstrates how NixOS configurations work.
+It defines an enable option for the ZMap network scanner. If enabled by the
+user in their system configuration, the module ensures the <code>zmap</code> package is
+installed and its default configuration files are placed in <code>/etc</code>, allowing
+ZMap to be managed declaratively as part of the operating system.
+<ul>
+<li>
+<p>When <code>nixpkgs</code> is imported (e.g., in a NixOS configuration), the
+configuration options and settings defined by its modules (like
+<code>programs.zmap.nix</code>) become available for use, typically accessed via dot
+notation (e.g., <code>config.programs.zmap.enable</code>). This ability to make such a
+huge set of modules and packages readily available without a significant
+performance penalty is due to Nix’s <strong>lazy evaluation</strong>; only the
+expressions required for a particular build or configuration are actually
+evaluated.</p>
+</li>
+<li>
+<p>Most of the time you’ll simply <a href="https://search.nixos.org/packages">search</a>
+to see if the package is already included in <code>nixpkgs</code> and follow the
+instructions there to get it on your system. It is good practice to first
+search for the <a href="https://search.nixos.org/options?">options</a> to see what
+configurable settings are available, and then proceed to search for the
+package itself if you know it exists or if you need its specific package
+definition. When you look up the options for Zmap, <code>programs.zmap.enable</code> is
+all that is listed in this example.</p>
+</li>
+<li>
+<p>Home Manager uses the same underlying Nix module system as NixOS, and when
+you do something like home.packages = with pkgs; you are referring to the
+same package derivations from nixpkgs as you would with
+<code>environment.systemPackages</code>. However, Home Manager’s own configuration
+modules (e.g., for <code>programs.zsh</code> or <code>git</code>) are distinct and reside in the
+Home Manager repository, designed for user-specific configurations.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>One of the main differentiating aspects of Nix, as opposed to traditional
+package managers, is this concept that package builds are treated as pure
+functions. This functional paradigm ensures consistency and reproducibility,
+which are core tenets of the Nix philosophy.</p>
+<p><img src="images/nix_isnot_nixos.png" alt="Nix is not" /></p>
+<p><strong>Fig. X:</strong> Conceptual diagram illustrating the distinction between Nix and
+NixOS. Source: xeiaso, from the blog post “Making NixOS modules for fun and
+(hopefully) profit”, <a href="https://xeiaso.net/talks/asg-2023-nixos/">https://xeiaso.net/talks/asg-2023-nixos/</a>.</p>
+<p>Nix expressions permeate the ecosystem—everything in Nix is an expression,
+including the next key components: package definitions and derivations.</p>
+<h3>Package Definitions &amp; Derivations</h3>
+<p><strong>Package Definitions</strong> are specialized expressions that tell Nix how to build
+software.</p>
+<p>Example of a package definition:</p>
+<pre><code class="language-nix"># hello.nix
+{pkgs ? import &lt;nixpkgs&gt; {}}:
+pkgs.stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = pkgs.fetchurl {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd";
+  };
+
+  nativeBuildInputs = [pkgs.autoconf pkgs.automake pkgs.gcc];
+
+  configurePhase = ''
+    ./configure --prefix=$out
+  '';
+
+  buildPhase = ''
+    make
+  '';
+
+  installPhase = ''
+    make install
+  '';
+}
+</code></pre>
+<ol>
+<li><strong>Evaluation Phase</strong>:</li>
+</ol>
+<p>Now when you run something like:</p>
+<pre><code class="language-bash">nix-instantiate hello.nix
+warning: you did not specify '--add-root'; the result might be removed by the garbage collector
+/nix/store/p2hbg16a9kpqgx2nzcsq39wmnyxyq4jy-hello-2.12.1.drv
+</code></pre>
+<ul>
+<li>Nix evaluates the expression and produces a <code>.drv</code> file (the <strong>derivation</strong>),
+a precise JSON-like blueprint describing how the package will be built. It
+does not contain the built software itself.</li>
+</ul>
+<ol start="2">
+<li><strong>Realization Phase</strong>:</li>
+</ol>
+<p>When you run:</p>
+<pre><code class="language-bash">nix-build hello.nix
+#...snip...
+shrinking RPATHs of ELF executables and libraries in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+shrinking /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin/hello
+checking for references to /build/ in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1...
+gzipping man pages under /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/share/man/
+patching script interpreter paths in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+stripping (with command strip and flags -S -p) in  /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin
+/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+</code></pre>
+<ul>
+<li>
+<p>Nix realizes the derivation by actually executing the build steps, fetching
+sources, compiling (if needed), and producing the final result (typically
+stored in e.g. <code>/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1</code>)</p>
+</li>
+<li>
+<p><code>nix-build</code> also creates a symlink named <code>result</code> in your current directory,
+pointing to the final build output in the Nix store.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Execute the program:</li>
+</ol>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
+<p><code>result/bin/hello</code> points to the executable inside the output of the
+derivation.The derivation describes how the package is built, but does not
+include the final binaries.</p>
+<p>To say that another way, the derivation is not the executable. The executable is
+one of the derivations <code>outputs</code>. When Nix “realizes” a derivation, it executes
+those build instructions, and the result is the actual built software, which
+gets placed into its own unique path in the Nix store.</p>
+<p>A single derivation can produce multiple outputs. The executable is typically
+part of the <code>out</code> output, specifically in its <code>bin</code> directory.</p>
+<p>Here is a small snippet of what a <code>.drv</code> file could look like, I got this from
+building the hello derivation and running the following on the store path:</p>
+<pre><code class="language-bash">nix show-derivation /nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1
+</code></pre>
+<pre><code class="language-nix">{
+  "/nix/store/871398c9cbskmzy6bvfnynr8yrlh7nk0-hello-2.12.1.drv": {
+    "args": [
+      "-e",
+      "/nix/store/v6x3cs394jgqfbi0a42pam708flxaphh-default-builder.sh"
+    ],
+    "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
+    "env": {
+      "__structuredAttrs": "",
+      "buildInputs": "",
+      "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
+      "cmakeFlags": "",
+      "configureFlags": "",
+      "depsBuildBuild": "",
+      "depsBuildBuildPropagated": "",
+      "depsBuildTarget": "",
+      "depsBuildTargetPropagated": "",
+      "depsHostHost": "",
+      "depsHostHostPropagated": "",
+      "depsTargetTarget": "",
+      "depsTargetTargetPropagated": "",
+      "doCheck": "",
+      "doInstallCheck": "",
+      "mesonFlags": "",
+      "name": "hello-2.12.1",
+      "nativeBuildInputs": "",
+      "out": "/nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1",
+      "outputs": "out",
+      "patches": "",
+      "pname": "hello",
+      "propagatedBuildInputs": "",
+      "propagatedNativeBuildInputs": "",
+      "src": "/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz",
+      "stdenv": "/nix/store/80wijs24wjp619zmrasrh805bax02xjm-stdenv-linux",
+      "strictDeps": "",
+      "system": "x86_64-linux",
+      "version": "2.12.1"
+    },
+# ... snip ...
+</code></pre>
+<h4>Conclusion</h4>
+<p>In this introductory chapter, we’ve laid the groundwork for understanding the
+powerful Nix ecosystem. We explored how the Nix Language forms the declarative
+bedrock, enabling us to define desired system states and software builds as
+expressions. You saw how the Nix Package Manager orchestrates this process,
+transforming those expressions into precise derivations during the evaluation
+phase, and then faithfully “realizing” them into reproducible, isolated
+artifacts within the immutable <code>/nix/store</code>.</p>
+<p>We also introduced the vast Nixpkgs collection, which provides tens of thousands
+of package definitions and forms the foundation for NixOS — a fully declarative
+operating system built on these principles—and even user-level configurations
+like those managed by Home Manager. This unique functional approach, with its
+emphasis on immutability and lazy evaluation, is what enables Nix’s promises of
+consistency, atomic upgrades, and truly hermetic builds, fundamentally changing
+how we think about software and system management.</p>
+<h5>Related Sub-Chapters</h5>
+<ul>
+<li>
+<p>The <a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/nix_package_manager.html">Nix Package Manager</a></p>
+</li>
+</ul>
+<p>Now that you have a foundational understanding of the Nix ecosystem and its core
+operational cycle, we are ready to delve deeper into the building blocks of Nix
+expressions. In the next chapter,
+<a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Understanding Nix Functions</a>,
+we will peel back the layers and explore the intricacies of function arguments,
+advanced patterns, scope, and how functions play a crucial role in building more
+sophisticated Nix expressions and derivations.</p>
+<p>Here are some resources that are helpful for getting started:</p>
+<h4>Resources</h4>
+<details>
+<summary> ✔️ Resources (Click to Expand)</summary>
+<ul>
+<li>
+<p><a href="https://search.nixos.org/packages">NixOS Search</a></p>
+</li>
+<li>
+<p><a href="https://search.nixos.org/options?">NixOS Options</a></p>
+</li>
+<li>
+<p><a href="https://home-manager-options.extranix.com/?query=&amp;release=master">Extranix Home-Manager Option Search</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nix-community/awesome-nix">awesome-nix</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Nix_ecosystem">Nix Core Ecosystem</a>, Nix, NixOS,
+Nix Lang, Nixpkgs are all distinctly different; related things which can be
+confusing for beginners this article explains them.</p>
+</li>
+<li>
+<p><a href="https://github.com/nixos/nixpkgs">nixpkgs</a>: Vast package repository</p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/how-nix-works/">How Nix Works</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.26/language/types#type-attrs">Nix Reference Manual Data Types</a>
+The main Data Types you’ll come across in the Nix ecosystem</p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/NixOS_Wiki">NixOS Wiki</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/">nix.dev</a>: Has become the top respected source of
+information in my opinion. There is a lot of great stuff in here, and they
+actively update the information.</p>
+</li>
+</ul>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>
