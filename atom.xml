@@ -1,5 +1,314 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2025-12-06T13:52:00+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Understanding the Helix Flake</title><id>https://saylesss88.github.io/flakes/helix_flake_4.4.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/helix_flake_4.4.html" rel="alternate"/><content type="html">&lt;h1&gt;Chapter 4.4&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2025-12-06T22:01:18+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>KVM</title><id>https://saylesss88.github.io/nix/kvm.html</id><updated>2025-12-06T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/kvm.html" rel="alternate"/><content type="html">&lt;h1&gt;Running NixOS in a VM with Maximum Isolation (Beginner Guide)&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;img src=&quot;images/steampunk5.cleaned.png&quot; alt=&quot;sp5&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;Why This Setup?&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Host&lt;/strong&gt; &lt;code&gt;secureblue&lt;/code&gt; = Fedora Atomic with &lt;strong&gt;SELinux enforcing&lt;/strong&gt;, &lt;strong&gt;sVirt&lt;/strong&gt;,
+&lt;strong&gt;Secure Boot&lt;/strong&gt;, and hardened defaults.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Guest&lt;/strong&gt;: NixOS in a VM → full declarative power, near zero risk to host.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Isolation&lt;/strong&gt;: Mandatory Access Control (MAC) via SELinux + KVM + no direct
+hardware access.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;My Experience with Secureblue&lt;/h3&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ My Experience with Secureblue &lt;/summary&gt;
+&lt;p&gt;I have been using secureblue as the host OS while running NixOS in a VM, with no
+noticeable performance issues for my workload. When problems do occur, they have
+all been fixable via rollbacks or small configuration changes, so there has been
+no need to “nuke and reinstall.”&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Software Installation and Management&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Flatpak takes some adjustment, especially if you are used to running editors or
+other tools with full root access on a traditional Linux setup. Tools like
+Flatseal make it easy to inspect exactly which permissions each application has
+by default, and then gradually tighten them as you learn what is actually
+required for the app to keep working. On secureblue, you can also apply a very
+strict default with ujust flatpak-permissions-lockdown, which revokes almost
+everything so that you must explicitly grant each permission you want an
+application to have.&lt;/p&gt;
+&lt;p&gt;To be honest, I have one editor that’s setup with flatpak and one that is
+installed with &lt;code&gt;rpm-ostree&lt;/code&gt; for the tight integration and default full root
+behavior that is much less secure. I ended up moving from flatpak yazi to
+&lt;code&gt;rpm-ostree&lt;/code&gt; as well because in order to get it to function the way I wanted, I
+had to bypass much of the sandboxing anyways.&lt;/p&gt;
+&lt;p&gt;If you use toolbx, it can be helpful to also install brew and flatpak within the
+toolbx so you can share more config files. Silverblue recommends using flatpak
+for most GUI apps and creating a toolbox for all of your cli apps, secureblue
+includes homebrew which makes installing cli apps outside of a container easy.&lt;/p&gt;
+&lt;p&gt;On secureblue &lt;code&gt;/home&lt;/code&gt; is just a symlink to &lt;code&gt;/var/home&lt;/code&gt;, and that leaks into some
+development workflows in non‑obvious ways. Most tools work without issue, but
+some get confused by the symlink. If this happens, pointing the tool at
+&lt;code&gt;/var/home/username/&lt;/code&gt; instead of &lt;code&gt;/home/username/&lt;/code&gt; often fixes the issue.&lt;/p&gt;
+&lt;p&gt;Most people will not need to add any extra GPU or display drivers inside the
+NixOS VM when running on secureblue. The host already provides the hardware
+stack, and adding additional drivers in the guest can actually make things less
+stable instead of better.&lt;/p&gt;
+&lt;p&gt;For example, when extra drivers or compositor tweaks are added in the VM, it can
+cause flashing, freezes, or generally janky graphics because you are effectively
+fighting the host’s configuration. Keeping the VM’s graphics setup simple and
+close to the defaults avoids a whole class of hard‑to‑debug issues and usually
+gives smoother performance.&lt;/p&gt;
+&lt;/details&gt;
+&lt;hr /&gt;
+&lt;h3&gt;🔑 Key Terms&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: Secureblue enables the &lt;code&gt;hardened_malloc&lt;/code&gt; by default which causes
+problems for many browsers and will cause screen flashing with Firefox and
+others within the VM. See:&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://secureblue.dev/faq#standard-malloc&quot;&gt;secureblue standard_malloc&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Step 1: Install secureblue (Hardened Host)&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Download a &lt;a href=&quot;https://secureblue.dev/install&quot;&gt;secureblue image&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;strong&gt;Fedora Media Writer&lt;/strong&gt; (Flatpak):&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;flatpak install flathub org.fedoraproject.MediaWriter
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;
+&lt;p&gt;Flash the secureblue image &amp;amp; enable Secure Boot in UEFI &lt;strong&gt;before&lt;/strong&gt; install.
+This is now possible with Fedora, when you boot into Fedora Media Writer (not
+Ventoy or Rufus), you will be allowed to enroll the secure boot key with
+secure boot pre-enabled.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;On first boot:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ujust enroll-secureblue-secure-boot-key
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Reboot -&amp;gt; Enroll key in MOK manager with password: &lt;code&gt;secureblue&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;
+&lt;p&gt;Post-install hardening See:
+&lt;a href=&quot;https://secureblue.dev/post-install&quot;&gt;post-install&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Install virtualization stack:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ujust install-libvirt-packages
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The above command enables &lt;code&gt;qemu&lt;/code&gt;, &lt;code&gt;libvirt&lt;/code&gt;, &amp;amp; &lt;code&gt;virt-manager&lt;/code&gt; with SELinux
+labels.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Read the &lt;a href=&quot;https://secureblue.dev/faq&quot;&gt;secureblue FAQ&lt;/a&gt; to learn the quirks of
+an atomic fedora image.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Secureblue recommends installing GUI apps with Flatpak, CLI apps with homebrew,
+and apps that require more system access to be layered with rpm-ostree. It takes
+some getting used to but is very stable.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://secureblue.dev/faq#software&quot;&gt;secureblue how to install software&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Create NixOS VM (via virt-manager)&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Download: &lt;a href=&quot;https://nixos.org/download/&quot;&gt;NixOS Graphical ISO&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Open &lt;code&gt;virt-manager&lt;/code&gt; -&amp;gt; File -&amp;gt; New Virtual Machine&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Select ISO&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;CPU: &lt;code&gt;host-passthrough&lt;/code&gt; (optional, for performance)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Do some research to find the ideal Memory and Storage for your system.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;
+&lt;p&gt;Ensure SELinux is enabled (the default for secureblue) with: &lt;code&gt;getenforce&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Ensure sVirt is enabled (the default) with &lt;code&gt;run0 ps -eZ | grep qemu&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;run0 ps -eZ | grep qemu
+# Output
+system_u:system_r:svirt_t:s0:c383,c416 14793 ?   00:01:37 qemu-system-x86
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Boot -&amp;gt; Follow graphical installer:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Enable LUKS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Create an admin user&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Optionally skip desktop -&amp;gt; install your own after first boot.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The attack surface is reduced significantly when running NixOS within a hardened
+hosts VM. The VM operates on virtualized hardware, which is a powerful form of
+attack surface reduction.&lt;/p&gt;
+&lt;p&gt;Devices like your host’s Bluetooth adapter, Wi-Fi card, microphone, webcam, and
+USB ports are not directly exposed to the guest operating system. The VM only
+sees virtual versions of these devices. If an exploit targets a vulnerability in
+the Bluetooth stack within the VM, it compromises the VM environment, but it
+cannot typically reach and exploit the physical Bluetooth hardware on the host.&lt;/p&gt;
+&lt;p&gt;You can also choose not to pass through certain devices, like Bluetooth or
+webcam to the VM at all, effectively disabling that attack vector. Since your
+host likely already has these hardened features you may not need the additional
+functionality within the VM.&lt;/p&gt;
+&lt;p&gt;If something breaks, you have an option to rollback to the previous generation
+with &lt;code&gt;rpm-ostree rollback&lt;/code&gt;. The previous generation will be applied on next
+reboot. You can also just reboot and choose the previous generation through the
+grub menu, this way it is temporary and will revert back on next reboot.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;🔒 How Host MAC Secures the NixOS VM&lt;/h2&gt;
+&lt;p&gt;The core security principle here is defense-in-depth, where the outer, hardened
+layer (the host) compensates for potential weaknesses in the inner layer (the
+guest).&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;MAC Confinement via SELinux and sVirt sVirt (Secure Virtualization): This is
+a critical component running on the secureblue host. It automatically assigns
+unique SELinux labels to all virtualization components.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;QEMU Process Confinement&lt;/strong&gt;: The entire QEMU process that runs the NixOS VM is
+confined by a specific SELinux type, typically &lt;code&gt;svirt_t&lt;/code&gt;. This means:&lt;/p&gt;
+&lt;p&gt;The host’s MAC policy strictly controls what the QEMU process can access and do
+on the host system.&lt;/p&gt;
+&lt;p&gt;If an attacker were to achieve a “VM breakout” (a worst-case scenario where they
+escape the VM and try to interact with the host OS), their activity would still
+be confined by the extremely strict rules of the &lt;code&gt;svirt_t&lt;/code&gt; label. They would not
+be able to arbitrarily read host files or compromise the host kernel.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Disk Image Confinement&lt;/strong&gt;: The VM’s disk images are also labeled, typically as
+virt_image_t, preventing other processes on the host from accessing or tampering
+with them.&lt;/p&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;&lt;strong&gt;KVM and Host Hardening KVM&lt;/strong&gt;: KVM provides the low-level, hardware-assisted
+virtualization. It is an extremely secure and audited hypervisor that creates
+a strong barrier between the guest and the host kernel.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;Secureblue Hardening&lt;/strong&gt;: The secureblue host is designed with SELinux
+enforcing, Secure Boot, a hardened kernel, and hardened_malloc by default, which
+minimizes the attack surface and ensures the integrity of the base operating
+system that’s running the VM.&lt;/p&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Isolation and Zero Host Risk Decoupling Security&lt;/strong&gt;: The security of the
+host is completely decoupled from the security of the NixOS guest.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Any compromise within the NixOS VM (e.g., a service vulnerability,
+misconfiguration, or user error) will be contained by the host’s isolation
+mechanisms (KVM + SELinux + sVirt). This containment means the host remains
+secure (“Zero host compromise”), regardless of the NixOS VM’s internal security
+settings, including its lack of default MAC.&lt;/p&gt;
+&lt;p&gt;In short, the security boundary isn’t the guest OS’s (NixOS) configuration, but
+the hypervisor and the host’s MAC policy that enforces the complete isolation of
+the VM&lt;/p&gt;
+&lt;h2&gt;It’s still recommended to harden the Guest VM (NixOS)&lt;/h2&gt;
+&lt;p&gt;Hardening the NixOS guest VM adds an extra, independent layer of defense,
+helping to protect the system beyond what the host provides.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Best Practices for Minimizing VM Device Exposure&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Take a VM snapshot right after a fresh install. This snapshot acts as a clean
+restore point. Many people safely test malware or potentially dangerous software
+by running it within the VM, then reverting to the snapshot afterward to wipe
+out any changes or infections caused by the malware.&lt;/p&gt;
+&lt;p&gt;Avoid unnecessary device passthrough: Only pass through hardware devices (like
+USB, GPU, or network interfaces) that are essential for your VM’s operation. For
+example, if a device isn’t needed within the VM, do not passthrough the device
+to reduce attack surface.​&lt;/p&gt;
+&lt;p&gt;Use virtual network segmentation: Instead of bridging physical network devices,
+opt for virtual network configurations like isolated networks, VLANs, or
+internal networks that prevent VM-to-VM or VM-to-host communication unless
+explicitly allowed.​&lt;/p&gt;
+&lt;p&gt;Implement network filtering and firewall rules: Use libvirt nwfilter, iptables,
+or firewalld rules to restrict communications between VMs and external networks,
+or between guest VMs on the same host.​&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://libvirt.org/firewall.html&quot;&gt;libvirt Firewall and network filtering&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Use virtual device models with minimal capabilities: Prefer virtio or similar
+paravirtualized devices that have a smaller attack surface. Avoid emulated
+devices when not necessary.​&lt;/p&gt;
+&lt;p&gt;Disable features like USB debugging, audio, or PnP devices: These can
+potentially be exploited or leak information if enabled unnecessarily.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;It’s still recommended to enable either the &lt;code&gt;graphene-hardened&lt;/code&gt; or
+&lt;code&gt;graphene-hardened-light&lt;/code&gt; memory allocators on the NixOS guest machine as
+well.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
+environment.memoryAllocator.provider = &quot;graphene-hardened&quot;;
+# OR for a more permissive and better performing allocator:
+# environment.memoryAllocator.provider = &quot;graphene-hardened-light&quot;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Remember that certain programs won’t run with the &lt;code&gt;hardened_malloc&lt;/code&gt;. I have
+read that you need to recompile Firefox for it to respect and work with the
+&lt;code&gt;hardened_malloc&lt;/code&gt;. I haven’t attempted this as of yet and use Brave for now.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Continue
+&lt;a href=&quot;https://saylesss88.github.io/nix/hardening_NixOS.html&quot;&gt;hardening NixOS&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗️ NOTE: It’s generally recommended not to enable GPU drivers inside the VM
+unless you are specifically doing GPU passthrough, as this often causes
+stability and compatibility issues. GPU passthrough itself requires careful
+configuration and dedicated hardware, and introduces additional attack
+surfaces.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Regarding IPv6 networking, enabling it typically requires using a bridged
+network setup rather than NAT, which connects the VM more directly to the
+host’s network. While bridged networking enables full IPv6 functionality, it
+also reduces the network isolation between the VM and host, potentially
+increasing security risks. For maximum isolation, consider carefully whether
+you need IPv6 connectivity inside the VM and weigh that against your security
+goals.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;I have been able to recover from quite a few missteps with Secureblue. I run a
+mini PC and attempted running &lt;code&gt;ujust update-firmware&lt;/code&gt;, some systems allow you to
+update the firmware of a booted system. On reboot I got a message “Something
+went seriously wrong MOK is full”, it then forced a shutdown. I was familiar
+with resetting the NVRAM by disassembling the PC and moving the red jumper from
+prongs 1 &amp;amp; 2 to prongs 2 &amp;amp; 3 with the power off for 10 seconds. I then moved the
+jumper back to the default position and rebooted. The PC sounds like it’s
+revving up a few times and does a few reboots and allowed me to sign right back
+in and re-enroll the secure boot key.&lt;/p&gt;
+&lt;h3&gt;Resources&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.redhat.com/en/topics/virtualization/what-is-virtualization&quot;&gt;RedHat What is virtualization?&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://sumit-ghosh.com/posts/virtualization-hypervisors-explaining-qemu-kvm-libvirt/&quot;&gt;virtualization &amp;amp; hypervisors&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://bitgrounds.tech/posts/kvm-qemu-libvirt-virtualization/&quot;&gt;Virtualization on Linux using the KVM/QEMU/Libvirt stack&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</content></entry><entry><title>Understanding the Helix Flake</title><id>https://saylesss88.github.io/flakes/helix_flake_4.4.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/helix_flake_4.4.html" rel="alternate"/><content type="html">&lt;h1&gt;Chapter 4.4&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
@@ -16154,276 +16463,6 @@ something like &lt;code&gt;/nix/store/your-hash-hello-world&lt;/code&gt;).&lt;/p
 &lt;code&gt;&quot;Hello, World!&quot;&lt;/code&gt;.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/details&gt;
-</content></entry><entry><title>KVM</title><id>https://saylesss88.github.io/nix/kvm.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/kvm.html" rel="alternate"/><content type="html">&lt;h1&gt;Running NixOS in a VM with Maximum Isolation (Beginner Guide)&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;p&gt;&lt;img src=&quot;images/steampunk5.cleaned.png&quot; alt=&quot;sp5&quot; /&gt;&lt;/p&gt;
-&lt;h2&gt;Why This Setup?&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Host&lt;/strong&gt; &lt;code&gt;secureblue&lt;/code&gt; = Fedora Atomic with &lt;strong&gt;SELinux enforcing&lt;/strong&gt;, &lt;strong&gt;sVirt&lt;/strong&gt;,
-&lt;strong&gt;Secure Boot&lt;/strong&gt;, and hardened defaults.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Guest&lt;/strong&gt;: NixOS in a VM → full declarative power, near zero risk to host.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Isolation&lt;/strong&gt;: Mandatory Access Control (MAC) via SELinux + KVM + no direct
-hardware access.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h3&gt;🔑 Key Terms&lt;/h3&gt;
-&lt;blockquote&gt;
-&lt;p&gt;NOTE: Secureblue enables the &lt;code&gt;hardened_malloc&lt;/code&gt; by default which causes
-problems for many browsers and will cause screen flashing with Firefox and
-others within the VM. See:&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://secureblue.dev/faq#standard-malloc&quot;&gt;secureblue standard_malloc&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;Step 1: Install secureblue (Hardened Host)&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;Download a &lt;a href=&quot;https://secureblue.dev/install&quot;&gt;secureblue image&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Use &lt;strong&gt;Fedora Media Writer&lt;/strong&gt; (Flatpak):&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;flatpak install flathub org.fedoraproject.MediaWriter
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;
-&lt;p&gt;Flash the secureblue image &amp;amp; enable Secure Boot in UEFI &lt;strong&gt;before&lt;/strong&gt; install.
-This is now possible with Fedora, when you boot into Fedora Media Writer (not
-Ventoy or Rufus), you will be allowed to enroll the secure boot key with
-secure boot pre-enabled.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;On first boot:&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ujust enroll-secureblue-secure-boot-key
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Reboot -&amp;gt; Enroll key in MOK manager with password: &lt;code&gt;secureblue&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;
-&lt;p&gt;Post-install hardening See:
-&lt;a href=&quot;https://secureblue.dev/post-install&quot;&gt;post-install&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Install virtualization stack:&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ujust install-libvirt-packages
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;The above command enables &lt;code&gt;qemu&lt;/code&gt;, &lt;code&gt;libvirt&lt;/code&gt;, &amp;amp; &lt;code&gt;virt-manager&lt;/code&gt; with SELinux
-labels.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Read the &lt;a href=&quot;https://secureblue.dev/faq&quot;&gt;secureblue FAQ&lt;/a&gt; to learn the quirks of
-an atomic fedora image.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Secureblue recommends installing GUI apps with Flatpak, CLI apps with homebrew,
-and apps that require more system access to be layered with rpm-ostree. It takes
-some getting used to but is very stable.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://secureblue.dev/faq#software&quot;&gt;secureblue how to install software&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h2&gt;Create NixOS VM (via virt-manager)&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;Download: &lt;a href=&quot;https://nixos.org/download/&quot;&gt;NixOS Graphical ISO&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Open &lt;code&gt;virt-manager&lt;/code&gt; -&amp;gt; File -&amp;gt; New Virtual Machine&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Select ISO&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;CPU: &lt;code&gt;host-passthrough&lt;/code&gt; (optional, for performance)&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Do some research to find the ideal Memory and Storage for your system.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;
-&lt;p&gt;Ensure SELinux is enabled (the default for secureblue) with: &lt;code&gt;getenforce&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Ensure sVirt is enabled (the default) with &lt;code&gt;run0 ps -eZ | grep qemu&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;run0 ps -eZ | grep qemu
-# Output
-system_u:system_r:svirt_t:s0:c383,c416 14793 ?   00:01:37 qemu-system-x86
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;Boot -&amp;gt; Follow graphical installer:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Enable LUKS&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Create an admin user&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Optionally skip desktop -&amp;gt; install your own after first boot.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The attack surface is reduced significantly when running NixOS within a hardened
-hosts VM. The VM operates on virtualized hardware, which is a powerful form of
-attack surface reduction.&lt;/p&gt;
-&lt;p&gt;Devices like your host’s Bluetooth adapter, Wi-Fi card, microphone, webcam, and
-USB ports are not directly exposed to the guest operating system. The VM only
-sees virtual versions of these devices. If an exploit targets a vulnerability in
-the Bluetooth stack within the VM, it compromises the VM environment, but it
-cannot typically reach and exploit the physical Bluetooth hardware on the host.&lt;/p&gt;
-&lt;p&gt;You can also choose not to pass through certain devices, like Bluetooth or
-webcam to the VM at all, effectively disabling that attack vector. Since your
-host likely already has these hardened features you may not need the additional
-functionality within the VM.&lt;/p&gt;
-&lt;p&gt;If something breaks, you have an option to rollback to the previous generation
-with &lt;code&gt;rpm-ostree rollback&lt;/code&gt;. The previous generation will be applied on next
-reboot. You can also just reboot and choose the previous generation through the
-grub menu, this way it is temporary and will revert back on next reboot.&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h2&gt;🔒 How Host MAC Secures the NixOS VM&lt;/h2&gt;
-&lt;p&gt;The core security principle here is defense-in-depth, where the outer, hardened
-layer (the host) compensates for potential weaknesses in the inner layer (the
-guest).&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;MAC Confinement via SELinux and sVirt sVirt (Secure Virtualization): This is
-a critical component running on the secureblue host. It automatically assigns
-unique SELinux labels to all virtualization components.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;&lt;strong&gt;QEMU Process Confinement&lt;/strong&gt;: The entire QEMU process that runs the NixOS VM is
-confined by a specific SELinux type, typically &lt;code&gt;svirt_t&lt;/code&gt;. This means:&lt;/p&gt;
-&lt;p&gt;The host’s MAC policy strictly controls what the QEMU process can access and do
-on the host system.&lt;/p&gt;
-&lt;p&gt;If an attacker were to achieve a “VM breakout” (a worst-case scenario where they
-escape the VM and try to interact with the host OS), their activity would still
-be confined by the extremely strict rules of the &lt;code&gt;svirt_t&lt;/code&gt; label. They would not
-be able to arbitrarily read host files or compromise the host kernel.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Disk Image Confinement&lt;/strong&gt;: The VM’s disk images are also labeled, typically as
-virt_image_t, preventing other processes on the host from accessing or tampering
-with them.&lt;/p&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;&lt;strong&gt;KVM and Host Hardening KVM&lt;/strong&gt;: KVM provides the low-level, hardware-assisted
-virtualization. It is an extremely secure and audited hypervisor that creates
-a strong barrier between the guest and the host kernel.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;&lt;strong&gt;Secureblue Hardening&lt;/strong&gt;: The secureblue host is designed with SELinux
-enforcing, Secure Boot, a hardened kernel, and hardened_malloc by default, which
-minimizes the attack surface and ensures the integrity of the base operating
-system that’s running the VM.&lt;/p&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;&lt;strong&gt;Isolation and Zero Host Risk Decoupling Security&lt;/strong&gt;: The security of the
-host is completely decoupled from the security of the NixOS guest.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Any compromise within the NixOS VM (e.g., a service vulnerability,
-misconfiguration, or user error) will be contained by the host’s isolation
-mechanisms (KVM + SELinux + sVirt). This containment means the host remains
-secure (“Zero host compromise”), regardless of the NixOS VM’s internal security
-settings, including its lack of default MAC.&lt;/p&gt;
-&lt;p&gt;In short, the security boundary isn’t the guest OS’s (NixOS) configuration, but
-the hypervisor and the host’s MAC policy that enforces the complete isolation of
-the VM&lt;/p&gt;
-&lt;h2&gt;It’s still recommended to harden the Guest VM (NixOS)&lt;/h2&gt;
-&lt;p&gt;Hardening the NixOS guest VM adds an extra, independent layer of defense,
-helping to protect the system beyond what the host provides.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Best Practices for Minimizing VM Device Exposure&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Take a VM snapshot right after a fresh install. This snapshot acts as a clean
-restore point. Many people safely test malware or potentially dangerous software
-by running it within the VM, then reverting to the snapshot afterward to wipe
-out any changes or infections caused by the malware.&lt;/p&gt;
-&lt;p&gt;Avoid unnecessary device passthrough: Only pass through hardware devices (like
-USB, GPU, or network interfaces) that are essential for your VM’s operation. For
-example, if a device isn’t needed within the VM, do not passthrough the device
-to reduce attack surface.​&lt;/p&gt;
-&lt;p&gt;Use virtual network segmentation: Instead of bridging physical network devices,
-opt for virtual network configurations like isolated networks, VLANs, or
-internal networks that prevent VM-to-VM or VM-to-host communication unless
-explicitly allowed.​&lt;/p&gt;
-&lt;p&gt;Implement network filtering and firewall rules: Use libvirt nwfilter, iptables,
-or firewalld rules to restrict communications between VMs and external networks,
-or between guest VMs on the same host.​&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://libvirt.org/firewall.html&quot;&gt;libvirt Firewall and network filtering&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Use virtual device models with minimal capabilities: Prefer virtio or similar
-paravirtualized devices that have a smaller attack surface. Avoid emulated
-devices when not necessary.​&lt;/p&gt;
-&lt;p&gt;Disable features like USB debugging, audio, or PnP devices: These can
-potentially be exploited or leak information if enabled unnecessarily.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;It’s still recommended to enable either the &lt;code&gt;graphene-hardened&lt;/code&gt; or
-&lt;code&gt;graphene-hardened-light&lt;/code&gt; memory allocators on the NixOS guest machine as
-well.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
-environment.memoryAllocator.provider = &quot;graphene-hardened&quot;;
-# OR for a more permissive and better performing allocator:
-# environment.memoryAllocator.provider = &quot;graphene-hardened-light&quot;;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Remember that certain programs won’t run with the &lt;code&gt;hardened_malloc&lt;/code&gt;. I have
-read that you need to recompile Firefox for it to respect and work with the
-&lt;code&gt;hardened_malloc&lt;/code&gt;. I haven’t attempted this as of yet and use Brave for now.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Continue
-&lt;a href=&quot;https://saylesss88.github.io/nix/hardening_NixOS.html&quot;&gt;hardening NixOS&lt;/a&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗️ NOTE: It’s generally recommended not to enable GPU drivers inside the VM
-unless you are specifically doing GPU passthrough, as this often causes
-stability and compatibility issues. GPU passthrough itself requires careful
-configuration and dedicated hardware, and introduces additional attack
-surfaces.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Regarding IPv6 networking, enabling it typically requires using a bridged
-network setup rather than NAT, which connects the VM more directly to the
-host’s network. While bridged networking enables full IPv6 functionality, it
-also reduces the network isolation between the VM and host, potentially
-increasing security risks. For maximum isolation, consider carefully whether
-you need IPv6 connectivity inside the VM and weigh that against your security
-goals.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;I have been able to recover from quite a few missteps with Secureblue. I run a
-mini PC and attempted running &lt;code&gt;ujust update-firmware&lt;/code&gt;, some systems allow you to
-update the firmware of a booted system. On reboot I got a message “Something
-went seriously wrong MOK is full”, it then forced a shutdown. I was familiar
-with resetting the NVRAM by disassembling the PC and moving the red jumper from
-prongs 1 &amp;amp; 2 to prongs 2 &amp;amp; 3 with the power off for 10 seconds. I then moved the
-jumper back to the default position and rebooted. The PC sounds like it’s
-revving up a few times and does a few reboots and allowed me to sign right back
-in and re-enroll the secure boot key.&lt;/p&gt;
-&lt;h3&gt;Resources&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.redhat.com/en/topics/virtualization/what-is-virtualization&quot;&gt;RedHat What is virtualization?&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://sumit-ghosh.com/posts/virtualization-hypervisors-explaining-qemu-kvm-libvirt/&quot;&gt;virtualization &amp;amp; hypervisors&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://bitgrounds.tech/posts/kvm-qemu-libvirt-virtualization/&quot;&gt;Virtualization on Linux using the KVM/QEMU/Libvirt stack&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
 </content></entry><entry><title>Nix Lang</title><id>https://saylesss88.github.io/nix/nix_language.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/nix_language.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Language&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
