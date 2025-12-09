@@ -1,5 +1,990 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>Hardening NixOS</title><id>https://saylesss88.github.io/nix/hardening_NixOS.html</id><updated>2025-12-08T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_NixOS.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening NixOS&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>JJ VCS</title><id>https://saylesss88.github.io/vcs/jujutsu.html</id><updated>2025-12-08T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/jujutsu.html" rel="alternate"/><content type="html">&lt;h1&gt;Version Control with JJ&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;img src=&quot;../images/jujutsu.png&quot; alt=&quot;JJ Logo&quot; /&gt;&lt;/p&gt;
+&lt;div style=&quot;font-size: 0.8em; margin-top: 10px;&quot;&gt;
+  **Image Source:** This image is from the [Jujutsu VCS repository](https://github.com/jj-vcs/jj) and is licensed under the Apache 2.0 License.
+&lt;/div&gt;
+&lt;p&gt;⚠️ &lt;strong&gt;Security Reminder&lt;/strong&gt;: Never commit secrets (passwords, API keys, tokens,
+etc.) in plain text to your Git repository. If you plan to publish your NixOS
+configuration, always use a secrets management tool like &lt;code&gt;sops-nix&lt;/code&gt; or &lt;code&gt;agenix&lt;/code&gt;
+to keep sensitive data safe. See the
+&lt;a href=&quot;https://saylesss88.github.io/installation/enc/sops-nix.html&quot;&gt;Sops-Nix Guide&lt;/a&gt;
+for details.&lt;/p&gt;
+&lt;h2&gt;Getting Started&lt;/h2&gt;
+&lt;p&gt;Jujutsu (jj) is a modern, Git-compatible version control system designed to
+simplify and improve the developer experience. It offers a new approach to
+distributed version control, focusing on a more intuitive workflow, powerful
+undo capabilities, and a branchless model that reduces common pitfalls of Git.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Recommended resources&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://steveklabnik.github.io/jujutsu-tutorial/&quot;&gt;Steve’s Jujutsu Tutorial&lt;/a&gt;
+(most up to date). Steve does an excellent job explaining the ins and outs of
+Jujutsu.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidth jj-tips-and-tricks&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Official:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj help -k tutorial
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Every time you run a &lt;code&gt;jj&lt;/code&gt; command, it examines the working copy and takes a
+snapshot.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Command help:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj &amp;lt;command&amp;gt; --help
+jj git init --help
+jj git push --help
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;🔑 Key Concepts&lt;/h2&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Key Concepts &lt;/summary&gt;
+&lt;ol&gt;
+&lt;li&gt;Working Copy as Commit&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;In JJ your working copy is always a real commit. Any changes you make are
+automatically recorded in this working commit. The working copy is always
+(&lt;code&gt;@&lt;/code&gt;) and the Parent commit is always &lt;code&gt;(@-)&lt;/code&gt; keep this in mind.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;There is &lt;strong&gt;no staging area&lt;/strong&gt; (index) as in Git. You do not need to run
+&lt;code&gt;git add&lt;/code&gt; or &lt;code&gt;git commit&lt;/code&gt; for every change. Modifications are always tracked
+in the current commit.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Branchless Workflow and Bookmarks&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;JJ does not have the concept of a “current branch.” Instead, use bookmarks,
+which are named pointers to specific commits.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Bookmarks do not move automatically. Commands like &lt;code&gt;jj new&lt;/code&gt; and &lt;code&gt;jj commit&lt;/code&gt;
+move the working copy, but the bookmark stays were it was. Use
+&lt;code&gt;jj bookmark move&lt;/code&gt; to move bookmarks. (e.g., &lt;code&gt;jj bookmark move main&lt;/code&gt;). You can
+also use &lt;code&gt;jj bookmark set main -r @&lt;/code&gt; to explicitly set the main bookmark to
+point at the working copy commit.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Only commits referenced by bookmarks are pushed to remotes, preventing
+accidental sharing of unfinished work.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Automatic Tracking and Simpler Workflow&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Adding or removing files is automatically tracked, no need for explicit &lt;code&gt;add&lt;/code&gt;
+or &lt;code&gt;rm&lt;/code&gt; commands.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The working copy acts as a live snapshot of your workspace. Commands first
+sync filesystem changes into this commit, then perform the requested
+operation, and finally update the working copy if needed.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Operation Log and Undo&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;JJ records every operation (commits, merges, rebases, etc.) in an &lt;strong&gt;operation
+log&lt;/strong&gt;. Inspect it with: &lt;code&gt;jj op log&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;You can view and undo any previous operation, not just the most recent one,
+making it easy to recover from mistakes, a feature not present in Git’s core
+CLI.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;First-Class Conflict Handling&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Conflicts happen when JJ can’t figure out how to merge different changes made to
+the same file.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Conflicts are stored inside commits, not just in the working directory. You
+can resolve them at any time, not just during a merge or rebase.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Conflict markers are inserted directly into files, and JJ can reconstruct the
+conflict state from these markers. You can resolve conflicts by editing the
+files or using &lt;code&gt;jj resolve&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;Revsets and Filesets&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Revsets&lt;/strong&gt;: JJ’s powerful query language for selecting sets of commits,
+inspired by Mercurial. For example, &lt;code&gt;jj log -r &quot;author(alice) &amp;amp; file(*.py)&quot;&lt;/code&gt;
+lists all commits by Alice that touch Python files.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Filesets&lt;/strong&gt;:JJ supports a functional language for selecting sets of files,
+allowing advanced file-based queries and operations.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Feature&lt;/th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Git&lt;/th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Jujutsu (jj)&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Staging Area&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Yes (git add/index)&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;No, working copy is always a commit&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Commit Workflow&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Stage → Commit&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;All changes auto-recorded in working commit&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Branches&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Central to workflow&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Optional, bookmarks used for sharing&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Undo/Redo&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Limited, complex&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Easy, operation log for undo&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Conflict Handling&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Manual, can be confusing&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Conflicts tracked in commits, easier to fix&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Integration with Git&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Native&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Fully compatible, can switch back anytime&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;ol start=&quot;7&quot;&gt;
+&lt;li&gt;Anonymous branches: In Git a branch is a pointer to a commit that needs a
+name.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;If you haven’t taken the time to deep dive Git, it may be a good time to learn
+about a new way of doing Version Control that is actually less complex and
+easier to mentally map out in my opinion.&lt;/p&gt;
+&lt;p&gt;Jujutsu is a new front-end to Git, and it’s a new design for distributed version
+control. –jj init&lt;/p&gt;
+&lt;p&gt;You can use jujutsu (jj) with existing Git repositories with one command.
+&lt;code&gt;jj git init --colocate&lt;/code&gt; or &lt;code&gt;jj git init --git-repo /path/to/git_repository&lt;/code&gt;.
+The native repository format for jj is still a work in progress so people
+typically use a &lt;code&gt;git&lt;/code&gt; repository for backend.&lt;/p&gt;
+&lt;p&gt;Unlike &lt;code&gt;git&lt;/code&gt;, &lt;code&gt;jj&lt;/code&gt; has no index “staging area”. It treats the working copy as an
+actual commit. When you make changes to files, these changes are automatically
+recorded to the working commit. There’s no need to explicitly stage changes
+because they are already part of the commit that represents your current working
+state.&lt;/p&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;strong&gt;Simplified Workflow&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Check where you’re at, JJ doesn’t care about commits without descriptions but
+Git and GitHub do:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+Working copy  (@) now at: zuknrzrx 8a20bfa7 (empty) (no description set)
+Parent commit (@-)      : yzppulzo bdd64e8d main | (empty) &quot;Enable Rofi and update nu func for jj&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can see that the Working copy is &lt;code&gt;(empty)&lt;/code&gt; and has &lt;code&gt;(no description set)&lt;/code&gt;,
+lets give it a description:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;My feature&quot;
+# ...edit files...
+# Check where we&apos;re at again
+jj st
+Working copy changes:
+M home/jj.nix
+Working copy  (@) : zuknrzrx bcd3d965 My feature
+Parent commit (@-): yzppulzo bdd64e8d main | (empty) &quot;Enable Rofi and update nu func for jj&quot;
+
+# Tell JJ which branch we&apos;re interested in
+jj bookmark set main
+# Push this change to main
+jj git push
+Changes to push to origin:
+  Move forward bookmark main from bdd64e8d6ea5 to bcd3d96567f8
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+Warning: The working-copy commit in workspace &apos;default&apos; became immutable, so a new commit has been created on top of it.
+Working copy  (@) now at: ktlywzlx 8e88ddbe (empty) (no description set)
+Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;What is the Jujutsu Working Copy&lt;/h2&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click To Expand Working Copy Description &lt;/summary&gt;
+&lt;p&gt;The &lt;strong&gt;working copy&lt;/strong&gt; in Jujutsu is an actual &lt;strong&gt;commit&lt;/strong&gt; that represents the
+current state of the files you’re working on. Unlike Git, where the working copy
+is separate from commits and changes must be explicitly staged and committed, in
+JJ the working copy is a live commit that automatically records changes as you
+modify files.&lt;/p&gt;
+&lt;p&gt;Adding or removing files in the working copy implicitly tracks or untracks them
+without needing explicit commands like &lt;code&gt;git add&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;The working copy commit acts as a snapshot of your current workspace. When you
+run commands, Jujutsu first syncs the filesystem changes into this commit, then
+performs the requested operation, and finally updates the working copy if needed&lt;/p&gt;
+&lt;p&gt;To finalize your current changes and start a new set of changes, you use the
+&lt;code&gt;jj new&lt;/code&gt; command, which creates a new working-copy commit on top of the current
+one. This replaces the traditional Git workflow of staging and committing
+changes separately.&lt;/p&gt;
+&lt;p&gt;Conflicts in the working copy are represented by inserting conflict markers
+directly into the files. Jujutsu tracks the conflicting parts and can
+reconstruct the conflict state from these markers. You resolve conflicts by
+editing these markers and then committing the resolution in the working copy&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;This means that you don’t need to worry about making a change, running
+&lt;code&gt;git add .&lt;/code&gt;, running &lt;code&gt;git commit -m &quot;commit message&quot;&lt;/code&gt; because it’s already
+done for you. This is handy with flakes by preventing a “dirty working tree”
+and can instantly be rebuilt after making a change.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;h2&gt;Example JJ Module&lt;/h2&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand JJ home-manager module example &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;For &lt;code&gt;lazygit&lt;/code&gt; fans, Nixpkgs has &lt;code&gt;lazyjj&lt;/code&gt;. I’ve seen that it’s recommended to
+use jj with &lt;code&gt;meld&lt;/code&gt;. I’ll share my &lt;code&gt;jj.nix&lt;/code&gt; here for an example:&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;I got a lot of the aliases and such from the
+&lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidth&lt;/a&gt; post, this has
+been a game changer:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  lib,
+  config,
+  pkgs,
+  # userVars ? {},
+  #
+  #
+  #
+  ...
+}: let
+  cfg = config.custom.jj;
+in {
+  options.custom.jj = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = &quot;Enable the Jujutsu (jj) module&quot;;
+    };
+
+    userName = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = &quot;sayls8&quot;;
+      description = &quot;Jujutsu user name&quot;;
+    };
+
+    userEmail = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = &quot;sayls8@proton.me&quot;;
+      description = &quot;Jujutsu user email&quot;;
+    };
+
+    packages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = with pkgs; [lazyjj meld];
+      description = &quot;Additional Jujutsu-related packages to install&quot;;
+    };
+
+    settings = lib.mkOption {
+      type = lib.types.attrs;
+      default = {
+        ui = {
+          # default-command = &quot;log-recent&quot;;
+          default-command = [&quot;status&quot; &quot;--no-pager&quot;];
+          diff-editor = &quot;gitpatch&quot;;
+          # diff-editor = [&quot;nvim&quot; &quot;-c&quot; &quot;DiffEditor&quot; &quot;$left&quot; &quot;$right&quot; &quot;$output&quot;];
+          # diff-formatter = [&quot;meld&quot; &quot;$left&quot; &quot;$right&quot;];
+          merge-editor = &quot;:builtin&quot;;
+          conflict-marker-style = &quot;diff&quot;;
+        };
+        git = {
+          # remove the need for `--allow-new` when pushing new bookmarks
+          auto-local-bookmark = true;
+          push-new-bookmarks = true;
+        };
+        revset-aliases = {
+          &quot;closest_bookmark(to)&quot; = &quot;heads(::to &amp;amp; bookmarks())&quot;;
+          &quot;immutable_heads()&quot; = &quot;builtin_immutable_heads() | remote_bookmarks()&quot;;
+          # The following command is incorrect, TODO
+          # &quot;default()&quot; = &quot;coalesce(trunk(),root())::present(@) | ancestors(visible_heads() &amp;amp; recent(), 2)&quot;;
+          &quot;recent()&quot; = &quot;committer_date(after:&apos;1 month ago&apos;)&quot;;
+          trunk = &quot;main@origin&quot;;
+        };
+        template-aliases = {
+          &quot;format_short_change_id(id)&quot; = &quot;id.shortest()&quot;;
+        };
+        merge-tools.gitpatch = {
+          program = &quot;sh&quot;;
+          edit-args = [
+            &quot;-c&quot;
+            &apos;&apos;
+              set -eu
+              rm -f &quot;$right/JJ-INSTRUCTIONS&quot;
+              git -C &quot;$left&quot; init -q
+              git -C &quot;$left&quot; add -A
+              git -C &quot;$left&quot; commit -q -m baseline --allow-empty
+              mv &quot;$left/.git&quot; &quot;$right&quot;
+              git -C &quot;$right&quot; add --intent-to-add -A
+              git -C &quot;$right&quot; add -p
+              git -C &quot;$right&quot; diff-index --quiet --cached HEAD &amp;amp;&amp;amp; { echo &quot;No changes done, aborting split.&quot;; exit 1; }
+              git -C &quot;$right&quot; commit -q -m split
+              git -C &quot;$right&quot; restore . # undo changes in modified files
+              git -C &quot;$right&quot; reset .   # undo --intent-to-add
+              git -C &quot;$right&quot; clean -q -df # remove untracked files
+            &apos;&apos;
+          ];
+        };
+        aliases = {
+          c = [&quot;commit&quot;];
+          ci = [&quot;commit&quot; &quot;--interactive&quot;];
+          e = [&quot;edit&quot;];
+          i = [&quot;git&quot; &quot;init&quot; &quot;--colocate&quot;];
+          tug = [&quot;bookmark&quot; &quot;move&quot; &quot;--from&quot; &quot;closest_bookmark(@-)&quot; &quot;--to&quot; &quot;@-&quot;];
+          log-recent = [&quot;log&quot; &quot;-r&quot; &quot;default() &amp;amp; recent()&quot;];
+          nb = [&quot;bookmark&quot; &quot;create&quot; &quot;-r&quot; &quot;@-&quot;]; # new bookmark
+          upmain = [&quot;bookmark&quot; &quot;set&quot; &quot;main&quot;];
+          squash-desc = [&quot;squash&quot; &quot;::@&quot; &quot;-d&quot; &quot;@&quot;];
+          rebase-main = [&quot;rebase&quot; &quot;-d&quot; &quot;main&quot;];
+          amend = [&quot;describe&quot; &quot;-m&quot;];
+          pushall = [&quot;git&quot; &quot;push&quot; &quot;--all&quot;];
+          push = [&quot;git&quot; &quot;push&quot; &quot;--allow-new&quot;];
+          pull = [&quot;git&quot; &quot;fetch&quot;];
+          dmain = [&quot;diff&quot; &quot;-r&quot; &quot;main&quot;];
+          l = [&quot;log&quot; &quot;-T&quot; &quot;builtin_log_compact&quot;];
+          lf = [&quot;log&quot; &quot;-r&quot; &quot;all()&quot;];
+          r = [&quot;rebase&quot;];
+          s = [&quot;squash&quot;];
+          si = [&quot;squash&quot; &quot;--interactive&quot;];
+        };
+        revsets = {
+          # log = &quot;main@origin&quot;;
+          # log = &quot;master@origin&quot;;
+        };
+      };
+      description = &quot;Jujutsu configuration settings&quot;;
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    home.packages = cfg.packages;
+
+    programs.jujutsu = {
+      enable = true;
+      settings = lib.mergeAttrs cfg.settings {
+        user = {
+          name = cfg.userName;
+          email = cfg.userEmail;
+        };
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In my &lt;code&gt;home.nix&lt;/code&gt; I have this to enable it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;custom = {
+    jj = {
+        enable = true;
+        userName = &quot;sayls8&quot;;
+        userEmail = &quot;sayls8@proton.me&quot;;
+        packages = &quot;&quot;;
+    };
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/details&gt;
+&lt;p&gt;The &lt;code&gt;custom.jj&lt;/code&gt; module allows me to override the username, email, packages, and
+whether jj is enabled from a single, centralized place within my Nix
+configuration. So only if jj is enabled, &lt;code&gt;lazyjj&lt;/code&gt; and &lt;code&gt;meld&lt;/code&gt; will be installed.&lt;/p&gt;
+&lt;p&gt;With the above &lt;code&gt;gitpatch&lt;/code&gt; setup, say you did more work than you want to commit
+which is common with jj since it automatically tracks everything. I can now run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj commit -i
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And an interactive diff will come up allowing you to choose what to include in
+the current commit. This also works for &lt;code&gt;jj split -i&lt;/code&gt; and &lt;code&gt;jj squash -i&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Example, using &lt;code&gt;jj commit -i&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;../images/jj-gitpatch.png&quot; alt=&quot;jj commit -i&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;You can also use the &lt;code&gt;jj tug&lt;/code&gt; command to make pushing to a remote more
+straightforward. Since JJ’s bookmarks don’t automatically move as they do with
+Git, you can use &lt;code&gt;jj tug&lt;/code&gt; after you’ve made a few commits to move the bookmark
+that is closest to the parent commit of your current position to your current
+commit:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj tug
+jj git push
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;tug&lt;/code&gt; alias works for both the squash and edit workflows. After running
+&lt;code&gt;jj tug&lt;/code&gt;, &lt;code&gt;jj git push&lt;/code&gt; should work. If you get an error saying no bookmarks to
+move, you can run &lt;code&gt;jj new&lt;/code&gt; and then run &lt;code&gt;jj tug&lt;/code&gt;, this happens when the bookmark
+is already at the parent commit.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# jj.nix
+mb = [&quot;bookmark&quot; &quot;set&quot; &quot;-r&quot; &quot;@&quot;];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Another option would be to run &lt;code&gt;jj mb main&lt;/code&gt; before running &lt;code&gt;jj git push&lt;/code&gt; in this
+situation, but you will have to describe the commit first.&lt;/p&gt;
+&lt;h2&gt;Issues I’ve Noticed&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;../images/jj2.png&quot; alt=&quot;jj tree&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;I have run into a few issues, such as every flake command reloading every single
+input every time. &lt;strong&gt;What I mean by this is what you see when you run a flake
+command for the first time, it adds all of your flakes inputs.&lt;/strong&gt; I believe the
+fix for this is deleting and regenerating your &lt;code&gt;flake.lock&lt;/code&gt;. The same thing can
+happen when you move your flake from one location to another.&lt;/p&gt;
+&lt;p&gt;JJ doesn’t seem to automatically track completely new files, running
+&lt;code&gt;git add /file/path.nix&lt;/code&gt; enables JJ to start tracking the new file.&lt;/p&gt;
+&lt;p&gt;That said, I recommend doing just that after running something like
+&lt;code&gt;jj git init --colocate&lt;/code&gt;. Delete your &lt;code&gt;flake.lock&lt;/code&gt; and run &lt;code&gt;nix flake update&lt;/code&gt;,
+&lt;code&gt;nix flake lock --recreate-lock-file&lt;/code&gt; still works but is being depreciated.&lt;/p&gt;
+&lt;p&gt;Sometimes the auto staging doesn’t pick up the changes in your configuration so
+rebuilding changes nothing, this has been more rare but happens occasionally.&lt;/p&gt;
+&lt;p&gt;One of the most fundamental differences between Jujutsu and Git is how pushing
+works. If you’re coming from Git, it’s important to understand this shift so you
+don’t get tripped up by “nothing happened” warnings or missing changes on your
+remote.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;In Git, you’re always “on” a branch (e.g., &lt;code&gt;main&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;When you make a commit, the branch pointer automatically moves forward.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;git push&lt;/code&gt; pushes the current branch’s new commits to the remote.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If you forget to switch branches, you might accidentally push to the wrong
+place, but you rarely have to think about “moving” the branch pointer
+yourself.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;The JJ Push Model&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;JJ has no concept of a “currrent branch”&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Bookmarks &lt;strong&gt;do not&lt;/strong&gt; move automatically. When you make a new commit, the
+bookmark (e.g., &lt;code&gt;main&lt;/code&gt;) stays where it was. You must explicitly move it to
+your new commit with &lt;code&gt;jj bookmark set main&lt;/code&gt; (or create a new one).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;JJ only pushes commits that are referenced by bookmarks. If your latest work
+isn’t pointed to by a bookmark, &lt;code&gt;jj git push&lt;/code&gt; will do nothing and warn you.
+This is to prevent accidental pushes and gives you more control over what gets
+shared.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Typical JJ Push Workflow&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Check out where your working copy and Parent commit are, you will notice that
+jj highlights the minimal amount of characters needed to reference this
+change:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+Working copy changes:
+M README.md
+Working copy  (@) : mnkrokmt 7f0558f8 say hello and goodbye
+Parent commit (@-): ywyvxrts 986d16f5 main | test3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;We can see that &lt;code&gt;ywy&lt;/code&gt; is the &lt;code&gt;main&lt;/code&gt; branch so lets create our change on top of
+that. We can also see that it’s (&lt;code&gt;@-&lt;/code&gt;), and this is actually what &lt;code&gt;main&lt;/code&gt; will
+always be. Once I understood this everything came together.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new @-
+Working copy  (@) now at: kxwrsmmu bc7e8144 (empty) (no description set)
+Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
+Added 0 files, modified 1 files, removed 0 files
+jj desc @ -m &quot;Add a devShell&quot;
+Working copy  (@) now at: kxwrsmmu eacafd73 (empty) Add a devShell
+Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Being more explicit about your commands ensures both you and jj know where
+everything should go. (i.e. &lt;code&gt;jj desc @ -m&lt;/code&gt; explicitly describes &lt;code&gt;@&lt;/code&gt;, the working
+copy.) This will save you some headaches.&lt;/p&gt;
+&lt;p&gt;Our new change, the Working copy is now built off of &lt;code&gt;main&lt;/code&gt;. The working copy
+will always be (&lt;code&gt;@&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Make some changes&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+Working copy changes:
+A dev/flake.lock
+A dev/flake.nix
+Working copy  (@) : kxwrsmmu 42b011cd Add a devShell
+Parent commit (@-): ywyvxrts 986d16f5 main | test3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now I’m done, and since we built this change on top of &lt;code&gt;main&lt;/code&gt; the following
+command will tell jj we know what we want to push:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set main
+jj git push
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you forget to move a bookmark, JJ will warn you and nothing will be pushed.
+This is a safety feature, not a bug. That’s what the &lt;code&gt;mb&lt;/code&gt; alias does, moves the
+bookmark to the working copy.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# home-manager alias (move bookmark)
+mb = [&quot;bookmark&quot; &quot;set&quot; &quot;-r&quot; &quot;@&quot;];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you really have problems, &lt;code&gt;jj git push --change @&lt;/code&gt; explicitly pushes the
+working copy.&lt;/p&gt;
+&lt;p&gt;This is a bit different than Git and takes some getting used to but you don’t
+need to move the bookmark after every commit, just when you want to push. I know
+I’ve made the mistake of pushing to the wrong branch before this should prevent
+that.&lt;/p&gt;
+&lt;h2&gt;Here’s an example of using JJ in an existing Git repo&lt;/h2&gt;
+&lt;p&gt;Say I have my configuration flake in the &lt;code&gt;~/flakes/&lt;/code&gt; directory that is an
+existing Git repository. To use JJ as the front-end I could do something like:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/flakes
+jj git init --colocate
+Done importing changes from the underlying Git repo.
+Setting the revset alias `trunk()` to `main@origin`
+Initialized repo in &quot;.&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;By default, JJ defines &lt;code&gt;trunk()&lt;/code&gt; as the main development branch of your remote
+repository. This is usually set to &lt;code&gt;main@origin&lt;/code&gt;, but could be named something
+else. This means that whenever you use &lt;code&gt;trunk()&lt;/code&gt; in JJ commands, it will
+resolve to the latest commit on &lt;code&gt;main@origin&lt;/code&gt;. This makes it easier to refer
+to the main branch in scripts and commands without hardcoding the branch name.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Bookmarks&lt;/strong&gt; in jj are named pointers to specific revisions, similar to
+branches in Git. When you first run &lt;code&gt;jj git init --colocate&lt;/code&gt; in a git repo, you
+will likely get a Hint saying “Run the following command to keep local bookmarks
+updated on future pulls”.:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark list
+track main@origin
+
+jj st
+The working copy has no changes.
+Working copy  (@) : qzxomtxq 925eca75 (empty) (no description set)
+Parent commit (@-): qnpnrklz bf291074 main | notes
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This shows that running &lt;code&gt;jj git init --colocate&lt;/code&gt; automatically started tracking
+&lt;code&gt;main&lt;/code&gt; in this case. If it doesn’t, use &lt;code&gt;jj bookmark track main@origin&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;I’ll create a simple change in the &lt;code&gt;README.md&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+Working copy changes:
+M README.md
+Working copy  (@) : qzxomtxq b963dff0 (no description set)
+Parent commit (@-): qnpnrklz bf291074 main | notes
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can see that the working copy now contains a modified file &lt;code&gt;M README.md&lt;/code&gt; and
+has no description set. Lets give it a description before pushing to github.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc @ -m &quot;Added to README&quot;
+jj bookmark set main -r @
+Moved 1 bookmarks to pxwnopqo 1e6e08a2 main* | Added to README
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;jj bookmark set main -r @&lt;/code&gt; moves the &lt;code&gt;main&lt;/code&gt; bookmark to the current revision
+(the working copy), which is the explicit, recommended way to update bookmarks
+in JJ. Without this step, your bookmark will continue to point at the old
+commit, not your latest work. This is a major difference from Git.&lt;/p&gt;
+&lt;p&gt;And finally push to GitHub:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj git push
+Changes to push to origin:
+  Move forward bookmark main from bf291074125e to e2a75e45237b
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+Warning: The working-copy commit in workspace &apos;default&apos; became immutable, so a new commit has been created on top of it.
+Working copy  (@) now at: pxwnopqo 8311444b (empty) (no description set)
+Parent commit (@-)      : qzxomtxq e2a75e45 main | Added to README
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Create a Repo without an existing Git Repo&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Or&lt;/strong&gt; to do this in a directory that isn’t already a git repo you can do
+something like:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cargo new hello-world --vcs=none
+cd hello-world
+jj git init
+Initialized repo in &quot;.&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;JJ and Git Side by Side&lt;/h3&gt;
+&lt;p&gt;Or for example, with Git if you wanted to move to a different branch before
+running &lt;code&gt;nix flake update&lt;/code&gt; to see if it introduced errors before merging with
+your main branch, you could do something like:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git checkout -b update-test
+
+nix flake update
+
+sudo nixos-rebuild test --flake .
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you’re satisfied you can merge:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git checkout main
+git add . # Stage the change
+git commit -m &quot;update&quot;
+git merge update-test
+git branch -D update-test
+sudo nixos-rebuild switch --flake .
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With JJ a similar workflow could be:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Run &lt;code&gt;jj st&lt;/code&gt; to see what you have:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+The working copy has no changes.
+Working copy  (@) : ttkstzzn 3f55c42c (empty) (no description set)
+Parent commit (@-): wppknozq e3558ef5 main@origin | jj diff
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you don’t have a description set for the working copy set it now.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc @ -m &quot;enable vim&quot;
+jj st
+The working copy has no changes.
+Working copy  (@) : ttkstzzn 63fda123 (empty) enable vim
+Parent commit (@-): wppknozq e3558ef5 main@origin | jj diff
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Start from the working copy (which is mutable). The working copy in JJ is
+itself a commit that you can edit and squash changes into. Since &lt;code&gt;main&lt;/code&gt; is
+immutable, you can create your new change by working on top of the working
+copy commit.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Create a new change off of the working copy:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new @
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Make your edits:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+Working copy changes:
+M home/editors/vim.nix
+Working copy  (@) : qrsxltmt 494b5f18 (no description set)
+Parent commit (@-): wytnnnto a07e775c (empty) enable vim
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Squash your changes into the new change:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj squash
+The working copy has no changes.
+Working copy  (@) : tmlwppnu ba06bb99 (empty) (no description set)
+Parent commit (@-): wytnnnto 52928ed9 enable vim
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This moves your working copy changes into the new commit you just created.&lt;/p&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Describe the new change, this might feel weird but the &lt;code&gt;jj squash&lt;/code&gt; command
+created a new commit that you have to describe again:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc @ -m &quot;Enabled Vim&quot;
+Working copy  (@) : tmlwppnu 5c1569c3 (empty) Enabled Vim
+Parent commit (@-): wytnnnto 52928ed9 enable vim
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;Set the bookmark to the Parent commit that was squashed into:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set wyt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;7&quot;&gt;
+&lt;li&gt;Finally Push to the remote repository:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj git push --allow-new
+Changes to push to origin:
+  Add bookmark wyt to 5c1569c35b22
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+remote:
+remote: Create a pull request for &apos;wyt&apos; on GitHub by visiting:
+remote:      https://github.com/sayls8/flake/pull/new/wyt
+remote:
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This command does the following:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Uploads your bookmark and the associated commit to the remote repository
+(e.g., GitHub).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If the bookmark is new (not present on the remote), &lt;code&gt;--allow-new&lt;/code&gt; tells JJ
+it’s okay to create it remotely.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;After pushing, GitHub (or your code host) will usually suggest creating a pull
+request for your new branch/bookmark, allowing you or your collaborators to
+review and merge the change into main.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Merging your Change into &lt;code&gt;main&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Option 1. Go to the URL suggested in the output, visit in this case:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;https://github.com/sayls8/flake/pull/new/wyt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Click Create PR&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Click Merge PR if it shows it can merge cleanly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Option 2.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Switch to &lt;code&gt;main&lt;/code&gt; (if not already there):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set main
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Create a new change that combines the new change with &lt;code&gt;main&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new tml wyt -m &quot;Merge: enable vim&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This creates a new commit with both &lt;code&gt;tml&lt;/code&gt; and &lt;code&gt;wyt&lt;/code&gt; as parents, which is how JJ
+handles merges (since &lt;code&gt;jj merge&lt;/code&gt; depreciated). JJ merges are additive and
+history-preserving by design especially for folks used to Git’s fast-forward and
+squash options.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Summary&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;With &lt;code&gt;jj&lt;/code&gt; you’re creating a new commit rather than a new branch.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Amending vs. Squashing: Git’s &lt;code&gt;git commit --amend&lt;/code&gt; updates the last commit.
+&lt;code&gt;jj squash&lt;/code&gt; combines the current commit with its parent, effectively doing the
+same thing in terms of history.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Merging: Git’s merge command is explicit. In &lt;code&gt;jj&lt;/code&gt;, the concept is similar, but
+since there’s no branch, you’re “merging” by moving your working commit to
+include these changes.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;No need to delete branches: Since there are no branches in &lt;code&gt;jj&lt;/code&gt;, there’s no
+equivalent to &lt;code&gt;git branch -D&lt;/code&gt; to clean up. Instead commits that are no longer
+needed can be “abandoned” with &lt;code&gt;jj abandon&lt;/code&gt; if you want to clean up your
+commit graph.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj describe&lt;/code&gt; without a flag just opens &lt;code&gt;$EDITOR&lt;/code&gt; where you can write your
+commit message save and exit.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;In &lt;code&gt;git&lt;/code&gt;, we finish a set of changes to our code by committing, but in &lt;code&gt;jj&lt;/code&gt; we
+start new work by creating a change, and &lt;em&gt;then&lt;/em&gt; make changes to our code. It’s
+more useful to write an initial description of your intended changes, and then
+refine it as you work, than it is creating a commit message after the fact.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;I have heard that jj can struggle with big repositories such as Nixpkgs and
+have noticed some issues here and there when using with NixOS. I’m hoping that
+as the project matures, it gets better on this front.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;The 2 main JJ Workflows&lt;/h2&gt;
+&lt;h3&gt;The Squash Workflow&lt;/h3&gt;
+&lt;p&gt;This workflow is the most similar to Git and Git’s index.&lt;/p&gt;
+&lt;p&gt;The workflow:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Describe the work we want to do with &lt;code&gt;jj desc -m &quot;message&quot;&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;We create a new empty change on top of that one with &lt;code&gt;jj new&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;When we are done with a feature, we run &lt;code&gt;jj squash&lt;/code&gt; to move the changes from
+&lt;code&gt;@&lt;/code&gt; into the change we described in step 1. &lt;code&gt;@&lt;/code&gt; is where your working copy is
+positioned currently.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;For example, let’s say we just ran &lt;code&gt;jj git init --colocate&lt;/code&gt; in our configuration
+Flake directory making it a &lt;code&gt;jj&lt;/code&gt; repo as well using git for backend.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd flake
+jj git init --colocate
+jj log
+@  lnmmxwko sayls8@proton.me 2025-06-27 10:14:57 1eac6aa0
+│  (empty) (no description set)
+○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 git_head() 5358483a
+│  (empty) jj
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The above log output shows that running &lt;code&gt;jj git init&lt;/code&gt; creates an empty working
+commit (&lt;code&gt;@&lt;/code&gt;) on top of the &lt;code&gt;git_head()&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;Switch from nixVim to NVF&quot;
+jj new  # Create a new empty change
+jj log
+@  nmnmznmm sayls8@proton.me 2025-06-27 10:16:30 52dd7ee0
+│  (empty) (no description set)
+○  lnmmxwko sayls8@proton.me 2025-06-27 10:16:24 git_head() 3e8f9f3a
+│  (empty) Switch from nixVim to NVF
+○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 5358483a
+│  (empty) jj
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The above log shows that running &lt;code&gt;jj desc&lt;/code&gt; changes the current (&lt;code&gt;@&lt;/code&gt;) commits
+description, and then &lt;code&gt;jj new&lt;/code&gt; creates a new empty commit on top of it, moving
+(&lt;code&gt;@&lt;/code&gt;) to this new empty commit.&lt;/p&gt;
+&lt;p&gt;The “Switch from nixVim to NVF” commit is now the parent of (&lt;code&gt;@&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Now, we’d make the necessary changes and to add them to the commit we just
+described in the previous steps.&lt;/p&gt;
+&lt;p&gt;The changes are automatically “staged” so theres no need to &lt;code&gt;git add&lt;/code&gt; them, so
+we just make the changes and squash them.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj squash  # Squash the commit into its parent commit (i.e., our named commit)
+jj log
+@  zsxsolsq sayls8@proton.me 2025-06-27 10:18:01 2c35d83f
+│  (empty) (no description set)
+○  lnmmxwko sayls8@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
+│  (empty) Switch from nixVim to NVF
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This shows &lt;code&gt;jj squashes&lt;/code&gt; effect, it merges the changes from the current (&lt;code&gt;@&lt;/code&gt;)
+commit into its parent. The (&lt;code&gt;@&lt;/code&gt;) then moves to this modified parent, and a new
+empty commit is created on top, ready for the next set of changes.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We’re still in the nameless commit and can either continue working or run
+&lt;code&gt;jj desc -m &quot;&quot;&lt;/code&gt; again describing our new change, then &lt;code&gt;jj new&lt;/code&gt; and &lt;code&gt;jj squash&lt;/code&gt;
+it’s pretty simple. The nameless commit is used as an adhoc staging area.&lt;/p&gt;
+&lt;p&gt;When you are ready to push, it’s important to know where your working copy
+currently is and if it’s attached to a bookmark. It’s common for &lt;code&gt;jj new&lt;/code&gt; to
+detach the head, all you have to do is tell JJ which branch to attach to, then
+push:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
+Working copy changes:
+M hosts/magic/configuration.nix
+M hosts/magic/container.nix
+Working copy  (@) : youptvvn 988e6fc9 (no description set)
+Parent commit (@-): qlwqromx 4bb754fa mdbook container
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The above output means that the working copy has modifications (&lt;code&gt;M&lt;/code&gt;) in two
+files. And these changes are not yet committed.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set main
+jj git push
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;The Edit Workflow&lt;/h3&gt;
+&lt;p&gt;This workflow adds a few new commands &lt;code&gt;jj edit&lt;/code&gt;, and &lt;code&gt;jj next&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Here’s the workflow:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Create a new change to work on the new feature with &lt;code&gt;jj new&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If everything works exactly as planned, we’re done.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If we realize we want to break this big change up into multiple smaller ones,
+we do it by making a new change before the current one, swapping to it, and
+making the necessary change.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Lastly, we go back to the main change.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The squash workflow leaves &lt;code&gt;@&lt;/code&gt; at an empty undescribed change, with this
+workflow, &lt;code&gt;@&lt;/code&gt; will often be on the existing change.&lt;/p&gt;
+&lt;p&gt;If &lt;code&gt;@&lt;/code&gt; wasn’t at an empty change, we would start this workflow with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new -m &quot;Switch from NVF to nixVim&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;since our &lt;code&gt;@&lt;/code&gt; is already at an empty change, we’ll just describe it and get
+started:&lt;/p&gt;
+&lt;p&gt;For this example, lets say we want to revert back to nixVim:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;Switch from NVF to nixVim&quot;
+jj log
+@  zsxsolsq sayls8@proton.me 2025-06-27 10:18:47 606abaa7
+│  (empty) Switch from NVF to nixVim
+○  lnmmxwko sayls8@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
+│  (empty) Switch from nixVim to NVF
+○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 5358483a
+│  (empty) jj
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Again, this shows &lt;code&gt;jj desc&lt;/code&gt; renaming the current empty &lt;code&gt;@&lt;/code&gt; commit.&lt;/p&gt;
+&lt;p&gt;We make the changes, and it’s pretty straightforward so we’re done, every change
+is automatically staged so we can just run &lt;code&gt;sudo nixos-rebuild switch --flake .&lt;/code&gt;
+now to apply the changes.&lt;/p&gt;
+&lt;p&gt;If we wanted to make more changes that aren’t described we can use &lt;code&gt;jj new -B&lt;/code&gt;
+which is similar to &lt;code&gt;git add -a&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new -B @ -m &quot;Adding LSP to nixVim&quot;
+Rebased 1 descendant commits
+Working copy  (@) now at: lpnxxxpo bf929946 (empty) Adding LSP to nixVim
+Parent commit (@-)      : lnmmxwko 485eaee9 (empty) Switch from nixVim to NVF
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;-B&lt;/code&gt; tells jj to create the new change &lt;em&gt;before&lt;/em&gt; the current one and it
+creates a rebase. We created a change before the one we’re on, it automatically
+rebased our original change. This operation will &lt;em&gt;always&lt;/em&gt; succeed with jj, we
+will have our working copy at the commit we’ve just inserted.&lt;/p&gt;
+&lt;p&gt;You can see below that &lt;code&gt;@&lt;/code&gt; moved down one commit:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log
+○  zsxsolsq sayls8@proton.me 2025-06-27 10:22:03 ad0713b6
+│  (empty) Switch from NVF to nixVim
+@  lpnxxxpo sayls8@proton.me 2025-06-27 10:22:03 bf929946
+│  (empty) Adding LSP to nixVim
+○  lnmmxwko sayls8@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
+│  (empty) Switch from nixVim to NVF
+○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 5358483a
+│  (empty) jj
+○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 git_head()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The “Adding LSP to nixVim” commit is directly above “Switch from nixVim to NVF”
+(the old &lt;code&gt;git_head()&lt;/code&gt;)&lt;/p&gt;
+&lt;p&gt;The “Switch from NVF to nixVim” commit (which was your &lt;code&gt;@&lt;/code&gt; before &lt;code&gt;jj new -B&lt;/code&gt;)
+is now above “Adding LSP to nixVim” in the log output, meaning “Adding LSP to
+nixVim” is its new parent.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;@&lt;/code&gt; has moved to “Adding LSP to nixVim”&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;jj log&lt;/code&gt; example output&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Operation Log and Undo&lt;/h2&gt;
+&lt;p&gt;JJ records every operation (commits, merges, rebases, etc.) in an operation log.
+You can view and undo previous operations, making it easy to recover from
+mistakes, a feature not present in Git’s core CLI&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj op log
+@  fbf6e626df22 jr@magic 15 minutes ago, lasted 9 milliseconds
+│  new empty commit
+│  args: jj new -B @ -m &apos;Adding LSP to nixVim&apos;
+○  bde40b7c17cf jr@magic 19 minutes ago, lasted 8 milliseconds
+│  describe commit 2c35d83f75031dc582bf28b64d4af1c218177f90
+│  args: jj desc -m &apos;Switch from NVF to nixVim&apos;
+○  3a2bfe1c0b0a jr@magic 19 minutes ago, lasted 8 milliseconds
+│  squash commits into 3e8f9f3a6a58fef86906e16e9b4375afb43e73e3
+│  args: jj squash
+○  80abcb58dcb6 jr@magic 21 minutes ago, lasted 8 milliseconds
+│  new empty commit
+│  args: jj new
+○  8c80314cbcd7 jr@magic 21 minutes ago, lasted 8 milliseconds
+│  describe commit 1eac6aa0b88ba014785ee9c1c2ad6e2abc6206e9
+│  args: jj desc -m &apos;Switch from nixVim to NVF&apos;
+○  44b5789cb4d1 jr@magic 22 minutes ago, lasted 6 milliseconds
+│  track remote bookmark main@origin
+│  args: jj bookmark track main@origin
+○  dbefee04aa85 jr@magic 23 minutes ago, lasted 4 milliseconds
+│  import git head
+│  args: jj git init --git-repo .
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj op undo &amp;lt;operation-id&amp;gt;
+# or
+jj op restore &amp;lt;operation-id&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Conflict Resolution&lt;/h2&gt;
+&lt;p&gt;In JJ, conflicts live inside commits and can be resolved at any time, not just
+during a merge. This makes rebasing and history editing safer and more flexible&lt;/p&gt;
+&lt;p&gt;JJ treats conflicts as first-class citizens: conflicts can exist inside commits,
+not just in the working directory. This means if a merge or rebase introduces a
+conflict, the conflicted state is saved in the commit itself, and you can
+resolve it at any time there’s no need to resolve conflicts immediately or use
+“&lt;code&gt;--continue&lt;/code&gt;” commands as in Git&lt;/p&gt;
+&lt;p&gt;Here’s how it works:&lt;/p&gt;
+&lt;p&gt;When you check out or create a commit with conflicts, JJ materializes the
+conflicts as markers in your files (similar to Git’s conflict markers)&lt;/p&gt;
+&lt;p&gt;You can resolve conflicts by editing the files to remove the markers, or by
+using:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj resolve
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Revsets&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://jj-vcs.github.io/jj/latest/revsets/&quot;&gt;Jujutsu Revsets&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;JJ includes a powerful query language for selecting commits. For example:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log -r &quot;author(alice) &amp;amp; file(*.py)&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This command lists all commits by Alice that touch Python files.&lt;/p&gt;
+&lt;h2&gt;Filesets&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://jj-vcs.github.io/jj/latest/filesets/&quot;&gt;Jujutsu Filesets&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Jujutsu supports a functional language for selecting a set of files. Expressions
+in this language are called “filesets” (the idea comes from Mercurial). The
+language consists of file patterns, operators, and functions. –JJ Docs&lt;/p&gt;
+&lt;h2&gt;Summary&lt;/h2&gt;
+&lt;p&gt;Jujutsu (jj) offers a streamlined, branchless, and undo-friendly approach to
+version control, fully compatible with Git but designed to be easier to use and
+reason about. Its workflows, operation log, and conflict handling provide a
+safer and more flexible environment for managing code changes, making it a
+compelling alternative for both new and experienced developers.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Resources&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://steveklabnik.github.io/jujutsu-tutorial/&quot;&gt;steves_jj_tutorial&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/jj-vcs/jj&quot;&gt;jj_github&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://jj-vcs.github.io/jj/latest/tutorial/&quot;&gt;official_tutorial&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://v5.chriskrycho.com/essays/jj-init/&quot;&gt;jj_init&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</content></entry><entry><title>Hardening NixOS</title><id>https://saylesss88.github.io/nix/hardening_NixOS.html</id><updated>2025-12-08T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_NixOS.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening NixOS&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
@@ -8498,991 +9483,6 @@ equivalent.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a href=&quot;https://ohshitgit.com/&quot;&gt;Oh shit Git&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-</content></entry><entry><title>JJ VCS</title><id>https://saylesss88.github.io/vcs/jujutsu.html</id><updated>2025-11-30T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/jujutsu.html" rel="alternate"/><content type="html">&lt;h1&gt;Version Control with JJ&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;p&gt;&lt;img src=&quot;../images/jujutsu.png&quot; alt=&quot;JJ Logo&quot; /&gt;&lt;/p&gt;
-&lt;div style=&quot;font-size: 0.8em; margin-top: 10px;&quot;&gt;
-  **Image Source:** This image is from the [Jujutsu VCS repository](https://github.com/jj-vcs/jj) and is licensed under the Apache 2.0 License.
-&lt;/div&gt;
-&lt;p&gt;⚠️ &lt;strong&gt;Security Reminder&lt;/strong&gt;: Never commit secrets (passwords, API keys, tokens,
-etc.) in plain text to your Git repository. If you plan to publish your NixOS
-configuration, always use a secrets management tool like &lt;code&gt;sops-nix&lt;/code&gt; or &lt;code&gt;agenix&lt;/code&gt;
-to keep sensitive data safe. See the
-&lt;a href=&quot;https://saylesss88.github.io/installation/enc/sops-nix.html&quot;&gt;Sops-Nix Guide&lt;/a&gt;
-for details.&lt;/p&gt;
-&lt;h2&gt;Getting Started&lt;/h2&gt;
-&lt;p&gt;Jujutsu (jj) is a modern, Git-compatible version control system designed to
-simplify and improve the developer experience. It offers a new approach to
-distributed version control, focusing on a more intuitive workflow, powerful
-undo capabilities, and a branchless model that reduces common pitfalls of Git.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Recommended resources&lt;/strong&gt;:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://steveklabnik.github.io/jujutsu-tutorial/&quot;&gt;Steve’s Jujutsu Tutorial&lt;/a&gt;
-(most up to date). Steve does an excellent job explaining the ins and outs of
-Jujutsu.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidth jj-tips-and-tricks&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Official:&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj help -k tutorial
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Every time you run a &lt;code&gt;jj&lt;/code&gt; command, it examines the working copy and takes a
-snapshot.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Command help:&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj &amp;lt;command&amp;gt; --help
-jj git init --help
-jj git push --help
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h2&gt;🔑 Key Concepts&lt;/h2&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Key Concepts &lt;/summary&gt;
-&lt;ol&gt;
-&lt;li&gt;Working Copy as Commit&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;In JJ your working copy is always a real commit. Any changes you make are
-automatically recorded in this working commit. The working copy is always
-(&lt;code&gt;@&lt;/code&gt;) and the Parent commit is always &lt;code&gt;(@-)&lt;/code&gt; keep this in mind.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;There is &lt;strong&gt;no staging area&lt;/strong&gt; (index) as in Git. You do not need to run
-&lt;code&gt;git add&lt;/code&gt; or &lt;code&gt;git commit&lt;/code&gt; for every change. Modifications are always tracked
-in the current commit.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Branchless Workflow and Bookmarks&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;JJ does not have the concept of a “current branch.” Instead, use bookmarks,
-which are named pointers to specific commits.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Bookmarks do not move automatically. Commands like &lt;code&gt;jj new&lt;/code&gt; and &lt;code&gt;jj commit&lt;/code&gt;
-move the working copy, but the bookmark stays were it was. Use
-&lt;code&gt;jj bookmark move&lt;/code&gt; to move bookmarks. (e.g., &lt;code&gt;jj bookmark move main&lt;/code&gt;). You can
-also use &lt;code&gt;jj bookmark set main -r @&lt;/code&gt; to explicitly set the main bookmark to
-point at the working copy commit.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Only commits referenced by bookmarks are pushed to remotes, preventing
-accidental sharing of unfinished work.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Automatic Tracking and Simpler Workflow&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Adding or removing files is automatically tracked, no need for explicit &lt;code&gt;add&lt;/code&gt;
-or &lt;code&gt;rm&lt;/code&gt; commands.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;The working copy acts as a live snapshot of your workspace. Commands first
-sync filesystem changes into this commit, then perform the requested
-operation, and finally update the working copy if needed.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;4&quot;&gt;
-&lt;li&gt;Operation Log and Undo&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;JJ records every operation (commits, merges, rebases, etc.) in an &lt;strong&gt;operation
-log&lt;/strong&gt;. Inspect it with: &lt;code&gt;jj op log&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;You can view and undo any previous operation, not just the most recent one,
-making it easy to recover from mistakes, a feature not present in Git’s core
-CLI.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;First-Class Conflict Handling&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Conflicts happen when JJ can’t figure out how to merge different changes made to
-the same file.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Conflicts are stored inside commits, not just in the working directory. You
-can resolve them at any time, not just during a merge or rebase.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Conflict markers are inserted directly into files, and JJ can reconstruct the
-conflict state from these markers. You can resolve conflicts by editing the
-files or using &lt;code&gt;jj resolve&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;6&quot;&gt;
-&lt;li&gt;Revsets and Filesets&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Revsets&lt;/strong&gt;: JJ’s powerful query language for selecting sets of commits,
-inspired by Mercurial. For example, &lt;code&gt;jj log -r &quot;author(alice) &amp;amp; file(*.py)&quot;&lt;/code&gt;
-lists all commits by Alice that touch Python files.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Filesets&lt;/strong&gt;:JJ supports a functional language for selecting sets of files,
-allowing advanced file-based queries and operations.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align: left&quot;&gt;Feature&lt;/th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Git&lt;/th&gt;&lt;th style=&quot;text-align: left&quot;&gt;Jujutsu (jj)&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
-&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Staging Area&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Yes (git add/index)&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;No, working copy is always a commit&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Commit Workflow&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Stage → Commit&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;All changes auto-recorded in working commit&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Branches&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Central to workflow&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Optional, bookmarks used for sharing&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Undo/Redo&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Limited, complex&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Easy, operation log for undo&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Conflict Handling&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Manual, can be confusing&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Conflicts tracked in commits, easier to fix&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td style=&quot;text-align: left&quot;&gt;Integration with Git&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Native&lt;/td&gt;&lt;td style=&quot;text-align: left&quot;&gt;Fully compatible, can switch back anytime&lt;/td&gt;&lt;/tr&gt;
-&lt;/tbody&gt;&lt;/table&gt;
-&lt;ol start=&quot;7&quot;&gt;
-&lt;li&gt;Anonymous branches: In Git a branch is a pointer to a commit that needs a
-name.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;If you haven’t taken the time to deep dive Git, it may be a good time to learn
-about a new way of doing Version Control that is actually less complex and
-easier to mentally map out in my opinion.&lt;/p&gt;
-&lt;p&gt;Jujutsu is a new front-end to Git, and it’s a new design for distributed version
-control. –jj init&lt;/p&gt;
-&lt;p&gt;You can use jujutsu (jj) with existing Git repositories with one command.
-&lt;code&gt;jj git init --colocate&lt;/code&gt; or &lt;code&gt;jj git init --git-repo /path/to/git_repository&lt;/code&gt;.
-The native repository format for jj is still a work in progress so people
-typically use a &lt;code&gt;git&lt;/code&gt; repository for backend.&lt;/p&gt;
-&lt;p&gt;Unlike &lt;code&gt;git&lt;/code&gt;, &lt;code&gt;jj&lt;/code&gt; has no index “staging area”. It treats the working copy as an
-actual commit. When you make changes to files, these changes are automatically
-recorded to the working commit. There’s no need to explicitly stage changes
-because they are already part of the commit that represents your current working
-state.&lt;/p&gt;
-&lt;/details&gt;
-&lt;p&gt;&lt;strong&gt;Simplified Workflow&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Check where you’re at, JJ doesn’t care about commits without descriptions but
-Git and GitHub do:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy  (@) now at: zuknrzrx 8a20bfa7 (empty) (no description set)
-Parent commit (@-)      : yzppulzo bdd64e8d main | (empty) &quot;Enable Rofi and update nu func for jj&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can see that the Working copy is &lt;code&gt;(empty)&lt;/code&gt; and has &lt;code&gt;(no description set)&lt;/code&gt;,
-lets give it a description:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;My feature&quot;
-# ...edit files...
-# Check where we&apos;re at again
-jj st
-Working copy changes:
-M home/jj.nix
-Working copy  (@) : zuknrzrx bcd3d965 My feature
-Parent commit (@-): yzppulzo bdd64e8d main | (empty) &quot;Enable Rofi and update nu func for jj&quot;
-
-# Tell JJ which branch we&apos;re interested in
-jj bookmark set main
-# Push this change to main
-jj git push
-Changes to push to origin:
-  Move forward bookmark main from bdd64e8d6ea5 to bcd3d96567f8
-remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
-Warning: The working-copy commit in workspace &apos;default&apos; became immutable, so a new commit has been created on top of it.
-Working copy  (@) now at: ktlywzlx 8e88ddbe (empty) (no description set)
-Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h2&gt;What is the Jujutsu Working Copy&lt;/h2&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click To Expand Working Copy Description &lt;/summary&gt;
-&lt;p&gt;The &lt;strong&gt;working copy&lt;/strong&gt; in Jujutsu is an actual &lt;strong&gt;commit&lt;/strong&gt; that represents the
-current state of the files you’re working on. Unlike Git, where the working copy
-is separate from commits and changes must be explicitly staged and committed, in
-JJ the working copy is a live commit that automatically records changes as you
-modify files.&lt;/p&gt;
-&lt;p&gt;Adding or removing files in the working copy implicitly tracks or untracks them
-without needing explicit commands like &lt;code&gt;git add&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;The working copy commit acts as a snapshot of your current workspace. When you
-run commands, Jujutsu first syncs the filesystem changes into this commit, then
-performs the requested operation, and finally updates the working copy if needed&lt;/p&gt;
-&lt;p&gt;To finalize your current changes and start a new set of changes, you use the
-&lt;code&gt;jj new&lt;/code&gt; command, which creates a new working-copy commit on top of the current
-one. This replaces the traditional Git workflow of staging and committing
-changes separately.&lt;/p&gt;
-&lt;p&gt;Conflicts in the working copy are represented by inserting conflict markers
-directly into the files. Jujutsu tracks the conflicting parts and can
-reconstruct the conflict state from these markers. You resolve conflicts by
-editing these markers and then committing the resolution in the working copy&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;This means that you don’t need to worry about making a change, running
-&lt;code&gt;git add .&lt;/code&gt;, running &lt;code&gt;git commit -m &quot;commit message&quot;&lt;/code&gt; because it’s already
-done for you. This is handy with flakes by preventing a “dirty working tree”
-and can instantly be rebuilt after making a change.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
-&lt;h2&gt;Example JJ Module&lt;/h2&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand JJ home-manager module example &lt;/summary&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;For &lt;code&gt;lazygit&lt;/code&gt; fans, Nixpkgs has &lt;code&gt;lazyjj&lt;/code&gt;. I’ve seen that it’s recommended to
-use jj with &lt;code&gt;meld&lt;/code&gt;. I’ll share my &lt;code&gt;jj.nix&lt;/code&gt; here for an example:&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;I got a lot of the aliases and such from the
-&lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidth&lt;/a&gt; post, this has
-been a game changer:&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  lib,
-  config,
-  pkgs,
-  # userVars ? {},
-  #
-  #
-  #
-  ...
-}: let
-  cfg = config.custom.jj;
-in {
-  options.custom.jj = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = &quot;Enable the Jujutsu (jj) module&quot;;
-    };
-
-    userName = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = &quot;sayls8&quot;;
-      description = &quot;Jujutsu user name&quot;;
-    };
-
-    userEmail = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = &quot;sayls8@proton.me&quot;;
-      description = &quot;Jujutsu user email&quot;;
-    };
-
-    packages = lib.mkOption {
-      type = lib.types.listOf lib.types.package;
-      default = with pkgs; [lazyjj meld];
-      description = &quot;Additional Jujutsu-related packages to install&quot;;
-    };
-
-    settings = lib.mkOption {
-      type = lib.types.attrs;
-      default = {
-        ui = {
-          # default-command = &quot;log-recent&quot;;
-          default-command = [&quot;status&quot; &quot;--no-pager&quot;];
-          diff-editor = &quot;gitpatch&quot;;
-          # diff-editor = [&quot;nvim&quot; &quot;-c&quot; &quot;DiffEditor&quot; &quot;$left&quot; &quot;$right&quot; &quot;$output&quot;];
-          # diff-formatter = [&quot;meld&quot; &quot;$left&quot; &quot;$right&quot;];
-          merge-editor = &quot;:builtin&quot;;
-          conflict-marker-style = &quot;diff&quot;;
-        };
-        git = {
-          # remove the need for `--allow-new` when pushing new bookmarks
-          auto-local-bookmark = true;
-          push-new-bookmarks = true;
-        };
-        revset-aliases = {
-          &quot;closest_bookmark(to)&quot; = &quot;heads(::to &amp;amp; bookmarks())&quot;;
-          &quot;immutable_heads()&quot; = &quot;builtin_immutable_heads() | remote_bookmarks()&quot;;
-          # The following command is incorrect, TODO
-          # &quot;default()&quot; = &quot;coalesce(trunk(),root())::present(@) | ancestors(visible_heads() &amp;amp; recent(), 2)&quot;;
-          &quot;recent()&quot; = &quot;committer_date(after:&apos;1 month ago&apos;)&quot;;
-          trunk = &quot;main@origin&quot;;
-        };
-        template-aliases = {
-          &quot;format_short_change_id(id)&quot; = &quot;id.shortest()&quot;;
-        };
-        merge-tools.gitpatch = {
-          program = &quot;sh&quot;;
-          edit-args = [
-            &quot;-c&quot;
-            &apos;&apos;
-              set -eu
-              rm -f &quot;$right/JJ-INSTRUCTIONS&quot;
-              git -C &quot;$left&quot; init -q
-              git -C &quot;$left&quot; add -A
-              git -C &quot;$left&quot; commit -q -m baseline --allow-empty
-              mv &quot;$left/.git&quot; &quot;$right&quot;
-              git -C &quot;$right&quot; add --intent-to-add -A
-              git -C &quot;$right&quot; add -p
-              git -C &quot;$right&quot; diff-index --quiet --cached HEAD &amp;amp;&amp;amp; { echo &quot;No changes done, aborting split.&quot;; exit 1; }
-              git -C &quot;$right&quot; commit -q -m split
-              git -C &quot;$right&quot; restore . # undo changes in modified files
-              git -C &quot;$right&quot; reset .   # undo --intent-to-add
-              git -C &quot;$right&quot; clean -q -df # remove untracked files
-            &apos;&apos;
-          ];
-        };
-        aliases = {
-          c = [&quot;commit&quot;];
-          ci = [&quot;commit&quot; &quot;--interactive&quot;];
-          e = [&quot;edit&quot;];
-          i = [&quot;git&quot; &quot;init&quot; &quot;--colocate&quot;];
-          tug = [&quot;bookmark&quot; &quot;move&quot; &quot;--from&quot; &quot;closest_bookmark(@-)&quot; &quot;--to&quot; &quot;@-&quot;];
-          log-recent = [&quot;log&quot; &quot;-r&quot; &quot;default() &amp;amp; recent()&quot;];
-          nb = [&quot;bookmark&quot; &quot;create&quot; &quot;-r&quot; &quot;@-&quot;]; # new bookmark
-          upmain = [&quot;bookmark&quot; &quot;set&quot; &quot;main&quot;];
-          squash-desc = [&quot;squash&quot; &quot;::@&quot; &quot;-d&quot; &quot;@&quot;];
-          rebase-main = [&quot;rebase&quot; &quot;-d&quot; &quot;main&quot;];
-          amend = [&quot;describe&quot; &quot;-m&quot;];
-          pushall = [&quot;git&quot; &quot;push&quot; &quot;--all&quot;];
-          push = [&quot;git&quot; &quot;push&quot; &quot;--allow-new&quot;];
-          pull = [&quot;git&quot; &quot;fetch&quot;];
-          dmain = [&quot;diff&quot; &quot;-r&quot; &quot;main&quot;];
-          l = [&quot;log&quot; &quot;-T&quot; &quot;builtin_log_compact&quot;];
-          lf = [&quot;log&quot; &quot;-r&quot; &quot;all()&quot;];
-          r = [&quot;rebase&quot;];
-          s = [&quot;squash&quot;];
-          si = [&quot;squash&quot; &quot;--interactive&quot;];
-        };
-        revsets = {
-          # log = &quot;main@origin&quot;;
-          # log = &quot;master@origin&quot;;
-        };
-      };
-      description = &quot;Jujutsu configuration settings&quot;;
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    home.packages = cfg.packages;
-
-    programs.jujutsu = {
-      enable = true;
-      settings = lib.mergeAttrs cfg.settings {
-        user = {
-          name = cfg.userName;
-          email = cfg.userEmail;
-        };
-      };
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;In my &lt;code&gt;home.nix&lt;/code&gt; I have this to enable it:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;custom = {
-    jj = {
-        enable = true;
-        userName = &quot;sayls8&quot;;
-        userEmail = &quot;sayls8@proton.me&quot;;
-        packages = &quot;&quot;;
-    };
-};
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/details&gt;
-&lt;p&gt;The &lt;code&gt;custom.jj&lt;/code&gt; module allows me to override the username, email, packages, and
-whether jj is enabled from a single, centralized place within my Nix
-configuration. So only if jj is enabled, &lt;code&gt;lazyjj&lt;/code&gt; and &lt;code&gt;meld&lt;/code&gt; will be installed.&lt;/p&gt;
-&lt;p&gt;With the above &lt;code&gt;gitpatch&lt;/code&gt; setup, say you did more work than you want to commit
-which is common with jj since it automatically tracks everything. I can now run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj commit -i
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;And an interactive diff will come up allowing you to choose what to include in
-the current commit. This also works for &lt;code&gt;jj split -i&lt;/code&gt; and &lt;code&gt;jj squash -i&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Example, using &lt;code&gt;jj commit -i&lt;/code&gt;:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;../images/jj-gitpatch.png&quot; alt=&quot;jj commit -i&quot; /&gt;&lt;/p&gt;
-&lt;p&gt;You can also use the &lt;code&gt;jj tug&lt;/code&gt; command to make pushing to a remote more
-straightforward. Since JJ’s bookmarks don’t automatically move as they do with
-Git, you can use &lt;code&gt;jj tug&lt;/code&gt; after you’ve made a few commits to move the bookmark
-that is closest to the parent commit of your current position to your current
-commit:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj tug
-jj git push
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The &lt;code&gt;tug&lt;/code&gt; alias works for both the squash and edit workflows. After running
-&lt;code&gt;jj tug&lt;/code&gt;, &lt;code&gt;jj git push&lt;/code&gt; should work. If you get an error saying no bookmarks to
-move, you can run &lt;code&gt;jj new&lt;/code&gt; and then run &lt;code&gt;jj tug&lt;/code&gt;, this happens when the bookmark
-is already at the parent commit.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# jj.nix
-mb = [&quot;bookmark&quot; &quot;set&quot; &quot;-r&quot; &quot;@&quot;];
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Another option would be to run &lt;code&gt;jj mb main&lt;/code&gt; before running &lt;code&gt;jj git push&lt;/code&gt; in this
-situation, but you will have to describe the commit first.&lt;/p&gt;
-&lt;h2&gt;Issues I’ve Noticed&lt;/h2&gt;
-&lt;p&gt;&lt;img src=&quot;../images/jj2.png&quot; alt=&quot;jj tree&quot; /&gt;&lt;/p&gt;
-&lt;p&gt;I have run into a few issues, such as every flake command reloading every single
-input every time. &lt;strong&gt;What I mean by this is what you see when you run a flake
-command for the first time, it adds all of your flakes inputs.&lt;/strong&gt; I believe the
-fix for this is deleting and regenerating your &lt;code&gt;flake.lock&lt;/code&gt;. The same thing can
-happen when you move your flake from one location to another.&lt;/p&gt;
-&lt;p&gt;JJ doesn’t seem to automatically track completely new files, running
-&lt;code&gt;git add /file/path.nix&lt;/code&gt; enables JJ to start tracking the new file.&lt;/p&gt;
-&lt;p&gt;That said, I recommend doing just that after running something like
-&lt;code&gt;jj git init --colocate&lt;/code&gt;. Delete your &lt;code&gt;flake.lock&lt;/code&gt; and run &lt;code&gt;nix flake update&lt;/code&gt;,
-&lt;code&gt;nix flake lock --recreate-lock-file&lt;/code&gt; still works but is being depreciated.&lt;/p&gt;
-&lt;p&gt;Sometimes the auto staging doesn’t pick up the changes in your configuration so
-rebuilding changes nothing, this has been more rare but happens occasionally.&lt;/p&gt;
-&lt;p&gt;One of the most fundamental differences between Jujutsu and Git is how pushing
-works. If you’re coming from Git, it’s important to understand this shift so you
-don’t get tripped up by “nothing happened” warnings or missing changes on your
-remote.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;In Git, you’re always “on” a branch (e.g., &lt;code&gt;main&lt;/code&gt;).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;When you make a commit, the branch pointer automatically moves forward.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;git push&lt;/code&gt; pushes the current branch’s new commits to the remote.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;If you forget to switch branches, you might accidentally push to the wrong
-place, but you rarely have to think about “moving” the branch pointer
-yourself.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;The JJ Push Model&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;JJ has no concept of a “currrent branch”&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Bookmarks &lt;strong&gt;do not&lt;/strong&gt; move automatically. When you make a new commit, the
-bookmark (e.g., &lt;code&gt;main&lt;/code&gt;) stays where it was. You must explicitly move it to
-your new commit with &lt;code&gt;jj bookmark set main&lt;/code&gt; (or create a new one).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;JJ only pushes commits that are referenced by bookmarks. If your latest work
-isn’t pointed to by a bookmark, &lt;code&gt;jj git push&lt;/code&gt; will do nothing and warn you.
-This is to prevent accidental pushes and gives you more control over what gets
-shared.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Typical JJ Push Workflow&lt;/strong&gt;&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Check out where your working copy and Parent commit are, you will notice that
-jj highlights the minimal amount of characters needed to reference this
-change:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy changes:
-M README.md
-Working copy  (@) : mnkrokmt 7f0558f8 say hello and goodbye
-Parent commit (@-): ywyvxrts 986d16f5 main | test3
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;We can see that &lt;code&gt;ywy&lt;/code&gt; is the &lt;code&gt;main&lt;/code&gt; branch so lets create our change on top of
-that. We can also see that it’s (&lt;code&gt;@-&lt;/code&gt;), and this is actually what &lt;code&gt;main&lt;/code&gt; will
-always be. Once I understood this everything came together.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new @-
-Working copy  (@) now at: kxwrsmmu bc7e8144 (empty) (no description set)
-Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
-Added 0 files, modified 1 files, removed 0 files
-jj desc @ -m &quot;Add a devShell&quot;
-Working copy  (@) now at: kxwrsmmu eacafd73 (empty) Add a devShell
-Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Being more explicit about your commands ensures both you and jj know where
-everything should go. (i.e. &lt;code&gt;jj desc @ -m&lt;/code&gt; explicitly describes &lt;code&gt;@&lt;/code&gt;, the working
-copy.) This will save you some headaches.&lt;/p&gt;
-&lt;p&gt;Our new change, the Working copy is now built off of &lt;code&gt;main&lt;/code&gt;. The working copy
-will always be (&lt;code&gt;@&lt;/code&gt;).&lt;/p&gt;
-&lt;p&gt;Make some changes&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy changes:
-A dev/flake.lock
-A dev/flake.nix
-Working copy  (@) : kxwrsmmu 42b011cd Add a devShell
-Parent commit (@-): ywyvxrts 986d16f5 main | test3
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now I’m done, and since we built this change on top of &lt;code&gt;main&lt;/code&gt; the following
-command will tell jj we know what we want to push:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set main
-jj git push
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If you forget to move a bookmark, JJ will warn you and nothing will be pushed.
-This is a safety feature, not a bug. That’s what the &lt;code&gt;mb&lt;/code&gt; alias does, moves the
-bookmark to the working copy.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# home-manager alias (move bookmark)
-mb = [&quot;bookmark&quot; &quot;set&quot; &quot;-r&quot; &quot;@&quot;];
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If you really have problems, &lt;code&gt;jj git push --change @&lt;/code&gt; explicitly pushes the
-working copy.&lt;/p&gt;
-&lt;p&gt;This is a bit different than Git and takes some getting used to but you don’t
-need to move the bookmark after every commit, just when you want to push. I know
-I’ve made the mistake of pushing to the wrong branch before this should prevent
-that.&lt;/p&gt;
-&lt;h2&gt;Here’s an example of using JJ in an existing Git repo&lt;/h2&gt;
-&lt;p&gt;Say I have my configuration flake in the &lt;code&gt;~/flakes/&lt;/code&gt; directory that is an
-existing Git repository. To use JJ as the front-end I could do something like:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/flakes
-jj git init --colocate
-Done importing changes from the underlying Git repo.
-Setting the revset alias `trunk()` to `main@origin`
-Initialized repo in &quot;.&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;By default, JJ defines &lt;code&gt;trunk()&lt;/code&gt; as the main development branch of your remote
-repository. This is usually set to &lt;code&gt;main@origin&lt;/code&gt;, but could be named something
-else. This means that whenever you use &lt;code&gt;trunk()&lt;/code&gt; in JJ commands, it will
-resolve to the latest commit on &lt;code&gt;main@origin&lt;/code&gt;. This makes it easier to refer
-to the main branch in scripts and commands without hardcoding the branch name.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Bookmarks&lt;/strong&gt; in jj are named pointers to specific revisions, similar to
-branches in Git. When you first run &lt;code&gt;jj git init --colocate&lt;/code&gt; in a git repo, you
-will likely get a Hint saying “Run the following command to keep local bookmarks
-updated on future pulls”.:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark list
-track main@origin
-
-jj st
-The working copy has no changes.
-Working copy  (@) : qzxomtxq 925eca75 (empty) (no description set)
-Parent commit (@-): qnpnrklz bf291074 main | notes
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This shows that running &lt;code&gt;jj git init --colocate&lt;/code&gt; automatically started tracking
-&lt;code&gt;main&lt;/code&gt; in this case. If it doesn’t, use &lt;code&gt;jj bookmark track main@origin&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;I’ll create a simple change in the &lt;code&gt;README.md&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy changes:
-M README.md
-Working copy  (@) : qzxomtxq b963dff0 (no description set)
-Parent commit (@-): qnpnrklz bf291074 main | notes
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can see that the working copy now contains a modified file &lt;code&gt;M README.md&lt;/code&gt; and
-has no description set. Lets give it a description before pushing to github.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc @ -m &quot;Added to README&quot;
-jj bookmark set main -r @
-Moved 1 bookmarks to pxwnopqo 1e6e08a2 main* | Added to README
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;jj bookmark set main -r @&lt;/code&gt; moves the &lt;code&gt;main&lt;/code&gt; bookmark to the current revision
-(the working copy), which is the explicit, recommended way to update bookmarks
-in JJ. Without this step, your bookmark will continue to point at the old
-commit, not your latest work. This is a major difference from Git.&lt;/p&gt;
-&lt;p&gt;And finally push to GitHub:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj git push
-Changes to push to origin:
-  Move forward bookmark main from bf291074125e to e2a75e45237b
-remote: Resolving deltas: 100% (1/1), completed with 1 local object.
-Warning: The working-copy commit in workspace &apos;default&apos; became immutable, so a new commit has been created on top of it.
-Working copy  (@) now at: pxwnopqo 8311444b (empty) (no description set)
-Parent commit (@-)      : qzxomtxq e2a75e45 main | Added to README
-&lt;/code&gt;&lt;/pre&gt;
-&lt;hr /&gt;
-&lt;h2&gt;Create a Repo without an existing Git Repo&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;Or&lt;/strong&gt; to do this in a directory that isn’t already a git repo you can do
-something like:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cargo new hello-world --vcs=none
-cd hello-world
-jj git init
-Initialized repo in &quot;.&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;hr /&gt;
-&lt;h3&gt;JJ and Git Side by Side&lt;/h3&gt;
-&lt;p&gt;Or for example, with Git if you wanted to move to a different branch before
-running &lt;code&gt;nix flake update&lt;/code&gt; to see if it introduced errors before merging with
-your main branch, you could do something like:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git checkout -b update-test
-
-nix flake update
-
-sudo nixos-rebuild test --flake .
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If you’re satisfied you can merge:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git checkout main
-git add . # Stage the change
-git commit -m &quot;update&quot;
-git merge update-test
-git branch -D update-test
-sudo nixos-rebuild switch --flake .
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;With JJ a similar workflow could be:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Run &lt;code&gt;jj st&lt;/code&gt; to see what you have:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-The working copy has no changes.
-Working copy  (@) : ttkstzzn 3f55c42c (empty) (no description set)
-Parent commit (@-): wppknozq e3558ef5 main@origin | jj diff
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If you don’t have a description set for the working copy set it now.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc @ -m &quot;enable vim&quot;
-jj st
-The working copy has no changes.
-Working copy  (@) : ttkstzzn 63fda123 (empty) enable vim
-Parent commit (@-): wppknozq e3558ef5 main@origin | jj diff
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Start from the working copy (which is mutable). The working copy in JJ is
-itself a commit that you can edit and squash changes into. Since &lt;code&gt;main&lt;/code&gt; is
-immutable, you can create your new change by working on top of the working
-copy commit.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Create a new change off of the working copy:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new @
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Make your edits:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy changes:
-M home/editors/vim.nix
-Working copy  (@) : qrsxltmt 494b5f18 (no description set)
-Parent commit (@-): wytnnnto a07e775c (empty) enable vim
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;4&quot;&gt;
-&lt;li&gt;Squash your changes into the new change:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj squash
-The working copy has no changes.
-Working copy  (@) : tmlwppnu ba06bb99 (empty) (no description set)
-Parent commit (@-): wytnnnto 52928ed9 enable vim
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This moves your working copy changes into the new commit you just created.&lt;/p&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;Describe the new change, this might feel weird but the &lt;code&gt;jj squash&lt;/code&gt; command
-created a new commit that you have to describe again:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc @ -m &quot;Enabled Vim&quot;
-Working copy  (@) : tmlwppnu 5c1569c3 (empty) Enabled Vim
-Parent commit (@-): wytnnnto 52928ed9 enable vim
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;6&quot;&gt;
-&lt;li&gt;Set the bookmark to the Parent commit that was squashed into:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set wyt
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;7&quot;&gt;
-&lt;li&gt;Finally Push to the remote repository:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj git push --allow-new
-Changes to push to origin:
-  Add bookmark wyt to 5c1569c35b22
-remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
-remote:
-remote: Create a pull request for &apos;wyt&apos; on GitHub by visiting:
-remote:      https://github.com/sayls8/flake/pull/new/wyt
-remote:
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This command does the following:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Uploads your bookmark and the associated commit to the remote repository
-(e.g., GitHub).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;If the bookmark is new (not present on the remote), &lt;code&gt;--allow-new&lt;/code&gt; tells JJ
-it’s okay to create it remotely.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;After pushing, GitHub (or your code host) will usually suggest creating a pull
-request for your new branch/bookmark, allowing you or your collaborators to
-review and merge the change into main.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Merging your Change into &lt;code&gt;main&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Option 1. Go to the URL suggested in the output, visit in this case:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;https://github.com/sayls8/flake/pull/new/wyt
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Click Create PR&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Click Merge PR if it shows it can merge cleanly.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Option 2.&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Switch to &lt;code&gt;main&lt;/code&gt; (if not already there):&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set main
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Create a new change that combines the new change with &lt;code&gt;main&lt;/code&gt;:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new tml wyt -m &quot;Merge: enable vim&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This creates a new commit with both &lt;code&gt;tml&lt;/code&gt; and &lt;code&gt;wyt&lt;/code&gt; as parents, which is how JJ
-handles merges (since &lt;code&gt;jj merge&lt;/code&gt; depreciated). JJ merges are additive and
-history-preserving by design especially for folks used to Git’s fast-forward and
-squash options.&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;Summary&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;With &lt;code&gt;jj&lt;/code&gt; you’re creating a new commit rather than a new branch.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Amending vs. Squashing: Git’s &lt;code&gt;git commit --amend&lt;/code&gt; updates the last commit.
-&lt;code&gt;jj squash&lt;/code&gt; combines the current commit with its parent, effectively doing the
-same thing in terms of history.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Merging: Git’s merge command is explicit. In &lt;code&gt;jj&lt;/code&gt;, the concept is similar, but
-since there’s no branch, you’re “merging” by moving your working commit to
-include these changes.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;No need to delete branches: Since there are no branches in &lt;code&gt;jj&lt;/code&gt;, there’s no
-equivalent to &lt;code&gt;git branch -D&lt;/code&gt; to clean up. Instead commits that are no longer
-needed can be “abandoned” with &lt;code&gt;jj abandon&lt;/code&gt; if you want to clean up your
-commit graph.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;jj describe&lt;/code&gt; without a flag just opens &lt;code&gt;$EDITOR&lt;/code&gt; where you can write your
-commit message save and exit.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;In &lt;code&gt;git&lt;/code&gt;, we finish a set of changes to our code by committing, but in &lt;code&gt;jj&lt;/code&gt; we
-start new work by creating a change, and &lt;em&gt;then&lt;/em&gt; make changes to our code. It’s
-more useful to write an initial description of your intended changes, and then
-refine it as you work, than it is creating a commit message after the fact.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;I have heard that jj can struggle with big repositories such as Nixpkgs and
-have noticed some issues here and there when using with NixOS. I’m hoping that
-as the project matures, it gets better on this front.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h2&gt;The 2 main JJ Workflows&lt;/h2&gt;
-&lt;h3&gt;The Squash Workflow&lt;/h3&gt;
-&lt;p&gt;This workflow is the most similar to Git and Git’s index.&lt;/p&gt;
-&lt;p&gt;The workflow:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;Describe the work we want to do with &lt;code&gt;jj desc -m &quot;message&quot;&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;We create a new empty change on top of that one with &lt;code&gt;jj new&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;When we are done with a feature, we run &lt;code&gt;jj squash&lt;/code&gt; to move the changes from
-&lt;code&gt;@&lt;/code&gt; into the change we described in step 1. &lt;code&gt;@&lt;/code&gt; is where your working copy is
-positioned currently.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;For example, let’s say we just ran &lt;code&gt;jj git init --colocate&lt;/code&gt; in our configuration
-Flake directory making it a &lt;code&gt;jj&lt;/code&gt; repo as well using git for backend.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd flake
-jj git init --colocate
-jj log
-@  lnmmxwko sayls8@proton.me 2025-06-27 10:14:57 1eac6aa0
-│  (empty) (no description set)
-○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 git_head() 5358483a
-│  (empty) jj
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The above log output shows that running &lt;code&gt;jj git init&lt;/code&gt; creates an empty working
-commit (&lt;code&gt;@&lt;/code&gt;) on top of the &lt;code&gt;git_head()&lt;/code&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;Switch from nixVim to NVF&quot;
-jj new  # Create a new empty change
-jj log
-@  nmnmznmm sayls8@proton.me 2025-06-27 10:16:30 52dd7ee0
-│  (empty) (no description set)
-○  lnmmxwko sayls8@proton.me 2025-06-27 10:16:24 git_head() 3e8f9f3a
-│  (empty) Switch from nixVim to NVF
-○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 5358483a
-│  (empty) jj
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The above log shows that running &lt;code&gt;jj desc&lt;/code&gt; changes the current (&lt;code&gt;@&lt;/code&gt;) commits
-description, and then &lt;code&gt;jj new&lt;/code&gt; creates a new empty commit on top of it, moving
-(&lt;code&gt;@&lt;/code&gt;) to this new empty commit.&lt;/p&gt;
-&lt;p&gt;The “Switch from nixVim to NVF” commit is now the parent of (&lt;code&gt;@&lt;/code&gt;).&lt;/p&gt;
-&lt;p&gt;Now, we’d make the necessary changes and to add them to the commit we just
-described in the previous steps.&lt;/p&gt;
-&lt;p&gt;The changes are automatically “staged” so theres no need to &lt;code&gt;git add&lt;/code&gt; them, so
-we just make the changes and squash them.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj squash  # Squash the commit into its parent commit (i.e., our named commit)
-jj log
-@  zsxsolsq sayls8@proton.me 2025-06-27 10:18:01 2c35d83f
-│  (empty) (no description set)
-○  lnmmxwko sayls8@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
-│  (empty) Switch from nixVim to NVF
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This shows &lt;code&gt;jj squashes&lt;/code&gt; effect, it merges the changes from the current (&lt;code&gt;@&lt;/code&gt;)
-commit into its parent. The (&lt;code&gt;@&lt;/code&gt;) then moves to this modified parent, and a new
-empty commit is created on top, ready for the next set of changes.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We’re still in the nameless commit and can either continue working or run
-&lt;code&gt;jj desc -m &quot;&quot;&lt;/code&gt; again describing our new change, then &lt;code&gt;jj new&lt;/code&gt; and &lt;code&gt;jj squash&lt;/code&gt;
-it’s pretty simple. The nameless commit is used as an adhoc staging area.&lt;/p&gt;
-&lt;p&gt;When you are ready to push, it’s important to know where your working copy
-currently is and if it’s attached to a bookmark. It’s common for &lt;code&gt;jj new&lt;/code&gt; to
-detach the head, all you have to do is tell JJ which branch to attach to, then
-push:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy changes:
-M hosts/magic/configuration.nix
-M hosts/magic/container.nix
-Working copy  (@) : youptvvn 988e6fc9 (no description set)
-Parent commit (@-): qlwqromx 4bb754fa mdbook container
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The above output means that the working copy has modifications (&lt;code&gt;M&lt;/code&gt;) in two
-files. And these changes are not yet committed.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj bookmark set main
-jj git push
-&lt;/code&gt;&lt;/pre&gt;
-&lt;hr /&gt;
-&lt;h3&gt;The Edit Workflow&lt;/h3&gt;
-&lt;p&gt;This workflow adds a few new commands &lt;code&gt;jj edit&lt;/code&gt;, and &lt;code&gt;jj next&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Here’s the workflow:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;Create a new change to work on the new feature with &lt;code&gt;jj new&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;If everything works exactly as planned, we’re done.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;If we realize we want to break this big change up into multiple smaller ones,
-we do it by making a new change before the current one, swapping to it, and
-making the necessary change.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Lastly, we go back to the main change.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;The squash workflow leaves &lt;code&gt;@&lt;/code&gt; at an empty undescribed change, with this
-workflow, &lt;code&gt;@&lt;/code&gt; will often be on the existing change.&lt;/p&gt;
-&lt;p&gt;If &lt;code&gt;@&lt;/code&gt; wasn’t at an empty change, we would start this workflow with:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new -m &quot;Switch from NVF to nixVim&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;since our &lt;code&gt;@&lt;/code&gt; is already at an empty change, we’ll just describe it and get
-started:&lt;/p&gt;
-&lt;p&gt;For this example, lets say we want to revert back to nixVim:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;Switch from NVF to nixVim&quot;
-jj log
-@  zsxsolsq sayls8@proton.me 2025-06-27 10:18:47 606abaa7
-│  (empty) Switch from NVF to nixVim
-○  lnmmxwko sayls8@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
-│  (empty) Switch from nixVim to NVF
-○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 5358483a
-│  (empty) jj
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Again, this shows &lt;code&gt;jj desc&lt;/code&gt; renaming the current empty &lt;code&gt;@&lt;/code&gt; commit.&lt;/p&gt;
-&lt;p&gt;We make the changes, and it’s pretty straightforward so we’re done, every change
-is automatically staged so we can just run &lt;code&gt;sudo nixos-rebuild switch --flake .&lt;/code&gt;
-now to apply the changes.&lt;/p&gt;
-&lt;p&gt;If we wanted to make more changes that aren’t described we can use &lt;code&gt;jj new -B&lt;/code&gt;
-which is similar to &lt;code&gt;git add -a&lt;/code&gt;.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new -B @ -m &quot;Adding LSP to nixVim&quot;
-Rebased 1 descendant commits
-Working copy  (@) now at: lpnxxxpo bf929946 (empty) Adding LSP to nixVim
-Parent commit (@-)      : lnmmxwko 485eaee9 (empty) Switch from nixVim to NVF
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The &lt;code&gt;-B&lt;/code&gt; tells jj to create the new change &lt;em&gt;before&lt;/em&gt; the current one and it
-creates a rebase. We created a change before the one we’re on, it automatically
-rebased our original change. This operation will &lt;em&gt;always&lt;/em&gt; succeed with jj, we
-will have our working copy at the commit we’ve just inserted.&lt;/p&gt;
-&lt;p&gt;You can see below that &lt;code&gt;@&lt;/code&gt; moved down one commit:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log
-○  zsxsolsq sayls8@proton.me 2025-06-27 10:22:03 ad0713b6
-│  (empty) Switch from NVF to nixVim
-@  lpnxxxpo sayls8@proton.me 2025-06-27 10:22:03 bf929946
-│  (empty) Adding LSP to nixVim
-○  lnmmxwko sayls8@proton.me 2025-06-27 10:18:01 git_head() 485eaee9
-│  (empty) Switch from nixVim to NVF
-○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 5358483a
-│  (empty) jj
-○  qnknltto sayls8@proton.me 2025-06-27 09:04:08 git_head()
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The “Adding LSP to nixVim” commit is directly above “Switch from nixVim to NVF”
-(the old &lt;code&gt;git_head()&lt;/code&gt;)&lt;/p&gt;
-&lt;p&gt;The “Switch from NVF to nixVim” commit (which was your &lt;code&gt;@&lt;/code&gt; before &lt;code&gt;jj new -B&lt;/code&gt;)
-is now above “Adding LSP to nixVim” in the log output, meaning “Adding LSP to
-nixVim” is its new parent.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;@&lt;/code&gt; has moved to “Adding LSP to nixVim”&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;jj log&lt;/code&gt; example output&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h2&gt;Operation Log and Undo&lt;/h2&gt;
-&lt;p&gt;JJ records every operation (commits, merges, rebases, etc.) in an operation log.
-You can view and undo previous operations, making it easy to recover from
-mistakes, a feature not present in Git’s core CLI&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj op log
-@  fbf6e626df22 jr@magic 15 minutes ago, lasted 9 milliseconds
-│  new empty commit
-│  args: jj new -B @ -m &apos;Adding LSP to nixVim&apos;
-○  bde40b7c17cf jr@magic 19 minutes ago, lasted 8 milliseconds
-│  describe commit 2c35d83f75031dc582bf28b64d4af1c218177f90
-│  args: jj desc -m &apos;Switch from NVF to nixVim&apos;
-○  3a2bfe1c0b0a jr@magic 19 minutes ago, lasted 8 milliseconds
-│  squash commits into 3e8f9f3a6a58fef86906e16e9b4375afb43e73e3
-│  args: jj squash
-○  80abcb58dcb6 jr@magic 21 minutes ago, lasted 8 milliseconds
-│  new empty commit
-│  args: jj new
-○  8c80314cbcd7 jr@magic 21 minutes ago, lasted 8 milliseconds
-│  describe commit 1eac6aa0b88ba014785ee9c1c2ad6e2abc6206e9
-│  args: jj desc -m &apos;Switch from nixVim to NVF&apos;
-○  44b5789cb4d1 jr@magic 22 minutes ago, lasted 6 milliseconds
-│  track remote bookmark main@origin
-│  args: jj bookmark track main@origin
-○  dbefee04aa85 jr@magic 23 minutes ago, lasted 4 milliseconds
-│  import git head
-│  args: jj git init --git-repo .
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj op undo &amp;lt;operation-id&amp;gt;
-# or
-jj op restore &amp;lt;operation-id&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;hr /&gt;
-&lt;h2&gt;Conflict Resolution&lt;/h2&gt;
-&lt;p&gt;In JJ, conflicts live inside commits and can be resolved at any time, not just
-during a merge. This makes rebasing and history editing safer and more flexible&lt;/p&gt;
-&lt;p&gt;JJ treats conflicts as first-class citizens: conflicts can exist inside commits,
-not just in the working directory. This means if a merge or rebase introduces a
-conflict, the conflicted state is saved in the commit itself, and you can
-resolve it at any time there’s no need to resolve conflicts immediately or use
-“&lt;code&gt;--continue&lt;/code&gt;” commands as in Git&lt;/p&gt;
-&lt;p&gt;Here’s how it works:&lt;/p&gt;
-&lt;p&gt;When you check out or create a commit with conflicts, JJ materializes the
-conflicts as markers in your files (similar to Git’s conflict markers)&lt;/p&gt;
-&lt;p&gt;You can resolve conflicts by editing the files to remove the markers, or by
-using:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj resolve
-&lt;/code&gt;&lt;/pre&gt;
-&lt;hr /&gt;
-&lt;h2&gt;Revsets&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&quot;https://jj-vcs.github.io/jj/latest/revsets/&quot;&gt;Jujutsu Revsets&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;JJ includes a powerful query language for selecting commits. For example:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log -r &quot;author(alice) &amp;amp; file(*.py)&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This command lists all commits by Alice that touch Python files.&lt;/p&gt;
-&lt;h2&gt;Filesets&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&quot;https://jj-vcs.github.io/jj/latest/filesets/&quot;&gt;Jujutsu Filesets&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Jujutsu supports a functional language for selecting a set of files. Expressions
-in this language are called “filesets” (the idea comes from Mercurial). The
-language consists of file patterns, operators, and functions. –JJ Docs&lt;/p&gt;
-&lt;h2&gt;Summary&lt;/h2&gt;
-&lt;p&gt;Jujutsu (jj) offers a streamlined, branchless, and undo-friendly approach to
-version control, fully compatible with Git but designed to be easier to use and
-reason about. Its workflows, operation log, and conflict handling provide a
-safer and more flexible environment for managing code changes, making it a
-compelling alternative for both new and experienced developers.&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;Resources&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://steveklabnik.github.io/jujutsu-tutorial/&quot;&gt;steves_jj_tutorial&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/jj-vcs/jj&quot;&gt;jj_github&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://jj-vcs.github.io/jj/latest/tutorial/&quot;&gt;official_tutorial&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://v5.chriskrycho.com/essays/jj-init/&quot;&gt;jj_init&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 </content></entry><entry><title>Functions and NixOS Modules</title><id>https://saylesss88.github.io/functions/functions_and_modules_2.2.html</id><updated>2025-11-30T00:00:00+00:00</updated><link href="https://saylesss88.github.io/functions/functions_and_modules_2.2.html" rel="alternate"/><content type="html">&lt;h1&gt;Functions and NixOS Modules&lt;/h1&gt;
