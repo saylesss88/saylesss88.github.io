@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Browsing Security</title><link>https://saylesss88.github.io/nix/browsing_security.html</link><description><![CDATA[<h1>Browser/Browsing Security</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Browsing Security</title><link>https://saylesss88.github.io/nix/browsing_security.html</link><description><![CDATA[<h1>Browser/Browsing Security: Defense in Depth</h1>
 <blockquote>
 <p>“The major problem with current systems is their inability to provide
 effective isolation between various programs running on one machine. E.g. if
@@ -6,21 +6,27 @@ the user’s Web browser gets compromised (due to a bug exploited by a malicious
 web site), the OS is usually unable to protect other user’s applications and
 data from also being compromised.” –Qubes arch-spec</p>
 </blockquote>
-<ul>
+<p>The web browser is the most complex, most exposed, and most vulnerable
+application on a hardened Linux system. It is your primary interface with the
+internet and, consequently, the primary vector for exploitation and tracking.</p>
+<p>The Three Pillars of Web Defense To secure your browsing, you must balance three
+often-conflicting goals:</p>
+<ol>
 <li>
-<p><strong>Security</strong>: reducing the chance a web bug leads to code execution / system
-compromise (sandboxing, isolation, hardening, fast patching). ​</p>
+<p><strong>Security (Exploit Mitigation)</strong>: Preventing malicious sites from escaping
+the browser sandbox to access your local files or execute code.</p>
 </li>
 <li>
-<p><strong>Privacy</strong>: reducing what websites/adtech learn about you (tracking
-protection, cookie partitioning, anti-fingerprinting). ​</p>
+<p><strong>Privacy (Tracking Protection)</strong>: Preventing advertisers and sites from
+linking your current session to your real-world identity or browsing history.</p>
 </li>
 <li>
-<p><strong>Anonymity</strong>: reducing linkability back to your real identity (standardized
-fingerprints + Tor routing). ​</p>
+<p><strong>Anonymity (Identity Obfuscation)</strong>: Making your traffic indistinguishable
+from thousands of other users to hide your physical location and legal
+identity.</p>
 </li>
-</ul>
-<h2>Methods Of Protection</h2>
+</ol>
+<h2>Methods of Protection</h2>
 <ul>
 <li>
 <p><strong>Browser hardening</strong> focuses on reducing attack surface and blocking tracking
@@ -581,8 +587,63 @@ features Tor created along with a VPN if you so choose.</p>
 <li><a href="https://mullvad.net/en/browser">Mullvad-Browser</a>, is in Nixpkgs as:
 <code>pkgs.mullvad-browser</code></li>
 </ul>
+<h2>Making Your Browser Amnesic, the Nix way</h2>
+<p><strong>Pro Tip</strong>: Even if you use a persistent home directory, you should mount your
+<code>~/.cache</code> folder to <code>tmpfs</code>.</p>
+<ul>
+<li>
+<p><strong>Performance</strong>: Browsers perform thousands of small read/writes to the cache.
+In-memory storage is significantly faster.</p>
+</li>
+<li>
+<p><strong>Disk Health</strong>: It prevents “SSD wear” from constant caching of temporary web
+assets.</p>
+</li>
+<li>
+<p><strong>Forensic Hygiene</strong>: It ensures that volatile “junk” like images, scripts,
+and stylesheets never touches your physical platter.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: This will <strong>not</strong> wipe your browser session (tabs, cookies,
+history), as those are stored in <code>~/.config</code>. If you want a truly “amnesic”
+browsing session that wipes everything on reboot, you must also mount your
+browser’s profile directory (e.g., <code>~/.mozilla</code> or <code>~/.config/BraveSoftware</code>)
+to <code>tmpfs</code>.</p>
+</blockquote>
+<pre><code class="language-nix">fileSystems."/home/youruser/.cache" = {
+  device = "none";
+  fsType = "tmpfs";
+  options = [ "size=4G" "mode=777" ]; # Use 700 for privacy
+};
+</code></pre>
+<p>Ensure it was applied with:</p>
+<pre><code class="language-bash">findmnt /home/youruser/.cache
+</code></pre>
+<p>You can apply the same <code>tmpfs</code> logic to your config folder. <strong>Warning</strong>: This
+will wipe your settings, extensions, and history every reboot.</p>
+<pre><code class="language-nix">fileSystems."/home/youruser/.config/BraveSoftware" = {
+  device = "none";
+  fsType = "tmpfs";
+  options = [
+  "size=4G"
+  "mode=700"
+  "noatime"
+  # Replace `1000` with the output of `id -u`
+  "uid=1000"
+  # Replace `100` with output of `id -g`
+  "gid=100"
+  ]; # Use 700 for privacy
+};
+</code></pre>
+<p><strong>How to find your UID/GID</strong></p>
+<p>If you’re unsure if you are <code>1000</code>, run <code>id -u</code> (for UID) and <code>id -g</code> (for GID)</p>
+<hr />
 <details>
-<summary> ✔️ Click to Expand Script to wipe cache and generate new `machine-id` </summary>
+<summary> ✔️ Example Script to wipe cache and generate new `machine-id` </summary>
+<p>If you followed the above “Nix way” of Amnesic cache, the following script is
+unnecessary, I’m leaving it here for now for those that are interested in
+changing their machine-id imperatively.</p>
 <ul>
 <li>
 <p><a href="https://www.man7.org/linux/man-pages/man5/machine-id.5.html">man page machine-id(5)</a></p>
