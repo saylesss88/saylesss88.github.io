@@ -39,7 +39,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9406bbd5.js";
+            window.path_to_searchindex_js = "searchindex-bf599594.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a3c81382.js"></script>
@@ -7939,6 +7939,7 @@ features Tor created along with a VPN if you so choose.</p>
 <code>pkgs.mullvad-browser</code></li>
 </ul>
 <h2 id="making-your-browser-amnesic-the-nix-way"><a class="header" href="#making-your-browser-amnesic-the-nix-way">Making Your Browser Amnesic, the Nix way</a></h2>
+<p><strong>Problem</strong>: Browsers leak data via <code>.cache</code> and <code>.config</code>.</p>
 <p><strong>Pro Tip</strong>: Even if you use a persistent home directory, you should mount your
 <code>~/.cache</code> folder to <code>tmpfs</code>.</p>
 <ul>
@@ -7973,6 +7974,9 @@ to <code>tmpfs</code>.</p>
 </code></pre>
 <p>You can apply the same <code>tmpfs</code> logic to your config folder. <strong>Warning</strong>: This
 will wipe your settings, extensions, and history every reboot.</p>
+<p>Manual <code>tmpfs</code> mounts in <code>configuration.nix</code> are powerful because they happen at
+the system level, but they require explicit ownership (<code>uid</code>/<code>gid</code>) to work with
+user-level applications.</p>
 <pre><code class="language-nix">fileSystems."/home/youruser/.config/BraveSoftware" = {
   device = "none";
   fsType = "tmpfs";
@@ -7988,7 +7992,10 @@ will wipe your settings, extensions, and history every reboot.</p>
 };
 </code></pre>
 <p><strong>How to find your UID/GID</strong></p>
-<p>If you’re unsure if you are <code>1000</code>, run <code>id -u</code> (for UID) and <code>id -g</code> (for GID)</p>
+<pre><code class="language-bash">id -u &amp;&amp; id -g
+</code></pre>
+<p>Replece the above <code>uid=</code>, and <code>gid=</code> values with the output of the above
+command.</p>
 <hr><details>
 <summary> ✔️ Example Script to wipe cache and generate new `machine-id` </summary>
 <p>If you followed the above “Nix way” of Amnesic cache, the following script is

@@ -589,6 +589,7 @@ features Tor created along with a VPN if you so choose.&lt;/p&gt;
 &lt;code&gt;pkgs.mullvad-browser&lt;/code&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2&gt;Making Your Browser Amnesic, the Nix way&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Problem&lt;/strong&gt;: Browsers leak data via &lt;code&gt;.cache&lt;/code&gt; and &lt;code&gt;.config&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Pro Tip&lt;/strong&gt;: Even if you use a persistent home directory, you should mount your
 &lt;code&gt;~/.cache&lt;/code&gt; folder to &lt;code&gt;tmpfs&lt;/code&gt;.&lt;/p&gt;
 &lt;ul&gt;
@@ -623,6 +624,9 @@ to &lt;code&gt;tmpfs&lt;/code&gt;.&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;You can apply the same &lt;code&gt;tmpfs&lt;/code&gt; logic to your config folder. &lt;strong&gt;Warning&lt;/strong&gt;: This
 will wipe your settings, extensions, and history every reboot.&lt;/p&gt;
+&lt;p&gt;Manual &lt;code&gt;tmpfs&lt;/code&gt; mounts in &lt;code&gt;configuration.nix&lt;/code&gt; are powerful because they happen at
+the system level, but they require explicit ownership (&lt;code&gt;uid&lt;/code&gt;/&lt;code&gt;gid&lt;/code&gt;) to work with
+user-level applications.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;fileSystems.&quot;/home/youruser/.config/BraveSoftware&quot; = {
   device = &quot;none&quot;;
   fsType = &quot;tmpfs&quot;;
@@ -638,7 +642,10 @@ will wipe your settings, extensions, and history every reboot.&lt;/p&gt;
 };
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;strong&gt;How to find your UID/GID&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;If you’re unsure if you are &lt;code&gt;1000&lt;/code&gt;, run &lt;code&gt;id -u&lt;/code&gt; (for UID) and &lt;code&gt;id -g&lt;/code&gt; (for GID)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;id -u &amp;amp;&amp;amp; id -g
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Replece the above &lt;code&gt;uid=&lt;/code&gt;, and &lt;code&gt;gid=&lt;/code&gt; values with the output of the above
+command.&lt;/p&gt;
 &lt;hr /&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Example Script to wipe cache and generate new `machine-id` &lt;/summary&gt;
