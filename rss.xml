@@ -20,6 +20,36 @@ protection, cookie partitioning, anti-fingerprinting). ​</p>
 fingerprints + Tor routing). ​</p>
 </li>
 </ul>
+<h2>Methods Of Protection</h2>
+<ul>
+<li>
+<p><strong>Browser hardening</strong> focuses on reducing attack surface and blocking tracking
+by disabling or restricting features like JavaScript, cookies, telemetry, and
+third-party scripts.</p>
+</li>
+<li>
+<p><strong>Fingerprint protection</strong>, on the other hand, aims to make your browser
+indistinguishable from others. Instead of just blocking data collection, it
+ensures that your browser’s configuration; screen size, fonts, user agent,
+etc. matches a large group of users, so you blend in.</p>
+</li>
+<li>
+<p><strong>Anonymity</strong>: Maximizing anonymity often means restricting or masking
+features (setting a generic fingerprint, disabling browser APIs, blocking
+trackers) so the browser blends in with many others. This reduces uniqueness
+but can break website functionality, cause CAPTCHAs, and limit usability.</p>
+</li>
+<li>
+<p><strong>Browser compartmentalization</strong> is a technique where different browsers are
+dedicated to distinct online activities to isolate cookies, trackers, and
+browsing data. For example, Mullvad Browser can be used solely for activities
+where fingerprinting resistance is critical, such as anonymous browsing or
+visiting privacy-sensitive sites. Meanwhile, a hardened LibreWolf or Firefox
+can be used for general browsing, email, or banking where you want solid
+security and feature flexibility but aren’t as concerned about fingerprint
+uniqueness.</p>
+</li>
+</ul>
 <p>On a hardened Linux system, the browser is most often the weakest link exposed
 to the internet, and so security, privacy, and anti-tracking features of
 browsers are now as important, or even more important than platform-level
@@ -35,6 +65,26 @@ consistent fingerprint (Tor Browser / Mullvad Browser). If the goal is mainly
 reducing cross-site tracking for normal browsing, a hardened Firefox/LibreWolf
 profile with minimal extensions is usually easier to live with.</p>
 <h3>Fingerprinting</h3>
+<p>Modern web APIs make rich, customized experiences possible, but they also reveal
+enough low‑level details about your device and browser to build a unique
+fingerprint. This fingerprint can be used for hidden, persistent tracking, even
+when cookies are blocked.</p>
+<p>Browser fingerprinting is a tracking technique, often done by third-party
+companies that specialize in it. They provide code (usually JavaScript) that a
+website owner can embed on their site. When you visit the site, the script runs
+in the background, silently collecting data about your device and browser.</p>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Entropy_(computing)">Entropy</a>: in this
+context, is a measure of how much unique information a specific browser
+feature contributes to your fingerprint. It’s often quantified in <strong>bits of
+entropy</strong>, where higher bits mean more uniqueness (i.e., easier to identify
+you).
+<ul>
+<li>A “bit” is a basic unit of information for computers. Entropy measuring
+sites results are measured in “bits of identifying information”.</li>
+</ul>
+</li>
+</ul>
 <p>There are two main approaches to obfuscating your fingerprint:</p>
 <ul>
 <li>
@@ -71,36 +121,47 @@ track.</p>
 </ul>
 <hr />
 <h3>Browsers</h3>
-<p>I currently run NixOS in a VM with a secureblue host and my default browser is
-<a href="https://github.com/secureblue/Trivalent">Trivalent</a>, a security-focused,
-Chromium-based browser.</p>
+<p>I currently run NixOS in a VM with a secureblue host,
+<a href="https://github.com/secureblue/Trivalent">Trivalent</a> is my default browser, a
+security-focused, Chromium-based browser.</p>
+<p>In this section, the goal is to outline several browser options on NixOS and
+show concrete configurations (with a focus on LibreWolf that can be adapted to
+Firefox). Browsers are complicated and people have different security, privacy,
+and usability needs, so this is not an endorsement of a single “best” choice.
+Instead, the following subsections describe trade-offs and example setups so you
+can decide which browser and configuration best match your own threat model and
+workflow.</p>
 <h4>Firefox</h4>
-<p>My understanding here is evolving, Firefox on Linux may be very privacy friendly
-after some tweaks, but is not necessarily a secure browser.</p>
-<p>Firefox’s defaults are not privacy respecting or secure but allows a high level
-of customization to make it so. Firefox will be patched with security fixes
-sooner than any fork, and some forks are slow to apply the updates leaving a
-vulnerability open longer to exploit.</p>
-<p>The Tor Uplift Project was a collaboration between the Tor Project and Mozilla
-to integrate key privacy and anti-fingerprinting features from the Tor Browser
-into Firefox. This enables us to enable/disable a few settings and remove the
-need for most add-ons.</p>
-<p>If you use Firefox’s ETP, RFP, and other protections provided by the ghacks or
-Arkenfox scripts alongside uBlock configured to use dynamic filtering you can
-accomplish what it used to take 10 extensions to do.</p>
-<p>Firefox does implement Site Isolation with its Project Fission. This is much
-less mature than Chromes site isolation and often disabled by default on
-different versions of Firefox. To ensure it’s enabled, go to <code>about:config</code> and
-check that both <code>fission.autostart</code>, and <code>gfx.webrender.all</code> prefs are set to
-<code>true</code>.</p>
-<p>With uBlock you can <code>Disable JavaScript</code> which functions similar to NoScript,
-enable numerous blocklists and more.</p>
+<p>Firefox is kind of its own thing: it runs on Gecko, not on Chromium or WebKit,
+so it’s one of the only mainstream browsers that isn’t just another Chrome fork.
+That uniqueness matters if you care about engine diversity and not having the
+entire web effectively dictated by a single vendor. It’s also very tweakable, so
+if you’re willing to flip some prefs and add a couple of key extensions, you can
+turn it into a solid privacy‑focused daily driver without giving up a
+non‑Chromium stack.</p>
+<p>Firefox will usually get security fixes sooner than any fork, and some forks lag
+behind on patching, which can leave known vulnerabilities exploitable for
+longer. If you use Firefox’s built‑in Enhanced Tracking Protection (ETP), Resist
+Fingerprinting (RFP), and hardening templates like ghacks or Arkenfox together
+with uBlock Origin configured for dynamic filtering, you can replicate what used
+to require a pile of separate extensions.</p>
+<h4>Site Isolation &amp; Firefox Links</h4>
+<p>Firefox does implement Site Isolation via Project Fission, but it’s newer and
+historically less mature than Chromium’s site‑per‑process model, and it may not
+be enabled everywhere by default. To check that it is active, go to about:config
+and ensure both fission.autostart and gfx.webrender.all are set to true.</p>
+<p>With uBlock Origin you can disable JavaScript per‑site (similar to NoScript),
+enable a bunch of high‑quality blocklists, and selectively relax rules when a
+trusted site breaks. To turn on Enhanced Tracking Protection and fingerprinting
+protections in the UI, go to Settings -&gt; Privacy &amp; Security -&gt; Enhanced Tracking
+Protection -&gt; Custom; if that causes breakage on a particular website, click the
+shield icon in the URL bar and disable protections just for that site.</p>
 <ul>
 <li><a href="https://github.com/gorhill/uBlock/wiki">uBlock Wiki</a></li>
 </ul>
 <p>To enable Enhanced Tracking Protection and FPP, go to
 <code>Settings -&gt; Privacy &amp; Security</code> -&gt; <code>Enhanced Tracking Protection -&gt; Custom</code>. If
-it causes breakage, while on the broken site, click the sheild next to the
+it causes breakage, while on the broken site, click the shield next to the
 search bar. From there you can turn off ETP for <strong>just that site</strong>.</p>
 <p>Once you select <code>Custom</code>, you’ll see that among the options is to block
 <code>Known fingerprinters</code> as well as <code>Suspected fingerprinters</code>. The “Known
@@ -109,20 +170,56 @@ Fingerprinters” protection works by blocking scripts listed in
 For most users they suggest using the above FPP to avoid breakage. To go further
 and enable RFP, go to <code>about:config</code> and set <code>privacy.resistFingerprinting</code> to
 <code>true</code>.</p>
+<details>
+<summary> ✔️ Further Reading on Firefox Defenses </summary>
 <ul>
 <li>
 <p><a href="https://support.mozilla.org/en-US/kb/resist-fingerprinting">Mozilla Resist Fingerprinting</a></p>
-</li>
-<li>
-<p><a href="https://wiki.mozilla.org/Project_Fission">Mozilla Project_Fission</a>, Firefox’s
-implementation of Site Isolation.</p>
 <ul>
 <li>To ensure Site Isolation is enabled, in <code>about:config</code>, set
 <code>fission.autostart</code>, and <code>gfx.webrender.all</code> prefs to <code>true</code>.(It’s disabled
 by default on android).</li>
 </ul>
 </li>
+<li>
+<p><a href="https://en.wikipedia.org/wiki/Entropy_(computing)">Entropy</a>: in this
+context, is a measure of how much unique information a specific browser
+feature contributes to your fingerprint. It’s often quantified in <strong>bits of
+entropy</strong>, where higher bits mean more uniqueness (i.e., easier to identify
+you).</p>
+<ul>
+<li>A “bit” is a basic unit of information for computers. Entropy measuring
+sites results are measured in “bits of identifying information”.</li>
 </ul>
+</li>
+<li>
+<p><a href="https://developer.mozilla.org/en-US/docs/Glossary/Origin">Origin</a>: Web
+content’s <em>origin</em> is defined by the <em>scheme</em> (protocol), <em>hostname</em> (domain),
+and port of the URL used to access it. Two objects have the same origin only
+when the scheme, hostname, and port all match.</p>
+</li>
+<li>
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy">Same-origin policy</a>:
+is a critical security mechanism that restricts how a document or script
+loaded by one origin can interact with a resource from another origin. It
+helps isolate potentially malicious documents, reducing possible attack
+vectors.</p>
+</li>
+<li>
+<p><a href="https://blog.mozilla.org/security/2021/05/18/introducing-site-isolation-in-firefox/">Firefox Site-Isolation</a>.
+Firefox does provide site-isolation as well.</p>
+</li>
+<li>
+<p><a href="https://www.mozilla.org/en-US/security/advisories/mfsa2018-01/">Protection from side-channel attacks</a></p>
+</li>
+<li>
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/Security/Insecure_passwords">MDN Insecure passwords</a></p>
+<ul>
+<li><a href="https://blog.mozilla.org/tanvi/2016/01/28/no-more-passwords-over-http-please/">Risks of reused passwords</a></li>
+</ul>
+</li>
+</ul>
+</details>
 <hr />
 <h2>LibreWolf</h2>
 <p><strong>LibreWolf</strong> is an open-source fork of Firefox with a strong focus on privacy,
@@ -276,10 +373,6 @@ add the <code>search?q=%s</code> to the end of it. For example, I’m using
 </blockquote>
 <p>Searx is a bit different, you can choose which search engine you want for your
 current search with <code>!ddg search term</code> to use duckduckgo for example.</p>
-<p>Firefox Relay is a pretty cool privacy tool too, it gives you temporary email
-and phone number aliases so you don’t have to give out your real ones. There is
-an autofill option available also, but you can just click on the Relay button
-and generate a new alias and use it like your normal email.</p>
 <details>
 <summary> ✔️ Alternative LibreWolf Configuration utilizing Arkenfox </summary>
 <pre><code class="language-nix">{
