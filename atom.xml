@@ -1,5 +1,593 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>JJ VCS</title><id>https://saylesss88.github.io/vcs/jujutsu.html</id><updated>2025-12-08T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/jujutsu.html" rel="alternate"/><content type="html">&lt;h1&gt;Version Control with JJ&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>Browsing Security</title><id>https://saylesss88.github.io/nix/browsing_security.html</id><updated>2025-12-21T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/browsing_security.html" rel="alternate"/><content type="html">&lt;h1&gt;Browser/Browsing Security&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“The major problem with current systems is their inability to provide
+effective isolation between various programs running on one machine. E.g. if
+the user’s Web browser gets compromised (due to a bug exploited by a malicious
+web site), the OS is usually unable to protect other user’s applications and
+data from also being compromised.” –Qubes arch-spec&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Security&lt;/strong&gt;: reducing the chance a web bug leads to code execution / system
+compromise (sandboxing, isolation, hardening, fast patching). ​&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Privacy&lt;/strong&gt;: reducing what websites/adtech learn about you (tracking
+protection, cookie partitioning, anti-fingerprinting). ​&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Anonymity&lt;/strong&gt;: reducing linkability back to your real identity (standardized
+fingerprints + Tor routing). ​&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;On a hardened Linux system, the browser is most often the weakest link exposed
+to the internet, and so security, privacy, and anti-tracking features of
+browsers are now as important, or even more important than platform-level
+protections.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;Browsers leak identity in two main ways: &lt;strong&gt;network identifiers&lt;/strong&gt; (IP address,
+DNS, TLS metadata) and &lt;strong&gt;browser identifiers&lt;/strong&gt; (fingerprinting + tracking). This
+chapter focuses on the browser side first, then covers when a VPN or Tor changes
+the network side. Before tweaking anything, pick the browsing goal (anonymity vs
+privacy vs convenience), because the “best” settings differ.&lt;/p&gt;
+&lt;p&gt;If the goal is blending in, prefer a browser that ships with a shared,
+consistent fingerprint (Tor Browser / Mullvad Browser). If the goal is mainly
+reducing cross-site tracking for normal browsing, a hardened Firefox/LibreWolf
+profile with minimal extensions is usually easier to live with.&lt;/p&gt;
+&lt;h3&gt;Fingerprinting&lt;/h3&gt;
+&lt;p&gt;There are two main approaches to obfuscating your fingerprint:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Standardization&lt;/strong&gt;: Make browsers standardized and therefore have the same
+fingerprint to blend into a crowd. This is what Tor and Mullvad Browser do.
+Best for anonymity; increases the crowd you blend into, but may decrease
+usability (site breakage, CAPTCHAs); adversaries may still find subtle
+differences.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Randomization&lt;/strong&gt;: Randomize fingerprint metrics so it’s not directly linkable
+to you. Brave has this feature, if you run coveryourtracks with Brave you will
+get a result of “your browser has a randomized fingerprint”. This is good for
+privacy but may be detectable by advanced scripts.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Fingerprint Testing&lt;/h3&gt;
+&lt;p&gt;You can test your browser to see how well you are protected from tracking and
+fingerprinting at &lt;a href=&quot;https://coveryourtracks.eff.org/&quot;&gt;Cover Your Tracks&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Also check out, &lt;a href=&quot;https://amiunique.org/fingerprint&quot;&gt;Am I Unique&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ WARNING: Don’t put too much weight into the results as people often check
+their fingerprint, change one metric and check it again over and over skewing
+the results. It is helpful for knowing the fingerprint values that trackers
+track.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://forum.torproject.org/t/browser-fingerprinting/1228/25&quot;&gt;Browser Fingerprinting Tor Forum&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://madaidans-insecurities.github.io/browser-tracking.html&quot;&gt;Madaidans Hot Take on Browser Tracking&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Browsers&lt;/h3&gt;
+&lt;p&gt;I currently run NixOS in a VM with a secureblue host and my default browser is
+&lt;a href=&quot;https://github.com/secureblue/Trivalent&quot;&gt;Trivalent&lt;/a&gt;, a security-focused,
+Chromium-based browser.&lt;/p&gt;
+&lt;h4&gt;Firefox&lt;/h4&gt;
+&lt;p&gt;My understanding here is evolving, Firefox on Linux may be very privacy friendly
+after some tweaks, but is not necessarily a secure browser.&lt;/p&gt;
+&lt;p&gt;Firefox’s defaults are not privacy respecting or secure but allows a high level
+of customization to make it so. Firefox will be patched with security fixes
+sooner than any fork, and some forks are slow to apply the updates leaving a
+vulnerability open longer to exploit.&lt;/p&gt;
+&lt;p&gt;The Tor Uplift Project was a collaboration between the Tor Project and Mozilla
+to integrate key privacy and anti-fingerprinting features from the Tor Browser
+into Firefox. This enables us to enable/disable a few settings and remove the
+need for most add-ons.&lt;/p&gt;
+&lt;p&gt;If you use Firefox’s ETP, RFP, and other protections provided by the ghacks or
+Arkenfox scripts alongside uBlock configured to use dynamic filtering you can
+accomplish what it used to take 10 extensions to do.&lt;/p&gt;
+&lt;p&gt;Firefox does implement Site Isolation with its Project Fission. This is much
+less mature than Chromes site isolation and often disabled by default on
+different versions of Firefox. To ensure it’s enabled, go to &lt;code&gt;about:config&lt;/code&gt; and
+check that both &lt;code&gt;fission.autostart&lt;/code&gt;, and &lt;code&gt;gfx.webrender.all&lt;/code&gt; prefs are set to
+&lt;code&gt;true&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;With uBlock you can &lt;code&gt;Disable JavaScript&lt;/code&gt; which functions similar to NoScript,
+enable numerous blocklists and more.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/gorhill/uBlock/wiki&quot;&gt;uBlock Wiki&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To enable Enhanced Tracking Protection and FPP, go to
+&lt;code&gt;Settings -&amp;gt; Privacy &amp;amp; Security&lt;/code&gt; -&amp;gt; &lt;code&gt;Enhanced Tracking Protection -&amp;gt; Custom&lt;/code&gt;. If
+it causes breakage, while on the broken site, click the sheild next to the
+search bar. From there you can turn off ETP for &lt;strong&gt;just that site&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Once you select &lt;code&gt;Custom&lt;/code&gt;, you’ll see that among the options is to block
+&lt;code&gt;Known fingerprinters&lt;/code&gt; as well as &lt;code&gt;Suspected fingerprinters&lt;/code&gt;. The “Known
+Fingerprinters” protection works by blocking scripts listed in
+&lt;a href=&quot;https://disconnect.me/trackerprotection#categories_of_trackers&quot;&gt;Disconnect’s fingerprinting list&lt;/a&gt;
+For most users they suggest using the above FPP to avoid breakage. To go further
+and enable RFP, go to &lt;code&gt;about:config&lt;/code&gt; and set &lt;code&gt;privacy.resistFingerprinting&lt;/code&gt; to
+&lt;code&gt;true&lt;/code&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://support.mozilla.org/en-US/kb/resist-fingerprinting&quot;&gt;Mozilla Resist Fingerprinting&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.mozilla.org/Project_Fission&quot;&gt;Mozilla Project_Fission&lt;/a&gt;, Firefox’s
+implementation of Site Isolation.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;To ensure Site Isolation is enabled, in &lt;code&gt;about:config&lt;/code&gt;, set
+&lt;code&gt;fission.autostart&lt;/code&gt;, and &lt;code&gt;gfx.webrender.all&lt;/code&gt; prefs to &lt;code&gt;true&lt;/code&gt;.(It’s disabled
+by default on android).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;LibreWolf&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;LibreWolf&lt;/strong&gt; is an open-source fork of Firefox with a strong focus on privacy,
+security, and user freedom. LibreWolf enables always HTTPS, includes
+uBlockOrigin, and only includes privacy focused search engines by default.&lt;/p&gt;
+&lt;p&gt;Example LibreWolf config implementing many of the STIG recommendations:&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to expand LibreWolf Example &lt;/summary&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# librewolf.nix
+{pkgs, lib, config, ...}: let
+  cfg = config.custom.librewolf;
+in {
+  options.custom.librewolf = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = &quot;Enable the LibreWolf Module&quot;;
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    programs.librewolf = {
+      enable = true;
+      policies = {
+        # A bit annoying
+        DontCheckDefaultBrowser = true;
+        # Pocket is insecure according to DoD
+        DisablePocket = true;
+        # No imperative updates
+        DisableAppUpdate = true;
+      };
+      settings = {
+        # // SV-16925 - DTBF030
+        &quot;security.enable_tls&quot; = true;
+        # // SV-16925 - DTBF030
+        &quot;security.tls.version.min&quot; = 2;
+        # // SV-16925 - DTBF030
+        &quot;security.tls.version.max&quot; = 4;
+
+        # // SV-111841 - DTBF210
+        &quot;privacy.trackingprotection.fingerprinting.enabled&quot; = true;
+
+        # // V-252881 - Retaining Data Upon Shutdown
+        &quot;browser.sessionstore.privacy_level&quot; = 0;
+
+        # // SV-251573 - Customizing the New Tab Page
+        &quot;browser.newtabpage.activity-stream.enabled&quot; = false;
+        &quot;browser.newtabpage.activity-stream.feeds.section.topstories&quot; = false;
+        &quot;browser.newtabpage.activity-stream.showSponsored&quot; = false;
+        &quot;browser.newtabpage.activity-stream.feeds.snippets&quot; = false;
+
+        # // V-251580 - Disabling Feedback Reporting
+        &quot;browser.chrome.toolbar_tips&quot; = false;
+        &quot;browser.selfsupport.url&quot; = &quot;&quot;;
+        &quot;extensions.abuseReport.enabled&quot; = false;
+        &quot;extensions.abuseReport.url&quot; = &quot;&quot;;
+
+        # // V-251558 - Controlling Data Submission
+        &quot;datareporting.policy.dataSubmissionEnabled&quot; = false;
+        &quot;datareporting.healthreport.uploadEnabled&quot; = false;
+        &quot;datareporting.policy.firstRunURL&quot; = &quot;&quot;;
+        &quot;datareporting.policy.notifications.firstRunURL&quot; = &quot;&quot;;
+        &quot;datareporting.policy.requiredURL&quot; = &quot;&quot;;
+
+        # // V-252909 - Disabling Firefox Studies
+        &quot;app.shield.optoutstudies.enabled&quot; = false;
+        &quot;app.normandy.enabled&quot; = false;
+        &quot;app.normandy.api_url&quot; = &quot;&quot;;
+
+        # // V-252908 - Disabling Pocket
+        &quot;extensions.pocket.enabled&quot; = false;
+
+        # // V-251555 - Preventing Improper Script Execution
+        &quot;dom.disable_window_flip&quot; = true;
+
+        # // V-251554 - Restricting Window Movement and Resizing
+        &quot;dom.disable_window_move_resize&quot; = true;
+
+        # // V-251551 - Disabling Form Fill Assistance
+        &quot;browser.formfill.enable&quot; = false;
+
+        # // V-251550 - Blocking Unauthorized MIME Types
+        &quot;plugin.disable_full_page_plugin_for_types&quot; = &quot;application/pdf,application/fdf,application/xfdf,application/lso,application/lss,application/iqy,application/rqy,application/lsl,application/xlk,application/xls,application/xlt,application/pot,application/pps,application/ppt,application/dos,application/dot,application/wks,application/bat,application/ps,application/eps,application/wch,application/wcm,application/wb1,application/wb3,application/rtf,application/doc,application/mdb,application/mde,application/wbk,application/ad,application/adp&quot;;
+      };
+    };
+    xdg.desktopEntries.librewolf = {
+      name = &quot;LibreWolf&quot;;
+      exec = &quot;${pkgs.librewolf}/bin/librewolf&quot;;
+    };
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        &quot;text/html&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/http&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/https&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/about&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/unknown&quot; = &quot;librewolf.desktop&quot;;
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And enable it in your &lt;code&gt;home.nix&lt;/code&gt; or equivalent with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# home.nix
+custom.librewolf.enable = true;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;xdg&lt;/code&gt; settings at the end make LibreWolf the defaults for what is listed.&lt;/p&gt;
+&lt;p&gt;Thanks to &lt;code&gt;JosefKatic&lt;/code&gt; for putting the above STIG settings in NixOS format.&lt;/p&gt;
+&lt;p&gt;Also, go to
+&lt;a href=&quot;https://accounts.firefox.com/settings#data-collection&quot;&gt;accounts.firefox&lt;/a&gt; and
+turn off “Allow Mozilla accounts to send technical and interaction data to
+Mozilla”. Also set 2-fa in
+&lt;a href=&quot;https://accounts.firefox.com/settings#security&quot;&gt;Security Settings&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;I always set &lt;code&gt;Max Protection&lt;/code&gt; for DNS over HTTPS and personally set a custom
+resolver to &lt;code&gt;https://dns.quad9.net/dns-query&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Mullvad is also a good option:
+&lt;a href=&quot;https://mullvad.net/en/help/no-logging-data-policy&quot;&gt;Mullvad no-logging-data-policy&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;Search Defaults&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;Startpage&lt;/strong&gt;: Advertised as the world’s most private search engine. “Startpage
+delivers Google search results via their proprietary personal data protection
+technology.”&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.startpage.com/&quot;&gt;Startpage&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;To add Startpage as a search engine, add
+&lt;code&gt;https://www.startpage.com/sp/search?query=%s&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;SearXNG&lt;/strong&gt; an open-source, privacy-respecting metasearch engine that aggregates
+results from various search services, such as Google, DuckDuckGo, etc. without
+tracking you or profiling your searches. You can add SearXNG to firefox by going
+to &lt;code&gt;about:preferences#search&lt;/code&gt; and at the bottom click &lt;code&gt;Add&lt;/code&gt;, URL will be
+&lt;code&gt;https://searx.be/search?q=%s&lt;/code&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗️ NOTE: SearXNGs google results are not working as of 11-17-25 and haven’t
+for a while now leading to bad results being returned for most instances. It’s
+my understanding this is because Google is actively blocking automated
+requests from SearXNG. Devs sometimes publish patches or workarounds, but
+these are quickly blocked when Google changes their back-end.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗️ NOTE: The above searx is the default and doesn’t give many relevant
+results. To get relevant results find a
+&lt;a href=&quot;https://searx.space/&quot;&gt;public instance&lt;/a&gt; with a good rating from your area and
+add the &lt;code&gt;search?q=%s&lt;/code&gt; to the end of it. For example, I’m using
+&lt;code&gt;https://priv.au/search?q=%s&lt;/code&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Searx is a bit different, you can choose which search engine you want for your
+current search with &lt;code&gt;!ddg search term&lt;/code&gt; to use duckduckgo for example.&lt;/p&gt;
+&lt;p&gt;Firefox Relay is a pretty cool privacy tool too, it gives you temporary email
+and phone number aliases so you don’t have to give out your real ones. There is
+an autofill option available also, but you can just click on the Relay button
+and generate a new alias and use it like your normal email.&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Alternative LibreWolf Configuration utilizing Arkenfox &lt;/summary&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  pkgs,
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.librewolf;
+in {
+  options.custom.librewolf = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = &quot;Enable the LibreWolf Module&quot;;
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    programs.librewolf = {
+      enable = true;
+      policies = {
+        DontCheckDefaultBrowser = true;
+        DisablePocket = true;
+        DisableAppUpdate = true;
+      };
+      profiles.my-default = {
+        isDefault = true;
+        name = &quot;Default Profile&quot;;
+        extraConfig = &apos;&apos;
+          ${builtins.readFile ./user.js}
+          &quot;general.autoScroll&quot; = true;
+          &quot;sidebar.verticalTabs&quot; = true;
+        &apos;&apos;;
+
+        settings = {
+        };
+      };
+    };
+    xdg.desktopEntries.librewolf = {
+      name = &quot;LibreWolf&quot;;
+      exec = &quot;${pkgs.librewolf}/bin/librewolf&quot;;
+    };
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        &quot;text/html&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/http&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/https&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/about&quot; = &quot;librewolf.desktop&quot;;
+        &quot;x-scheme-handler/unknown&quot; = &quot;librewolf.desktop&quot;;
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Download the
+&lt;a href=&quot;https://github.com/arkenfox/user.js/blob/master/user.js&quot;&gt;Arkenfox user.js&lt;/a&gt; and
+review it making sure that you agree with the settings. If you do, place it in
+the same directory as your &lt;code&gt;librewolf.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Read the &lt;a href=&quot;https://github.com/arkenfox/user.js/wiki&quot;&gt;Arkenfox Wiki&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;user.js&lt;/code&gt; is full of comments and information, read it and adjust it for
+your needs. The following enables RFP fingerprint protection:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-js&quot;&gt;***/ user.js ***/
+user_pref(&quot;privacy.resistFingerprinting&quot;, true); // [FF41+]
+user_pref(&quot;privacy.resistFingerprinting.pbmode&quot;, true); // [FF114+]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As you learn more, you can get more strict if you so choose.&lt;/p&gt;
+&lt;p&gt;Rebuild, launch LibreWolf, and check your &lt;code&gt;~/.librewolf/my-default/user.js&lt;/code&gt;. It
+should match the Arkenfox settings. Initially, only the &lt;code&gt;user.js&lt;/code&gt; will be
+listed, as you run LibreWolf other profile files and folders are created
+dynamically.&lt;/p&gt;
+&lt;p&gt;In LibreWolf type &lt;code&gt;Ctrl + Shift + J&lt;/code&gt; and look for any errors.&lt;/p&gt;
+&lt;p&gt;Type &lt;code&gt;about:config&lt;/code&gt; into the address bar and search a few of the settings that
+Arkenfox changes, do they match?&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;user.js&lt;/code&gt; is read &lt;strong&gt;in order&lt;/strong&gt;, if there are 2 of the same setting, the last
+one will be applied. Adding overrides to the settings attribute above places the
+changes at the &lt;strong&gt;beginning&lt;/strong&gt; of the &lt;code&gt;user.js&lt;/code&gt; which isn’t what we want. Placing
+them after the &lt;code&gt;${builtins.readFile ./user.js}&lt;/code&gt; in &lt;code&gt;extraConfig&lt;/code&gt; amends them to
+the &lt;strong&gt;end&lt;/strong&gt; of the &lt;code&gt;user.js&lt;/code&gt; allowing us to override the defaults.&lt;/p&gt;
+&lt;p&gt;The process is the same with Firefox but since Arkenfox strongly recommends
+Ublock Origin and it is built into LibreWolf it makes sense to use the browser
+with the stronger defaults.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: There is a home-manager module called &lt;code&gt;arkenfox-nixos&lt;/code&gt; that is
+supposed to make updates easier but IMO the documentation leaves you guessing
+how to use it. As updates come in to Firefox/LibreWolf some of the settings
+become unnecessary so it’s important to keep an eye on both Firefox and
+Arkenfox updates. Which both have RSS feeds that will alert you upon changes.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;I personally use &lt;a href=&quot;https://feeder.co/&quot;&gt;Feeder&lt;/a&gt; as my open-source RSS feed reader,
+available in most app stores including F-Droid. It is listed on
+&lt;a href=&quot;https://www.privacytools.io/privacy-rss-feed-readers&quot;&gt;PrivacyTools&lt;/a&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js/commits/master.atom&quot;&gt;Arkenfox Recent Commits RSS feed&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js/releases.atom&quot;&gt;Arkenfox Release Notes RSS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.mozilla.org/en-US/firefox/nightly/notes/feed/&quot;&gt;Firefox Nightly release notes&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;/details&gt;
+&lt;h4&gt;Tor Browser&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: Tor is &lt;strong&gt;not&lt;/strong&gt; the most secure browser, anonymity and security can
+often be at odds with each other. Having the exact same browser as many other
+people isn’t the best security practice, but it is great for anonymity. Tor is
+also based on Firefox Esr, which only receives patches for vulnerabilities
+considered Critical or High which can be taken advantage of.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Tor is a modified version of Firefox specifically designed for use with Tor.&lt;/p&gt;
+&lt;p&gt;Tor routes your internet traffic through a global volunteer-operated network,
+masking your IP address and activities from local observers, ISPs, websites, and
+surveillance systems. This helps you protect personal information and maintain
+anonymity when browsing, communicating, or using online services.&lt;/p&gt;
+&lt;p&gt;Adding browser plugins to Tor can de-anonymize you, don’t do it. Tor is already
+built with the necessary plugins and privacy protecting rules, so adding more is
+unnecessary and actually dangerous for your anonymity.&lt;/p&gt;
+&lt;p&gt;A Tor exit node can easily see your traffic, and if you’re not using HTTPS then
+it may be able to modify that traffic. Only use HTTPS when browsing the clear
+net with Tor, this doesn’t apply to onion services (&lt;code&gt;.onion&lt;/code&gt;) as the traffic
+stays inside the Tor network all the way to the destination.&lt;/p&gt;
+&lt;p&gt;You can visit both the clear web and &lt;code&gt;.onion&lt;/code&gt; sites on Tor. Whenever possible
+you should utilize Onion Services (&lt;code&gt;.onion&lt;/code&gt; addresses) so communications and web
+browsing stay within the Tor network. &lt;code&gt;.onion&lt;/code&gt; URLS form a tunnel that is
+end-to-end encrypted using a random rendezvous point and incorporating
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Forward_secrecy&quot;&gt;perfect forward secrecy (PFS)&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Bridges are only necessary in countries that don’t allow people to use Tor.
+Using Bridges when they aren’t needed takes resources away from people in
+oppressive regimes that need, only use them if necessary. Read the guides, and
+use Tails OS, or Whonix when it really matters.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://saylesss88.github.io/nix/whonix_kvm.html&quot;&gt;Whonix KVM on NixOS&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You will see a lot of conflicting information about using Tor with a VPN. If you
+are in an area that blocks access to Tor or it is dangerous to use Tor, by all
+means use a trusted VPN.&lt;/p&gt;
+&lt;h3&gt;TorPlusVPN&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://gitlab.torproject.org/legacy/trac/-/wikis/doc/TorPlusVPN&quot;&gt;Tor Project Wiki TorPlusVPN&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/advanced/tor-overview/#safely-connecting-to-tor&quot;&gt;Safely Connecting to Tor&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Learn about Tor&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;I recommend starting with
+&lt;a href=&quot;https://www.privacyguides.org/articles/2025/04/30/in-praise-of-tor/#onion-sites-you-can-visit-using-the-tor-browser&quot;&gt;Privacy Guides In Praise of Tor&lt;/a&gt;
+and then reading their
+&lt;a href=&quot;https://www.privacyguides.org/en/advanced/tor-overview/&quot;&gt;Tor Overview&lt;/a&gt; they
+have been the most informative resources I’ve come across yet.&lt;/p&gt;
+&lt;p&gt;The Electronic Frontier Foundation sponsors and helps fund Tor and so does the
+United States Government.&lt;/p&gt;
+&lt;p&gt;If you are fortunate to live outside of oppressive regimes with extreme
+censorship, using Tor for every day, mundane activities is likely safe and won’t
+put you on any harmful “list.” Even if it did, you’d be in good company—these
+lists mostly contain great people working tirelessly to defend human rights and
+online privacy worldwide.&lt;/p&gt;
+&lt;p&gt;By using Tor regularly for ordinary browsing, you help strengthen the network,
+making it more robust and anonymous for everyone. This collective support makes
+staying private easier for activists, journalists, and anyone facing online
+surveillance or censorship. The writer of the PrivacyGuides article mentions
+using Tor when he needs to access Google Maps to protect his privacy&lt;/p&gt;
+&lt;p&gt;So, consider embracing Tor not only for sensitive browsing but also for daily
+routine tasks. Every user adds valuable noise to the network, helping protect
+privacy and freedom for all.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Tor is at risk, and needs our help&lt;/strong&gt;. Despite its strength and history, Tor
+isn’t safe from the same attacks oppressive regimes and misinformed legislators
+direct at encryption and many other privacy-enhancing
+technologies.–&lt;a href=&quot;https://www.privacyguides.org/articles/2025/04/30/in-praise-of-tor/#how-to-support-tor&quot;&gt;How to Support Tor&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Tor&quot;&gt;Tor on NixOS&lt;/a&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tb-manual.torproject.org/&quot;&gt;Tor Browser User Manual&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://support.torproject.org/faq/staying-anonymous/&quot;&gt;Tor staying-anonymous&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/module/how-to-use-tor&quot;&gt;How to Use Tor&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://torproject.github.io/manual/secure-connections/&quot;&gt;Cool Graphic Showing Secure Connections with Tor&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h4&gt;Mullvad-Browser&lt;/h4&gt;
+&lt;p&gt;Rather than try to tweak a browser into fingerprinting submission, I recommend
+using either Tor or Mullvad-Browser when fingerprintability is the highest
+issue. Both Tor and Mullvad-Browser were designed specifically for this purpose
+and you likely won’t get as much out of tweaking another browser.&lt;/p&gt;
+&lt;p&gt;Mullvad-Browser is free and open-source and was developed by the Tor Project in
+collaboration with Mullvad VPN.(Another Firefox Derivative). It is also the top
+recommended browser from PrivacyGuides.&lt;/p&gt;
+&lt;p&gt;It is the Tor Browser without the Tor Network, allowing you to use the privacy
+features Tor created along with a VPN if you so choose.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://mullvad.net/en/browser&quot;&gt;Mullvad-Browser&lt;/a&gt;, is in Nixpkgs as:
+&lt;code&gt;pkgs.mullvad-browser&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Script to wipe cache and generate new `machine-id` &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.man7.org/linux/man-pages/man5/machine-id.5.html&quot;&gt;man page machine-id(5)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The following example is adapted from
+&lt;a href=&quot;https://firejail.wordpress.com/all-about-tor/&quot;&gt;Firejail All About Tor&lt;/a&gt;
+section, adapted for NixOS.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Save the following script as &lt;code&gt;cleanup.sh&lt;/code&gt;, change &lt;code&gt;Your-User&lt;/code&gt; to your username:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;#!/bin/sh -e
+USER=&quot;Your-User&quot;
+HOME_DIR=&quot;/home/$USER&quot;
+# clear user cache directly as root
+sudo -u &quot;$USER&quot; rm -fr &quot;$HOME_DIR/.cache&quot;
+# generate a new machine-id
+rm -f /var/lib/machine-id
+dbus-uuidgen &amp;gt; /var/lib/machine-id
+cp /var/lib/machine-id /etc/machine-id
+chmod 444 /etc/machine-id
+exit 0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;~/.cache&lt;/code&gt; directory is where most programs store runtime information:
+webpages you visited, torrent trackers you connected to, and deleted emails.
+It’s a good idea to remove them at shutdown. –Firejail all-about-tor&lt;/p&gt;
+&lt;p&gt;Check &lt;code&gt;/etc/machine-id&lt;/code&gt; &amp;amp; &lt;code&gt;~/.cache&lt;/code&gt; before running the script:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cat /etc/machine-id
+# Output
+0b46feb27a20469da0ee62baaeb51c5c
+ls ~/.cache
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;chmod +x cleanup.sh
+sudo ./cleanup.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Recheck your &lt;code&gt;machine-id&lt;/code&gt; and &lt;code&gt;~/.cache&lt;/code&gt; directories, you should have a newly
+generated &lt;code&gt;machine-id&lt;/code&gt; and minimal files in the &lt;code&gt;~/.cache&lt;/code&gt; directory. The
+Firejail example shows a systemd unit that runs the above script at every
+shutdown but that may be overkill, I suggest running it occasionally to make it
+harder for sites to link your &lt;code&gt;machine-id&lt;/code&gt; to you.&lt;/p&gt;
+&lt;/details&gt;
+&lt;p&gt;Privacy protection doesn’t need to be perfect to make a difference. The best
+protection against tracking and fingerprinting available is to use Tor. Many
+add-ons are redundant, do some research and avoid using an add-on for something
+that can be accomplished with built-in settings.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://ssd.eff.org/module/how-to-use-tor&quot;&gt;Surveillance Self-Defense How to: Use Tor&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;There are more hardening parameters that can be set but this should be a good
+starting point for a hardened version of LibreWolf. When testing with Cover your
+tracks, customized LibreWolf tested as having stronger tracking protection than
+default Mullvad-Browser and NoScript significantly cuts down the data available
+for fingerprinting by disabling JavaScript.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;a href=&quot;https://wiki.garudalinux.org/en/privacy-guide&quot;&gt;Garuda Privacy-Guide&lt;/a&gt; has
+good tips and recommendations for browser add-ons.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Virtual Private Networks (VPNs)&lt;/h3&gt;
+&lt;p&gt;A &lt;strong&gt;VPN&lt;/strong&gt; (Virtual Private Network) encrypts your Internet connection and routes
+your traffic through a VPN provider’s servers, masking your IP address from
+local network observers, ISPs, and websites. Using a VPN can prevent your ISP or
+local Wi-Fi owner from tracking what sites you visit (they only see a connection
+to the VPN), and can help circumvent some regional restrictions or filtering.&lt;/p&gt;
+&lt;p&gt;However, VPNs simply shift your trust: Instead of your ISP seeing your activity,
+your VPN provider can, so you must trust their privacy policies and
+infrastructure. Quality and privacy protections vary widely from one VPN company
+to another.&lt;/p&gt;
+&lt;p&gt;I see over and over again that Mullvad VPN is the best, I am in no way
+affiliated with them this is just what I hear. They allow you to pay with cash
+completely anonymously and keep very minimal metadata. Metadata is a big deal,
+the US gov has admitted to killing people based solely on their metadata.&lt;/p&gt;
+&lt;p&gt;Your ISP almost certainly does sketchy stuff with your data, personally I would
+rather trust a company like Mullvad whose whole reputation is based on their
+trustworthiness, transparency, and data protection.&lt;/p&gt;
+&lt;p&gt;You can use a VPN with Tor, but it’s not recommended by the Tor Project unless
+you’re an advanced user who knows how to configure both in a way that doesn’t
+compromise your privacy.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Popular VPNs on NixOS&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Mullvad_VPN&quot;&gt;Mullvad VPN&lt;/a&gt; Mullvad VPN uses
+WireGuard under the hood and only works if &lt;code&gt;systemd-resolvd&lt;/code&gt; is enabled.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/WireGuard&quot;&gt;WireGuard VPN&lt;/a&gt;, WireGuard is a
+protocol, but also a VPN provider on NixOS.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Tailscale&quot;&gt;Tailscale&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/OpenVPN&quot;&gt;OpenVPN&lt;/a&gt;, OpenVPN is both a protocol and
+full-featured VPN provider on NixOS.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</content></entry><entry><title>JJ VCS</title><id>https://saylesss88.github.io/vcs/jujutsu.html</id><updated>2025-12-08T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/jujutsu.html" rel="alternate"/><content type="html">&lt;h1&gt;Version Control with JJ&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
@@ -1021,7 +1609,10 @@ researched sources on practical Linux security, frequently cited for its depth
 and actionable advice. For example, much of the original basis for hardening
 for &lt;a href=&quot;https://github.com/cynicsketch/nix-mineral&quot;&gt;nix-mineral&lt;/a&gt; came from this
 guide as well. This can be a starting point but shouldn’t be blindly followed
-either, always do your own research, things change frequently.&lt;/p&gt;
+either, always do your own research, things change frequently. Madaidan is
+also a contributor to both
+&lt;a href=&quot;https://www.kicksecure.com/wiki/Contributors&quot;&gt;Kicksecure&lt;/a&gt; and
+&lt;a href=&quot;https://www.whonix.org/wiki/Contributors&quot;&gt;Whonix&lt;/a&gt;.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;For an article with apposing perspectives, see
 &lt;a href=&quot;https://chyrp.cgps.ch/en/debunking-madaidans-insecurities/&quot;&gt;debunking-madaidans-insecurities&lt;/a&gt;.
@@ -4731,232 +5322,6 @@ pub  ed25519/0x76A5EF9054449A5C
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;You can see that the trust is &lt;code&gt;marginal&lt;/code&gt; and validity is &lt;code&gt;full&lt;/code&gt;.&lt;/p&gt;
 &lt;/details&gt;
-</content></entry><entry><title>Encrypted Impermanence</title><id>https://saylesss88.github.io/nix/encrypted_impermanence.html</id><updated>2025-12-06T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/encrypted_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;Encrypted Impermanence&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ Important Note: This guide details a setup involving encrypted partitions
-and impermanent NixOS. While powerful, such configurations require careful
-attention to detail. Incorrect steps, especially concerning encryption keys or
-persistent data paths, can lead to &lt;strong&gt;permanent data loss&lt;/strong&gt;. Please read all
-instructions thoroughly before proceeding and consider backing up any critical
-data beforehand. This has only been tested with the disk layout described in
-&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;Getting Started&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;Add impermanence to your &lt;code&gt;flake.nix&lt;/code&gt;. You will change the &lt;code&gt;hostname&lt;/code&gt; in the
-flake to match your &lt;code&gt;networking.hostName&lt;/code&gt;.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
-{
-  description = &quot;NixOS configuration&quot;;
-
-  inputs = {
-    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
-    disko.url = &quot;github:nix-community/disko/latest&quot;;
-    disko.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
-    impermanence.url = &quot;github:nix-community/impermanence&quot;;
-  };
-
-  outputs = inputs@{ nixpkgs, ... }: {
-    nixosConfigurations = {
-      hostname = nixpkgs.lib.nixosSystem {
-        system = &quot;x86_64-linux&quot;;
-        modules = [
-          ./configuration.nix
-          inputs.disko.nixosModules.disko
-          inputs.impermanence.nixosModules.impermanence
-        ];
-      };
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Discover where your root subvolume is located with &lt;code&gt;findmnt&lt;/code&gt;:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;If you followed the
-&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;
-guide, your encrypted subvolume should be located at:
-&lt;code&gt;/dev/mapper/cryptroot /mnt&lt;/code&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Your encrypted Btrfs partition, once unlocked by LUKS, will be available at
-&lt;code&gt;/dev/mapper/cryptroot&lt;/code&gt; as configured here in the &lt;code&gt;disk-config.nix&lt;/code&gt;:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# disk-config2.nix
-# ... snip ...
-            luks = {
-              size = &quot;100%&quot;;
-              label = &quot;luks&quot;;
-              content = {
-                type = &quot;luks&quot;;
-                name = &quot;cryptroot&quot;;
-                content = {
-# ... snip ...
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Double check that the paths exist:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /dev/mapper/crypt&amp;lt;TAB&amp;gt;  # autocomplete should fill out /dev/mapper/cryptroot
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Create an &lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Now, create a new file named &lt;code&gt;impermanence.nix&lt;/code&gt; in your configuration directory
-(i.e. your flake directory). This file will contain all the specific settings
-for your impermanent setup, including BTRFS subvolume management and persistent
-data locations. Since this file is right next to your &lt;code&gt;configuration.nix&lt;/code&gt;,
-you’ll just add an &lt;code&gt;imports = [ ./impermanence.nix ]&lt;/code&gt; to your
-&lt;code&gt;configuration.nix&lt;/code&gt; apply it to your configuration.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  config,
-  lib,
-  ...
-}: {
-  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
-    echo &quot;Rollback running&quot; &amp;gt; /mnt/rollback.log
-     mkdir -p /mnt
-     mount -t btrfs /dev/mapper/cryptroot /mnt
-
-     # Recursively delete all nested subvolumes inside /mnt/root
-     btrfs subvolume list -o /mnt/root | cut -f9 -d&apos; &apos; | while read subvolume; do
-       echo &quot;Deleting /$subvolume subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
-       btrfs subvolume delete &quot;/mnt/$subvolume&quot;
-     done
-
-     echo &quot;Deleting /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
-     btrfs subvolume delete /mnt/root
-
-     echo &quot;Restoring blank /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
-     btrfs subvolume snapshot /mnt/root-blank /mnt/root
-
-     umount /mnt
-  &apos;&apos;;
-
-  environment.persistence.&quot;/persist&quot; = {
-    directories = [
-      &quot;/etc&quot;
-      &quot;/var/spool&quot;
-      &quot;/root&quot;
-      &quot;/srv&quot;
-      &quot;/etc/NetworkManager/system-connections&quot;
-      &quot;/var/lib/bluetooth&quot;
-    ];
-    files = [
-      # &quot;/etc/machine-id&quot;
-      # Add more files you want to persist
-    ];
-  };
-
-# optional quality of life setting
-  security.sudo.extraConfig = &apos;&apos;
-    Defaults lecture = never
-  &apos;&apos;;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;/mnt/rollback.log&lt;/code&gt;: this log will be available during the boot process for
-debugging if the rollback fails, but won’t persist.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;With the above impermanence script, the btrfs subvolumes are deleted recursively
-and replaced with the &lt;code&gt;root-blank&lt;/code&gt; snapshot we took during the install.&lt;/p&gt;
-&lt;p&gt;I have commented out &lt;code&gt;&quot;/etc/machine-id&quot;&lt;/code&gt; because we already copied over all of
-the files to their persistent location and the above setting would work once and
-then cause a conflict.&lt;/p&gt;
-&lt;h2&gt;configuration.nix changes&lt;/h2&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
-  boot.initrd.luks.devices = {
-    cryptroot = {
-      device = &quot;/dev/disk/by-partlabel/luks&quot;;
-      allowDiscards = true;
-      preLVM = true;
-    };
-  };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;This defines how your system’s initial ramdisk (&lt;code&gt;initrd&lt;/code&gt;) should handle a
-specific encrypted disk during the boot process. It helps with timing and is a
-more robust way of telling Nix that we are using an encrypted disk.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The following is optional to enable &lt;code&gt;autoScrub&lt;/code&gt; for btrfs, the wiki shows
-&lt;code&gt;interval = &quot;monthly&quot;;&lt;/code&gt; FYI.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
-  services.btrfs.autoScrub = {
-    enable = true;
-    interval = &quot;weekly&quot;;
-    fileSystems = [&quot;/&quot;];
-  };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Remember to ensure that your &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;configuration.nix&lt;/code&gt; matches
-the &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;flake.nix&lt;/code&gt;.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;Applying Your Impermanence Configuration&lt;/h3&gt;
-&lt;p&gt;Once you have completed all the steps and created or modified the necessary
-files (&lt;code&gt;flake.nix&lt;/code&gt;, &lt;code&gt;impermanence.nix&lt;/code&gt;), you need to apply these changes to your
-NixOS system.&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Navigate to your NixOS configuration directory (where your &lt;code&gt;flake.nix&lt;/code&gt; is
-located).&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /path/to/your/flake
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Rebuild and Switch: Execute the &lt;code&gt;nixos-rebuild switch&lt;/code&gt; command. This command
-will:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Evaluate your &lt;code&gt;flake.nix&lt;/code&gt; and the modules it imports (including your new
-&lt;code&gt;impermanence.nix&lt;/code&gt;).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Build a new NixOS system closure based on your updated configuration.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Activate the new system configuration, making it the current running system.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .#hostname # Replace &apos;hostname&apos; with your actual system hostname
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Perform an Impermanence Test (Before Reboot):&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;Before you reboot, create a temporary directory and file in a non-persistent
-location. Since you haven’t explicitly added &lt;code&gt;/imperm_test&lt;/code&gt; to your
-&lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; directories, this file should not survive
-a reboot.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
-echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
-ls -l /imperm_test/testfile # Verify the file exists
-cat /imperm_test/testfile # Verify content
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;4&quot;&gt;
-&lt;li&gt;Reboot Your System: For the impermanence setup to take full effect and for
-your root filesystem to be reset for the first time, you must reboot your
-machine.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo reboot
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;Verify Impermanence (After Reboot):&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;After the system has rebooted, check if the test directory and file still
-exist:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;You should see an output like &lt;code&gt;ls: cannot access &apos;/imperm_test/testfile&apos;&lt;/code&gt;: No
-such file or directory. This confirms that the &lt;code&gt;/imperm_test&lt;/code&gt; directory and its
-contents were indeed ephemeral and were removed during the reboot process,
-indicating your impermanence setup is working correctly!&lt;/p&gt;
-&lt;p&gt;Your system should now come up with a fresh root filesystem, and only the data
-specified in your &lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; configuration will be
-persistent.&lt;/p&gt;
 </content></entry><entry><title>KVM</title><id>https://saylesss88.github.io/nix/kvm.html</id><updated>2025-12-06T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/kvm.html" rel="alternate"/><content type="html">&lt;h1&gt;Running NixOS in a VM with Maximum Isolation (Beginner Guide)&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
@@ -5258,6 +5623,11 @@ as flicker, random freezes, or generally janky graphics because the guest was
 effectively fighting the host’s configuration. Sticking close to the defaults in
 the VM has consistently produced smoother and more predictable graphics
 behavior.&lt;/p&gt;
+&lt;p&gt;The main issue I’ve had is with the dns-selector occasionally causing networking
+problems. I configure global DNS with their &lt;code&gt;ujust&lt;/code&gt; command and I’m assuming
+that updates were incompatible with my DNS setup. Running &lt;code&gt;ujust dns-selector&lt;/code&gt;
+and pressing &lt;code&gt;1&lt;/code&gt; (Reset to defaults), and a reboot typically fix the connection
+and within a few days the global DNS will work again.&lt;/p&gt;
 &lt;/details&gt;
 &lt;hr /&gt;
 &lt;h3&gt;Resources&lt;/h3&gt;
@@ -5272,6 +5642,985 @@ behavior.&lt;/p&gt;
 &lt;p&gt;&lt;a href=&quot;https://bitgrounds.tech/posts/kvm-qemu-libvirt-virtualization/&quot;&gt;Virtualization on Linux using the KVM/QEMU/Libvirt stack&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
+</content></entry><entry><title>Encrypted Impermanence</title><id>https://saylesss88.github.io/nix/encrypted_impermanence.html</id><updated>2025-12-06T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/encrypted_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;Encrypted Impermanence&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ Important Note: This guide details a setup involving encrypted partitions
+and impermanent NixOS. While powerful, such configurations require careful
+attention to detail. Incorrect steps, especially concerning encryption keys or
+persistent data paths, can lead to &lt;strong&gt;permanent data loss&lt;/strong&gt;. Please read all
+instructions thoroughly before proceeding and consider backing up any critical
+data beforehand. This has only been tested with the disk layout described in
+&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;Getting Started&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;Add impermanence to your &lt;code&gt;flake.nix&lt;/code&gt;. You will change the &lt;code&gt;hostname&lt;/code&gt; in the
+flake to match your &lt;code&gt;networking.hostName&lt;/code&gt;.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  description = &quot;NixOS configuration&quot;;
+
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+    disko.url = &quot;github:nix-community/disko/latest&quot;;
+    disko.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    impermanence.url = &quot;github:nix-community/impermanence&quot;;
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = &quot;x86_64-linux&quot;;
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Discover where your root subvolume is located with &lt;code&gt;findmnt&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;If you followed the
+&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;
+guide, your encrypted subvolume should be located at:
+&lt;code&gt;/dev/mapper/cryptroot /mnt&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Your encrypted Btrfs partition, once unlocked by LUKS, will be available at
+&lt;code&gt;/dev/mapper/cryptroot&lt;/code&gt; as configured here in the &lt;code&gt;disk-config.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# disk-config2.nix
+# ... snip ...
+            luks = {
+              size = &quot;100%&quot;;
+              label = &quot;luks&quot;;
+              content = {
+                type = &quot;luks&quot;;
+                name = &quot;cryptroot&quot;;
+                content = {
+# ... snip ...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Double check that the paths exist:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /dev/mapper/crypt&amp;lt;TAB&amp;gt;  # autocomplete should fill out /dev/mapper/cryptroot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Create an &lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now, create a new file named &lt;code&gt;impermanence.nix&lt;/code&gt; in your configuration directory
+(i.e. your flake directory). This file will contain all the specific settings
+for your impermanent setup, including BTRFS subvolume management and persistent
+data locations. Since this file is right next to your &lt;code&gt;configuration.nix&lt;/code&gt;,
+you’ll just add an &lt;code&gt;imports = [ ./impermanence.nix ]&lt;/code&gt; to your
+&lt;code&gt;configuration.nix&lt;/code&gt; apply it to your configuration.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  config,
+  lib,
+  ...
+}: {
+  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+    echo &quot;Rollback running&quot; &amp;gt; /mnt/rollback.log
+     mkdir -p /mnt
+     mount -t btrfs /dev/mapper/cryptroot /mnt
+
+     # Recursively delete all nested subvolumes inside /mnt/root
+     btrfs subvolume list -o /mnt/root | cut -f9 -d&apos; &apos; | while read subvolume; do
+       echo &quot;Deleting /$subvolume subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
+       btrfs subvolume delete &quot;/mnt/$subvolume&quot;
+     done
+
+     echo &quot;Deleting /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
+     btrfs subvolume delete /mnt/root
+
+     echo &quot;Restoring blank /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
+     btrfs subvolume snapshot /mnt/root-blank /mnt/root
+
+     umount /mnt
+  &apos;&apos;;
+
+  environment.persistence.&quot;/persist&quot; = {
+    directories = [
+      &quot;/etc&quot;
+      &quot;/var/spool&quot;
+      &quot;/root&quot;
+      &quot;/srv&quot;
+      &quot;/etc/NetworkManager/system-connections&quot;
+      &quot;/var/lib/bluetooth&quot;
+    ];
+    files = [
+      # &quot;/etc/machine-id&quot;
+      # Add more files you want to persist
+    ];
+  };
+
+# optional quality of life setting
+  security.sudo.extraConfig = &apos;&apos;
+    Defaults lecture = never
+  &apos;&apos;;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;/mnt/rollback.log&lt;/code&gt;: this log will be available during the boot process for
+debugging if the rollback fails, but won’t persist.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;With the above impermanence script, the btrfs subvolumes are deleted recursively
+and replaced with the &lt;code&gt;root-blank&lt;/code&gt; snapshot we took during the install.&lt;/p&gt;
+&lt;p&gt;I have commented out &lt;code&gt;&quot;/etc/machine-id&quot;&lt;/code&gt; because we already copied over all of
+the files to their persistent location and the above setting would work once and
+then cause a conflict.&lt;/p&gt;
+&lt;h2&gt;configuration.nix changes&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
+  boot.initrd.luks.devices = {
+    cryptroot = {
+      device = &quot;/dev/disk/by-partlabel/luks&quot;;
+      allowDiscards = true;
+      preLVM = true;
+    };
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This defines how your system’s initial ramdisk (&lt;code&gt;initrd&lt;/code&gt;) should handle a
+specific encrypted disk during the boot process. It helps with timing and is a
+more robust way of telling Nix that we are using an encrypted disk.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The following is optional to enable &lt;code&gt;autoScrub&lt;/code&gt; for btrfs, the wiki shows
+&lt;code&gt;interval = &quot;monthly&quot;;&lt;/code&gt; FYI.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
+  services.btrfs.autoScrub = {
+    enable = true;
+    interval = &quot;weekly&quot;;
+    fileSystems = [&quot;/&quot;];
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Remember to ensure that your &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;configuration.nix&lt;/code&gt; matches
+the &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;flake.nix&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Applying Your Impermanence Configuration&lt;/h3&gt;
+&lt;p&gt;Once you have completed all the steps and created or modified the necessary
+files (&lt;code&gt;flake.nix&lt;/code&gt;, &lt;code&gt;impermanence.nix&lt;/code&gt;), you need to apply these changes to your
+NixOS system.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Navigate to your NixOS configuration directory (where your &lt;code&gt;flake.nix&lt;/code&gt; is
+located).&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /path/to/your/flake
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Rebuild and Switch: Execute the &lt;code&gt;nixos-rebuild switch&lt;/code&gt; command. This command
+will:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Evaluate your &lt;code&gt;flake.nix&lt;/code&gt; and the modules it imports (including your new
+&lt;code&gt;impermanence.nix&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Build a new NixOS system closure based on your updated configuration.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Activate the new system configuration, making it the current running system.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .#hostname # Replace &apos;hostname&apos; with your actual system hostname
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Perform an Impermanence Test (Before Reboot):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Before you reboot, create a temporary directory and file in a non-persistent
+location. Since you haven’t explicitly added &lt;code&gt;/imperm_test&lt;/code&gt; to your
+&lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; directories, this file should not survive
+a reboot.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
+echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
+ls -l /imperm_test/testfile # Verify the file exists
+cat /imperm_test/testfile # Verify content
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Reboot Your System: For the impermanence setup to take full effect and for
+your root filesystem to be reset for the first time, you must reboot your
+machine.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo reboot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Verify Impermanence (After Reboot):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;After the system has rebooted, check if the test directory and file still
+exist:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You should see an output like &lt;code&gt;ls: cannot access &apos;/imperm_test/testfile&apos;&lt;/code&gt;: No
+such file or directory. This confirms that the &lt;code&gt;/imperm_test&lt;/code&gt; directory and its
+contents were indeed ephemeral and were removed during the reboot process,
+indicating your impermanence setup is working correctly!&lt;/p&gt;
+&lt;p&gt;Your system should now come up with a fresh root filesystem, and only the data
+specified in your &lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; configuration will be
+persistent.&lt;/p&gt;
+</content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Since networks and systems vary, some adjustments may cause unexpected issues,
+especially around critical components like DNS or firewalls. Always review and
+test changes in a controlled environment before applying them broadly.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Understand the trade-offs and tailor the settings to your threat model and
+workflow. Take what’s useful, adapt as needed, and seek expert guidance for
+more advanced scenarios.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;Every setup is unique, feel free to adapt or skip sections based on your needs.
+Start with the basics and build up as you gain confidence. The goal is
+practical, tested hardening tailored to you.&lt;/p&gt;
+&lt;h3&gt;Safe Browsing / Privacy Enhancing Habits&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Adopt Encrypted DNS and HTTPS Everywhere&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Configure your system and browsers to use DNS over HTTPS (DoH), DNS over TLS
+(DoT), or DNSCrypt to prevent DNS leakage. Use HTTPS-Only mode in browsers to
+encrypt all web traffic. Prefer browsers with strong privacy defaults or add
+recommended extensions.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/dns/#dnscrypt-proxy&quot;&gt;Privacy Guides dnscrypt-proxy recommendation&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Disable browser “remember password” and autofill features, clear cookies and
+site data upon exit, and carefully vet suspicious URLs with tools like
+&lt;a href=&quot;https://www.virustotal.com/gui/home/url&quot;&gt;VirusTotal&lt;/a&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Limit Account Linking and Use Unique Credentials&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Create separate accounts with unique passwords instead of signing in with
+Google, Facebook, or similar services to limit broad data exposure from
+compromises.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Use Metadata Cleaning Tools&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Many files like images, PDFs, and office documents contain hidden metadata
+information such as location data, device details, and more that can reveal
+your identity or other sensitive information when you share files publicly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;To protect your privacy, always sanitize files by removing this metadata
+before sharing. Tools like &lt;a href=&quot;https://0xacab.org/jvoisin/mat2&quot;&gt;mat2&lt;/a&gt; are
+designed to strip metadata from a wide range of media files efficiently.
+(&lt;code&gt;pkgs.mat2&lt;/code&gt;). You just type &lt;code&gt;mat2 swappy-2025.png&lt;/code&gt; for example and there will
+then be a new &lt;code&gt;mat2 swappy-2025.cleaned.png&lt;/code&gt; that can safely be shared.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Use Anonymous File-Sharing Tools&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;For sensitive transfers, consiter tools like
+&lt;a href=&quot;https://github.com/onionshare/onionshare&quot;&gt;OnionShare&lt;/a&gt; that provide anonymity
+and security.(&lt;code&gt;pkgs.onionshare&lt;/code&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Avoid Scanning Random QR Codes Without Verification&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Use QR code scanner apps that check for malicious content before loading
+links.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Understand Your Threat Model&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Apply these basics universally, but tailor advanced hardening according to
+your unique environment, connectivity needs, and risk profile.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Delete cookies and site data when the browser is closed&lt;/strong&gt;. (security not
+usability).&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Use Strong, Unique Passwords and a Password Manager&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Avoid reused passwords by using reliable password managers like KeePassXC or
+Bitwarden, both available on NixOS. Pair this with enabling two-factor
+authentication &lt;strong&gt;(2FA) wherever possible&lt;/strong&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It’s advisable to only use the desktop version and not the browser extension
+for a number of reasons. One is that you can store your passwords completely
+offline and have complete ownership of them.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;environment.systemPackages = [
+    pkgs.keepassxc
+    pkgs.kpcli     # KeePass CLI
+    # OR
+    pkgs.bitwarden-desktop
+    pkgs.bitwarden-cli
+];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With KeePassXC, you can require 3 different authentication methods at the same
+time. You can choose a password, a keyfile, and a security key where it won’t
+open unless all 3 are present giving you additional security. All 3 might not be
+necessary but it’s possible. It’s also easy to migrate to KeePassXC, you can
+import your vault from many different managers.&lt;/p&gt;
+&lt;p&gt;KeepassXC also makes it easy to keep your complete password database offline
+which can significantly reduce the risk of a breach.&lt;/p&gt;
+&lt;p&gt;With Bitwarden, to enable 2 factor authentication, you need to log in with your
+master password through the web interface.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.privacyguides.org/en/basics/passwords-overview/&quot;&gt;PrivacyGuides Intro to Passwords&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Why Follow These Basics?&lt;/h3&gt;
+&lt;p&gt;These recommended steps help protect your privacy and security while maintaining
+usability and minimizing system interruptions. They catch common threats like
+network eavesdropping, password reuse, fingerprinting, and data leakage,
+providing a solid foundation to build on.&lt;/p&gt;
+&lt;p&gt;A vast majority of secure and privacy-focused browsers available for NixOS are
+based on Firefox.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: Firefox does lack some security features available in Chrome and
+sandbox escapes in Linux are relatively easy. People such as madaidan say to
+never use Linux or Firefox period when you’re worried about security and
+privacy. I’m not personally going to jump to proprietary software with known
+backdoors in a misguided attempt at increasing security/privacy.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://techstory.in/eu-hits-google-with-3-5-billion-antitrust-fine-over-adtech-practices/&quot;&gt;EU Hits Google with 3.5 Billion Antitrust&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This &lt;a href=&quot;https://grapheneos.org/usage#web-browsing&quot;&gt;GrapheneOS article&lt;/a&gt;, breaks
+down why they use Chromium-based browsers and specifically mentions that it’s
+not recommended to use Firefox, especially on Linux because of the weak
+sandboxing.&lt;/p&gt;
+&lt;p&gt;As a Chromium-based browser, Brave has been growing on me. Brave uses
+randomization rather than standardization for fingerprinting protection. If you
+run Cover Your Tracks with Brave, it will show a randomized fingerprint.&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click To Expand United States Patriot Act Overview &lt;/summary&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.csis.org/analysis/fact-sheet-section-215-usa-patriot-act&quot;&gt;Section 215 USA Patriot Act&lt;/a&gt;
+permits the collection of “Tangible Things” or “Business Records”, e.g., your
+phone records, medical records, etc. for an investigation to obtain foreign
+intelligence information. If it does relate to a US person it must be relevant
+to preventing terrorism or espionage, and not be based solely on activities
+protected by the first amendment. “Relevant” is the key word here and it is at
+the governments discretion meaning they sweep everything and sift it later.
+Criticized for violating American citizens Fourth Amendment protections against
+warrantless search and seizure and proven to be ineffective.&lt;/p&gt;
+&lt;/details&gt;
+&lt;p&gt;What is “normal” and allowed today might be suppressed tomorrow, look at the UK
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Online_Safety_Act_2023&quot;&gt;Online Safety Act&lt;/a&gt;
+purported to protect children, accused of banning privacy. This is because the
+only way to verify age is to make everyone submit KYC with their drivers license
+or ID, completely taking away any anonymity of adults and children alike.&lt;/p&gt;
+&lt;p&gt;Also see
+&lt;a href=&quot;https://www.bbc.com/news/articles/cq68j5g2nr1o&quot;&gt;BBC 4chan refuses to pay fine&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The mere existence of a surveillance state breeds fear and conformity and
+stifles free
+expression.–&lt;a href=&quot;https://theintercept.com/2016/04/28/new-study-shows-mass-surveillance-breeds-meekness-fear-and-self-censorship/&quot;&gt;The Intercept&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;There are much more scary examples in
+&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The new Oil&lt;/a&gt;&lt;/p&gt;
+&lt;h2&gt;Protections from Surveillance in the U.S.&lt;/h2&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand U.S. Surveillance protections &lt;/summary&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ A crucial caveat to keep in mind regarding surveillance protections in the
+U.S., whether grounded in the Fourth Amendment, the First Amendment, or
+statutory laws is that &lt;strong&gt;these protections are not foolproof and have
+repeatedly failed or been circumvented in practice&lt;/strong&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Fourth Amendment Basics&lt;/strong&gt;: It demands reasonableness in searches and usually
+requires a warrant. This means government agents cannot arbitrarily listen to
+your private communications or search your digital data without judicial
+approval&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Electronic Surveillance Challenges&lt;/strong&gt;: Courts have wrestled with how the
+Fourth Amendment applies to modern communications. The Supreme Court has ruled
+in some cases that pervasive or non-consensual electronic surveillance
+violates reasonable expectations of privacy, but other rulings have allowed
+broader state actions in national security contexts.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Third-Party Doctrine&lt;/strong&gt;: A major limitation arises from the “third-party
+doctrine,” which holds that information voluntarily shared with third parties
+(like phone companies or internet providers) has reduced Fourth Amendment
+protections. This means data held by third parties may be subject to
+government access without a warrant in some cases&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The First Amendment&lt;/strong&gt; guarantees free speech and the freedom to receive
+information without government censorship or intimidation. Excessive or
+secretive government surveillance can chill free speech by making people
+afraid their communications are monitored, discouraging open expression and
+participation in public discourse.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Advocates argue that courts should recognize government surveillance not
+only as a Fourth Amendment search issue but also as a First Amendment
+violation where surveillance suppresses or chills constitutionally protected
+expression.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;While the Fourth Amendment traditionally governs searches and surveillance
+legality, the First Amendment frames the broader impact on free speech and
+democratic engagement. Invoking both provides a more comprehensive
+constitutional shield against intrusive surveillance practices.&lt;/p&gt;
+&lt;/details&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Encrypted DNS&lt;/h2&gt;
+&lt;p&gt;DNS (Domain Name System) resolution is the process of translating a website’s
+domain name into its corresponding IP address. By default, this traffic isn’t
+encrypted, which means anyone on the network, from your ISP to potential
+hackers, can see the websites you’re trying to visit. &lt;strong&gt;Encrypted DNS&lt;/strong&gt; uses
+protocols to scramble this information, protecting your queries and responses
+from being intercepted and viewed by others.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: There are many other ways for someone monitoring your traffic to see
+what domain you looked up via DNS that it’s effectiveness is questionable
+without also using Tor or a VPN. Encrypted DNS will not help you hide any of
+your browsing activity.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;There are 3 main types of DNS protection:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;DNS over HTTPS (DoH)&lt;/strong&gt;: Uses the HTTPS protocol to encrypt data between the
+client and the resolver.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;DNS over TLS (DoT)&lt;/strong&gt;: Similar to (DoH), differs in the methods used for
+encryption and delivery using a separate port from HTTPS.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;DNSCrypt&lt;/strong&gt;: Uses end-to-end encryption with the added benefit of being able
+to prevent DNS spoofing attacks.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Useful resources:&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand DNS Resources &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Encrypted_DNS&quot;&gt;NixOS Wiki Encrypted DNS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/dns/what-is-dns/&quot;&gt;Domain Name System (DNS)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_HTTPS&quot;&gt;Wikipedia DNS over HTTPS (DoH)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_TLS&quot;&gt;Wikipedia DNS over TLS (DoT)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://blog.cloudflare.com/dns-encryption-explained/&quot;&gt;Cloudflare Dns Encryption Explained&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nordvpn.com/blog/encrypted-dns-traffic/&quot;&gt;NordVPN Encrypted Dns Traffic&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Hot Take&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://madaidans-insecurities.github.io/encrypted-dns.html&quot;&gt;Encrypted DNS is ineffective without a VPN or Tor by madaidan&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;p&gt;The following sets up dnscrypt-proxy using DoH (DNS over HTTPS) with an oisd
+blocklist, they both come directly from the Wiki:&lt;/p&gt;
+&lt;p&gt;Add &lt;code&gt;oisd&lt;/code&gt; to your flake inputs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+inputs = {
+    oisd = {
+      url = &quot;https://big.oisd.nl/domainswild&quot;;
+      flake = false;
+    };
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: The &lt;code&gt;oisd&lt;/code&gt; blocklist is a plain text file that updates frequently.
+This can cause &lt;code&gt;nh os switch&lt;/code&gt; to fail with a &lt;code&gt;NarHash&lt;/code&gt; mismatch error. To fix
+this, you need to run &lt;code&gt;nix flake update&lt;/code&gt; to refresh the blocklist and its hash
+in your &lt;code&gt;flake.lock&lt;/code&gt; file. After that, you can run your &lt;code&gt;nh&lt;/code&gt; command again.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;And the import the following into your &lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# dnscrypt-proxy.nix
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}: let
+  blocklist_base = builtins.readFile inputs.oisd;
+  extraBlocklist = &apos;&apos;&apos;&apos;;
+  blocklist_txt = pkgs.writeText &quot;blocklist.txt&quot; &apos;&apos;
+    ${extraBlocklist}
+    ${blocklist_base}
+  &apos;&apos;;
+  hasIPv6Internet = true;
+  StateDirectory = &quot;dnscrypt-proxy&quot;;
+in {
+  networking = {
+    # Set DNS nameservers to the local host addresses for iPv4 (`127.0.0.1`) &amp;amp; iPv6 (::1)
+    nameservers = [&quot;127.0.0.1&quot; &quot;::1&quot;];
+    # If using dhcpcd
+    # dhcpcd.extraConfig = &quot;nohook resolv.conf&quot;;
+    # If using NetworkManager
+    networkmanager.dns = &quot;none&quot;;
+  };
+  services.resolved.enable = lib.mkForce false;
+  # See https://wiki.nixos.org/wiki/Encrypted_DNS
+  services.dnscrypt-proxy2 = {
+    enable = true;
+    # See https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml
+    settings = {
+      # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+      sources.public-resolvers = {
+        urls = [
+          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md&quot;
+          &quot;https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md&quot;
+        ];
+        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
+        cache_file = &quot;/var/lib/${StateDirectory}/public-resolvers.md&quot;;
+      };
+     # sources.quad9-resolvers = {
+     #   urls = [
+     #     &quot;https://quad9.net/dnscrypt/quad9-resolvers.md&quot;
+     #     &quot;https://raw.githubusercontent.com/Quad9DNS/dnscrypt-settings/main/dnscrypt/quad9-resolvers.md&quot;
+     #   ];
+     #   minisign_key = &quot;RWTp2E4t64BrL651lEiDLNon+DqzPG4jhZ97pfdNkcq1VDdocLKvl5FW&quot;;
+     #   cache_file = &quot;/var/cache/dnscrypt-proxy/quad9-resolvers.md&quot;;
+     # };
+
+      # Use servers reachable over IPv6 -- Do not enable if you don&apos;t have IPv6 connectivity
+      ipv6_servers = hasIPv6Internet;
+      block_ipv6 = ! hasIPv6Internet;
+      blocked_names.blocked_names_file = blocklist_txt;
+      require_dnssec = true;
+      # Logs can get large very quickly...
+      require_nolog = false;
+      # This stops dns malware filtering, etc. if true
+      require_nofilter = false;
+      dnscrypt_servers = true;
+
+      # If you want, choose a specific set of servers that come from your sources.
+      # Here it&apos;s from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+      # If you don&apos;t specify any, dnscrypt-proxy will automatically rank servers
+      # that match your criteria and choose the best one.
+      # server_names = [ ... ];
+      # server_names = [&apos;quad9-dnscrypt-ip6-filter-pri&apos;, &apos;quad9-dnscrypt-ip4-filter-pri&apos;, &apos;mullvad-adblock-d&apos;];
+
+    };
+  };
+
+  systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗️ NOTE: Upon testing dnscrypt-proxy on Arch, it was able to route the browser
+through the proxy, removing the need for Max Protection. I’m still currently
+on Arch and plan to test this further ASAP. We test the above settings further
+down, but I’m curious why the browser isn’t routed correctly…&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;Above, we have a local DNS proxy that encrypts and forwards queries.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# You should see that dnscrypt-proxy chooses the Server with the lowest initial latency
+sudo systemctl status dnscrypt-proxy2
+# verify that dnscrypt-proxy is listening
+sudo ss -lnp | grep 53
+# Test a DNS query, if you get valid responses it&apos;s working
+dig @127.0.0.1 example.com +short
+# check the logs
+sudo journalctl -u dnscrypt-proxy2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; acts as your local DNS resolver listening on your machine
+(&lt;code&gt;127.0.0.1&lt;/code&gt;) for IPv4 and &lt;code&gt;::1&lt;/code&gt; for iPv6.&lt;/p&gt;
+&lt;p&gt;The system’s DNS settings (&lt;code&gt;networking.nameservers&lt;/code&gt;) point to localhost, so
+&lt;strong&gt;all DNS queries&lt;/strong&gt; go to dnscrypt-proxy accept for your browser. Your browser
+has to be configured separately with a local resolver in which I haven’t figured
+out yet. I recommend setting your browsers DNS over HTTPS to strict with a
+respected custom DNS resolver such as &lt;code&gt;https://dns.quad9.net/dns-query&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;inputs.oisd&lt;/code&gt; refers to the flake input oisd blocklist, it prevents your device
+from connecting to unwanted or harmful domains.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; then encrypts and forwards our DNS requests to third-party
+public DNSCrypt or DoH servers.&lt;/p&gt;
+&lt;h3&gt;Setting up Tailscale&lt;/h3&gt;
+&lt;p&gt;I was surprised at how easy this actually was to set up. Either go to
+&lt;a href=&quot;https://www.tailscale.com&quot;&gt;https://www.tailscale.com&lt;/a&gt; and/or download the app for either Android or IOS,
+sign up with your identity provider, and click &lt;code&gt;Start connecting devices -&amp;gt;&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://tailscale.com/kb/1017/install&quot;&gt;Tailscale quickstart&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To add tailscale to NixOS:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# tailscale.nix
+{...}: {
+  services.tailscale.enable = true;
+  # Tell the firewall to implicitly trust packets routed over Tailscale:
+  networking.firewall.trustedInterfaces = [&quot;tailscale0&quot;];
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Tailscale will automatically use the hostname of your device as the name of the
+network. If you want to change it to something else:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --hostname=&amp;lt;name&amp;gt;
+# You can also give your account a nickname
+sudo tailscale set --nickname=&amp;lt;name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This allows you to refer to your network by &lt;code&gt;name&lt;/code&gt; rather than IP address.&lt;/p&gt;
+&lt;p&gt;Tailscale uses &lt;a href=&quot;https://tailscale.com/kb/1081/magicdns&quot;&gt;MagicDNS&lt;/a&gt; which is
+enabled by default, and they recommend you keep it enabled.&lt;/p&gt;
+&lt;p&gt;The docs say that by default, devices in your tailnet prefer their local DNS
+settings and only use the tailnet’s DNS servers when needed. I had to completely
+disable my Androids DNS settings for tailscale to access the internet through
+MagicDNS.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --accept-dns=false
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To connect to tailscale after rebuilding you can run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale up
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Use &lt;code&gt;nslookup&lt;/code&gt; to review and debug DNS responses:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nslookup google.com
+Server:         127.0.0.1
+Address:        127.0.0.1#53
+
+Non-authoritative answer:
+Name:   google.com
+Address: 142.251.40.206
+Name:   google.com
+Address: 2a00:1450:4001:827::200e
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;127.0.0.1#53&lt;/code&gt; indicate that instead of using the DNS server pushed by
+your ISP, router, or Tailscale’s MagicDNS, the system is sending all DNS
+requests through the loopback device to &lt;code&gt;dnscrypt-proxy&lt;/code&gt; in my case.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Get the status of your connections to other Tailscale devices:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;tailscale status
+1           2         3           4         5
+100.1.2.3   device-a  apenwarr@   linux     active; direct &amp;lt;ip-port&amp;gt;, tx 1116 rx 1124
+100.4.5.6   device-b  crawshaw@   macOS     active; relay &amp;lt;relay-server&amp;gt;, tx 1351 rx 4262
+100.7.8.9   device-c  danderson@  windows   idle; tx 1214 rx 50
+100.0.1.2   device-d  ross@       iOS       —
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1196/security-hardening&quot;&gt;Tailscale Best Practices&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1080/cli&quot;&gt;Tailscale CLI&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;There is much more you can do with Tailscale, including integrating
+Mullvad-VPN and using Exit Nodes.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;MAC Randomization&lt;/h2&gt;
+&lt;p&gt;All network cards have a unique identifier called a MAC address. They’re stored
+in hardware and are used to assign an address to computers on the local network.&lt;/p&gt;
+&lt;p&gt;The MAC address is typically only traceable on the local network, it’s not
+passively sent out beyond the local router making it more critical on untrusted,
+public networks.&lt;/p&gt;
+&lt;p&gt;Leak-proof MAC randomization is very difficult to implement:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.kicksecure.com/wiki/Dev/MAC#Leak-proof_MAC_Randomization_-_Technical_Implementation_Challenges&quot;&gt;Leak-proof MAC Randomization Implementation Challenges&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Android and iPhone already implement MAC Randomization by default.&lt;/p&gt;
+&lt;p&gt;MAC Randomization enhances privacy by making it harder for third parties to
+track users across different networks.&lt;/p&gt;
+&lt;p&gt;Randomizing MAC adresses obscures a device’s unique hardware identity when
+scanning for or connecting to Wi-Fi, blocking passive tracking as well as
+location tracking across networks.&lt;/p&gt;
+&lt;p&gt;If you use NetworkManager you can set MAC randomization with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    networking = {
+      networkmanager = {
+        enable = true;
+        wifi.scanRandMacAddress = true;
+        wifi.macAddress = &quot;random&quot;;
+        plugins = [];
+      };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Right when I rebuilt, I got an alert from my router saying that a new device
+just connected to the network.&lt;/p&gt;
+&lt;p&gt;There is also a utility for viewing/manipulating the MAC address of network
+interfaces, &lt;code&gt;pkgs.macchanger&lt;/code&gt;. This is less reliable than the NetworkManager
+setting.&lt;/p&gt;
+&lt;h2&gt;Firewalls&lt;/h2&gt;
+&lt;p&gt;NixOS includes an integrated firewall based on iptables/nftables.&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Firewall Resources &lt;/summary&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/security/what-is-a-firewall/&quot;&gt;Cloudflare What is a Firewall&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/&quot;&gt;Beginners guide to nftables&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.archlinux.org/title/Nftables&quot;&gt;Arch Wiki nftables&lt;/a&gt;&lt;/p&gt;
+&lt;/details&gt;
+&lt;p&gt;The following firewall setup is based on the dnscrypt setup above utilizing
+nftables.&lt;/p&gt;
+&lt;p&gt;This nftables firewall configuration is a strong recommended practice for
+enforcing encrypted DNS on your system by restricting all outbound DNS traffic
+to a local dnscrypt-proxy process. It greatly reduces DNS leak risks and
+enforces privacy by limiting DNS queries to trusted, encrypted upstream
+servers.(This was edited on 08-08-25) replace &lt;code&gt;&amp;lt;DNSCRYPT-UID&amp;gt;&lt;/code&gt; with the UID
+given from the command &lt;code&gt;ps -o uid,user,pid,cmd -C dnscrypt-proxy&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ ... }: {
+  networking.nftables = {
+    enable = true;
+
+    ruleset = &apos;&apos;
+      table inet filter {
+        chain output {
+          type filter hook output priority 0; policy accept;
+
+          # Allow localhost DNS for dnscrypt-proxy2
+          ip daddr 127.0.0.1 udp dport 53 accept
+          ip6 daddr ::1 udp dport 53 accept
+          ip daddr 127.0.0.1 tcp dport 53 accept
+          ip6 daddr ::1 tcp dport 53 accept
+
+          # Allow dnscrypt-proxy2 to talk to upstream servers
+          # Replace &amp;lt;DNSCRYPT-UID&amp;gt; with:
+          # ps -o uid,user,pid,cmd -C dnscrypt-proxy
+          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; udp dport { 443, 853 } accept
+          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; tcp dport { 443, 853 } accept
+
+          # Block all other outbound DNS
+          udp dport { 53, 853 } drop
+          tcp dport { 53, 853 } drop
+        }
+      }
+    &apos;&apos;;
+  };
+  networking.firewall = {
+    enable = true;
+    allowedTCPPorts = [
+      # Ports open for inbound connections.
+      # Limit these to reduce the attack surface.
+
+      22 # SSH – Keep open only if you need remote access.
+         # To change the SSH port in NixOS:
+         # services.openssh.ports = [ 2222 ];
+         # Update this list to match the new port.
+
+      # 53  # DNS – Only if running a public DNS server.
+      # 80  # HTTP – Only if hosting a website.
+      # 443 # HTTPS – Only if hosting a secure website.
+    ];
+    allowedUDPPorts = [
+      # Ports open for inbound UDP traffic.
+      # Most NixOS workstations won&apos;t need any here.
+
+      # 53 # DNS – Only if running a public DNS server.
+    ];
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Tip on changing the default SSH Port &lt;/summary&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ TIP: Reduce SSH noise by changing the default port On most systems, SSH
+listens on TCP port 22 — which means automated bots and scanners will hit it
+constantly. While this doesn’t replace real security measures, moving SSH to a
+different port drastically cuts down on drive-by brute-force attempts you’ll
+see in your logs.&lt;/p&gt;
+&lt;p&gt;In NixOS, change both the SSH daemon port and your firewall rule:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; # Example: Move SSH to port 2222
+ networking.firewall.allowedTCPPorts = [ 2222 ];
+ services.openssh.ports = [ 2222 ];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;After rebuilding, test from another terminal/session before closing your
+existing one:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ssh -p 2222 user@host
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/blockquote&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;code&gt;nft&lt;/code&gt; is a cli tool used to set up, maintain and inspect packet filtering and
+classification rules in the Linux kernel, in the nftables framework. The Linux
+kernel subsystem is known as nftables, and ‘nf’ stands for Netfilter.–&lt;code&gt;man nft&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nft list ruleset
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Since we declare our firewall, we’ll only use &lt;code&gt;nft&lt;/code&gt; to inspect our ruleset.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;NixOS Firewall vs &lt;code&gt;nftables&lt;/code&gt; Ruleset&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;networking.nftables&lt;/code&gt;: This section provides a raw &lt;code&gt;nftables&lt;/code&gt; ruleset that gives
+you granular, low-level control. The rules here are more specific and are meant
+to handle the intricate logic of the DNS proxy setup. They will be applied
+directly to the kernel’s &lt;code&gt;nftables&lt;/code&gt; subsystem and prevent DNS leaks.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;networking.firewall&lt;/code&gt;: This is a higher-level, simpler NixOS option that uses
+&lt;code&gt;iptables&lt;/code&gt; rules to open ports for inbound traffic. The rules defined here
+(allowing port 22) is for incoming SSH connections to the machine, not for
+outbound traffic, so they do not interfere with the &lt;code&gt;nftables&lt;/code&gt; rules that filter
+the outgoing traffic. (Make sure to comment out or remove this if you don’t SSH
+into your machine).&lt;/p&gt;
+&lt;p&gt;The firewall ensures only authorized, local encrypted DNS proxy process can
+speak DNS with the outside world, and that all other DNS requests from any other
+process are blocked unless they’re to &lt;code&gt;127.0.0.1&lt;/code&gt; (our local proxy). This is a
+robust policy against both DNS leaks and local compromise.&lt;/p&gt;
+&lt;h2&gt;Testing&lt;/h2&gt;
+&lt;p&gt;Review listening ports: After each rebuild, use &lt;code&gt;ss -tlpn&lt;/code&gt;, &lt;code&gt;nmap&lt;/code&gt; or &lt;code&gt;netstat&lt;/code&gt;
+to see which services are accepting connections. Close or firewall anything
+unnecessary.&lt;/p&gt;
+&lt;p&gt;You can also test firewall DNS restrictions using &lt;code&gt;dig&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;dig @127.0.0.1 example.com  # Should work
+
+dig @8.8.8.8 example.com    # Should fail/time out for normal users
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This test is actually what alerted me of an improper configuration in the
+above firewalls nftables rules allowing me to fix it. Initially the second
+&lt;code&gt;dig&lt;/code&gt; command gave results letting me know that the restrictions weren’t being
+applied correctly.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Since we defined an &lt;code&gt;output&lt;/code&gt; chain inside &lt;code&gt;table inet filter&lt;/code&gt; with the line:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;type filter hook output priority 0; policy accept;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This attaches the chain to the kernel’s OUTPUT hook, so all locally generated
+packets, including DNS queries are filtered by this chain.&lt;/p&gt;
+&lt;p&gt;Within this chain, the rules:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Explicitly allow DNS queries to localhost addresses (&lt;code&gt;127.0.0.1&lt;/code&gt; and &lt;code&gt;::1&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Allow the &lt;code&gt;dnscrypt-proxy&lt;/code&gt; process (running with UID &lt;code&gt;62396&lt;/code&gt;) to send DNS
+queries on ports 443 and 853 (for DNS-over-HTTPS and DNS-over-TLS).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Drop all other outbound DNS traffic on ports &lt;code&gt;53&lt;/code&gt; and &lt;code&gt;853&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Because of this setup, dig queries to your local resolver at &lt;code&gt;127.0.0.1&lt;/code&gt; pass,
+but queries directly to public DNS servers like &lt;code&gt;8.8.8.8&lt;/code&gt; are blocked for
+users/processes other than the allowed DNS proxy.&lt;/p&gt;
+&lt;h2&gt;OpenSnitch&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/OpenSnitch&quot;&gt;NixOS Wiki OpenSnitch&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/evilsocket/opensnitch&quot;&gt;Opensnitch&lt;/a&gt; is an open-source
+application firewall that focuses on monitoring and controlling outgoing network
+connections on a per-application basis.&lt;/p&gt;
+&lt;p&gt;This can be used to block apps from accessing the internet that shouldn’t need
+to (i.e., block telemetry and more). Opensnitch will report that the app has
+attempted to make an outbound internet connection and block it or allow it based
+on the rules you set.&lt;/p&gt;
+&lt;h3&gt;Resources&lt;/h3&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Resources &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://cloudflare.com/learning/ssl/what-is-https&quot;&gt;Cloudflare What is HTTPS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/&quot;&gt;Surveillance Self-Defence&lt;/a&gt; has a lot of helpful info to
+protect your privacy.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/module/what-fingerprinting&quot;&gt;What is Fingerprinting&lt;/a&gt;, more
+than you realize is being tracked constantly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://oisd.nl/&quot;&gt;oisd.nl&lt;/a&gt; the oisd website&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;For potentially dangerous file types like PDFs, office documents, or images,
+especially those downloaded from untrusted sources such as torrents, consider
+converting them to a safe PDF format with
+&lt;a href=&quot;https://github.com/freedomofpress/dangerzone&quot;&gt;dangerzone&lt;/a&gt;. Dangerzone not
+only removes metadata but also applies robust sanitization to neutralize
+malicious content.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Librewolf&quot;&gt;NixOS Wiki LibreWolf&lt;/a&gt;, the options in
+the wiki make it less secure and aren’t recommended settings to use. They
+explicitly disable several of LibreWolf’s default privacy-enhancing features,
+such as fingerprinting resistance and clearing session data on shutdown.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://librewolf.net/docs/features/&quot;&gt;LibreWolf Features&lt;/a&gt; You still need to
+enable DNS over HTTPS through privacy settings.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/SearXNG&quot;&gt;SearXNG on NixOS&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.searxng.org/&quot;&gt;Welcome to SearXNG&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;Firefox Hardening Guide&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.ghacks.net/2015/08/18/a-comprehensive-list-of-firefox-privacy-and-security-settings/&quot;&gt;Firefox ghacks&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js&quot;&gt;Arkenfox&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacytools.io/private-browser&quot;&gt;PrivacyTools.io&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/simeononsecurity/FireFox-Privacy-Script&quot;&gt;simeononsecurity Firefox-Privacy-Script&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;brianfucksec firefox-hardening-Guide 2023&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://simeononsecurity.com/guides/enhance-firefox-security-configuring-guide/&quot;&gt;STIG Firefox Hardening&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;If you should trust the U.S. Governments recommendations is another story but
+it can be good to compare and contrast with other trusted resources. You’ll
+have to think whether the CISA recommending that everyone uses Signal is solid
+advice or guiding you towards a honeypot, I can’t say for sure.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://stigviewer.com/stigs/mozilla_firefox&quot;&gt;Mozilla Firefox Security Technical Implementation Guide&lt;/a&gt;
+The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
+set of security configuration standards developed by the U.S. Department of
+Defense. They are created by the Defense Information Systems Agency (DISA) to
+secure and harden DoD information systems and software.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The New Oil (Why Privacy &amp;amp; Security Matter)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/&quot;&gt;PrivacyGuides&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://relay.firefox.com/accounts/profile/&quot;&gt;Firefox Relay&lt;/a&gt; can be used to
+create email aliases that forward to your real email address. The paid plan
+also lets you create phone number aliases that forward to your phone number.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://zebracrossing.narwhalacademy.org/&quot;&gt;Zebra Crossing digital safety checklist&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/essentials#step-1&quot;&gt;DataDetoxKit&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/degooglise/&quot;&gt;DataDetox Degooglise&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tb-manual.torproject.org/&quot;&gt;Tor Browser User Manual&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://gitlab.torproject.org/tpo/team/-/wikis/home&quot;&gt;Tor Wiki&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tldp.org/LDP/nag2/x-087-2-intro.html&quot;&gt;Linux Network Administrators Guide&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.ibm.com/think/topics/networking&quot;&gt;IBM Networking&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
 </content></entry><entry><title>Cachix devour-flake</title><id>https://saylesss88.github.io/nix/cachix_devour.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/cachix_devour.html" rel="alternate"/><content type="html">&lt;h1&gt;Cachix and the devour-flake&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
@@ -5596,1315 +6945,6 @@ cache for fast, reproducible builds.&lt;/p&gt;
 &lt;p&gt;&lt;a href=&quot;https://docs.cachix.org/installation#flakes&quot;&gt;Cachix docs: Flakes&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;&lt;a href=&quot;https://www.tweag.io/blog/2020-06-25-eval-cache/#:~:text=The%20overhead%20for%20creating%20the,nixpkgs%20blender%20takes%204.9%20seconds.&quot;&gt;Tweag Evaluation Caching&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;&lt;a href=&quot;https://scrive.github.io/nix-workshop/06-infrastructure/01-caching-nix.html&quot;&gt;Scrive Caching&lt;/a&gt;&lt;/p&gt;
-</content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Since networks and systems vary, some adjustments may cause unexpected issues,
-especially around critical components like DNS or firewalls. Always review and
-test changes in a controlled environment before applying them broadly.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Understand the trade-offs and tailor the settings to your threat model and
-workflow. Take what’s useful, adapt as needed, and seek expert guidance for
-more advanced scenarios.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h2&gt;Introduction&lt;/h2&gt;
-&lt;p&gt;Every setup is unique, feel free to adapt or skip sections based on your needs.
-Start with the basics and build up as you gain confidence. The goal is
-practical, tested hardening tailored to you.&lt;/p&gt;
-&lt;h3&gt;Safe Browsing / Privacy Enhancing Habits&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;Adopt Encrypted DNS and HTTPS Everywhere&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Configure your system and browsers to use DNS over HTTPS (DoH), DNS over TLS
-(DoT), or DNSCrypt to prevent DNS leakage. Use HTTPS-Only mode in browsers to
-encrypt all web traffic. Prefer browsers with strong privacy defaults or add
-recommended extensions.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/dns/#dnscrypt-proxy&quot;&gt;Privacy Guides dnscrypt-proxy recommendation&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Disable browser “remember password” and autofill features, clear cookies and
-site data upon exit, and carefully vet suspicious URLs with tools like
-&lt;a href=&quot;https://www.virustotal.com/gui/home/url&quot;&gt;VirusTotal&lt;/a&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Limit Account Linking and Use Unique Credentials&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Create separate accounts with unique passwords instead of signing in with
-Google, Facebook, or similar services to limit broad data exposure from
-compromises.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Use Metadata Cleaning Tools&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Many files like images, PDFs, and office documents contain hidden metadata
-information such as location data, device details, and more that can reveal
-your identity or other sensitive information when you share files publicly.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;To protect your privacy, always sanitize files by removing this metadata
-before sharing. Tools like &lt;a href=&quot;https://0xacab.org/jvoisin/mat2&quot;&gt;mat2&lt;/a&gt; are
-designed to strip metadata from a wide range of media files efficiently.
-(&lt;code&gt;pkgs.mat2&lt;/code&gt;). You just type &lt;code&gt;mat2 swappy-2025.png&lt;/code&gt; for example and there will
-then be a new &lt;code&gt;mat2 swappy-2025.cleaned.png&lt;/code&gt; that can safely be shared.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Use Anonymous File-Sharing Tools&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;For sensitive transfers, consiter tools like
-&lt;a href=&quot;https://github.com/onionshare/onionshare&quot;&gt;OnionShare&lt;/a&gt; that provide anonymity
-and security.(&lt;code&gt;pkgs.onionshare&lt;/code&gt;)&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Avoid Scanning Random QR Codes Without Verification&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Use QR code scanner apps that check for malicious content before loading
-links.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Understand Your Threat Model&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Apply these basics universally, but tailor advanced hardening according to
-your unique environment, connectivity needs, and risk profile.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Delete cookies and site data when the browser is closed&lt;/strong&gt;. (security not
-usability).&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Use Strong, Unique Passwords and a Password Manager&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Avoid reused passwords by using reliable password managers like KeePassXC or
-Bitwarden, both available on NixOS. Pair this with enabling two-factor
-authentication &lt;strong&gt;(2FA) wherever possible&lt;/strong&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;It’s advisable to only use the desktop version and not the browser extension
-for a number of reasons. One is that you can store your passwords completely
-offline and have complete ownership of them.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;environment.systemPackages = [
-    pkgs.keepassxc
-    pkgs.kpcli     # KeePass CLI
-    # OR
-    pkgs.bitwarden-desktop
-    pkgs.bitwarden-cli
-];
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;With KeePassXC, you can require 3 different authentication methods at the same
-time. You can choose a password, a keyfile, and a security key where it won’t
-open unless all 3 are present giving you additional security. All 3 might not be
-necessary but it’s possible. It’s also easy to migrate to KeePassXC, you can
-import your vault from many different managers.&lt;/p&gt;
-&lt;p&gt;KeepassXC also makes it easy to keep your complete password database offline
-which can significantly reduce the risk of a breach.&lt;/p&gt;
-&lt;p&gt;With Bitwarden, to enable 2 factor authentication, you need to log in with your
-master password through the web interface.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.privacyguides.org/en/basics/passwords-overview/&quot;&gt;PrivacyGuides Intro to Passwords&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h3&gt;Why Follow These Basics?&lt;/h3&gt;
-&lt;p&gt;These recommended steps help protect your privacy and security while maintaining
-usability and minimizing system interruptions. They catch common threats like
-network eavesdropping, password reuse, fingerprinting, and data leakage,
-providing a solid foundation to build on.&lt;/p&gt;
-&lt;p&gt;A vast majority of secure and privacy-focused browsers available for NixOS are
-based on Firefox.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: Firefox does lack some security features available in Chrome and
-sandbox escapes in Linux are relatively easy. People such as madaidan say to
-never use Linux or Firefox period when you’re worried about security and
-privacy. I’m not personally going to jump to proprietary software with known
-backdoors in a misguided attempt at increasing security/privacy.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://techstory.in/eu-hits-google-with-3-5-billion-antitrust-fine-over-adtech-practices/&quot;&gt;EU Hits Google with 3.5 Billion Antitrust&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;This &lt;a href=&quot;https://grapheneos.org/usage#web-browsing&quot;&gt;GrapheneOS article&lt;/a&gt;, breaks
-down why they use Chromium-based browsers and specifically mentions that it’s
-not recommended to use Firefox, especially on Linux because of the weak
-sandboxing.&lt;/p&gt;
-&lt;p&gt;As a Chromium-based browser, Brave has been growing on me. Brave uses
-randomization rather than standardization for fingerprinting protection. If you
-run Cover Your Tracks with Brave, it will show a randomized fingerprint.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click To Expand United States Patriot Act Overview &lt;/summary&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.csis.org/analysis/fact-sheet-section-215-usa-patriot-act&quot;&gt;Section 215 USA Patriot Act&lt;/a&gt;
-permits the collection of “Tangible Things” or “Business Records”, e.g., your
-phone records, medical records, etc. for an investigation to obtain foreign
-intelligence information. If it does relate to a US person it must be relevant
-to preventing terrorism or espionage, and not be based solely on activities
-protected by the first amendment. “Relevant” is the key word here and it is at
-the governments discretion meaning they sweep everything and sift it later.
-Criticized for violating American citizens Fourth Amendment protections against
-warrantless search and seizure and proven to be ineffective.&lt;/p&gt;
-&lt;/details&gt;
-&lt;p&gt;What is “normal” and allowed today might be suppressed tomorrow, look at the UK
-&lt;a href=&quot;https://en.wikipedia.org/wiki/Online_Safety_Act_2023&quot;&gt;Online Safety Act&lt;/a&gt;
-purported to protect children, accused of banning privacy. This is because the
-only way to verify age is to make everyone submit KYC with their drivers license
-or ID, completely taking away any anonymity of adults and children alike.&lt;/p&gt;
-&lt;p&gt;Also see
-&lt;a href=&quot;https://www.bbc.com/news/articles/cq68j5g2nr1o&quot;&gt;BBC 4chan refuses to pay fine&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The mere existence of a surveillance state breeds fear and conformity and
-stifles free
-expression.–&lt;a href=&quot;https://theintercept.com/2016/04/28/new-study-shows-mass-surveillance-breeds-meekness-fear-and-self-censorship/&quot;&gt;The Intercept&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;There are much more scary examples in
-&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The new Oil&lt;/a&gt;&lt;/p&gt;
-&lt;h2&gt;Protections from Surveillance in the U.S.&lt;/h2&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand U.S. Surveillance protections &lt;/summary&gt;
-&lt;blockquote&gt;
-&lt;p&gt;⚠️ A crucial caveat to keep in mind regarding surveillance protections in the
-U.S., whether grounded in the Fourth Amendment, the First Amendment, or
-statutory laws is that &lt;strong&gt;these protections are not foolproof and have
-repeatedly failed or been circumvented in practice&lt;/strong&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Fourth Amendment Basics&lt;/strong&gt;: It demands reasonableness in searches and usually
-requires a warrant. This means government agents cannot arbitrarily listen to
-your private communications or search your digital data without judicial
-approval&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Electronic Surveillance Challenges&lt;/strong&gt;: Courts have wrestled with how the
-Fourth Amendment applies to modern communications. The Supreme Court has ruled
-in some cases that pervasive or non-consensual electronic surveillance
-violates reasonable expectations of privacy, but other rulings have allowed
-broader state actions in national security contexts.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;The Third-Party Doctrine&lt;/strong&gt;: A major limitation arises from the “third-party
-doctrine,” which holds that information voluntarily shared with third parties
-(like phone companies or internet providers) has reduced Fourth Amendment
-protections. This means data held by third parties may be subject to
-government access without a warrant in some cases&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;The First Amendment&lt;/strong&gt; guarantees free speech and the freedom to receive
-information without government censorship or intimidation. Excessive or
-secretive government surveillance can chill free speech by making people
-afraid their communications are monitored, discouraging open expression and
-participation in public discourse.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Advocates argue that courts should recognize government surveillance not
-only as a Fourth Amendment search issue but also as a First Amendment
-violation where surveillance suppresses or chills constitutionally protected
-expression.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;While the Fourth Amendment traditionally governs searches and surveillance
-legality, the First Amendment frames the broader impact on free speech and
-democratic engagement. Invoking both provides a more comprehensive
-constitutional shield against intrusive surveillance practices.&lt;/p&gt;
-&lt;/details&gt;
-&lt;hr /&gt;
-&lt;h3&gt;Choosing Secure/Private Browsers and Search Engines&lt;/h3&gt;
-&lt;blockquote&gt;
-&lt;p&gt;“The major problem with current systems is their inability to provide
-effective isolation between various programs running on one machine. E.g. if
-the user’s Web browser gets compromised (due to a bug exploited by a malicious
-web site), the OS is usually unable to protect other user’s applications and
-data from also being compromised.” –Qubes arch-spec&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;On a hardened Linux system, the browser is most often the weakest link exposed
-to the internet, and so security, privacy, and anti-tracking features of
-browsers are now as important, or even more important than platform-level
-protections.&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;Fingerprinting&lt;/h3&gt;
-&lt;p&gt;There are two main approaches to obfuscating your fingerprint:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Standardization&lt;/strong&gt;: Make browsers standardized and therefore have the same
-fingerprint to blend into a crowd. This is what Tor and Mullvad Browser do.
-Best for anonymity; increases the crowd you blend into, but may decrease
-usability (site breakage, CAPTCHAs); adversaries may still find subtle
-differences.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Randomization&lt;/strong&gt;: Randomize fingerprint metrics so it’s not directly linkable
-to you. Brave has this feature, if you run coveryourtracks with Brave you will
-get a result of “your browser has a randomized fingerprint”. This is good for
-privacy but may be detectable by advanced scripts.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h4&gt;Firefox&lt;/h4&gt;
-&lt;p&gt;My understanding here is evolving, Firefox on Linux may be very privacy friendly
-after some tweaks, but is not necessarily a secure browser.&lt;/p&gt;
-&lt;p&gt;Firefox’s defaults are not privacy respecting or secure but allows a high level
-of customization to make it so. Firefox will be patched with security fixes
-sooner than any fork, and some forks are slow to apply the updates leaving a
-vulnerability open longer to exploit.&lt;/p&gt;
-&lt;p&gt;The Tor Uplift Project was a collaboration between the Tor Project and Mozilla
-to integrate key privacy and anti-fingerprinting features from the Tor Browser
-into Firefox. This enables us to enable/disable a few settings and remove the
-need for most add-ons.&lt;/p&gt;
-&lt;p&gt;If you use Firefox’s ETP, RFP, and other protections provided by the ghacks or
-Arkenfox scripts alongside uBlock configured to use dynamic filtering you can
-accomplish what it used to take 10 extensions to do.&lt;/p&gt;
-&lt;p&gt;Firefox does implement Site Isolation with its Project Fission. This is much
-less mature than Chromes site isolation and often disabled by default on
-different versions of Firefox. To ensure it’s enabled, go to &lt;code&gt;about:config&lt;/code&gt; and
-check that both &lt;code&gt;fission.autostart&lt;/code&gt;, and &lt;code&gt;gfx.webrender.all&lt;/code&gt; prefs are set to
-&lt;code&gt;true&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;With uBlock you can &lt;code&gt;Disable JavaScript&lt;/code&gt; which functions similar to NoScript,
-enable numerous blocklists and more.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/gorhill/uBlock/wiki&quot;&gt;uBlock Wiki&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;To enable Enhanced Tracking Protection and FPP, go to
-&lt;code&gt;Settings -&amp;gt; Privacy &amp;amp; Security&lt;/code&gt; -&amp;gt; &lt;code&gt;Enhanced Tracking Protection -&amp;gt; Custom&lt;/code&gt;. If
-it causes breakage, while on the broken site, click the sheild next to the
-search bar. From there you can turn off ETP for &lt;strong&gt;just that site&lt;/strong&gt;.&lt;/p&gt;
-&lt;p&gt;Once you select &lt;code&gt;Custom&lt;/code&gt;, you’ll see that among the options is to block
-&lt;code&gt;Known fingerprinters&lt;/code&gt; as well as &lt;code&gt;Suspected fingerprinters&lt;/code&gt;. The “Known
-Fingerprinters” protection works by blocking scripts listed in
-&lt;a href=&quot;https://disconnect.me/trackerprotection#categories_of_trackers&quot;&gt;Disconnect’s fingerprinting list&lt;/a&gt;
-For most users they suggest using the above FPP to avoid breakage. To go further
-and enable RFP, go to &lt;code&gt;about:config&lt;/code&gt; and set &lt;code&gt;privacy.resistFingerprinting&lt;/code&gt; to
-&lt;code&gt;true&lt;/code&gt;.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://support.mozilla.org/en-US/kb/resist-fingerprinting&quot;&gt;Mozilla Resist Fingerprinting&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.mozilla.org/Project_Fission&quot;&gt;Mozilla Project_Fission&lt;/a&gt;, Firefox’s
-implementation of Site Isolation.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;To ensure Site Isolation is enabled, in &lt;code&gt;about:config&lt;/code&gt;, set
-&lt;code&gt;fission.autostart&lt;/code&gt;, and &lt;code&gt;gfx.webrender.all&lt;/code&gt; prefs to &lt;code&gt;true&lt;/code&gt;.(It’s disabled
-by default on android).&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h4&gt;Tor Browser&lt;/h4&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: Tor is &lt;strong&gt;not&lt;/strong&gt; the most secure browser, anonymity and security can
-often be at odds with each other. Having the exact same browser as many other
-people isn’t the best security practice, but it is great for anonymity. Tor is
-also based on Firefox Esr, which only receives patches for vulnerabilities
-considered Critical or High which can be taken advantage of.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;Tor is a modified version of Firefox specifically designed for use with Tor.&lt;/p&gt;
-&lt;p&gt;Tor routes your internet traffic through a global volunteer-operated network,
-masking your IP address and activities from local observers, ISPs, websites, and
-surveillance systems. This helps you protect personal information and maintain
-anonymity when browsing, communicating, or using online services.&lt;/p&gt;
-&lt;p&gt;Adding browser plugins to Tor can de-anonymize you, don’t do it. Tor is already
-built with the necessary plugins and privacy protecting rules, so adding more is
-unnecessary and actually dangerous for your anonymity.&lt;/p&gt;
-&lt;p&gt;A Tor exit node can easily see your traffic, and if you’re not using HTTPS then
-it may be able to modify that traffic. Only use HTTPS when browsing the clear
-net with Tor, this doesn’t apply to onion services (&lt;code&gt;.onion&lt;/code&gt;) as the traffic
-stays inside the Tor network all the way to the destination.&lt;/p&gt;
-&lt;p&gt;You can visit both the clear web and &lt;code&gt;.onion&lt;/code&gt; sites on Tor. Whenever possible
-you should utilize Onion Services (&lt;code&gt;.onion&lt;/code&gt; addresses) so communications and web
-browsing stay within the Tor network. &lt;code&gt;.onion&lt;/code&gt; URLS form a tunnel that is
-end-to-end encrypted using a random rendezvous point and incorporating
-&lt;a href=&quot;https://en.wikipedia.org/wiki/Forward_secrecy&quot;&gt;perfect forward secrecy (PFS)&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Bridges are only necessary in countries that don’t allow people to use Tor.
-Using Bridges when they aren’t needed takes resources away from people in
-oppressive regimes that need, only use them if necessary. Read the guides, and
-use Tails OS, or Whonix when it really matters.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://saylesss88.github.io/nix/whonix_kvm.html&quot;&gt;Whonix KVM on NixOS&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;You will see a lot of conflicting information about using Tor with a VPN. If you
-are in an area that blocks access to Tor or it is dangerous to use Tor, by all
-means use a trusted VPN.&lt;/p&gt;
-&lt;h3&gt;TorPlusVPN&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://gitlab.torproject.org/legacy/trac/-/wikis/doc/TorPlusVPN&quot;&gt;Tor Project Wiki TorPlusVPN&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/advanced/tor-overview/#safely-connecting-to-tor&quot;&gt;Safely Connecting to Tor&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Learn about Tor&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;I recommend starting with
-&lt;a href=&quot;https://www.privacyguides.org/articles/2025/04/30/in-praise-of-tor/#onion-sites-you-can-visit-using-the-tor-browser&quot;&gt;Privacy Guides In Praise of Tor&lt;/a&gt;
-and then reading their
-&lt;a href=&quot;https://www.privacyguides.org/en/advanced/tor-overview/&quot;&gt;Tor Overview&lt;/a&gt; they
-have been the most informative resources I’ve come across yet.&lt;/p&gt;
-&lt;p&gt;The Electronic Frontier Foundation sponsors and helps fund Tor and so does the
-United States Government.&lt;/p&gt;
-&lt;p&gt;If you are fortunate to live outside of oppressive regimes with extreme
-censorship, using Tor for every day, mundane activities is likely safe and won’t
-put you on any harmful “list.” Even if it did, you’d be in good company—these
-lists mostly contain great people working tirelessly to defend human rights and
-online privacy worldwide.&lt;/p&gt;
-&lt;p&gt;By using Tor regularly for ordinary browsing, you help strengthen the network,
-making it more robust and anonymous for everyone. This collective support makes
-staying private easier for activists, journalists, and anyone facing online
-surveillance or censorship. The writer of the PrivacyGuides article mentions
-using Tor when he needs to access Google Maps to protect his privacy&lt;/p&gt;
-&lt;p&gt;So, consider embracing Tor not only for sensitive browsing but also for daily
-routine tasks. Every user adds valuable noise to the network, helping protect
-privacy and freedom for all.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Tor is at risk, and needs our help&lt;/strong&gt;. Despite its strength and history, Tor
-isn’t safe from the same attacks oppressive regimes and misinformed legislators
-direct at encryption and many other privacy-enhancing
-technologies.–&lt;a href=&quot;https://www.privacyguides.org/articles/2025/04/30/in-praise-of-tor/#how-to-support-tor&quot;&gt;How to Support Tor&lt;/a&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Tor&quot;&gt;Tor on NixOS&lt;/a&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tb-manual.torproject.org/&quot;&gt;Tor Browser User Manual&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://support.torproject.org/faq/staying-anonymous/&quot;&gt;Tor staying-anonymous&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/module/how-to-use-tor&quot;&gt;How to Use Tor&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://torproject.github.io/manual/secure-connections/&quot;&gt;Cool Graphic Showing Secure Connections with Tor&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h4&gt;Mullvad-Browser&lt;/h4&gt;
-&lt;p&gt;Rather than try to tweak a browser into fingerprinting submission, I recommend
-using either Tor or Mullvad-Browser when fingerprintability is the highest
-issue. Both Tor and Mullvad-Browser were designed specifically for this purpose
-and you likely won’t get as much out of tweaking another browser.&lt;/p&gt;
-&lt;p&gt;Mullvad-Browser is free and open-source and was developed by the Tor Project in
-collaboration with Mullvad VPN.(Another Firefox Derivative). It is also the top
-recommended browser from PrivacyGuides.&lt;/p&gt;
-&lt;p&gt;It is the Tor Browser without the Tor Network, allowing you to use the privacy
-features Tor created along with a VPN if you so choose.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://mullvad.net/en/browser&quot;&gt;Mullvad-Browser&lt;/a&gt;, is in Nixpkgs as:
-&lt;code&gt;pkgs.mullvad-browser&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;LibreWolf&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;LibreWolf&lt;/strong&gt; is an open-source fork of Firefox with a strong focus on privacy,
-security, and user freedom. LibreWolf enables always HTTPS, includes
-uBlockOrigin, and only includes privacy focused search engines by default.&lt;/p&gt;
-&lt;h3&gt;Metasearch Engines&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;Startpage&lt;/strong&gt;: Advertised as the world’s most private search engine. “Startpage
-delivers Google search results via their proprietary personal data protection
-technology.”&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.startpage.com/&quot;&gt;Startpage&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;To add Startpage as a search engine, add
-&lt;code&gt;https://www.startpage.com/sp/search?query=%s&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;SearXNG&lt;/strong&gt; an open-source, privacy-respecting metasearch engine that aggregates
-results from various search services, such as Google, DuckDuckGo, etc. without
-tracking you or profiling your searches. You can add SearXNG to firefox by going
-to &lt;code&gt;about:preferences#search&lt;/code&gt; and at the bottom click &lt;code&gt;Add&lt;/code&gt;, URL will be
-&lt;code&gt;https://searx.be/search?q=%s&lt;/code&gt;.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗️ NOTE: SearXNGs google results are not working as of 11-17-25 and haven’t
-for a while now leading to bad results being returned for most instances. It’s
-my understanding this is because Google is actively blocking automated
-requests from SearXNG. Devs sometimes publish patches or workarounds, but
-these are quickly blocked when Google changes their back-end.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗️ NOTE: The above searx is the default and doesn’t give many relevant
-results. To get relevant results find a
-&lt;a href=&quot;https://searx.space/&quot;&gt;public instance&lt;/a&gt; with a good rating from your area and
-add the &lt;code&gt;search?q=%s&lt;/code&gt; to the end of it. For example, I’m using
-&lt;code&gt;https://priv.au/search?q=%s&lt;/code&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;Searx is a bit different, you can choose which search engine you want for your
-current search with &lt;code&gt;!ddg search term&lt;/code&gt; to use duckduckgo for example.&lt;/p&gt;
-&lt;p&gt;Example LibreWolf config implementing many of the STIG recommendations:&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to expand LibreWolf Example &lt;/summary&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# librewolf.nix
-{pkgs, lib, config, ...}: let
-  cfg = config.custom.librewolf;
-in {
-  options.custom.librewolf = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = &quot;Enable the LibreWolf Module&quot;;
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    programs.librewolf = {
-      enable = true;
-      policies = {
-        # A bit annoying
-        DontCheckDefaultBrowser = true;
-        # Pocket is insecure according to DoD
-        DisablePocket = true;
-        # No imperative updates
-        DisableAppUpdate = true;
-      };
-      settings = {
-        # // SV-16925 - DTBF030
-        &quot;security.enable_tls&quot; = true;
-        # // SV-16925 - DTBF030
-        &quot;security.tls.version.min&quot; = 2;
-        # // SV-16925 - DTBF030
-        &quot;security.tls.version.max&quot; = 4;
-
-        # // SV-111841 - DTBF210
-        &quot;privacy.trackingprotection.fingerprinting.enabled&quot; = true;
-
-        # // V-252881 - Retaining Data Upon Shutdown
-        &quot;browser.sessionstore.privacy_level&quot; = 0;
-
-        # // SV-251573 - Customizing the New Tab Page
-        &quot;browser.newtabpage.activity-stream.enabled&quot; = false;
-        &quot;browser.newtabpage.activity-stream.feeds.section.topstories&quot; = false;
-        &quot;browser.newtabpage.activity-stream.showSponsored&quot; = false;
-        &quot;browser.newtabpage.activity-stream.feeds.snippets&quot; = false;
-
-        # // V-251580 - Disabling Feedback Reporting
-        &quot;browser.chrome.toolbar_tips&quot; = false;
-        &quot;browser.selfsupport.url&quot; = &quot;&quot;;
-        &quot;extensions.abuseReport.enabled&quot; = false;
-        &quot;extensions.abuseReport.url&quot; = &quot;&quot;;
-
-        # // V-251558 - Controlling Data Submission
-        &quot;datareporting.policy.dataSubmissionEnabled&quot; = false;
-        &quot;datareporting.healthreport.uploadEnabled&quot; = false;
-        &quot;datareporting.policy.firstRunURL&quot; = &quot;&quot;;
-        &quot;datareporting.policy.notifications.firstRunURL&quot; = &quot;&quot;;
-        &quot;datareporting.policy.requiredURL&quot; = &quot;&quot;;
-
-        # // V-252909 - Disabling Firefox Studies
-        &quot;app.shield.optoutstudies.enabled&quot; = false;
-        &quot;app.normandy.enabled&quot; = false;
-        &quot;app.normandy.api_url&quot; = &quot;&quot;;
-
-        # // V-252908 - Disabling Pocket
-        &quot;extensions.pocket.enabled&quot; = false;
-
-        # // V-251555 - Preventing Improper Script Execution
-        &quot;dom.disable_window_flip&quot; = true;
-
-        # // V-251554 - Restricting Window Movement and Resizing
-        &quot;dom.disable_window_move_resize&quot; = true;
-
-        # // V-251551 - Disabling Form Fill Assistance
-        &quot;browser.formfill.enable&quot; = false;
-
-        # // V-251550 - Blocking Unauthorized MIME Types
-        &quot;plugin.disable_full_page_plugin_for_types&quot; = &quot;application/pdf,application/fdf,application/xfdf,application/lso,application/lss,application/iqy,application/rqy,application/lsl,application/xlk,application/xls,application/xlt,application/pot,application/pps,application/ppt,application/dos,application/dot,application/wks,application/bat,application/ps,application/eps,application/wch,application/wcm,application/wb1,application/wb3,application/rtf,application/doc,application/mdb,application/mde,application/wbk,application/ad,application/adp&quot;;
-      };
-    };
-    xdg.desktopEntries.librewolf = {
-      name = &quot;LibreWolf&quot;;
-      exec = &quot;${pkgs.librewolf}/bin/librewolf&quot;;
-    };
-    xdg.mimeApps = {
-      enable = true;
-      defaultApplications = {
-        &quot;text/html&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/http&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/https&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/about&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/unknown&quot; = &quot;librewolf.desktop&quot;;
-      };
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;And enable it in your &lt;code&gt;home.nix&lt;/code&gt; or equivalent with:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# home.nix
-custom.librewolf.enable = true;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The &lt;code&gt;xdg&lt;/code&gt; settings at the end make LibreWolf the defaults for what is listed.&lt;/p&gt;
-&lt;p&gt;Thanks to &lt;code&gt;JosefKatic&lt;/code&gt; for putting the above STIG settings in NixOS format.&lt;/p&gt;
-&lt;p&gt;Also, go to
-&lt;a href=&quot;https://accounts.firefox.com/settings#data-collection&quot;&gt;accounts.firefox&lt;/a&gt; and
-turn off “Allow Mozilla accounts to send technical and interaction data to
-Mozilla”. Also set 2-fa in
-&lt;a href=&quot;https://accounts.firefox.com/settings#security&quot;&gt;Security Settings&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;I always set &lt;code&gt;Max Protection&lt;/code&gt; for DNS over HTTPS and personally set a custom
-resolver to &lt;code&gt;https://dns.quad9.net/dns-query&lt;/code&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Mullvad is also a good option:
-&lt;a href=&quot;https://mullvad.net/en/help/no-logging-data-policy&quot;&gt;Mullvad no-logging-data-policy&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Firefox Relay is a pretty cool privacy tool too, it gives you temporary email
-and phone number aliases so you don’t have to give out your real ones. There is
-an autofill option available also, but you can just click on the Relay button
-and generate a new alias and use it like your normal email.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Alternative LibreWolf Configuration utilizing Arkenfox &lt;/summary&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  pkgs,
-  lib,
-  config,
-  ...
-}: let
-  cfg = config.custom.librewolf;
-in {
-  options.custom.librewolf = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = &quot;Enable the LibreWolf Module&quot;;
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    programs.librewolf = {
-      enable = true;
-      policies = {
-        DontCheckDefaultBrowser = true;
-        DisablePocket = true;
-        DisableAppUpdate = true;
-      };
-      profiles.my-default = {
-        isDefault = true;
-        name = &quot;Default Profile&quot;;
-        extraConfig = &apos;&apos;
-          ${builtins.readFile ./user.js}
-          &quot;general.autoScroll&quot; = true;
-          &quot;sidebar.verticalTabs&quot; = true;
-        &apos;&apos;;
-
-        settings = {
-        };
-      };
-    };
-    xdg.desktopEntries.librewolf = {
-      name = &quot;LibreWolf&quot;;
-      exec = &quot;${pkgs.librewolf}/bin/librewolf&quot;;
-    };
-    xdg.mimeApps = {
-      enable = true;
-      defaultApplications = {
-        &quot;text/html&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/http&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/https&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/about&quot; = &quot;librewolf.desktop&quot;;
-        &quot;x-scheme-handler/unknown&quot; = &quot;librewolf.desktop&quot;;
-      };
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Download the
-&lt;a href=&quot;https://github.com/arkenfox/user.js/blob/master/user.js&quot;&gt;Arkenfox user.js&lt;/a&gt; and
-review it making sure that you agree with the settings. If you do, place it in
-the same directory as your &lt;code&gt;librewolf.nix&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Read the &lt;a href=&quot;https://github.com/arkenfox/user.js/wiki&quot;&gt;Arkenfox Wiki&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The &lt;code&gt;user.js&lt;/code&gt; is full of comments and information, read it and adjust it for
-your needs. The following enables RFP fingerprint protection:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-js&quot;&gt;***/ user.js ***/
-user_pref(&quot;privacy.resistFingerprinting&quot;, true); // [FF41+]
-user_pref(&quot;privacy.resistFingerprinting.pbmode&quot;, true); // [FF114+]
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;As you learn more, you can get more strict if you so choose.&lt;/p&gt;
-&lt;p&gt;Rebuild, launch LibreWolf, and check your &lt;code&gt;~/.librewolf/my-default/user.js&lt;/code&gt;. It
-should match the Arkenfox settings. Initially, only the &lt;code&gt;user.js&lt;/code&gt; will be
-listed, as you run LibreWolf other profile files and folders are created
-dynamically.&lt;/p&gt;
-&lt;p&gt;In LibreWolf type &lt;code&gt;Ctrl + Shift + J&lt;/code&gt; and look for any errors.&lt;/p&gt;
-&lt;p&gt;Type &lt;code&gt;about:config&lt;/code&gt; into the address bar and search a few of the settings that
-Arkenfox changes, do they match?&lt;/p&gt;
-&lt;p&gt;The &lt;code&gt;user.js&lt;/code&gt; is read &lt;strong&gt;in order&lt;/strong&gt;, if there are 2 of the same setting, the last
-one will be applied. Adding overrides to the settings attribute above places the
-changes at the &lt;strong&gt;beginning&lt;/strong&gt; of the &lt;code&gt;user.js&lt;/code&gt; which isn’t what we want. Placing
-them after the &lt;code&gt;${builtins.readFile ./user.js}&lt;/code&gt; in &lt;code&gt;extraConfig&lt;/code&gt; amends them to
-the &lt;strong&gt;end&lt;/strong&gt; of the &lt;code&gt;user.js&lt;/code&gt; allowing us to override the defaults.&lt;/p&gt;
-&lt;p&gt;The process is the same with Firefox but since Arkenfox strongly recommends
-Ublock Origin and it is built into LibreWolf it makes sense to use the browser
-with the stronger defaults.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: There is a home-manager module called &lt;code&gt;arkenfox-nixos&lt;/code&gt; that is
-supposed to make updates easier but IMO the documentation leaves you guessing
-how to use it. As updates come in to Firefox/LibreWolf some of the settings
-become unnecessary so it’s important to keep an eye on both Firefox and
-Arkenfox updates. Which both have RSS feeds that will alert you upon changes.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;I personally use &lt;a href=&quot;https://feeder.co/&quot;&gt;Feeder&lt;/a&gt; as my open-source RSS feed reader,
-available in most app stores including F-Droid. It is listed on
-&lt;a href=&quot;https://www.privacytools.io/privacy-rss-feed-readers&quot;&gt;PrivacyTools&lt;/a&gt;.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js/commits/master.atom&quot;&gt;Arkenfox Recent Commits RSS feed&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js/releases.atom&quot;&gt;Arkenfox Release Notes RSS&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.mozilla.org/en-US/firefox/nightly/notes/feed/&quot;&gt;Firefox Nightly release notes&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
-&lt;/details&gt;
-&lt;h3&gt;Fingerprint Testing&lt;/h3&gt;
-&lt;p&gt;You can test your browser to see how well you are protected from tracking and
-fingerprinting at &lt;a href=&quot;https://coveryourtracks.eff.org/&quot;&gt;Cover Your Tracks&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Also check out, &lt;a href=&quot;https://amiunique.org/fingerprint&quot;&gt;Am I Unique&lt;/a&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;⚠️ WARNING: Don’t put too much weight into the results as people often check
-their fingerprint, change one metric and check it again over and over skewing
-the results. It is helpful for knowing the fingerprint values that trackers
-track.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://forum.torproject.org/t/browser-fingerprinting/1228/25&quot;&gt;Browser Fingerprinting Tor Forum&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://madaidans-insecurities.github.io/browser-tracking.html&quot;&gt;Madaidans Hot Take on Browser Tracking&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Script to wipe cache and generate new `machine-id` &lt;/summary&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.man7.org/linux/man-pages/man5/machine-id.5.html&quot;&gt;man page machine-id(5)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;The following example is adapted from
-&lt;a href=&quot;https://firejail.wordpress.com/all-about-tor/&quot;&gt;Firejail All About Tor&lt;/a&gt;
-section, adapted for NixOS.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Save the following script as &lt;code&gt;cleanup.sh&lt;/code&gt;, change &lt;code&gt;Your-User&lt;/code&gt; to your username:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;#!/bin/sh -e
-USER=&quot;Your-User&quot;
-HOME_DIR=&quot;/home/$USER&quot;
-# clear user cache directly as root
-sudo -u &quot;$USER&quot; rm -fr &quot;$HOME_DIR/.cache&quot;
-# generate a new machine-id
-rm -f /var/lib/machine-id
-dbus-uuidgen &amp;gt; /var/lib/machine-id
-cp /var/lib/machine-id /etc/machine-id
-chmod 444 /etc/machine-id
-exit 0
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The &lt;code&gt;~/.cache&lt;/code&gt; directory is where most programs store runtime information:
-webpages you visited, torrent trackers you connected to, and deleted emails.
-It’s a good idea to remove them at shutdown. –Firejail all-about-tor&lt;/p&gt;
-&lt;p&gt;Check &lt;code&gt;/etc/machine-id&lt;/code&gt; &amp;amp; &lt;code&gt;~/.cache&lt;/code&gt; before running the script:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cat /etc/machine-id
-# Output
-0b46feb27a20469da0ee62baaeb51c5c
-ls ~/.cache
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;chmod +x cleanup.sh
-sudo ./cleanup.sh
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Recheck your &lt;code&gt;machine-id&lt;/code&gt; and &lt;code&gt;~/.cache&lt;/code&gt; directories, you should have a newly
-generated &lt;code&gt;machine-id&lt;/code&gt; and minimal files in the &lt;code&gt;~/.cache&lt;/code&gt; directory. The
-Firejail example shows a systemd unit that runs the above script at every
-shutdown but that may be overkill, I suggest running it occasionally to make it
-harder for sites to link your &lt;code&gt;machine-id&lt;/code&gt; to you.&lt;/p&gt;
-&lt;/details&gt;
-&lt;p&gt;Privacy protection doesn’t need to be perfect to make a difference. The best
-protection against tracking and fingerprinting available is to use Tor. Many
-add-ons are redundant, do some research and avoid using an add-on for something
-that can be accomplished with built-in settings.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://ssd.eff.org/module/how-to-use-tor&quot;&gt;Surveillance Self-Defense How to: Use Tor&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;There are more hardening parameters that can be set but this should be a good
-starting point for a hardened version of LibreWolf. When testing with Cover your
-tracks, customized LibreWolf tested as having stronger tracking protection than
-default Mullvad-Browser and NoScript significantly cuts down the data available
-for fingerprinting by disabling JavaScript.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;The &lt;a href=&quot;https://wiki.garudalinux.org/en/privacy-guide&quot;&gt;Garuda Privacy-Guide&lt;/a&gt; has
-good tips and recommendations for browser add-ons.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;Virtual Private Networks (VPNs)&lt;/h3&gt;
-&lt;p&gt;A &lt;strong&gt;VPN&lt;/strong&gt; (Virtual Private Network) encrypts your Internet connection and routes
-your traffic through a VPN provider’s servers, masking your IP address from
-local network observers, ISPs, and websites. Using a VPN can prevent your ISP or
-local Wi-Fi owner from tracking what sites you visit (they only see a connection
-to the VPN), and can help circumvent some regional restrictions or filtering.&lt;/p&gt;
-&lt;p&gt;However, VPNs simply shift your trust: Instead of your ISP seeing your activity,
-your VPN provider can, so you must trust their privacy policies and
-infrastructure. Quality and privacy protections vary widely from one VPN company
-to another.&lt;/p&gt;
-&lt;p&gt;I see over and over again that Mullvad VPN is the best, I am in no way
-affiliated with them this is just what I hear. They allow you to pay with cash
-completely anonymously and keep very minimal metadata. Metadata is a big deal,
-the US gov has admitted to killing people based solely on their metadata.&lt;/p&gt;
-&lt;p&gt;Your ISP almost certainly does sketchy stuff with your data, personally I would
-rather trust a company like Mullvad whose whole reputation is based on their
-trustworthiness, transparency, and data protection.&lt;/p&gt;
-&lt;p&gt;You can use a VPN with Tor, but it’s not recommended by the Tor Project unless
-you’re an advanced user who knows how to configure both in a way that doesn’t
-compromise your privacy.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Popular VPNs on NixOS&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Mullvad_VPN&quot;&gt;Mullvad VPN&lt;/a&gt; Mullvad VPN uses
-WireGuard under the hood and only works if &lt;code&gt;systemd-resolvd&lt;/code&gt; is enabled.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/WireGuard&quot;&gt;WireGuard VPN&lt;/a&gt;, WireGuard is a
-protocol, but also a VPN provider on NixOS.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Tailscale&quot;&gt;Tailscale&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/OpenVPN&quot;&gt;OpenVPN&lt;/a&gt;, OpenVPN is both a protocol and
-full-featured VPN provider on NixOS.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;Setting up Tailscale&lt;/h3&gt;
-&lt;p&gt;I was surprised at how easy this actually was to set up. Either go to
-&lt;a href=&quot;https://www.tailscale.com&quot;&gt;https://www.tailscale.com&lt;/a&gt; and/or download the app for either Android or IOS,
-sign up with your identity provider, and click &lt;code&gt;Start connecting devices -&amp;gt;&lt;/code&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://tailscale.com/kb/1017/install&quot;&gt;Tailscale quickstart&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;To add tailscale to NixOS:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# tailscale.nix
-{...}: {
-  services.tailscale.enable = true;
-  # Tell the firewall to implicitly trust packets routed over Tailscale:
-  networking.firewall.trustedInterfaces = [&quot;tailscale0&quot;];
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Tailscale will automatically use the hostname of your device as the name of the
-network. If you want to change it to something else:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --hostname=&amp;lt;name&amp;gt;
-# You can also give your account a nickname
-sudo tailscale set --nickname=&amp;lt;name&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This allows you to refer to your network by &lt;code&gt;name&lt;/code&gt; rather than IP address.&lt;/p&gt;
-&lt;p&gt;Tailscale uses &lt;a href=&quot;https://tailscale.com/kb/1081/magicdns&quot;&gt;MagicDNS&lt;/a&gt; which is
-enabled by default, and they recommend you keep it enabled.&lt;/p&gt;
-&lt;p&gt;The docs say that by default, devices in your tailnet prefer their local DNS
-settings and only use the tailnet’s DNS servers when needed. I had to completely
-disable my Androids DNS settings for tailscale to access the internet through
-MagicDNS.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --accept-dns=false
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;To connect to tailscale after rebuilding you can run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale up
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Use &lt;code&gt;nslookup&lt;/code&gt; to review and debug DNS responses:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nslookup google.com
-Server:         127.0.0.1
-Address:        127.0.0.1#53
-
-Non-authoritative answer:
-Name:   google.com
-Address: 142.251.40.206
-Name:   google.com
-Address: 2a00:1450:4001:827::200e
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;The &lt;code&gt;127.0.0.1#53&lt;/code&gt; indicate that instead of using the DNS server pushed by
-your ISP, router, or Tailscale’s MagicDNS, the system is sending all DNS
-requests through the loopback device to &lt;code&gt;dnscrypt-proxy&lt;/code&gt; in my case.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Get the status of your connections to other Tailscale devices:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;tailscale status
-1           2         3           4         5
-100.1.2.3   device-a  apenwarr@   linux     active; direct &amp;lt;ip-port&amp;gt;, tx 1116 rx 1124
-100.4.5.6   device-b  crawshaw@   macOS     active; relay &amp;lt;relay-server&amp;gt;, tx 1351 rx 4262
-100.7.8.9   device-c  danderson@  windows   idle; tx 1214 rx 50
-100.0.1.2   device-d  ross@       iOS       —
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1196/security-hardening&quot;&gt;Tailscale Best Practices&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1080/cli&quot;&gt;Tailscale CLI&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;There is much more you can do with Tailscale, including integrating
-Mullvad-VPN and using Exit Nodes.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;Encrypted DNS&lt;/h2&gt;
-&lt;p&gt;DNS (Domain Name System) resolution is the process of translating a website’s
-domain name into its corresponding IP address. By default, this traffic isn’t
-encrypted, which means anyone on the network, from your ISP to potential
-hackers, can see the websites you’re trying to visit. &lt;strong&gt;Encrypted DNS&lt;/strong&gt; uses
-protocols to scramble this information, protecting your queries and responses
-from being intercepted and viewed by others.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: There are many other ways for someone monitoring your traffic to see
-what domain you looked up via DNS that it’s effectiveness is questionable
-without also using Tor or a VPN. Encrypted DNS will not help you hide any of
-your browsing activity.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;There are 3 main types of DNS protection:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;DNS over HTTPS (DoH)&lt;/strong&gt;: Uses the HTTPS protocol to encrypt data between the
-client and the resolver.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;DNS over TLS (DoT)&lt;/strong&gt;: Similar to (DoH), differs in the methods used for
-encryption and delivery using a separate port from HTTPS.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;DNSCrypt&lt;/strong&gt;: Uses end-to-end encryption with the added benefit of being able
-to prevent DNS spoofing attacks.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Useful resources:&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand DNS Resources &lt;/summary&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Encrypted_DNS&quot;&gt;NixOS Wiki Encrypted DNS&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/dns/what-is-dns/&quot;&gt;Domain Name System (DNS)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_HTTPS&quot;&gt;Wikipedia DNS over HTTPS (DoH)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_TLS&quot;&gt;Wikipedia DNS over TLS (DoT)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://blog.cloudflare.com/dns-encryption-explained/&quot;&gt;Cloudflare Dns Encryption Explained&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://nordvpn.com/blog/encrypted-dns-traffic/&quot;&gt;NordVPN Encrypted Dns Traffic&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Hot Take&lt;/strong&gt;:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://madaidans-insecurities.github.io/encrypted-dns.html&quot;&gt;Encrypted DNS is ineffective without a VPN or Tor by madaidan&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
-&lt;p&gt;The following sets up dnscrypt-proxy using DoH (DNS over HTTPS) with an oisd
-blocklist, they both come directly from the Wiki:&lt;/p&gt;
-&lt;p&gt;Add &lt;code&gt;oisd&lt;/code&gt; to your flake inputs:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
-inputs = {
-    oisd = {
-      url = &quot;https://big.oisd.nl/domainswild&quot;;
-      flake = false;
-    };
-};
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: The &lt;code&gt;oisd&lt;/code&gt; blocklist is a plain text file that updates frequently.
-This can cause &lt;code&gt;nh os switch&lt;/code&gt; to fail with a &lt;code&gt;NarHash&lt;/code&gt; mismatch error. To fix
-this, you need to run &lt;code&gt;nix flake update&lt;/code&gt; to refresh the blocklist and its hash
-in your &lt;code&gt;flake.lock&lt;/code&gt; file. After that, you can run your &lt;code&gt;nh&lt;/code&gt; command again.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;And the import the following into your &lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# dnscrypt-proxy.nix
-{
-  pkgs,
-  lib,
-  inputs,
-  ...
-}: let
-  blocklist_base = builtins.readFile inputs.oisd;
-  extraBlocklist = &apos;&apos;&apos;&apos;;
-  blocklist_txt = pkgs.writeText &quot;blocklist.txt&quot; &apos;&apos;
-    ${extraBlocklist}
-    ${blocklist_base}
-  &apos;&apos;;
-  hasIPv6Internet = true;
-  StateDirectory = &quot;dnscrypt-proxy&quot;;
-in {
-  networking = {
-    # Set DNS nameservers to the local host addresses for iPv4 (`127.0.0.1`) &amp;amp; iPv6 (::1)
-    nameservers = [&quot;127.0.0.1&quot; &quot;::1&quot;];
-    # If using dhcpcd
-    # dhcpcd.extraConfig = &quot;nohook resolv.conf&quot;;
-    # If using NetworkManager
-    networkmanager.dns = &quot;none&quot;;
-  };
-  services.resolved.enable = lib.mkForce false;
-  # See https://wiki.nixos.org/wiki/Encrypted_DNS
-  services.dnscrypt-proxy2 = {
-    enable = true;
-    # See https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml
-    settings = {
-      # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
-      sources.public-resolvers = {
-        urls = [
-          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md&quot;
-          &quot;https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md&quot;
-        ];
-        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
-        cache_file = &quot;/var/lib/${StateDirectory}/public-resolvers.md&quot;;
-      };
-     # sources.quad9-resolvers = {
-     #   urls = [
-     #     &quot;https://quad9.net/dnscrypt/quad9-resolvers.md&quot;
-     #     &quot;https://raw.githubusercontent.com/Quad9DNS/dnscrypt-settings/main/dnscrypt/quad9-resolvers.md&quot;
-     #   ];
-     #   minisign_key = &quot;RWTp2E4t64BrL651lEiDLNon+DqzPG4jhZ97pfdNkcq1VDdocLKvl5FW&quot;;
-     #   cache_file = &quot;/var/cache/dnscrypt-proxy/quad9-resolvers.md&quot;;
-     # };
-
-      # Use servers reachable over IPv6 -- Do not enable if you don&apos;t have IPv6 connectivity
-      ipv6_servers = hasIPv6Internet;
-      block_ipv6 = ! hasIPv6Internet;
-      blocked_names.blocked_names_file = blocklist_txt;
-      require_dnssec = true;
-      # Logs can get large very quickly...
-      require_nolog = false;
-      # This stops dns malware filtering, etc. if true
-      require_nofilter = false;
-      dnscrypt_servers = true;
-
-      # If you want, choose a specific set of servers that come from your sources.
-      # Here it&apos;s from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
-      # If you don&apos;t specify any, dnscrypt-proxy will automatically rank servers
-      # that match your criteria and choose the best one.
-      # server_names = [ ... ];
-      # server_names = [&apos;quad9-dnscrypt-ip6-filter-pri&apos;, &apos;quad9-dnscrypt-ip4-filter-pri&apos;, &apos;mullvad-adblock-d&apos;];
-
-    };
-  };
-
-  systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗️ NOTE: Upon testing dnscrypt-proxy on Arch, it was able to route the browser
-through the proxy, removing the need for Max Protection. I’m still currently
-on Arch and plan to test this further ASAP. We test the above settings further
-down, but I’m curious why the browser isn’t routed correctly…&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;Above, we have a local DNS proxy that encrypts and forwards queries.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# You should see that dnscrypt-proxy chooses the Server with the lowest initial latency
-sudo systemctl status dnscrypt-proxy2
-# verify that dnscrypt-proxy is listening
-sudo ss -lnp | grep 53
-# Test a DNS query, if you get valid responses it&apos;s working
-dig @127.0.0.1 example.com +short
-# check the logs
-sudo journalctl -u dnscrypt-proxy2
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; acts as your local DNS resolver listening on your machine
-(&lt;code&gt;127.0.0.1&lt;/code&gt;) for IPv4 and &lt;code&gt;::1&lt;/code&gt; for iPv6.&lt;/p&gt;
-&lt;p&gt;The system’s DNS settings (&lt;code&gt;networking.nameservers&lt;/code&gt;) point to localhost, so
-&lt;strong&gt;all DNS queries&lt;/strong&gt; go to dnscrypt-proxy accept for your browser. Your browser
-has to be configured separately with a local resolver in which I haven’t figured
-out yet. I recommend setting your browsers DNS over HTTPS to strict with a
-respected custom DNS resolver such as &lt;code&gt;https://dns.quad9.net/dns-query&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;inputs.oisd&lt;/code&gt; refers to the flake input oisd blocklist, it prevents your device
-from connecting to unwanted or harmful domains.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; then encrypts and forwards our DNS requests to third-party
-public DNSCrypt or DoH servers.&lt;/p&gt;
-&lt;h2&gt;MAC Randomization&lt;/h2&gt;
-&lt;p&gt;All network cards have a unique identifier called a MAC address. They’re stored
-in hardware and are used to assign an address to computers on the local network.&lt;/p&gt;
-&lt;p&gt;The MAC address is typically only traceable on the local network, it’s not
-passively sent out beyond the local router making it more critical on untrusted,
-public networks.&lt;/p&gt;
-&lt;p&gt;Leak-proof MAC randomization is very difficult to implement:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.kicksecure.com/wiki/Dev/MAC#Leak-proof_MAC_Randomization_-_Technical_Implementation_Challenges&quot;&gt;Leak-proof MAC Randomization Implementation Challenges&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Android and iPhone already implement MAC Randomization by default.&lt;/p&gt;
-&lt;p&gt;MAC Randomization enhances privacy by making it harder for third parties to
-track users across different networks.&lt;/p&gt;
-&lt;p&gt;Randomizing MAC adresses obscures a device’s unique hardware identity when
-scanning for or connecting to Wi-Fi, blocking passive tracking as well as
-location tracking across networks.&lt;/p&gt;
-&lt;p&gt;If you use NetworkManager you can set MAC randomization with:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    networking = {
-      networkmanager = {
-        enable = true;
-        wifi.scanRandMacAddress = true;
-        wifi.macAddress = &quot;random&quot;;
-        plugins = [];
-      };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Right when I rebuilt, I got an alert from my router saying that a new device
-just connected to the network.&lt;/p&gt;
-&lt;p&gt;There is also a utility for viewing/manipulating the MAC address of network
-interfaces, &lt;code&gt;pkgs.macchanger&lt;/code&gt;. This is less reliable than the NetworkManager
-setting.&lt;/p&gt;
-&lt;h2&gt;Firewalls&lt;/h2&gt;
-&lt;p&gt;NixOS includes an integrated firewall based on iptables/nftables.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Firewall Resources &lt;/summary&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/security/what-is-a-firewall/&quot;&gt;Cloudflare What is a Firewall&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&quot;https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/&quot;&gt;Beginners guide to nftables&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.archlinux.org/title/Nftables&quot;&gt;Arch Wiki nftables&lt;/a&gt;&lt;/p&gt;
-&lt;/details&gt;
-&lt;p&gt;The following firewall setup is based on the dnscrypt setup above utilizing
-nftables.&lt;/p&gt;
-&lt;p&gt;This nftables firewall configuration is a strong recommended practice for
-enforcing encrypted DNS on your system by restricting all outbound DNS traffic
-to a local dnscrypt-proxy process. It greatly reduces DNS leak risks and
-enforces privacy by limiting DNS queries to trusted, encrypted upstream
-servers.(This was edited on 08-08-25) replace &lt;code&gt;&amp;lt;DNSCRYPT-UID&amp;gt;&lt;/code&gt; with the UID
-given from the command &lt;code&gt;ps -o uid,user,pid,cmd -C dnscrypt-proxy&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ ... }: {
-  networking.nftables = {
-    enable = true;
-
-    ruleset = &apos;&apos;
-      table inet filter {
-        chain output {
-          type filter hook output priority 0; policy accept;
-
-          # Allow localhost DNS for dnscrypt-proxy2
-          ip daddr 127.0.0.1 udp dport 53 accept
-          ip6 daddr ::1 udp dport 53 accept
-          ip daddr 127.0.0.1 tcp dport 53 accept
-          ip6 daddr ::1 tcp dport 53 accept
-
-          # Allow dnscrypt-proxy2 to talk to upstream servers
-          # Replace &amp;lt;DNSCRYPT-UID&amp;gt; with:
-          # ps -o uid,user,pid,cmd -C dnscrypt-proxy
-          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; udp dport { 443, 853 } accept
-          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; tcp dport { 443, 853 } accept
-
-          # Block all other outbound DNS
-          udp dport { 53, 853 } drop
-          tcp dport { 53, 853 } drop
-        }
-      }
-    &apos;&apos;;
-  };
-  networking.firewall = {
-    enable = true;
-    allowedTCPPorts = [
-      # Ports open for inbound connections.
-      # Limit these to reduce the attack surface.
-
-      22 # SSH – Keep open only if you need remote access.
-         # To change the SSH port in NixOS:
-         # services.openssh.ports = [ 2222 ];
-         # Update this list to match the new port.
-
-      # 53  # DNS – Only if running a public DNS server.
-      # 80  # HTTP – Only if hosting a website.
-      # 443 # HTTPS – Only if hosting a secure website.
-    ];
-    allowedUDPPorts = [
-      # Ports open for inbound UDP traffic.
-      # Most NixOS workstations won&apos;t need any here.
-
-      # 53 # DNS – Only if running a public DNS server.
-    ];
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Tip on changing the default SSH Port &lt;/summary&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ TIP: Reduce SSH noise by changing the default port On most systems, SSH
-listens on TCP port 22 — which means automated bots and scanners will hit it
-constantly. While this doesn’t replace real security measures, moving SSH to a
-different port drastically cuts down on drive-by brute-force attempts you’ll
-see in your logs.&lt;/p&gt;
-&lt;p&gt;In NixOS, change both the SSH daemon port and your firewall rule:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; # Example: Move SSH to port 2222
- networking.firewall.allowedTCPPorts = [ 2222 ];
- services.openssh.ports = [ 2222 ];
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;After rebuilding, test from another terminal/session before closing your
-existing one:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ssh -p 2222 user@host
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/blockquote&gt;
-&lt;/details&gt;
-&lt;p&gt;&lt;code&gt;nft&lt;/code&gt; is a cli tool used to set up, maintain and inspect packet filtering and
-classification rules in the Linux kernel, in the nftables framework. The Linux
-kernel subsystem is known as nftables, and ‘nf’ stands for Netfilter.–&lt;code&gt;man nft&lt;/code&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nft list ruleset
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Since we declare our firewall, we’ll only use &lt;code&gt;nft&lt;/code&gt; to inspect our ruleset.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;NixOS Firewall vs &lt;code&gt;nftables&lt;/code&gt; Ruleset&lt;/h2&gt;
-&lt;p&gt;&lt;code&gt;networking.nftables&lt;/code&gt;: This section provides a raw &lt;code&gt;nftables&lt;/code&gt; ruleset that gives
-you granular, low-level control. The rules here are more specific and are meant
-to handle the intricate logic of the DNS proxy setup. They will be applied
-directly to the kernel’s &lt;code&gt;nftables&lt;/code&gt; subsystem and prevent DNS leaks.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;networking.firewall&lt;/code&gt;: This is a higher-level, simpler NixOS option that uses
-&lt;code&gt;iptables&lt;/code&gt; rules to open ports for inbound traffic. The rules defined here
-(allowing port 22) is for incoming SSH connections to the machine, not for
-outbound traffic, so they do not interfere with the &lt;code&gt;nftables&lt;/code&gt; rules that filter
-the outgoing traffic. (Make sure to comment out or remove this if you don’t SSH
-into your machine).&lt;/p&gt;
-&lt;p&gt;The firewall ensures only authorized, local encrypted DNS proxy process can
-speak DNS with the outside world, and that all other DNS requests from any other
-process are blocked unless they’re to &lt;code&gt;127.0.0.1&lt;/code&gt; (our local proxy). This is a
-robust policy against both DNS leaks and local compromise.&lt;/p&gt;
-&lt;h2&gt;Testing&lt;/h2&gt;
-&lt;p&gt;Review listening ports: After each rebuild, use &lt;code&gt;ss -tlpn&lt;/code&gt;, &lt;code&gt;nmap&lt;/code&gt; or &lt;code&gt;netstat&lt;/code&gt;
-to see which services are accepting connections. Close or firewall anything
-unnecessary.&lt;/p&gt;
-&lt;p&gt;You can also test firewall DNS restrictions using &lt;code&gt;dig&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;dig @127.0.0.1 example.com  # Should work
-
-dig @8.8.8.8 example.com    # Should fail/time out for normal users
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;This test is actually what alerted me of an improper configuration in the
-above firewalls nftables rules allowing me to fix it. Initially the second
-&lt;code&gt;dig&lt;/code&gt; command gave results letting me know that the restrictions weren’t being
-applied correctly.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Since we defined an &lt;code&gt;output&lt;/code&gt; chain inside &lt;code&gt;table inet filter&lt;/code&gt; with the line:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;type filter hook output priority 0; policy accept;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This attaches the chain to the kernel’s OUTPUT hook, so all locally generated
-packets, including DNS queries are filtered by this chain.&lt;/p&gt;
-&lt;p&gt;Within this chain, the rules:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Explicitly allow DNS queries to localhost addresses (&lt;code&gt;127.0.0.1&lt;/code&gt; and &lt;code&gt;::1&lt;/code&gt;).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Allow the &lt;code&gt;dnscrypt-proxy&lt;/code&gt; process (running with UID &lt;code&gt;62396&lt;/code&gt;) to send DNS
-queries on ports 443 and 853 (for DNS-over-HTTPS and DNS-over-TLS).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Drop all other outbound DNS traffic on ports &lt;code&gt;53&lt;/code&gt; and &lt;code&gt;853&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Because of this setup, dig queries to your local resolver at &lt;code&gt;127.0.0.1&lt;/code&gt; pass,
-but queries directly to public DNS servers like &lt;code&gt;8.8.8.8&lt;/code&gt; are blocked for
-users/processes other than the allowed DNS proxy.&lt;/p&gt;
-&lt;h2&gt;OpenSnitch&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/OpenSnitch&quot;&gt;NixOS Wiki OpenSnitch&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/evilsocket/opensnitch&quot;&gt;Opensnitch&lt;/a&gt; is an open-source
-application firewall that focuses on monitoring and controlling outgoing network
-connections on a per-application basis.&lt;/p&gt;
-&lt;p&gt;This can be used to block apps from accessing the internet that shouldn’t need
-to (i.e., block telemetry and more). Opensnitch will report that the app has
-attempted to make an outbound internet connection and block it or allow it based
-on the rules you set.&lt;/p&gt;
-&lt;h3&gt;Resources&lt;/h3&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Resources &lt;/summary&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://cloudflare.com/learning/ssl/what-is-https&quot;&gt;Cloudflare What is HTTPS&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/&quot;&gt;Surveillance Self-Defence&lt;/a&gt; has a lot of helpful info to
-protect your privacy.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/module/what-fingerprinting&quot;&gt;What is Fingerprinting&lt;/a&gt;, more
-than you realize is being tracked constantly.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://oisd.nl/&quot;&gt;oisd.nl&lt;/a&gt; the oisd website&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;For potentially dangerous file types like PDFs, office documents, or images,
-especially those downloaded from untrusted sources such as torrents, consider
-converting them to a safe PDF format with
-&lt;a href=&quot;https://github.com/freedomofpress/dangerzone&quot;&gt;dangerzone&lt;/a&gt;. Dangerzone not
-only removes metadata but also applies robust sanitization to neutralize
-malicious content.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Librewolf&quot;&gt;NixOS Wiki LibreWolf&lt;/a&gt;, the options in
-the wiki make it less secure and aren’t recommended settings to use. They
-explicitly disable several of LibreWolf’s default privacy-enhancing features,
-such as fingerprinting resistance and clearing session data on shutdown.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://librewolf.net/docs/features/&quot;&gt;LibreWolf Features&lt;/a&gt; You still need to
-enable DNS over HTTPS through privacy settings.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/SearXNG&quot;&gt;SearXNG on NixOS&lt;/a&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://docs.searxng.org/&quot;&gt;Welcome to SearXNG&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;Firefox Hardening Guide&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.ghacks.net/2015/08/18/a-comprehensive-list-of-firefox-privacy-and-security-settings/&quot;&gt;Firefox ghacks&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js&quot;&gt;Arkenfox&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacytools.io/private-browser&quot;&gt;PrivacyTools.io&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/simeononsecurity/FireFox-Privacy-Script&quot;&gt;simeononsecurity Firefox-Privacy-Script&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;brianfucksec firefox-hardening-Guide 2023&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://simeononsecurity.com/guides/enhance-firefox-security-configuring-guide/&quot;&gt;STIG Firefox Hardening&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;blockquote&gt;
-&lt;p&gt;If you should trust the U.S. Governments recommendations is another story but
-it can be good to compare and contrast with other trusted resources. You’ll
-have to think whether the CISA recommending that everyone uses Signal is solid
-advice or guiding you towards a honeypot, I can’t say for sure.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://stigviewer.com/stigs/mozilla_firefox&quot;&gt;Mozilla Firefox Security Technical Implementation Guide&lt;/a&gt;
-The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
-set of security configuration standards developed by the U.S. Department of
-Defense. They are created by the Defense Information Systems Agency (DISA) to
-secure and harden DoD information systems and software.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The New Oil (Why Privacy &amp;amp; Security Matter)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/&quot;&gt;PrivacyGuides&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://relay.firefox.com/accounts/profile/&quot;&gt;Firefox Relay&lt;/a&gt; can be used to
-create email aliases that forward to your real email address. The paid plan
-also lets you create phone number aliases that forward to your phone number.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://zebracrossing.narwhalacademy.org/&quot;&gt;Zebra Crossing digital safety checklist&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/essentials#step-1&quot;&gt;DataDetoxKit&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/degooglise/&quot;&gt;DataDetox Degooglise&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tb-manual.torproject.org/&quot;&gt;Tor Browser User Manual&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://gitlab.torproject.org/tpo/team/-/wikis/home&quot;&gt;Tor Wiki&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tldp.org/LDP/nag2/x-087-2-intro.html&quot;&gt;Linux Network Administrators Guide&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
 </content></entry><entry><title>Understanding the Helix Flake</title><id>https://saylesss88.github.io/flakes/helix_flake_4.4.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/helix_flake_4.4.html" rel="alternate"/><content type="html">&lt;h1&gt;Chapter 4.4&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
