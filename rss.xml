@@ -141,6 +141,74 @@ and usability needs, so this is not an endorsement of a single “best” choice
 Instead, the following subsections describe trade-offs and example setups so you
 can decide which browser and configuration best match your own threat model and
 workflow.</p>
+<p>IMO there aren’t many Chromium-based browsers on NixOS that hit the sweet spot
+of being both security-forward and privacy-respecting. Many of the “privacy
+browser” options you’ll see on NixOS are Firefox forks; with the right tweaks
+they can be made pretty private, but they generally don’t match Chromium-family
+browsers on exploit mitigations and sandbox depth. ​</p>
+<h4>Brave</h4>
+<p>Brave is basically “Chromium, but with privacy features turned on by default,”
+and the big win is that most of the protection comes from the browser itself
+(Shields + anti-fingerprinting) instead of from a pile of extensions. Brave’s
+fingerprinting story is also unusually practical: instead of trying to make
+every Brave user look identical, it mixes API blocking with per-site/per-session
+randomization (“farbling”) so the fingerprint is harder to reuse across
+contexts.</p>
+<p>On NixOS, IMO the best available Chromium-based browser is Brave. Brave strips
+out Google’s tracking code and includes a native add/tracker blocker (Brave
+Shields). It also ships a best‑effort anti‑fingerprinting system that combines
+(1) blocking/removing/modifying certain high-signal APIs and (2) “privacy
+through randomization” (farbling), where it returns slightly altered values so
+fingerprints don’t stay stable across sites/sessions. ​</p>
+<p><strong>Things to Note about Brave</strong>:</p>
+<ul>
+<li>
+<p>Shields is a bundle of controls (trackers/ads, cookies, fingerprinting
+defenses, HTTPS upgrades, referrer/query stripping, storage cleanup), so
+turning Shields off for a broken site is a big privacy downgrade for that
+site—not just “adblock off.” ​</p>
+</li>
+<li>
+<p>Brave explicitly recommends validating fingerprinting defenses with realistic
+tests (new private window, restart browser, different profile, clear site
+storage) and expects the fingerprint to change across those boundaries. ​</p>
+</li>
+<li>
+<p>Extension bloat will break Brave’s privacy and security story: each extension
+increases attack surface and usually has broad privileges, while Brave’s core
+pitch is that you can get most of the privacy wins without third-party code in
+your browser process</p>
+</li>
+</ul>
+<p><strong>Drawbacks worth mentioning</strong>:</p>
+<ul>
+<li>
+<p>Brave is still Chromium/Blink, so using it doesn’t help with engine diversity;
+if Gecko dies, the web becomes even more “whatever Chromium implements,” which
+is a long-term ecosystem risk.</p>
+</li>
+<li>
+<p>Brave ships a lot (Rewards, Wallet, VPN upsells, Leo/AI features depending on
+build/channel), and every extra subsystem is more UI complexity and
+potentially more bugs/attack surface than some browsers.</p>
+</li>
+<li>
+<p>Brave’s model assumes the browser does most privacy work; piling on extensions
+increases privileged code, fingerprint uniqueness, and the chance of a
+malicious/compromised extension.</p>
+</li>
+<li>
+<p>Farbling and API defenses reduce stability/linkability, but sophisticated
+trackers can still correlate behavior, logins, IP ranges, and high-level
+patterns—so “I enabled anti-fingerprinting” shouldn’t be read as “I can’t be
+tracked.”</p>
+</li>
+<li>
+<p>Brave’s built-in ad system (Rewards) is opt-in, but Brave also promotes
+features like Rewards and can show sponsored content (e.g., sponsored new-tab
+images) unless you disable/hide it</p>
+</li>
+</ul>
 <h4>Firefox</h4>
 <p>Firefox is kind of its own thing: it runs on Gecko, not on Chromium or WebKit,
 so it’s one of the only mainstream browsers that isn’t just another Chrome fork.
@@ -156,23 +224,22 @@ Fingerprinting (RFP), and hardening templates like ghacks or Arkenfox together
 with uBlock Origin configured for dynamic filtering, you can replicate what used
 to require a pile of separate extensions.</p>
 <h4>Site Isolation &amp; Firefox Links</h4>
-<p>Firefox does implement Site Isolation via Project Fission, but it’s newer and
+<p>Firefox does implement Site Isolation via
+<a href="https://wiki.mozilla.org/Project_Fission">Project Fission</a>, but it’s newer and
 historically less mature than Chromium’s site‑per‑process model, and it may not
-be enabled everywhere by default. To check that it is active, go to about:config
-and ensure both fission.autostart and gfx.webrender.all are set to true.</p>
+be enabled everywhere by default. To check that it is active, go to
+<code>about:config</code> and ensure both <code>fission.autostart</code> and <code>gfx.webrender.all</code> are
+set to <code>true</code>.</p>
 <p>With uBlock Origin you can disable JavaScript per‑site (similar to NoScript),
 enable a bunch of high‑quality blocklists, and selectively relax rules when a
 trusted site breaks. To turn on Enhanced Tracking Protection and fingerprinting
-protections in the UI, go to Settings -&gt; Privacy &amp; Security -&gt; Enhanced Tracking
-Protection -&gt; Custom; if that causes breakage on a particular website, click the
-shield icon in the URL bar and disable protections just for that site.</p>
+protections in the UI, go to <code>Settings -&gt; Privacy &amp; Security</code> -&gt;
+<code>Enhanced Tracking Protection -&gt; Custom</code>; if that causes breakage on a
+particular website, click the shield icon in the URL bar and disable protections
+just for that site.</p>
 <ul>
 <li><a href="https://github.com/gorhill/uBlock/wiki">uBlock Wiki</a></li>
 </ul>
-<p>To enable Enhanced Tracking Protection and FPP, go to
-<code>Settings -&gt; Privacy &amp; Security</code> -&gt; <code>Enhanced Tracking Protection -&gt; Custom</code>. If
-it causes breakage, while on the broken site, click the shield next to the
-search bar. From there you can turn off ETP for <strong>just that site</strong>.</p>
 <p>Once you select <code>Custom</code>, you’ll see that among the options is to block
 <code>Known fingerprinters</code> as well as <code>Suspected fingerprinters</code>. The “Known
 Fingerprinters” protection works by blocking scripts listed in

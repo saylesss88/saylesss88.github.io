@@ -142,6 +142,74 @@ and usability needs, so this is not an endorsement of a single “best” choice
 Instead, the following subsections describe trade-offs and example setups so you
 can decide which browser and configuration best match your own threat model and
 workflow.&lt;/p&gt;
+&lt;p&gt;IMO there aren’t many Chromium-based browsers on NixOS that hit the sweet spot
+of being both security-forward and privacy-respecting. Many of the “privacy
+browser” options you’ll see on NixOS are Firefox forks; with the right tweaks
+they can be made pretty private, but they generally don’t match Chromium-family
+browsers on exploit mitigations and sandbox depth. ​&lt;/p&gt;
+&lt;h4&gt;Brave&lt;/h4&gt;
+&lt;p&gt;Brave is basically “Chromium, but with privacy features turned on by default,”
+and the big win is that most of the protection comes from the browser itself
+(Shields + anti-fingerprinting) instead of from a pile of extensions. Brave’s
+fingerprinting story is also unusually practical: instead of trying to make
+every Brave user look identical, it mixes API blocking with per-site/per-session
+randomization (“farbling”) so the fingerprint is harder to reuse across
+contexts.&lt;/p&gt;
+&lt;p&gt;On NixOS, IMO the best available Chromium-based browser is Brave. Brave strips
+out Google’s tracking code and includes a native add/tracker blocker (Brave
+Shields). It also ships a best‑effort anti‑fingerprinting system that combines
+(1) blocking/removing/modifying certain high-signal APIs and (2) “privacy
+through randomization” (farbling), where it returns slightly altered values so
+fingerprints don’t stay stable across sites/sessions. ​&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Things to Note about Brave&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Shields is a bundle of controls (trackers/ads, cookies, fingerprinting
+defenses, HTTPS upgrades, referrer/query stripping, storage cleanup), so
+turning Shields off for a broken site is a big privacy downgrade for that
+site—not just “adblock off.” ​&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Brave explicitly recommends validating fingerprinting defenses with realistic
+tests (new private window, restart browser, different profile, clear site
+storage) and expects the fingerprint to change across those boundaries. ​&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Extension bloat will break Brave’s privacy and security story: each extension
+increases attack surface and usually has broad privileges, while Brave’s core
+pitch is that you can get most of the privacy wins without third-party code in
+your browser process&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Drawbacks worth mentioning&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Brave is still Chromium/Blink, so using it doesn’t help with engine diversity;
+if Gecko dies, the web becomes even more “whatever Chromium implements,” which
+is a long-term ecosystem risk.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Brave ships a lot (Rewards, Wallet, VPN upsells, Leo/AI features depending on
+build/channel), and every extra subsystem is more UI complexity and
+potentially more bugs/attack surface than some browsers.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Brave’s model assumes the browser does most privacy work; piling on extensions
+increases privileged code, fingerprint uniqueness, and the chance of a
+malicious/compromised extension.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Farbling and API defenses reduce stability/linkability, but sophisticated
+trackers can still correlate behavior, logins, IP ranges, and high-level
+patterns—so “I enabled anti-fingerprinting” shouldn’t be read as “I can’t be
+tracked.”&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Brave’s built-in ad system (Rewards) is opt-in, but Brave also promotes
+features like Rewards and can show sponsored content (e.g., sponsored new-tab
+images) unless you disable/hide it&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 &lt;h4&gt;Firefox&lt;/h4&gt;
 &lt;p&gt;Firefox is kind of its own thing: it runs on Gecko, not on Chromium or WebKit,
 so it’s one of the only mainstream browsers that isn’t just another Chrome fork.
@@ -157,23 +225,22 @@ Fingerprinting (RFP), and hardening templates like ghacks or Arkenfox together
 with uBlock Origin configured for dynamic filtering, you can replicate what used
 to require a pile of separate extensions.&lt;/p&gt;
 &lt;h4&gt;Site Isolation &amp;amp; Firefox Links&lt;/h4&gt;
-&lt;p&gt;Firefox does implement Site Isolation via Project Fission, but it’s newer and
+&lt;p&gt;Firefox does implement Site Isolation via
+&lt;a href=&quot;https://wiki.mozilla.org/Project_Fission&quot;&gt;Project Fission&lt;/a&gt;, but it’s newer and
 historically less mature than Chromium’s site‑per‑process model, and it may not
-be enabled everywhere by default. To check that it is active, go to about:config
-and ensure both fission.autostart and gfx.webrender.all are set to true.&lt;/p&gt;
+be enabled everywhere by default. To check that it is active, go to
+&lt;code&gt;about:config&lt;/code&gt; and ensure both &lt;code&gt;fission.autostart&lt;/code&gt; and &lt;code&gt;gfx.webrender.all&lt;/code&gt; are
+set to &lt;code&gt;true&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;With uBlock Origin you can disable JavaScript per‑site (similar to NoScript),
 enable a bunch of high‑quality blocklists, and selectively relax rules when a
 trusted site breaks. To turn on Enhanced Tracking Protection and fingerprinting
-protections in the UI, go to Settings -&amp;gt; Privacy &amp;amp; Security -&amp;gt; Enhanced Tracking
-Protection -&amp;gt; Custom; if that causes breakage on a particular website, click the
-shield icon in the URL bar and disable protections just for that site.&lt;/p&gt;
+protections in the UI, go to &lt;code&gt;Settings -&amp;gt; Privacy &amp;amp; Security&lt;/code&gt; -&amp;gt;
+&lt;code&gt;Enhanced Tracking Protection -&amp;gt; Custom&lt;/code&gt;; if that causes breakage on a
+particular website, click the shield icon in the URL bar and disable protections
+just for that site.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/gorhill/uBlock/wiki&quot;&gt;uBlock Wiki&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;To enable Enhanced Tracking Protection and FPP, go to
-&lt;code&gt;Settings -&amp;gt; Privacy &amp;amp; Security&lt;/code&gt; -&amp;gt; &lt;code&gt;Enhanced Tracking Protection -&amp;gt; Custom&lt;/code&gt;. If
-it causes breakage, while on the broken site, click the shield next to the
-search bar. From there you can turn off ETP for &lt;strong&gt;just that site&lt;/strong&gt;.&lt;/p&gt;
 &lt;p&gt;Once you select &lt;code&gt;Custom&lt;/code&gt;, you’ll see that among the options is to block
 &lt;code&gt;Known fingerprinters&lt;/code&gt; as well as &lt;code&gt;Suspected fingerprinters&lt;/code&gt;. The “Known
 Fingerprinters” protection works by blocking scripts listed in
