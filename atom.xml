@@ -1,5 +1,771 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>Browsing Security</title><id>https://saylesss88.github.io/nix/browsing_security.html</id><updated>2025-12-21T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/browsing_security.html" rel="alternate"/><content type="html">&lt;details&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-25T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Since networks and systems vary, some adjustments may cause unexpected issues,
+especially around critical components like DNS or firewalls. Always review and
+test changes in a controlled environment before applying them broadly.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Understand the trade-offs and tailor the settings to your threat model and
+workflow. Take what’s useful, adapt as needed, and seek expert guidance for
+more advanced scenarios.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;Every setup is unique, feel free to adapt or skip sections based on your needs.
+Start with the basics and build up as you gain confidence. The goal is
+practical, tested hardening tailored to you.&lt;/p&gt;
+&lt;h3&gt;Safe Browsing / Privacy Enhancing Habits&lt;/h3&gt;
+&lt;p&gt;I recently broke this chapter down and added another chapter:
+&lt;a href=&quot;https://saylesss88.github.io/nix/browsing_security.html&quot;&gt;Browser/Browsing Security&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Adopt Encrypted DNS and HTTPS Everywhere&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Configure your system and browsers to use DNS over HTTPS (DoH), DNS over TLS
+(DoT), or DNSCrypt to prevent DNS leakage. Use HTTPS-Only mode in browsers to
+encrypt all web traffic. Prefer browsers with strong privacy defaults or add
+recommended extensions.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/dns/#dnscrypt-proxy&quot;&gt;Privacy Guides dnscrypt-proxy recommendation&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Disable browser “remember password” and autofill features, clear cookies and
+site data upon exit, and carefully vet suspicious URLs with tools like
+&lt;a href=&quot;https://www.virustotal.com/gui/home/url&quot;&gt;VirusTotal&lt;/a&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Limit Account Linking and Use Unique Credentials&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Create separate accounts with unique passwords instead of signing in with
+Google, Facebook, or similar services to limit broad data exposure from
+compromises.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Use Metadata Cleaning Tools&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Many files like images, PDFs, and office documents contain hidden metadata
+information such as location data, device details, and more that can reveal
+your identity or other sensitive information when you share files publicly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;To protect your privacy, always sanitize files by removing this metadata
+before sharing. Tools like &lt;a href=&quot;https://0xacab.org/jvoisin/mat2&quot;&gt;mat2&lt;/a&gt; are
+designed to strip metadata from a wide range of media files efficiently.
+(&lt;code&gt;pkgs.mat2&lt;/code&gt;). You just type &lt;code&gt;mat2 swappy-2025.png&lt;/code&gt; for example and there will
+then be a new &lt;code&gt;mat2 swappy-2025.cleaned.png&lt;/code&gt; that can safely be shared.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Use Anonymous File-Sharing Tools&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;For sensitive transfers, consiter tools like
+&lt;a href=&quot;https://github.com/onionshare/onionshare&quot;&gt;OnionShare&lt;/a&gt; that provide anonymity
+and security.(&lt;code&gt;pkgs.onionshare&lt;/code&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Avoid Scanning Random QR Codes Without Verification&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Use QR code scanner apps that check for malicious content before loading
+links.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Understand Your Threat Model&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Apply these basics universally, but tailor advanced hardening according to
+your unique environment, connectivity needs, and risk profile.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Delete cookies and site data when the browser is closed&lt;/strong&gt;. (security not
+usability).&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Use Strong, Unique Passwords and a Password Manager&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Avoid reused passwords by using reliable password managers like KeePassXC or
+Bitwarden, both available on NixOS. Pair this with enabling two-factor
+authentication &lt;strong&gt;(2FA) wherever possible&lt;/strong&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It’s advisable to only use the desktop version and not the browser extension
+for a number of reasons. One is that you can store your passwords completely
+offline and have complete ownership of them.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;environment.systemPackages = [
+    pkgs.keepassxc
+    pkgs.kpcli     # KeePass CLI
+    # OR
+    pkgs.bitwarden-desktop
+    pkgs.bitwarden-cli
+];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With KeePassXC, you can require 3 different authentication methods at the same
+time. You can choose a password, a keyfile, and a security key where it won’t
+open unless all 3 are present giving you additional security. All 3 might not be
+necessary but it’s possible. It’s also easy to migrate to KeePassXC, you can
+import your vault from many different managers.&lt;/p&gt;
+&lt;p&gt;KeepassXC also makes it easy to keep your complete password database offline
+which can significantly reduce the risk of a breach.&lt;/p&gt;
+&lt;p&gt;With Bitwarden, to enable 2 factor authentication, you need to log in with your
+master password through the web interface.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.privacyguides.org/en/basics/passwords-overview/&quot;&gt;PrivacyGuides Intro to Passwords&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Why Follow These Basics?&lt;/h3&gt;
+&lt;p&gt;These recommended steps help protect your privacy and security while maintaining
+usability and minimizing system interruptions. They catch common threats like
+network eavesdropping, password reuse, fingerprinting, and data leakage,
+providing a solid foundation to build on.&lt;/p&gt;
+&lt;p&gt;A vast majority of secure and privacy-focused browsers available for NixOS are
+based on Firefox.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: Firefox does lack some security features available in Chrome and
+sandbox escapes in Linux are relatively easy. People such as madaidan say to
+never use Linux or Firefox period when you’re worried about security and
+privacy. I’m not personally going to jump to proprietary software with known
+backdoors in a misguided attempt at increasing security/privacy.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://techstory.in/eu-hits-google-with-3-5-billion-antitrust-fine-over-adtech-practices/&quot;&gt;EU Hits Google with 3.5 Billion Antitrust&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This &lt;a href=&quot;https://grapheneos.org/usage#web-browsing&quot;&gt;GrapheneOS article&lt;/a&gt;, breaks
+down why they use Chromium-based browsers and specifically mentions that it’s
+not recommended to use Firefox, especially on Linux because of the weak
+sandboxing.&lt;/p&gt;
+&lt;p&gt;As a Chromium-based browser, Brave has been growing on me. Brave uses
+randomization rather than standardization for fingerprinting protection. If you
+run Cover Your Tracks with Brave, it will show a randomized fingerprint.&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click To Expand United States Patriot Act Overview &lt;/summary&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.csis.org/analysis/fact-sheet-section-215-usa-patriot-act&quot;&gt;Section 215 USA Patriot Act&lt;/a&gt;
+permits the collection of “Tangible Things” or “Business Records”, e.g., your
+phone records, medical records, etc. for an investigation to obtain foreign
+intelligence information. If it does relate to a US person it must be relevant
+to preventing terrorism or espionage, and not be based solely on activities
+protected by the first amendment. “Relevant” is the key word here and it is at
+the governments discretion meaning they sweep everything and sift it later.
+Criticized for violating American citizens Fourth Amendment protections against
+warrantless search and seizure and proven to be ineffective.&lt;/p&gt;
+&lt;/details&gt;
+&lt;p&gt;What is “normal” and allowed today might be suppressed tomorrow, look at the UK
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Online_Safety_Act_2023&quot;&gt;Online Safety Act&lt;/a&gt;
+purported to protect children, accused of banning privacy. This is because the
+only way to verify age is to make everyone submit KYC with their drivers license
+or ID, completely taking away any anonymity of adults and children alike.&lt;/p&gt;
+&lt;p&gt;Also see
+&lt;a href=&quot;https://www.bbc.com/news/articles/cq68j5g2nr1o&quot;&gt;BBC 4chan refuses to pay fine&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The mere existence of a surveillance state breeds fear and conformity and
+stifles free
+expression.–&lt;a href=&quot;https://theintercept.com/2016/04/28/new-study-shows-mass-surveillance-breeds-meekness-fear-and-self-censorship/&quot;&gt;The Intercept&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;There are much more scary examples in
+&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The new Oil&lt;/a&gt;&lt;/p&gt;
+&lt;h2&gt;Protections from Surveillance in the U.S.&lt;/h2&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand U.S. Surveillance protections &lt;/summary&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ A crucial caveat to keep in mind regarding surveillance protections in the
+U.S., whether grounded in the Fourth Amendment, the First Amendment, or
+statutory laws is that &lt;strong&gt;these protections are not foolproof and have
+repeatedly failed or been circumvented in practice&lt;/strong&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Fourth Amendment Basics&lt;/strong&gt;: It demands reasonableness in searches and usually
+requires a warrant. This means government agents cannot arbitrarily listen to
+your private communications or search your digital data without judicial
+approval&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Electronic Surveillance Challenges&lt;/strong&gt;: Courts have wrestled with how the
+Fourth Amendment applies to modern communications. The Supreme Court has ruled
+in some cases that pervasive or non-consensual electronic surveillance
+violates reasonable expectations of privacy, but other rulings have allowed
+broader state actions in national security contexts.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Third-Party Doctrine&lt;/strong&gt;: A major limitation arises from the “third-party
+doctrine,” which holds that information voluntarily shared with third parties
+(like phone companies or internet providers) has reduced Fourth Amendment
+protections. This means data held by third parties may be subject to
+government access without a warrant in some cases&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The First Amendment&lt;/strong&gt; guarantees free speech and the freedom to receive
+information without government censorship or intimidation. Excessive or
+secretive government surveillance can chill free speech by making people
+afraid their communications are monitored, discouraging open expression and
+participation in public discourse.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Advocates argue that courts should recognize government surveillance not
+only as a Fourth Amendment search issue but also as a First Amendment
+violation where surveillance suppresses or chills constitutionally protected
+expression.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;While the Fourth Amendment traditionally governs searches and surveillance
+legality, the First Amendment frames the broader impact on free speech and
+democratic engagement. Invoking both provides a more comprehensive
+constitutional shield against intrusive surveillance practices.&lt;/p&gt;
+&lt;/details&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Encrypted DNS&lt;/h2&gt;
+&lt;p&gt;DNS (Domain Name System) resolution is the process of translating a website’s
+domain name into its corresponding IP address. By default, this traffic isn’t
+encrypted, which means anyone on the network, from your ISP to potential
+hackers, can see the websites you’re trying to visit. &lt;strong&gt;Encrypted DNS&lt;/strong&gt; uses
+protocols to scramble this information, protecting your queries and responses
+from being intercepted and viewed by others.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: There are many other ways for someone monitoring your traffic to see
+what domain you looked up via DNS that it’s effectiveness is questionable
+without also using Tor or a VPN. Encrypted DNS will not help you hide any of
+your browsing activity.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;There are 3 main types of DNS protection:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;DNS over HTTPS (DoH)&lt;/strong&gt;: Uses the HTTPS protocol to encrypt data between the
+client and the resolver.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;DNS over TLS (DoT)&lt;/strong&gt;: Similar to (DoH), differs in the methods used for
+encryption and delivery using a separate port from HTTPS.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;DNSCrypt&lt;/strong&gt;: Uses end-to-end encryption with the added benefit of being able
+to prevent DNS spoofing attacks.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Useful resources:&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand DNS Resources &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Encrypted_DNS&quot;&gt;NixOS Wiki Encrypted DNS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/dns/what-is-dns/&quot;&gt;Domain Name System (DNS)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_HTTPS&quot;&gt;Wikipedia DNS over HTTPS (DoH)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_TLS&quot;&gt;Wikipedia DNS over TLS (DoT)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://blog.cloudflare.com/dns-encryption-explained/&quot;&gt;Cloudflare Dns Encryption Explained&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nordvpn.com/blog/encrypted-dns-traffic/&quot;&gt;NordVPN Encrypted Dns Traffic&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Hot Take&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://madaidans-insecurities.github.io/encrypted-dns.html&quot;&gt;Encrypted DNS is ineffective without a VPN or Tor by madaidan&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;p&gt;The following sets up dnscrypt-proxy using ODoH (Oblivious DNS over HTTPS) with
+an oisd blocklist:&lt;/p&gt;
+&lt;p&gt;Add &lt;code&gt;oisd&lt;/code&gt; to your flake inputs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+inputs = {
+    oisd = {
+      url = &quot;https://big.oisd.nl/domainswild&quot;;
+      flake = false;
+    };
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: The &lt;code&gt;oisd&lt;/code&gt; blocklist is a plain text file that updates frequently.
+This can cause &lt;code&gt;nh os switch&lt;/code&gt; to fail with a &lt;code&gt;NarHash&lt;/code&gt; mismatch error. To fix
+this, you need to run &lt;code&gt;nix flake update&lt;/code&gt; to refresh the blocklist and its hash
+in your &lt;code&gt;flake.lock&lt;/code&gt; file. After that, you can run your &lt;code&gt;nh&lt;/code&gt; command again.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;And the import the following into your &lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# dnscrypt-proxy.nix
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}: let
+  blocklist_base = builtins.readFile inputs.oisd;
+  extraBlocklist = &quot;&quot;;
+  blocklist_txt = pkgs.writeText &quot;blocklist.txt&quot; &apos;&apos;
+    ${extraBlocklist}
+    ${blocklist_base}
+  &apos;&apos;;
+  hasIPv6Internet = true;
+  StateDirName = &quot;dnscrypt-proxy&quot;; # Used for systemd StateDirectory
+  StatePath = &quot;/var/lib/${StateDirName}&quot;;
+in {
+  networking = {
+    nameservers = [&quot;127.0.0.1&quot; &quot;::1&quot;];
+    networkmanager.dns = &quot;none&quot;;
+  };
+
+  services.resolved.enable = lib.mkForce false;
+
+  services.dnscrypt-proxy = {
+    enable = true;
+    settings = {
+      sources.public-resolvers = {
+        urls = [
+          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md&quot;
+          &quot;https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md&quot;
+        ];
+        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
+        cache_file = &quot;${StatePath}/public-resolvers.md&quot;;
+      };
+
+      sources.quad9-resolvers = {
+        urls = [
+          &quot;https://quad9.net/dnscrypt/quad9-resolvers.md&quot;
+          &quot;https://raw.githubusercontent.com/Quad9DNS/dnscrypt-settings/main/dnscrypt/quad9-resolvers.md&quot;
+        ];
+        minisign_key = &quot;RWTp2E4t64BrL651lEiDLNon+DqzPG4jhZ97pfdNkcq1VDdocLKvl5FW&quot;;
+        cache_file = &quot;${StatePath}/quad9-resolvers.md&quot;;
+      };
+
+      sources.relays = {
+        urls = [
+          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/relays.md&quot;
+          &quot;https://download.dnscrypt.info/resolvers-list/v3/relays.md&quot;
+        ];
+        cache_file = &quot;${StatePath}/relays.md&quot;;
+        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
+      };
+
+      sources.odoh-servers = {
+        urls = [
+          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-servers.md&quot;
+          &quot;https://download.dnscrypt.info/resolvers-list/v3/odoh-servers.md&quot;
+        ];
+        cache_file = &quot;${StatePath}/odoh-servers.md&quot;;
+        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
+      };
+
+      sources.odoh-relays = {
+        urls = [
+          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-relays.md&quot;
+          &quot;https://download.dnscrypt.info/resolvers-list/v3/odoh-relays.md&quot;
+        ];
+        cache_file = &quot;${StatePath}/odoh-relays.md&quot;;
+        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
+      };
+
+      ipv6_servers = hasIPv6Internet;
+      block_ipv6 = !hasIPv6Internet;
+      blocked_names.blocked_names_file = &quot;${blocklist_txt}&quot;;
+      require_dnssec = true;
+      require_nolog = false;
+      require_nofilter = false;
+      odoh_servers = true;
+    };
+  };
+
+  # This creates /var/lib/dnscrypt-proxy with correct permissions
+  systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirName;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This module follows a “Zero Trust” model for your internet traffic, ensuring no
+single entity can see both &lt;strong&gt;who you are&lt;/strong&gt; and &lt;strong&gt;where you are going&lt;/strong&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# You should see that dnscrypt-proxy chooses the Server with the lowest initial latency
+sudo systemctl status dnscrypt-proxy2
+# verify that dnscrypt-proxy is listening
+sudo ss -lnp | grep 53
+# Test a DNS query, if you get valid responses it&apos;s working
+dig @127.0.0.1 example.com +short
+# check the logs
+sudo journalctl -u dnscrypt-proxy2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; acts as your local DNS resolver listening on your machine
+(&lt;code&gt;127.0.0.1&lt;/code&gt;) for IPv4 and &lt;code&gt;::1&lt;/code&gt; for iPv6.&lt;/p&gt;
+&lt;p&gt;The system’s DNS settings (&lt;code&gt;networking.nameservers&lt;/code&gt;) point to localhost, so
+&lt;strong&gt;all DNS queries&lt;/strong&gt; go to dnscrypt-proxy accept for your browser. Your browser
+has to be configured separately with a local resolver in which I haven’t figured
+out yet. I recommend setting your browsers DNS over HTTPS to strict with a
+respected custom DNS resolver such as &lt;code&gt;https://dns.quad9.net/dns-query&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;inputs.oisd&lt;/code&gt; refers to the flake input oisd blocklist, it prevents your device
+from connecting to unwanted or harmful domains.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; then encrypts and forwards our DNS requests to third-party
+public DNSCrypt or DoH servers.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ODoH Relays: This is the “Oblivious” part. It breaks the link between your IP
+address and your browsing history.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Setting up Tailscale&lt;/h3&gt;
+&lt;p&gt;I was surprised at how easy this actually was to set up. Either go to
+&lt;a href=&quot;https://www.tailscale.com&quot;&gt;https://www.tailscale.com&lt;/a&gt; and/or download the app for either Android or IOS,
+sign up with your identity provider, and click &lt;code&gt;Start connecting devices -&amp;gt;&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://tailscale.com/kb/1017/install&quot;&gt;Tailscale quickstart&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To add tailscale to NixOS:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# tailscale.nix
+{...}: {
+  services.tailscale.enable = true;
+  # Tell the firewall to implicitly trust packets routed over Tailscale:
+  networking.firewall.trustedInterfaces = [&quot;tailscale0&quot;];
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Tailscale will automatically use the hostname of your device as the name of the
+network. If you want to change it to something else:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --hostname=&amp;lt;name&amp;gt;
+# You can also give your account a nickname
+sudo tailscale set --nickname=&amp;lt;name&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This allows you to refer to your network by &lt;code&gt;name&lt;/code&gt; rather than IP address.&lt;/p&gt;
+&lt;p&gt;Tailscale uses &lt;a href=&quot;https://tailscale.com/kb/1081/magicdns&quot;&gt;MagicDNS&lt;/a&gt; which is
+enabled by default, and they recommend you keep it enabled.&lt;/p&gt;
+&lt;p&gt;The docs say that by default, devices in your tailnet prefer their local DNS
+settings and only use the tailnet’s DNS servers when needed. I had to completely
+disable my Androids DNS settings for tailscale to access the internet through
+MagicDNS.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --accept-dns=false
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To connect to tailscale after rebuilding you can run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale up
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Use &lt;code&gt;nslookup&lt;/code&gt; to review and debug DNS responses:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nslookup google.com
+Server:         127.0.0.1
+Address:        127.0.0.1#53
+
+Non-authoritative answer:
+Name:   google.com
+Address: 142.251.40.206
+Name:   google.com
+Address: 2a00:1450:4001:827::200e
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;127.0.0.1#53&lt;/code&gt; indicate that instead of using the DNS server pushed by
+your ISP, router, or Tailscale’s MagicDNS, the system is sending all DNS
+requests through the loopback device to &lt;code&gt;dnscrypt-proxy&lt;/code&gt; in my case.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Get the status of your connections to other Tailscale devices:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;tailscale status
+1           2         3           4         5
+100.1.2.3   device-a  apenwarr@   linux     active; direct &amp;lt;ip-port&amp;gt;, tx 1116 rx 1124
+100.4.5.6   device-b  crawshaw@   macOS     active; relay &amp;lt;relay-server&amp;gt;, tx 1351 rx 4262
+100.7.8.9   device-c  danderson@  windows   idle; tx 1214 rx 50
+100.0.1.2   device-d  ross@       iOS       —
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1196/security-hardening&quot;&gt;Tailscale Best Practices&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1080/cli&quot;&gt;Tailscale CLI&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;There is much more you can do with Tailscale, including integrating
+Mullvad-VPN and using Exit Nodes.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;MAC Randomization&lt;/h2&gt;
+&lt;p&gt;All network cards have a unique identifier called a MAC address. They’re stored
+in hardware and are used to assign an address to computers on the local network.&lt;/p&gt;
+&lt;p&gt;The MAC address is typically only traceable on the local network, it’s not
+passively sent out beyond the local router making it more critical on untrusted,
+public networks.&lt;/p&gt;
+&lt;p&gt;Leak-proof MAC randomization is very difficult to implement:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.kicksecure.com/wiki/Dev/MAC#Leak-proof_MAC_Randomization_-_Technical_Implementation_Challenges&quot;&gt;Leak-proof MAC Randomization Implementation Challenges&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Android and iPhone already implement MAC Randomization by default.&lt;/p&gt;
+&lt;p&gt;MAC Randomization enhances privacy by making it harder for third parties to
+track users across different networks.&lt;/p&gt;
+&lt;p&gt;Randomizing MAC adresses obscures a device’s unique hardware identity when
+scanning for or connecting to Wi-Fi, blocking passive tracking as well as
+location tracking across networks.&lt;/p&gt;
+&lt;p&gt;If you use NetworkManager you can set MAC randomization with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    networking = {
+      networkmanager = {
+        enable = true;
+        wifi.scanRandMacAddress = true;
+        wifi.macAddress = &quot;random&quot;;
+        plugins = [];
+      };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Right when I rebuilt, I got an alert from my router saying that a new device
+just connected to the network.&lt;/p&gt;
+&lt;p&gt;There is also a utility for viewing/manipulating the MAC address of network
+interfaces, &lt;code&gt;pkgs.macchanger&lt;/code&gt;. This is less reliable than the NetworkManager
+setting.&lt;/p&gt;
+&lt;h2&gt;Firewalls&lt;/h2&gt;
+&lt;p&gt;NixOS includes an integrated firewall based on iptables/nftables.&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Firewall Resources &lt;/summary&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/security/what-is-a-firewall/&quot;&gt;Cloudflare What is a Firewall&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/&quot;&gt;Beginners guide to nftables&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.archlinux.org/title/Nftables&quot;&gt;Arch Wiki nftables&lt;/a&gt;&lt;/p&gt;
+&lt;/details&gt;
+&lt;p&gt;The following firewall setup is based on the dnscrypt setup above utilizing
+nftables.&lt;/p&gt;
+&lt;p&gt;This nftables firewall configuration is a strong recommended practice for
+enforcing encrypted DNS on your system by restricting all outbound DNS traffic
+to a local dnscrypt-proxy process. It greatly reduces DNS leak risks and
+enforces privacy by limiting DNS queries to trusted, encrypted upstream
+servers.(This was edited on 08-08-25) replace &lt;code&gt;&amp;lt;DNSCRYPT-UID&amp;gt;&lt;/code&gt; with the UID
+given from the command &lt;code&gt;ps -o uid,user,pid,cmd -C dnscrypt-proxy&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ ... }: {
+  networking.nftables = {
+    enable = true;
+
+    ruleset = &apos;&apos;
+      table inet filter {
+        chain output {
+          type filter hook output priority 0; policy accept;
+
+          # Allow localhost DNS for dnscrypt-proxy2
+          ip daddr 127.0.0.1 udp dport 53 accept
+          ip6 daddr ::1 udp dport 53 accept
+          ip daddr 127.0.0.1 tcp dport 53 accept
+          ip6 daddr ::1 tcp dport 53 accept
+
+          # Allow dnscrypt-proxy2 to talk to upstream servers
+          # Replace &amp;lt;DNSCRYPT-UID&amp;gt; with:
+          # ps -o uid,user,pid,cmd -C dnscrypt-proxy
+          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; udp dport { 443, 853 } accept
+          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; tcp dport { 443, 853 } accept
+
+          # Block all other outbound DNS
+          udp dport { 53, 853 } drop
+          tcp dport { 53, 853 } drop
+        }
+      }
+    &apos;&apos;;
+  };
+  networking.firewall = {
+    enable = true;
+    allowedTCPPorts = [
+      # Ports open for inbound connections.
+      # Limit these to reduce the attack surface.
+
+      22 # SSH – Keep open only if you need remote access.
+         # To change the SSH port in NixOS:
+         # services.openssh.ports = [ 2222 ];
+         # Update this list to match the new port.
+
+      # 53  # DNS – Only if running a public DNS server.
+      # 80  # HTTP – Only if hosting a website.
+      # 443 # HTTPS – Only if hosting a secure website.
+    ];
+    allowedUDPPorts = [
+      # Ports open for inbound UDP traffic.
+      # Most NixOS workstations won&apos;t need any here.
+
+      # 53 # DNS – Only if running a public DNS server.
+    ];
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Tip on changing the default SSH Port &lt;/summary&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ TIP: Reduce SSH noise by changing the default port On most systems, SSH
+listens on TCP port 22 — which means automated bots and scanners will hit it
+constantly. While this doesn’t replace real security measures, moving SSH to a
+different port drastically cuts down on drive-by brute-force attempts you’ll
+see in your logs.&lt;/p&gt;
+&lt;p&gt;In NixOS, change both the SSH daemon port and your firewall rule:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; # Example: Move SSH to port 2222
+ networking.firewall.allowedTCPPorts = [ 2222 ];
+ services.openssh.ports = [ 2222 ];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;After rebuilding, test from another terminal/session before closing your
+existing one:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ssh -p 2222 user@host
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/blockquote&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;code&gt;nft&lt;/code&gt; is a cli tool used to set up, maintain and inspect packet filtering and
+classification rules in the Linux kernel, in the nftables framework. The Linux
+kernel subsystem is known as nftables, and ‘nf’ stands for Netfilter.–&lt;code&gt;man nft&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nft list ruleset
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Since we declare our firewall, we’ll only use &lt;code&gt;nft&lt;/code&gt; to inspect our ruleset.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;NixOS Firewall vs &lt;code&gt;nftables&lt;/code&gt; Ruleset&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;networking.nftables&lt;/code&gt;: This section provides a raw &lt;code&gt;nftables&lt;/code&gt; ruleset that gives
+you granular, low-level control. The rules here are more specific and are meant
+to handle the intricate logic of the DNS proxy setup. They will be applied
+directly to the kernel’s &lt;code&gt;nftables&lt;/code&gt; subsystem and prevent DNS leaks.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;networking.firewall&lt;/code&gt;: This is a higher-level, simpler NixOS option that uses
+&lt;code&gt;iptables&lt;/code&gt; rules to open ports for inbound traffic. The rules defined here
+(allowing port 22) is for incoming SSH connections to the machine, not for
+outbound traffic, so they do not interfere with the &lt;code&gt;nftables&lt;/code&gt; rules that filter
+the outgoing traffic. (Make sure to comment out or remove this if you don’t SSH
+into your machine).&lt;/p&gt;
+&lt;p&gt;The firewall ensures only authorized, local encrypted DNS proxy process can
+speak DNS with the outside world, and that all other DNS requests from any other
+process are blocked unless they’re to &lt;code&gt;127.0.0.1&lt;/code&gt; (our local proxy). This is a
+robust policy against both DNS leaks and local compromise.&lt;/p&gt;
+&lt;h2&gt;Testing&lt;/h2&gt;
+&lt;p&gt;Review listening ports: After each rebuild, use &lt;code&gt;ss -tlpn&lt;/code&gt;, &lt;code&gt;nmap&lt;/code&gt; or &lt;code&gt;netstat&lt;/code&gt;
+to see which services are accepting connections. Close or firewall anything
+unnecessary.&lt;/p&gt;
+&lt;p&gt;You can also test firewall DNS restrictions using &lt;code&gt;dig&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;dig @127.0.0.1 example.com  # Should work
+
+dig @8.8.8.8 example.com    # Should fail/time out for normal users
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This test is actually what alerted me of an improper configuration in the
+above firewalls nftables rules allowing me to fix it. Initially the second
+&lt;code&gt;dig&lt;/code&gt; command gave results letting me know that the restrictions weren’t being
+applied correctly.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Since we defined an &lt;code&gt;output&lt;/code&gt; chain inside &lt;code&gt;table inet filter&lt;/code&gt; with the line:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;type filter hook output priority 0; policy accept;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This attaches the chain to the kernel’s OUTPUT hook, so all locally generated
+packets, including DNS queries are filtered by this chain.&lt;/p&gt;
+&lt;p&gt;Within this chain, the rules:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Explicitly allow DNS queries to localhost addresses (&lt;code&gt;127.0.0.1&lt;/code&gt; and &lt;code&gt;::1&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Allow the &lt;code&gt;dnscrypt-proxy&lt;/code&gt; process (running with UID &lt;code&gt;62396&lt;/code&gt;) to send DNS
+queries on ports 443 and 853 (for DNS-over-HTTPS and DNS-over-TLS).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Drop all other outbound DNS traffic on ports &lt;code&gt;53&lt;/code&gt; and &lt;code&gt;853&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Because of this setup, dig queries to your local resolver at &lt;code&gt;127.0.0.1&lt;/code&gt; pass,
+but queries directly to public DNS servers like &lt;code&gt;8.8.8.8&lt;/code&gt; are blocked for
+users/processes other than the allowed DNS proxy.&lt;/p&gt;
+&lt;h2&gt;OpenSnitch&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/OpenSnitch&quot;&gt;NixOS Wiki OpenSnitch&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/evilsocket/opensnitch&quot;&gt;Opensnitch&lt;/a&gt; is an open-source
+application firewall that focuses on monitoring and controlling outgoing network
+connections on a per-application basis.&lt;/p&gt;
+&lt;p&gt;This can be used to block apps from accessing the internet that shouldn’t need
+to (i.e., block telemetry and more). Opensnitch will report that the app has
+attempted to make an outbound internet connection and block it or allow it based
+on the rules you set.&lt;/p&gt;
+&lt;h3&gt;Resources&lt;/h3&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Resources &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://cloudflare.com/learning/ssl/what-is-https&quot;&gt;Cloudflare What is HTTPS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/&quot;&gt;Surveillance Self-Defence&lt;/a&gt; has a lot of helpful info to
+protect your privacy.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/module/what-fingerprinting&quot;&gt;What is Fingerprinting&lt;/a&gt;, more
+than you realize is being tracked constantly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://oisd.nl/&quot;&gt;oisd.nl&lt;/a&gt; the oisd website&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;For potentially dangerous file types like PDFs, office documents, or images,
+especially those downloaded from untrusted sources such as torrents, consider
+converting them to a safe PDF format with
+&lt;a href=&quot;https://github.com/freedomofpress/dangerzone&quot;&gt;dangerzone&lt;/a&gt;. Dangerzone not
+only removes metadata but also applies robust sanitization to neutralize
+malicious content.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Librewolf&quot;&gt;NixOS Wiki LibreWolf&lt;/a&gt;, the options in
+the wiki make it less secure and aren’t recommended settings to use. They
+explicitly disable several of LibreWolf’s default privacy-enhancing features,
+such as fingerprinting resistance and clearing session data on shutdown.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://librewolf.net/docs/features/&quot;&gt;LibreWolf Features&lt;/a&gt; You still need to
+enable DNS over HTTPS through privacy settings.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/SearXNG&quot;&gt;SearXNG on NixOS&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.searxng.org/&quot;&gt;Welcome to SearXNG&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;Firefox Hardening Guide&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.ghacks.net/2015/08/18/a-comprehensive-list-of-firefox-privacy-and-security-settings/&quot;&gt;Firefox ghacks&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js&quot;&gt;Arkenfox&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacytools.io/private-browser&quot;&gt;PrivacyTools.io&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/simeononsecurity/FireFox-Privacy-Script&quot;&gt;simeononsecurity Firefox-Privacy-Script&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;brianfucksec firefox-hardening-Guide 2023&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://simeononsecurity.com/guides/enhance-firefox-security-configuring-guide/&quot;&gt;STIG Firefox Hardening&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;If you should trust the U.S. Governments recommendations is another story but
+it can be good to compare and contrast with other trusted resources. You’ll
+have to think whether the CISA recommending that everyone uses Signal is solid
+advice or guiding you towards a honeypot, I can’t say for sure.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://stigviewer.com/stigs/mozilla_firefox&quot;&gt;Mozilla Firefox Security Technical Implementation Guide&lt;/a&gt;
+The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
+set of security configuration standards developed by the U.S. Department of
+Defense. They are created by the Defense Information Systems Agency (DISA) to
+secure and harden DoD information systems and software.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The New Oil (Why Privacy &amp;amp; Security Matter)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/&quot;&gt;PrivacyGuides&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://relay.firefox.com/accounts/profile/&quot;&gt;Firefox Relay&lt;/a&gt; can be used to
+create email aliases that forward to your real email address. The paid plan
+also lets you create phone number aliases that forward to your phone number.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://zebracrossing.narwhalacademy.org/&quot;&gt;Zebra Crossing digital safety checklist&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/essentials#step-1&quot;&gt;DataDetoxKit&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/degooglise/&quot;&gt;DataDetox Degooglise&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tb-manual.torproject.org/&quot;&gt;Tor Browser User Manual&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://gitlab.torproject.org/tpo/team/-/wikis/home&quot;&gt;Tor Wiki&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://tldp.org/LDP/nag2/x-087-2-intro.html&quot;&gt;Linux Network Administrators Guide&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.ibm.com/think/topics/networking&quot;&gt;IBM Networking&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+</content></entry><entry><title>Browsing Security</title><id>https://saylesss88.github.io/nix/browsing_security.html</id><updated>2025-12-21T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/browsing_security.html" rel="alternate"/><content type="html">&lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
 &lt;/details&gt;
@@ -6101,759 +6867,6 @@ indicating your impermanence setup is working correctly!&lt;/p&gt;
 &lt;p&gt;Your system should now come up with a fresh root filesystem, and only the data
 specified in your &lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; configuration will be
 persistent.&lt;/p&gt;
-</content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Since networks and systems vary, some adjustments may cause unexpected issues,
-especially around critical components like DNS or firewalls. Always review and
-test changes in a controlled environment before applying them broadly.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Understand the trade-offs and tailor the settings to your threat model and
-workflow. Take what’s useful, adapt as needed, and seek expert guidance for
-more advanced scenarios.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h2&gt;Introduction&lt;/h2&gt;
-&lt;p&gt;Every setup is unique, feel free to adapt or skip sections based on your needs.
-Start with the basics and build up as you gain confidence. The goal is
-practical, tested hardening tailored to you.&lt;/p&gt;
-&lt;h3&gt;Safe Browsing / Privacy Enhancing Habits&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;Adopt Encrypted DNS and HTTPS Everywhere&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Configure your system and browsers to use DNS over HTTPS (DoH), DNS over TLS
-(DoT), or DNSCrypt to prevent DNS leakage. Use HTTPS-Only mode in browsers to
-encrypt all web traffic. Prefer browsers with strong privacy defaults or add
-recommended extensions.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/dns/#dnscrypt-proxy&quot;&gt;Privacy Guides dnscrypt-proxy recommendation&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Disable browser “remember password” and autofill features, clear cookies and
-site data upon exit, and carefully vet suspicious URLs with tools like
-&lt;a href=&quot;https://www.virustotal.com/gui/home/url&quot;&gt;VirusTotal&lt;/a&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Limit Account Linking and Use Unique Credentials&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Create separate accounts with unique passwords instead of signing in with
-Google, Facebook, or similar services to limit broad data exposure from
-compromises.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Use Metadata Cleaning Tools&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Many files like images, PDFs, and office documents contain hidden metadata
-information such as location data, device details, and more that can reveal
-your identity or other sensitive information when you share files publicly.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;To protect your privacy, always sanitize files by removing this metadata
-before sharing. Tools like &lt;a href=&quot;https://0xacab.org/jvoisin/mat2&quot;&gt;mat2&lt;/a&gt; are
-designed to strip metadata from a wide range of media files efficiently.
-(&lt;code&gt;pkgs.mat2&lt;/code&gt;). You just type &lt;code&gt;mat2 swappy-2025.png&lt;/code&gt; for example and there will
-then be a new &lt;code&gt;mat2 swappy-2025.cleaned.png&lt;/code&gt; that can safely be shared.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Use Anonymous File-Sharing Tools&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;For sensitive transfers, consiter tools like
-&lt;a href=&quot;https://github.com/onionshare/onionshare&quot;&gt;OnionShare&lt;/a&gt; that provide anonymity
-and security.(&lt;code&gt;pkgs.onionshare&lt;/code&gt;)&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Avoid Scanning Random QR Codes Without Verification&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Use QR code scanner apps that check for malicious content before loading
-links.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Understand Your Threat Model&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Apply these basics universally, but tailor advanced hardening according to
-your unique environment, connectivity needs, and risk profile.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Delete cookies and site data when the browser is closed&lt;/strong&gt;. (security not
-usability).&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Use Strong, Unique Passwords and a Password Manager&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Avoid reused passwords by using reliable password managers like KeePassXC or
-Bitwarden, both available on NixOS. Pair this with enabling two-factor
-authentication &lt;strong&gt;(2FA) wherever possible&lt;/strong&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;It’s advisable to only use the desktop version and not the browser extension
-for a number of reasons. One is that you can store your passwords completely
-offline and have complete ownership of them.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;environment.systemPackages = [
-    pkgs.keepassxc
-    pkgs.kpcli     # KeePass CLI
-    # OR
-    pkgs.bitwarden-desktop
-    pkgs.bitwarden-cli
-];
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;With KeePassXC, you can require 3 different authentication methods at the same
-time. You can choose a password, a keyfile, and a security key where it won’t
-open unless all 3 are present giving you additional security. All 3 might not be
-necessary but it’s possible. It’s also easy to migrate to KeePassXC, you can
-import your vault from many different managers.&lt;/p&gt;
-&lt;p&gt;KeepassXC also makes it easy to keep your complete password database offline
-which can significantly reduce the risk of a breach.&lt;/p&gt;
-&lt;p&gt;With Bitwarden, to enable 2 factor authentication, you need to log in with your
-master password through the web interface.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.privacyguides.org/en/basics/passwords-overview/&quot;&gt;PrivacyGuides Intro to Passwords&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr /&gt;
-&lt;h3&gt;Why Follow These Basics?&lt;/h3&gt;
-&lt;p&gt;These recommended steps help protect your privacy and security while maintaining
-usability and minimizing system interruptions. They catch common threats like
-network eavesdropping, password reuse, fingerprinting, and data leakage,
-providing a solid foundation to build on.&lt;/p&gt;
-&lt;p&gt;A vast majority of secure and privacy-focused browsers available for NixOS are
-based on Firefox.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: Firefox does lack some security features available in Chrome and
-sandbox escapes in Linux are relatively easy. People such as madaidan say to
-never use Linux or Firefox period when you’re worried about security and
-privacy. I’m not personally going to jump to proprietary software with known
-backdoors in a misguided attempt at increasing security/privacy.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://techstory.in/eu-hits-google-with-3-5-billion-antitrust-fine-over-adtech-practices/&quot;&gt;EU Hits Google with 3.5 Billion Antitrust&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;This &lt;a href=&quot;https://grapheneos.org/usage#web-browsing&quot;&gt;GrapheneOS article&lt;/a&gt;, breaks
-down why they use Chromium-based browsers and specifically mentions that it’s
-not recommended to use Firefox, especially on Linux because of the weak
-sandboxing.&lt;/p&gt;
-&lt;p&gt;As a Chromium-based browser, Brave has been growing on me. Brave uses
-randomization rather than standardization for fingerprinting protection. If you
-run Cover Your Tracks with Brave, it will show a randomized fingerprint.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click To Expand United States Patriot Act Overview &lt;/summary&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.csis.org/analysis/fact-sheet-section-215-usa-patriot-act&quot;&gt;Section 215 USA Patriot Act&lt;/a&gt;
-permits the collection of “Tangible Things” or “Business Records”, e.g., your
-phone records, medical records, etc. for an investigation to obtain foreign
-intelligence information. If it does relate to a US person it must be relevant
-to preventing terrorism or espionage, and not be based solely on activities
-protected by the first amendment. “Relevant” is the key word here and it is at
-the governments discretion meaning they sweep everything and sift it later.
-Criticized for violating American citizens Fourth Amendment protections against
-warrantless search and seizure and proven to be ineffective.&lt;/p&gt;
-&lt;/details&gt;
-&lt;p&gt;What is “normal” and allowed today might be suppressed tomorrow, look at the UK
-&lt;a href=&quot;https://en.wikipedia.org/wiki/Online_Safety_Act_2023&quot;&gt;Online Safety Act&lt;/a&gt;
-purported to protect children, accused of banning privacy. This is because the
-only way to verify age is to make everyone submit KYC with their drivers license
-or ID, completely taking away any anonymity of adults and children alike.&lt;/p&gt;
-&lt;p&gt;Also see
-&lt;a href=&quot;https://www.bbc.com/news/articles/cq68j5g2nr1o&quot;&gt;BBC 4chan refuses to pay fine&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The mere existence of a surveillance state breeds fear and conformity and
-stifles free
-expression.–&lt;a href=&quot;https://theintercept.com/2016/04/28/new-study-shows-mass-surveillance-breeds-meekness-fear-and-self-censorship/&quot;&gt;The Intercept&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;There are much more scary examples in
-&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The new Oil&lt;/a&gt;&lt;/p&gt;
-&lt;h2&gt;Protections from Surveillance in the U.S.&lt;/h2&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand U.S. Surveillance protections &lt;/summary&gt;
-&lt;blockquote&gt;
-&lt;p&gt;⚠️ A crucial caveat to keep in mind regarding surveillance protections in the
-U.S., whether grounded in the Fourth Amendment, the First Amendment, or
-statutory laws is that &lt;strong&gt;these protections are not foolproof and have
-repeatedly failed or been circumvented in practice&lt;/strong&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Fourth Amendment Basics&lt;/strong&gt;: It demands reasonableness in searches and usually
-requires a warrant. This means government agents cannot arbitrarily listen to
-your private communications or search your digital data without judicial
-approval&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Electronic Surveillance Challenges&lt;/strong&gt;: Courts have wrestled with how the
-Fourth Amendment applies to modern communications. The Supreme Court has ruled
-in some cases that pervasive or non-consensual electronic surveillance
-violates reasonable expectations of privacy, but other rulings have allowed
-broader state actions in national security contexts.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;The Third-Party Doctrine&lt;/strong&gt;: A major limitation arises from the “third-party
-doctrine,” which holds that information voluntarily shared with third parties
-(like phone companies or internet providers) has reduced Fourth Amendment
-protections. This means data held by third parties may be subject to
-government access without a warrant in some cases&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;The First Amendment&lt;/strong&gt; guarantees free speech and the freedom to receive
-information without government censorship or intimidation. Excessive or
-secretive government surveillance can chill free speech by making people
-afraid their communications are monitored, discouraging open expression and
-participation in public discourse.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Advocates argue that courts should recognize government surveillance not
-only as a Fourth Amendment search issue but also as a First Amendment
-violation where surveillance suppresses or chills constitutionally protected
-expression.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;While the Fourth Amendment traditionally governs searches and surveillance
-legality, the First Amendment frames the broader impact on free speech and
-democratic engagement. Invoking both provides a more comprehensive
-constitutional shield against intrusive surveillance practices.&lt;/p&gt;
-&lt;/details&gt;
-&lt;hr /&gt;
-&lt;h2&gt;Encrypted DNS&lt;/h2&gt;
-&lt;p&gt;DNS (Domain Name System) resolution is the process of translating a website’s
-domain name into its corresponding IP address. By default, this traffic isn’t
-encrypted, which means anyone on the network, from your ISP to potential
-hackers, can see the websites you’re trying to visit. &lt;strong&gt;Encrypted DNS&lt;/strong&gt; uses
-protocols to scramble this information, protecting your queries and responses
-from being intercepted and viewed by others.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: There are many other ways for someone monitoring your traffic to see
-what domain you looked up via DNS that it’s effectiveness is questionable
-without also using Tor or a VPN. Encrypted DNS will not help you hide any of
-your browsing activity.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;There are 3 main types of DNS protection:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;DNS over HTTPS (DoH)&lt;/strong&gt;: Uses the HTTPS protocol to encrypt data between the
-client and the resolver.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;DNS over TLS (DoT)&lt;/strong&gt;: Similar to (DoH), differs in the methods used for
-encryption and delivery using a separate port from HTTPS.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;DNSCrypt&lt;/strong&gt;: Uses end-to-end encryption with the added benefit of being able
-to prevent DNS spoofing attacks.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Useful resources:&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand DNS Resources &lt;/summary&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Encrypted_DNS&quot;&gt;NixOS Wiki Encrypted DNS&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/dns/what-is-dns/&quot;&gt;Domain Name System (DNS)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_HTTPS&quot;&gt;Wikipedia DNS over HTTPS (DoH)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/DNS_over_TLS&quot;&gt;Wikipedia DNS over TLS (DoT)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://blog.cloudflare.com/dns-encryption-explained/&quot;&gt;Cloudflare Dns Encryption Explained&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://nordvpn.com/blog/encrypted-dns-traffic/&quot;&gt;NordVPN Encrypted Dns Traffic&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Hot Take&lt;/strong&gt;:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://madaidans-insecurities.github.io/encrypted-dns.html&quot;&gt;Encrypted DNS is ineffective without a VPN or Tor by madaidan&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
-&lt;p&gt;The following sets up dnscrypt-proxy using DoH (DNS over HTTPS) with an oisd
-blocklist, they both come directly from the Wiki:&lt;/p&gt;
-&lt;p&gt;Add &lt;code&gt;oisd&lt;/code&gt; to your flake inputs:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
-inputs = {
-    oisd = {
-      url = &quot;https://big.oisd.nl/domainswild&quot;;
-      flake = false;
-    };
-};
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NOTE: The &lt;code&gt;oisd&lt;/code&gt; blocklist is a plain text file that updates frequently.
-This can cause &lt;code&gt;nh os switch&lt;/code&gt; to fail with a &lt;code&gt;NarHash&lt;/code&gt; mismatch error. To fix
-this, you need to run &lt;code&gt;nix flake update&lt;/code&gt; to refresh the blocklist and its hash
-in your &lt;code&gt;flake.lock&lt;/code&gt; file. After that, you can run your &lt;code&gt;nh&lt;/code&gt; command again.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;And the import the following into your &lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# dnscrypt-proxy.nix
-{
-  pkgs,
-  lib,
-  inputs,
-  ...
-}: let
-  blocklist_base = builtins.readFile inputs.oisd;
-  extraBlocklist = &apos;&apos;&apos;&apos;;
-  blocklist_txt = pkgs.writeText &quot;blocklist.txt&quot; &apos;&apos;
-    ${extraBlocklist}
-    ${blocklist_base}
-  &apos;&apos;;
-  hasIPv6Internet = true;
-  StateDirectory = &quot;dnscrypt-proxy&quot;;
-in {
-  networking = {
-    # Set DNS nameservers to the local host addresses for iPv4 (`127.0.0.1`) &amp;amp; iPv6 (::1)
-    nameservers = [&quot;127.0.0.1&quot; &quot;::1&quot;];
-    # If using dhcpcd
-    # dhcpcd.extraConfig = &quot;nohook resolv.conf&quot;;
-    # If using NetworkManager
-    networkmanager.dns = &quot;none&quot;;
-  };
-  services.resolved.enable = lib.mkForce false;
-  # See https://wiki.nixos.org/wiki/Encrypted_DNS
-  services.dnscrypt-proxy2 = {
-    enable = true;
-    # See https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml
-    settings = {
-      # See https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
-      sources.public-resolvers = {
-        urls = [
-          &quot;https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md&quot;
-          &quot;https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md&quot;
-        ];
-        minisign_key = &quot;RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3&quot;;
-        cache_file = &quot;/var/lib/${StateDirectory}/public-resolvers.md&quot;;
-      };
-     # sources.quad9-resolvers = {
-     #   urls = [
-     #     &quot;https://quad9.net/dnscrypt/quad9-resolvers.md&quot;
-     #     &quot;https://raw.githubusercontent.com/Quad9DNS/dnscrypt-settings/main/dnscrypt/quad9-resolvers.md&quot;
-     #   ];
-     #   minisign_key = &quot;RWTp2E4t64BrL651lEiDLNon+DqzPG4jhZ97pfdNkcq1VDdocLKvl5FW&quot;;
-     #   cache_file = &quot;/var/cache/dnscrypt-proxy/quad9-resolvers.md&quot;;
-     # };
-
-      # Use servers reachable over IPv6 -- Do not enable if you don&apos;t have IPv6 connectivity
-      ipv6_servers = hasIPv6Internet;
-      block_ipv6 = ! hasIPv6Internet;
-      blocked_names.blocked_names_file = blocklist_txt;
-      require_dnssec = true;
-      # Logs can get large very quickly...
-      require_nolog = false;
-      # This stops dns malware filtering, etc. if true
-      require_nofilter = false;
-      dnscrypt_servers = true;
-
-      # If you want, choose a specific set of servers that come from your sources.
-      # Here it&apos;s from https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
-      # If you don&apos;t specify any, dnscrypt-proxy will automatically rank servers
-      # that match your criteria and choose the best one.
-      # server_names = [ ... ];
-      # server_names = [&apos;quad9-dnscrypt-ip6-filter-pri&apos;, &apos;quad9-dnscrypt-ip4-filter-pri&apos;, &apos;mullvad-adblock-d&apos;];
-
-    };
-  };
-
-  systemd.services.dnscrypt-proxy2.serviceConfig.StateDirectory = StateDirectory;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗️ NOTE: Upon testing dnscrypt-proxy on Arch, it was able to route the browser
-through the proxy, removing the need for Max Protection. I’m still currently
-on Arch and plan to test this further ASAP. We test the above settings further
-down, but I’m curious why the browser isn’t routed correctly…&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;Above, we have a local DNS proxy that encrypts and forwards queries.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# You should see that dnscrypt-proxy chooses the Server with the lowest initial latency
-sudo systemctl status dnscrypt-proxy2
-# verify that dnscrypt-proxy is listening
-sudo ss -lnp | grep 53
-# Test a DNS query, if you get valid responses it&apos;s working
-dig @127.0.0.1 example.com +short
-# check the logs
-sudo journalctl -u dnscrypt-proxy2
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; acts as your local DNS resolver listening on your machine
-(&lt;code&gt;127.0.0.1&lt;/code&gt;) for IPv4 and &lt;code&gt;::1&lt;/code&gt; for iPv6.&lt;/p&gt;
-&lt;p&gt;The system’s DNS settings (&lt;code&gt;networking.nameservers&lt;/code&gt;) point to localhost, so
-&lt;strong&gt;all DNS queries&lt;/strong&gt; go to dnscrypt-proxy accept for your browser. Your browser
-has to be configured separately with a local resolver in which I haven’t figured
-out yet. I recommend setting your browsers DNS over HTTPS to strict with a
-respected custom DNS resolver such as &lt;code&gt;https://dns.quad9.net/dns-query&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;inputs.oisd&lt;/code&gt; refers to the flake input oisd blocklist, it prevents your device
-from connecting to unwanted or harmful domains.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;dnscrypt-proxy2&lt;/code&gt; then encrypts and forwards our DNS requests to third-party
-public DNSCrypt or DoH servers.&lt;/p&gt;
-&lt;h3&gt;Setting up Tailscale&lt;/h3&gt;
-&lt;p&gt;I was surprised at how easy this actually was to set up. Either go to
-&lt;a href=&quot;https://www.tailscale.com&quot;&gt;https://www.tailscale.com&lt;/a&gt; and/or download the app for either Android or IOS,
-sign up with your identity provider, and click &lt;code&gt;Start connecting devices -&amp;gt;&lt;/code&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://tailscale.com/kb/1017/install&quot;&gt;Tailscale quickstart&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;To add tailscale to NixOS:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# tailscale.nix
-{...}: {
-  services.tailscale.enable = true;
-  # Tell the firewall to implicitly trust packets routed over Tailscale:
-  networking.firewall.trustedInterfaces = [&quot;tailscale0&quot;];
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Tailscale will automatically use the hostname of your device as the name of the
-network. If you want to change it to something else:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --hostname=&amp;lt;name&amp;gt;
-# You can also give your account a nickname
-sudo tailscale set --nickname=&amp;lt;name&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This allows you to refer to your network by &lt;code&gt;name&lt;/code&gt; rather than IP address.&lt;/p&gt;
-&lt;p&gt;Tailscale uses &lt;a href=&quot;https://tailscale.com/kb/1081/magicdns&quot;&gt;MagicDNS&lt;/a&gt; which is
-enabled by default, and they recommend you keep it enabled.&lt;/p&gt;
-&lt;p&gt;The docs say that by default, devices in your tailnet prefer their local DNS
-settings and only use the tailnet’s DNS servers when needed. I had to completely
-disable my Androids DNS settings for tailscale to access the internet through
-MagicDNS.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale set --accept-dns=false
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;To connect to tailscale after rebuilding you can run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo tailscale up
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Use &lt;code&gt;nslookup&lt;/code&gt; to review and debug DNS responses:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nslookup google.com
-Server:         127.0.0.1
-Address:        127.0.0.1#53
-
-Non-authoritative answer:
-Name:   google.com
-Address: 142.251.40.206
-Name:   google.com
-Address: 2a00:1450:4001:827::200e
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;The &lt;code&gt;127.0.0.1#53&lt;/code&gt; indicate that instead of using the DNS server pushed by
-your ISP, router, or Tailscale’s MagicDNS, the system is sending all DNS
-requests through the loopback device to &lt;code&gt;dnscrypt-proxy&lt;/code&gt; in my case.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Get the status of your connections to other Tailscale devices:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;tailscale status
-1           2         3           4         5
-100.1.2.3   device-a  apenwarr@   linux     active; direct &amp;lt;ip-port&amp;gt;, tx 1116 rx 1124
-100.4.5.6   device-b  crawshaw@   macOS     active; relay &amp;lt;relay-server&amp;gt;, tx 1351 rx 4262
-100.7.8.9   device-c  danderson@  windows   idle; tx 1214 rx 50
-100.0.1.2   device-d  ross@       iOS       —
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1196/security-hardening&quot;&gt;Tailscale Best Practices&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tailscale.com/kb/1080/cli&quot;&gt;Tailscale CLI&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;There is much more you can do with Tailscale, including integrating
-Mullvad-VPN and using Exit Nodes.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;MAC Randomization&lt;/h2&gt;
-&lt;p&gt;All network cards have a unique identifier called a MAC address. They’re stored
-in hardware and are used to assign an address to computers on the local network.&lt;/p&gt;
-&lt;p&gt;The MAC address is typically only traceable on the local network, it’s not
-passively sent out beyond the local router making it more critical on untrusted,
-public networks.&lt;/p&gt;
-&lt;p&gt;Leak-proof MAC randomization is very difficult to implement:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.kicksecure.com/wiki/Dev/MAC#Leak-proof_MAC_Randomization_-_Technical_Implementation_Challenges&quot;&gt;Leak-proof MAC Randomization Implementation Challenges&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Android and iPhone already implement MAC Randomization by default.&lt;/p&gt;
-&lt;p&gt;MAC Randomization enhances privacy by making it harder for third parties to
-track users across different networks.&lt;/p&gt;
-&lt;p&gt;Randomizing MAC adresses obscures a device’s unique hardware identity when
-scanning for or connecting to Wi-Fi, blocking passive tracking as well as
-location tracking across networks.&lt;/p&gt;
-&lt;p&gt;If you use NetworkManager you can set MAC randomization with:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    networking = {
-      networkmanager = {
-        enable = true;
-        wifi.scanRandMacAddress = true;
-        wifi.macAddress = &quot;random&quot;;
-        plugins = [];
-      };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Right when I rebuilt, I got an alert from my router saying that a new device
-just connected to the network.&lt;/p&gt;
-&lt;p&gt;There is also a utility for viewing/manipulating the MAC address of network
-interfaces, &lt;code&gt;pkgs.macchanger&lt;/code&gt;. This is less reliable than the NetworkManager
-setting.&lt;/p&gt;
-&lt;h2&gt;Firewalls&lt;/h2&gt;
-&lt;p&gt;NixOS includes an integrated firewall based on iptables/nftables.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Firewall Resources &lt;/summary&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.cloudflare.com/learning/security/what-is-a-firewall/&quot;&gt;Cloudflare What is a Firewall&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&quot;https://linux-audit.com/networking/nftables/nftables-beginners-guide-to-traffic-filtering/&quot;&gt;Beginners guide to nftables&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.archlinux.org/title/Nftables&quot;&gt;Arch Wiki nftables&lt;/a&gt;&lt;/p&gt;
-&lt;/details&gt;
-&lt;p&gt;The following firewall setup is based on the dnscrypt setup above utilizing
-nftables.&lt;/p&gt;
-&lt;p&gt;This nftables firewall configuration is a strong recommended practice for
-enforcing encrypted DNS on your system by restricting all outbound DNS traffic
-to a local dnscrypt-proxy process. It greatly reduces DNS leak risks and
-enforces privacy by limiting DNS queries to trusted, encrypted upstream
-servers.(This was edited on 08-08-25) replace &lt;code&gt;&amp;lt;DNSCRYPT-UID&amp;gt;&lt;/code&gt; with the UID
-given from the command &lt;code&gt;ps -o uid,user,pid,cmd -C dnscrypt-proxy&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ ... }: {
-  networking.nftables = {
-    enable = true;
-
-    ruleset = &apos;&apos;
-      table inet filter {
-        chain output {
-          type filter hook output priority 0; policy accept;
-
-          # Allow localhost DNS for dnscrypt-proxy2
-          ip daddr 127.0.0.1 udp dport 53 accept
-          ip6 daddr ::1 udp dport 53 accept
-          ip daddr 127.0.0.1 tcp dport 53 accept
-          ip6 daddr ::1 tcp dport 53 accept
-
-          # Allow dnscrypt-proxy2 to talk to upstream servers
-          # Replace &amp;lt;DNSCRYPT-UID&amp;gt; with:
-          # ps -o uid,user,pid,cmd -C dnscrypt-proxy
-          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; udp dport { 443, 853 } accept
-          meta skuid &amp;lt;DNSCRYPT-UID&amp;gt; tcp dport { 443, 853 } accept
-
-          # Block all other outbound DNS
-          udp dport { 53, 853 } drop
-          tcp dport { 53, 853 } drop
-        }
-      }
-    &apos;&apos;;
-  };
-  networking.firewall = {
-    enable = true;
-    allowedTCPPorts = [
-      # Ports open for inbound connections.
-      # Limit these to reduce the attack surface.
-
-      22 # SSH – Keep open only if you need remote access.
-         # To change the SSH port in NixOS:
-         # services.openssh.ports = [ 2222 ];
-         # Update this list to match the new port.
-
-      # 53  # DNS – Only if running a public DNS server.
-      # 80  # HTTP – Only if hosting a website.
-      # 443 # HTTPS – Only if hosting a secure website.
-    ];
-    allowedUDPPorts = [
-      # Ports open for inbound UDP traffic.
-      # Most NixOS workstations won&apos;t need any here.
-
-      # 53 # DNS – Only if running a public DNS server.
-    ];
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Tip on changing the default SSH Port &lt;/summary&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ TIP: Reduce SSH noise by changing the default port On most systems, SSH
-listens on TCP port 22 — which means automated bots and scanners will hit it
-constantly. While this doesn’t replace real security measures, moving SSH to a
-different port drastically cuts down on drive-by brute-force attempts you’ll
-see in your logs.&lt;/p&gt;
-&lt;p&gt;In NixOS, change both the SSH daemon port and your firewall rule:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; # Example: Move SSH to port 2222
- networking.firewall.allowedTCPPorts = [ 2222 ];
- services.openssh.ports = [ 2222 ];
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;After rebuilding, test from another terminal/session before closing your
-existing one:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ssh -p 2222 user@host
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/blockquote&gt;
-&lt;/details&gt;
-&lt;p&gt;&lt;code&gt;nft&lt;/code&gt; is a cli tool used to set up, maintain and inspect packet filtering and
-classification rules in the Linux kernel, in the nftables framework. The Linux
-kernel subsystem is known as nftables, and ‘nf’ stands for Netfilter.–&lt;code&gt;man nft&lt;/code&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nft list ruleset
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Since we declare our firewall, we’ll only use &lt;code&gt;nft&lt;/code&gt; to inspect our ruleset.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;NixOS Firewall vs &lt;code&gt;nftables&lt;/code&gt; Ruleset&lt;/h2&gt;
-&lt;p&gt;&lt;code&gt;networking.nftables&lt;/code&gt;: This section provides a raw &lt;code&gt;nftables&lt;/code&gt; ruleset that gives
-you granular, low-level control. The rules here are more specific and are meant
-to handle the intricate logic of the DNS proxy setup. They will be applied
-directly to the kernel’s &lt;code&gt;nftables&lt;/code&gt; subsystem and prevent DNS leaks.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;networking.firewall&lt;/code&gt;: This is a higher-level, simpler NixOS option that uses
-&lt;code&gt;iptables&lt;/code&gt; rules to open ports for inbound traffic. The rules defined here
-(allowing port 22) is for incoming SSH connections to the machine, not for
-outbound traffic, so they do not interfere with the &lt;code&gt;nftables&lt;/code&gt; rules that filter
-the outgoing traffic. (Make sure to comment out or remove this if you don’t SSH
-into your machine).&lt;/p&gt;
-&lt;p&gt;The firewall ensures only authorized, local encrypted DNS proxy process can
-speak DNS with the outside world, and that all other DNS requests from any other
-process are blocked unless they’re to &lt;code&gt;127.0.0.1&lt;/code&gt; (our local proxy). This is a
-robust policy against both DNS leaks and local compromise.&lt;/p&gt;
-&lt;h2&gt;Testing&lt;/h2&gt;
-&lt;p&gt;Review listening ports: After each rebuild, use &lt;code&gt;ss -tlpn&lt;/code&gt;, &lt;code&gt;nmap&lt;/code&gt; or &lt;code&gt;netstat&lt;/code&gt;
-to see which services are accepting connections. Close or firewall anything
-unnecessary.&lt;/p&gt;
-&lt;p&gt;You can also test firewall DNS restrictions using &lt;code&gt;dig&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;dig @127.0.0.1 example.com  # Should work
-
-dig @8.8.8.8 example.com    # Should fail/time out for normal users
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;This test is actually what alerted me of an improper configuration in the
-above firewalls nftables rules allowing me to fix it. Initially the second
-&lt;code&gt;dig&lt;/code&gt; command gave results letting me know that the restrictions weren’t being
-applied correctly.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Since we defined an &lt;code&gt;output&lt;/code&gt; chain inside &lt;code&gt;table inet filter&lt;/code&gt; with the line:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;type filter hook output priority 0; policy accept;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This attaches the chain to the kernel’s OUTPUT hook, so all locally generated
-packets, including DNS queries are filtered by this chain.&lt;/p&gt;
-&lt;p&gt;Within this chain, the rules:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Explicitly allow DNS queries to localhost addresses (&lt;code&gt;127.0.0.1&lt;/code&gt; and &lt;code&gt;::1&lt;/code&gt;).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Allow the &lt;code&gt;dnscrypt-proxy&lt;/code&gt; process (running with UID &lt;code&gt;62396&lt;/code&gt;) to send DNS
-queries on ports 443 and 853 (for DNS-over-HTTPS and DNS-over-TLS).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Drop all other outbound DNS traffic on ports &lt;code&gt;53&lt;/code&gt; and &lt;code&gt;853&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Because of this setup, dig queries to your local resolver at &lt;code&gt;127.0.0.1&lt;/code&gt; pass,
-but queries directly to public DNS servers like &lt;code&gt;8.8.8.8&lt;/code&gt; are blocked for
-users/processes other than the allowed DNS proxy.&lt;/p&gt;
-&lt;h2&gt;OpenSnitch&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/OpenSnitch&quot;&gt;NixOS Wiki OpenSnitch&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/evilsocket/opensnitch&quot;&gt;Opensnitch&lt;/a&gt; is an open-source
-application firewall that focuses on monitoring and controlling outgoing network
-connections on a per-application basis.&lt;/p&gt;
-&lt;p&gt;This can be used to block apps from accessing the internet that shouldn’t need
-to (i.e., block telemetry and more). Opensnitch will report that the app has
-attempted to make an outbound internet connection and block it or allow it based
-on the rules you set.&lt;/p&gt;
-&lt;h3&gt;Resources&lt;/h3&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Resources &lt;/summary&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://cloudflare.com/learning/ssl/what-is-https&quot;&gt;Cloudflare What is HTTPS&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/&quot;&gt;Surveillance Self-Defence&lt;/a&gt; has a lot of helpful info to
-protect your privacy.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://ssd.eff.org/module/what-fingerprinting&quot;&gt;What is Fingerprinting&lt;/a&gt;, more
-than you realize is being tracked constantly.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://oisd.nl/&quot;&gt;oisd.nl&lt;/a&gt; the oisd website&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;For potentially dangerous file types like PDFs, office documents, or images,
-especially those downloaded from untrusted sources such as torrents, consider
-converting them to a safe PDF format with
-&lt;a href=&quot;https://github.com/freedomofpress/dangerzone&quot;&gt;dangerzone&lt;/a&gt;. Dangerzone not
-only removes metadata but also applies robust sanitization to neutralize
-malicious content.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Librewolf&quot;&gt;NixOS Wiki LibreWolf&lt;/a&gt;, the options in
-the wiki make it less secure and aren’t recommended settings to use. They
-explicitly disable several of LibreWolf’s default privacy-enhancing features,
-such as fingerprinting resistance and clearing session data on shutdown.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://librewolf.net/docs/features/&quot;&gt;LibreWolf Features&lt;/a&gt; You still need to
-enable DNS over HTTPS through privacy settings.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/SearXNG&quot;&gt;SearXNG on NixOS&lt;/a&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://docs.searxng.org/&quot;&gt;Welcome to SearXNG&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;Firefox Hardening Guide&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.ghacks.net/2015/08/18/a-comprehensive-list-of-firefox-privacy-and-security-settings/&quot;&gt;Firefox ghacks&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/arkenfox/user.js&quot;&gt;Arkenfox&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacytools.io/private-browser&quot;&gt;PrivacyTools.io&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/simeononsecurity/FireFox-Privacy-Script&quot;&gt;simeononsecurity Firefox-Privacy-Script&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://brainfucksec.github.io/firefox-hardening-guide&quot;&gt;brianfucksec firefox-hardening-Guide 2023&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://simeononsecurity.com/guides/enhance-firefox-security-configuring-guide/&quot;&gt;STIG Firefox Hardening&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;blockquote&gt;
-&lt;p&gt;If you should trust the U.S. Governments recommendations is another story but
-it can be good to compare and contrast with other trusted resources. You’ll
-have to think whether the CISA recommending that everyone uses Signal is solid
-advice or guiding you towards a honeypot, I can’t say for sure.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://stigviewer.com/stigs/mozilla_firefox&quot;&gt;Mozilla Firefox Security Technical Implementation Guide&lt;/a&gt;
-The STIG for Mozilla Firefox (Security Technical Implementation Guide) is a
-set of security configuration standards developed by the U.S. Department of
-Defense. They are created by the Defense Information Systems Agency (DISA) to
-secure and harden DoD information systems and software.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://thenewoil.org/en/guides/prologue/why/&quot;&gt;Privacy, The New Oil (Why Privacy &amp;amp; Security Matter)&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.privacyguides.org/en/&quot;&gt;PrivacyGuides&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://relay.firefox.com/accounts/profile/&quot;&gt;Firefox Relay&lt;/a&gt; can be used to
-create email aliases that forward to your real email address. The paid plan
-also lets you create phone number aliases that forward to your phone number.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://zebracrossing.narwhalacademy.org/&quot;&gt;Zebra Crossing digital safety checklist&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/essentials#step-1&quot;&gt;DataDetoxKit&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://datadetoxkit.org/en/privacy/degooglise/&quot;&gt;DataDetox Degooglise&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tb-manual.torproject.org/&quot;&gt;Tor Browser User Manual&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://gitlab.torproject.org/tpo/team/-/wikis/home&quot;&gt;Tor Wiki&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://tldp.org/LDP/nag2/x-087-2-intro.html&quot;&gt;Linux Network Administrators Guide&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://www.ibm.com/think/topics/networking&quot;&gt;IBM Networking&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
 </content></entry><entry><title>Cachix devour-flake</title><id>https://saylesss88.github.io/nix/cachix_devour.html</id><updated>2025-12-05T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/cachix_devour.html" rel="alternate"/><content type="html">&lt;h1&gt;Cachix and the devour-flake&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
