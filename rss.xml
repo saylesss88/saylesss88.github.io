@@ -15438,7 +15438,252 @@ path:/home/jr/btrfs-progs?lastModified=1749655369&amp;narHash=sha256-ln6dLiqo7Tx
 └───overlays
     └───myCustomOverlay: Nixpkgs overlay
 </code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixpkgs/overlay.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Impermanence</title><link>https://saylesss88.github.io/nix/impermanence.html</link><description><![CDATA[<h1>Unencrypted BTRFS Impermanence with Flakes</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixpkgs/overlay.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Readme1</title><link>https://saylesss88.github.io/nix/index.html</link><description><![CDATA[<h1>Hardening README</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p>📌 <strong>How to Use This Guide</strong></p>
+<p><strong>Read warnings</strong>: Advanced hardening can break compatibility or cause data
+loss! Pause and research before enabling anything not listed above unless you
+understand the consequences.</p>
+<p><strong>Hardening NixOS</strong>:</p>
+<p>🔷 Start Here:</p>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking</a></p>
+</li>
+</ul>
+<hr />
+<p><strong>Additional security/hardening topics</strong></p>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/nix/browsing_security.html">Browser/Browsing Security/Privacy</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/gpg-agent.html">GnuPG gpg-agent</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/whonix_kvm.html">Whonix KVM on NixOS</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/kvm.html">Running NixOS in a secureblue VM</a></p>
+</li>
+</ul>
+<h2>Getting Started</h2>
+<p>There is a lot covered in this guide which can get overwhelming when trying to
+decide what is worth implementing. Here, I will list some common recommendations
+that most users should follow to harden their stance.</p>
+<blockquote>
+<p>“The major problem with current systems is their inability to provide
+effective isolation between various programs running on one machine. E.g. if
+the user’s Web browser gets compromised (due to a bug exploited by a malicious
+web site), the OS is usually unable to protect other user’s applications and
+data from also being compromised.”–Qubes arch-spec</p>
+</blockquote>
+<h2>Threat Modeling</h2>
+<p>You should always start by conducting a personal threat assesment to identify
+potential threats and vulnerabilities that you need to develop strategies to
+defend against.</p>
+<p>Threat modeling in computing involves evaluating the security risks to your
+computer or network. It helps uncover possible threats and weaknesses so you can
+create plans to safeguard your systems and data effectively. By examining
+various attack scenarios, you can anticipate potential cyber threats and better
+protect your digital resources.</p>
+<p>It’s not possible to protect yourself against every attack(er), focus on the
+most probable threats to your specific situation.</p>
+<ul>
+<li>
+<p><a href="https://ssd.eff.org/playlist/want-security-starter-pack">EFF Security Starter Pack</a></p>
+</li>
+<li>
+<p><a href="https://ssd.eff.org/module/your-security-plan">EFF Your Security Plan</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Threat_Modeling">Kicksecure Computer Security Threat Modeling</a></p>
+</li>
+</ul>
+<h3>Baseline Hardening</h3>
+<p>Before diving into advanced or specialized hardening, apply these baseline
+security measures suitable for all NixOS users. These settings help protect your
+system with minimal risk of breaking workflows or causing admin headaches.</p>
+<p>There is something to be said about the window manager you use. GNOME, KDE
+Plasma, and Sway secure privileged Wayland protocols like screencopy. This means
+that on environments outside of GNOME, KDE, and Sway, applications can access
+screen content of the entire desktop. This implicitly includes the content of
+other applications. It’s primarily for this reason that Silverblue, Kinoite, and
+Sericea images are recommended. COSMIC has plans to fix this.
+–<a href="https://secureblue.dev/images">secureblue Images</a></p>
+<p>Secureblue recommends disabling Xwayland and finding alternatives for those apps
+as well as disabling <code>xdg-desktop-portal-wlr</code>, this is because the wlroots
+desktop portal reintroduces the screencopy vulnerability.</p>
+<ul>
+<li>
+<p>Use Disk Encryption (LUKS) to protect your data at rest.</p>
+</li>
+<li>
+<p>Keep your system up to date (update regularly).</p>
+</li>
+<li>
+<p>Use strong, unique passwords. To generate one from the command-line, there is
+<code>pkgs.diceware</code>. Generate a password with: <code>diceware -n 12 -w en_eff</code>, add
+spaces between the words for higher entropy.</p>
+<ul>
+<li><a href="https://www.kicksecure.com/wiki/Passwords#Password_Generation">Kicksecure Password_Generation</a></li>
+</ul>
+</li>
+<li>
+<p>Avoid reusing passwords, use a password manager.</p>
+</li>
+<li>
+<p>Avoid storing files directly in the root home folder (i.e., <code>/home/user</code>),
+create sub-folders instead.(i.e., Instead of creating <code>~/notes.txt</code>, create
+<code>~/my-notes/notes.txt</code> or <code>~/Documents/notes.txt</code>).</p>
+<ul>
+<li>
+<p>If you are able to implement a Mandatory Access Control framework, there are
+more sub-folders that should be avoided such as <code>~/Downloads</code>. Another
+reason to use non-default sub-dirs is to avoid typos deleting important
+files.</p>
+</li>
+<li>
+<p>Home-Manager has an option <code>xdg.userDirs.enable</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-nix"># home.nix or equivalent
+{
+  xdg.userDirs.enable = true;
+  xdg.userDirs.createDirectories = true;
+  # Optionally create non-default sub-dirs
+  # xdg.userDirs.documents = "/home/jr/my-documents";
+  # xdg.userDirs.download = "/home/jr/my-downloads";
+}
+</code></pre>
+<ul>
+<li>
+<p>The XDG Base Directory Specification defines a consistent way for apps and
+desktops to store and find files. It helps prevent “dotfile clutter” by
+directing application files into clear, organized locations.</p>
+</li>
+<li>
+<p>Only enable what you use, and actively disable what’s no longer in use.</p>
+</li>
+<li>
+<p>Enable at least a basic firewall, a more complex firewall example that
+utilizes nftables is shared in the
+<a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking Chapter</a></p>
+</li>
+</ul>
+<p>Although the firewall is enabled by default on NixOS, let’s be explicit about
+it, add the following to your <code>configuration.nix</code> or equivalent:</p>
+<pre><code class="language-nix"># configuration.nix
+# this denies incoming connections but allows outgoing and established connections
+networking.firewall.enable = true;
+</code></pre>
+<p>Many services provide an option to open the required firewall ports
+automatically. For example:</p>
+<pre><code class="language-nix">services.tor.openFirewall = true;
+</code></pre>
+<p>This prevents you from having to manually open ports</p>
+<p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
+review and remove unused or outdated accounts to reduce your system’s attack
+surface, improve compliance, and ensure only authorized users have access. The
+following setting ensures that user (and group) management is fully declarative:</p>
+<pre><code class="language-nix"># configuration.nix
+# All users must be declared
+users.mutableUsers = false;
+</code></pre>
+<p>With <code>users.mutableUsers = false;</code>, all non-declaratively managed (imperative)
+user management including creation, modification, or password changes will fail
+or be reset on rebuild. User and group definitions become entirely controlled by
+your system configuration for maximum reproducibility and security. If you need
+to add, remove, or modify users, you must do so in your <code>configuration.nix</code> and
+rebuild the system.</p>
+<p>Don’t log in as <code>root</code>, it’s unnecessary.</p>
+<p>Commands that require <code>root</code> permissions should be run individually using <code>sudo</code>
+in all cases. Avoid logging in as <code>root</code> &amp; using <code>sudo su</code>.</p>
+<p>Never run GUI applications as <code>root</code>. If there is a legitimate reason for doing
+this, use <code>lxsudo</code> instead.</p>
+<hr />
+<blockquote>
+<p>NOTE: There is mention of making
+<a href="https://github.com/nikstur/userborn">userborn</a> the default for NixOS in the
+future. It can be more secure by prohibiting UID/GID re-use and giving
+warnings about insecure password hashing schemes.</p>
+</blockquote>
+<p>I have personally had nothing but problems with <code>userborn</code> and find the docs
+extremely lacking, you need to read the source code to figure anything out which
+is ridiculous. I don’t personally use this but if you figure it out, more power
+to ya.</p>
+<p>To enable <code>userborn</code>, just add the following to your <code>configuration.nix</code> or
+equivalent:</p>
+<pre><code class="language-nix"># users.nix
+{pkgs,...}:{
+services.userborn = {
+    enable = true;
+    # Only needed if `/etc` is immutable
+    # passwordFilesLocation = "/var/lib/nixos/userborn"
+};
+    users.users = {
+       "newuser" = {
+         homeMode = "755";
+         uid = 1000;
+         isNormalUser = true;
+         description = "New user account";
+         extraGroups = [ "networkmanager" "wheel" "libvirtd" ];
+         shell = pkgs.bash;
+         ignoreShellProgramCheck = true;
+         packages = with pkgs; [];
+       };
+    };
+    }
+</code></pre>
+<p>With <code>userborn</code>, you configure your users as you normally would declaratively
+with NixOS with <code>users.users</code>, change <code>"newuser"</code> to your desired username.</p>
+<p>Explicitly setting <code>uid = 1000;</code> is a best practice for compatibility and
+predictability.</p>
+<hr />
+<p><strong>Only install, enable, and run what is needed</strong>: Disable or uninstall
+unnecessary software and services to minimize potential vulnerabilities. Take
+advantage of NixOS’s easy package management and minimalism to keep your system
+lean and secure.</p>
+<p><strong>Avoid permanently installing temporary tools</strong>: Use tools like <code>nix-shell</code>,
+<code>comma</code>, <code>devShells</code> and <code>nix-direnv</code> to test or run software temporarily. This
+prevents clutter and reduces potential risks from unused software lingering on
+the system.</p>
+<p><strong>Update regularly</strong>: Keep your system and software up to date to receive the
+latest security patches. Delaying updates leaves known vulnerabilities open to
+exploitation.</p>
+<p><strong>Apply the Principle of Least Privilege</strong>: Never run tools or services as root
+unless absolutely necessary. Create dedicated users and groups with the minimum
+required permissions to limit potential damage if compromised.</p>
+<p><strong>Use strong passwords and passphrases</strong>: Aim for at least 14–16 characters by
+combining several unrelated words, symbols, and numbers. For example:
+<code>sunset-CoffeeHorse$guitar!</code>. Strong passphrases are both memorable and secure.</p>
+<p><strong>Use a password manager and enable multi-factor authentication (MFA)</strong>: Manage
+unique, strong passwords effectively with a trusted manager and protect accounts
+with MFA wherever possible for a second layer of defense.</p>
+<p><strong>Check logs regularly</strong>: Reviewing your system logs helps you spot unusual
+activity, errors, or failed login attempts that could indicate a security
+problem. NixOS uses <code>journald</code> by default, which makes this easy. For example,
+to see the logs for your current boot session:</p>
+<pre><code class="language-bash">journalctl -b
+# for the previous session
+journalctl -b -1
+</code></pre>
+<p>After establishing some standard best practices and a hardened base, it’s time
+to dive deeper into system hardening, the process of adding layered safeguards
+throughout your NixOS setup. This next section guides you through concrete steps
+and options for hardening critical areas of your system: from encryption and
+secure boot to managing secrets, tightening kernel security, and leveraging
+platform-specific tools.
+<a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Impermanence</title><link>https://saylesss88.github.io/nix/impermanence.html</link><description><![CDATA[<h1>Unencrypted BTRFS Impermanence with Flakes</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
@@ -16468,235 +16713,7 @@ grown to love the language. I find it fairly simple but powerful!</p>
 </li>
 </ul>
 </details>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_language.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Readme1</title><link>https://saylesss88.github.io/nix/index.html</link><description><![CDATA[<h1>Hardening README</h1>
-<details>
-<summary> ✔️ Click to Expand Table of Contents</summary>
-<!-- toc -->
-</details>
-<p>📌 <strong>How to Use This Guide</strong></p>
-<p><strong>Read warnings</strong>: Advanced hardening can break compatibility or cause data
-loss! Pause and research before enabling anything not listed above unless you
-understand the consequences.</p>
-<p>The guide is broken up into 2 chapters:</p>
-<ul>
-<li>
-<p><a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking</a></p>
-</li>
-</ul>
-<h2>Getting Started</h2>
-<p>There is a lot covered in this guide which can get overwhelming when trying to
-decide what is worth implementing. Here, I will list some common recommendations
-that most users should follow to harden their stance.</p>
-<blockquote>
-<p>“The major problem with current systems is their inability to provide
-effective isolation between various programs running on one machine. E.g. if
-the user’s Web browser gets compromised (due to a bug exploited by a malicious
-web site), the OS is usually unable to protect other user’s applications and
-data from also being compromised.”–Qubes arch-spec</p>
-</blockquote>
-<h2>Threat Modeling</h2>
-<p>You should always start by conducting a personal threat assesment to identify
-potential threats and vulnerabilities that you need to develop strategies to
-defend against.</p>
-<p>Threat modeling in computing involves evaluating the security risks to your
-computer or network. It helps uncover possible threats and weaknesses so you can
-create plans to safeguard your systems and data effectively. By examining
-various attack scenarios, you can anticipate potential cyber threats and better
-protect your digital resources.</p>
-<p>It’s not possible to protect yourself against every attack(er), focus on the
-most probable threats to your specific situation.</p>
-<ul>
-<li>
-<p><a href="https://ssd.eff.org/playlist/want-security-starter-pack">EFF Security Starter Pack</a></p>
-</li>
-<li>
-<p><a href="https://ssd.eff.org/module/your-security-plan">EFF Your Security Plan</a></p>
-</li>
-<li>
-<p><a href="https://www.kicksecure.com/wiki/Threat_Modeling">Kicksecure Computer Security Threat Modeling</a></p>
-</li>
-</ul>
-<h3>Baseline Hardening</h3>
-<p>Before diving into advanced or specialized hardening, apply these baseline
-security measures suitable for all NixOS users. These settings help protect your
-system with minimal risk of breaking workflows or causing admin headaches.</p>
-<p>There is something to be said about the window manager you use. GNOME, KDE
-Plasma, and Sway secure privileged Wayland protocols like screencopy. This means
-that on environments outside of GNOME, KDE, and Sway, applications can access
-screen content of the entire desktop. This implicitly includes the content of
-other applications. It’s primarily for this reason that Silverblue, Kinoite, and
-Sericea images are recommended. COSMIC has plans to fix this.
-–<a href="https://secureblue.dev/images">secureblue Images</a></p>
-<p>Secureblue recommends disabling Xwayland and finding alternatives for those apps
-as well as disabling <code>xdg-desktop-portal-wlr</code>, this is because the wlroots
-desktop portal reintroduces the screencopy vulnerability.</p>
-<ul>
-<li>
-<p>Use Disk Encryption (LUKS) to protect your data at rest.</p>
-</li>
-<li>
-<p>Keep your system up to date (update regularly).</p>
-</li>
-<li>
-<p>Use strong, unique passwords. To generate one from the command-line, there is
-<code>pkgs.diceware</code>. Generate a password with: <code>diceware -n 12 -w en_eff</code>, add
-spaces between the words for higher entropy.</p>
-<ul>
-<li><a href="https://www.kicksecure.com/wiki/Passwords#Password_Generation">Kicksecure Password_Generation</a></li>
-</ul>
-</li>
-<li>
-<p>Avoid reusing passwords, use a password manager.</p>
-</li>
-<li>
-<p>Avoid storing files directly in the root home folder (i.e., <code>/home/user</code>),
-create sub-folders instead.(i.e., Instead of creating <code>~/notes.txt</code>, create
-<code>~/my-notes/notes.txt</code> or <code>~/Documents/notes.txt</code>).</p>
-<ul>
-<li>
-<p>If you are able to implement a Mandatory Access Control framework, there are
-more sub-folders that should be avoided such as <code>~/Downloads</code>. Another
-reason to use non-default sub-dirs is to avoid typos deleting important
-files.</p>
-</li>
-<li>
-<p>Home-Manager has an option <code>xdg.userDirs.enable</code></p>
-</li>
-</ul>
-</li>
-</ul>
-<pre><code class="language-nix"># home.nix or equivalent
-{
-  xdg.userDirs.enable = true;
-  xdg.userDirs.createDirectories = true;
-  # Optionally create non-default sub-dirs
-  # xdg.userDirs.documents = "/home/jr/my-documents";
-  # xdg.userDirs.download = "/home/jr/my-downloads";
-}
-</code></pre>
-<ul>
-<li>
-<p>The XDG Base Directory Specification defines a consistent way for apps and
-desktops to store and find files. It helps prevent “dotfile clutter” by
-directing application files into clear, organized locations.</p>
-</li>
-<li>
-<p>Only enable what you use, and actively disable what’s no longer in use.</p>
-</li>
-<li>
-<p>Enable at least a basic firewall, a more complex firewall example that
-utilizes nftables is shared in the
-<a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking Chapter</a></p>
-</li>
-</ul>
-<p>Although the firewall is enabled by default on NixOS, let’s be explicit about
-it, add the following to your <code>configuration.nix</code> or equivalent:</p>
-<pre><code class="language-nix"># configuration.nix
-# this denies incoming connections but allows outgoing and established connections
-networking.firewall.enable = true;
-</code></pre>
-<p>Many services provide an option to open the required firewall ports
-automatically. For example:</p>
-<pre><code class="language-nix">services.tor.openFirewall = true;
-</code></pre>
-<p>This prevents you from having to manually open ports</p>
-<p><strong>Audit and remove local user accounts that are no longer needed</strong>: Regularly
-review and remove unused or outdated accounts to reduce your system’s attack
-surface, improve compliance, and ensure only authorized users have access. The
-following setting ensures that user (and group) management is fully declarative:</p>
-<pre><code class="language-nix"># configuration.nix
-# All users must be declared
-users.mutableUsers = false;
-</code></pre>
-<p>With <code>users.mutableUsers = false;</code>, all non-declaratively managed (imperative)
-user management including creation, modification, or password changes will fail
-or be reset on rebuild. User and group definitions become entirely controlled by
-your system configuration for maximum reproducibility and security. If you need
-to add, remove, or modify users, you must do so in your <code>configuration.nix</code> and
-rebuild the system.</p>
-<p>Don’t log in as <code>root</code>, it’s unnecessary.</p>
-<p>Commands that require <code>root</code> permissions should be run individually using <code>sudo</code>
-in all cases. Avoid logging in as <code>root</code> &amp; using <code>sudo su</code>.</p>
-<p>Never run GUI applications as <code>root</code>. If there is a legitimate reason for doing
-this, use <code>lxsudo</code> instead.</p>
-<hr />
-<blockquote>
-<p>NOTE: There is mention of making
-<a href="https://github.com/nikstur/userborn">userborn</a> the default for NixOS in the
-future. It can be more secure by prohibiting UID/GID re-use and giving
-warnings about insecure password hashing schemes.</p>
-</blockquote>
-<p>I have personally had nothing but problems with <code>userborn</code> and find the docs
-extremely lacking, you need to read the source code to figure anything out which
-is ridiculous. I don’t personally use this but if you figure it out, more power
-to ya.</p>
-<p>To enable <code>userborn</code>, just add the following to your <code>configuration.nix</code> or
-equivalent:</p>
-<pre><code class="language-nix"># users.nix
-{pkgs,...}:{
-services.userborn = {
-    enable = true;
-    # Only needed if `/etc` is immutable
-    # passwordFilesLocation = "/var/lib/nixos/userborn"
-};
-    users.users = {
-       "newuser" = {
-         homeMode = "755";
-         uid = 1000;
-         isNormalUser = true;
-         description = "New user account";
-         extraGroups = [ "networkmanager" "wheel" "libvirtd" ];
-         shell = pkgs.bash;
-         ignoreShellProgramCheck = true;
-         packages = with pkgs; [];
-       };
-    };
-    }
-</code></pre>
-<p>With <code>userborn</code>, you configure your users as you normally would declaratively
-with NixOS with <code>users.users</code>, change <code>"newuser"</code> to your desired username.</p>
-<p>Explicitly setting <code>uid = 1000;</code> is a best practice for compatibility and
-predictability.</p>
-<hr />
-<p><strong>Only install, enable, and run what is needed</strong>: Disable or uninstall
-unnecessary software and services to minimize potential vulnerabilities. Take
-advantage of NixOS’s easy package management and minimalism to keep your system
-lean and secure.</p>
-<p><strong>Avoid permanently installing temporary tools</strong>: Use tools like <code>nix-shell</code>,
-<code>comma</code>, <code>devShells</code> and <code>nix-direnv</code> to test or run software temporarily. This
-prevents clutter and reduces potential risks from unused software lingering on
-the system.</p>
-<p><strong>Update regularly</strong>: Keep your system and software up to date to receive the
-latest security patches. Delaying updates leaves known vulnerabilities open to
-exploitation.</p>
-<p><strong>Apply the Principle of Least Privilege</strong>: Never run tools or services as root
-unless absolutely necessary. Create dedicated users and groups with the minimum
-required permissions to limit potential damage if compromised.</p>
-<p><strong>Use strong passwords and passphrases</strong>: Aim for at least 14–16 characters by
-combining several unrelated words, symbols, and numbers. For example:
-<code>sunset-CoffeeHorse$guitar!</code>. Strong passphrases are both memorable and secure.</p>
-<p><strong>Use a password manager and enable multi-factor authentication (MFA)</strong>: Manage
-unique, strong passwords effectively with a trusted manager and protect accounts
-with MFA wherever possible for a second layer of defense.</p>
-<p><strong>Check logs regularly</strong>: Reviewing your system logs helps you spot unusual
-activity, errors, or failed login attempts that could indicate a security
-problem. NixOS uses <code>journald</code> by default, which makes this easy. For example,
-to see the logs for your current boot session:</p>
-<pre><code class="language-bash">journalctl -b
-# for the previous session
-journalctl -b -1
-</code></pre>
-<p>After establishing some standard best practices and a hardened base, it’s time
-to dive deeper into system hardening, the process of adding layered safeguards
-throughout your NixOS setup. This next section guides you through concrete steps
-and options for hardening critical areas of your system: from encryption and
-secure boot to managing secrets, tightening kernel security, and leveraging
-platform-specific tools.
-<a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Package Manager</title><link>https://saylesss88.github.io/nix/nix_package_manager.html</link><description><![CDATA[<h1>Nix Package Manager</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_language.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Package Manager</title><link>https://saylesss88.github.io/nix/nix_package_manager.html</link><description><![CDATA[<h1>Nix Package Manager</h1>
 <details>
 <summary> Click to Expand Table of Contents</summary>
 <!-- toc -->
