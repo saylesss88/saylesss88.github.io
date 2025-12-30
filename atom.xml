@@ -276,6 +276,27 @@ inputs = {
     };
 };
 &lt;/code&gt;&lt;/pre&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Add more blocklists: HaGeZi Multi PRO &lt;/summary&gt;
+&lt;p&gt;To use the Hagezi Multi PRO Blocklist either with oisd or alone you could do the
+following:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+inputs = {
+    oisd = {
+      url = &quot;https://big.oisd.nl/domainswild&quot;;
+      flake = false;
+    };
+    hagezi = {
+      url = &quot;https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt&quot;;
+      flake = false;
+    };
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;add it to the &lt;code&gt;extraBlocklist&lt;/code&gt; variable in the following &lt;code&gt;dnscrypt-proxy.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# dnscrypt-proxy.nix
+extraBlocklist = builtins.readFile inputs.hagezi;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/details&gt;
 &lt;blockquote&gt;
 &lt;p&gt;❗ NOTE: The &lt;code&gt;oisd&lt;/code&gt; blocklist is a plain text file that updates frequently.
 This can cause &lt;code&gt;nh os switch&lt;/code&gt; to fail with a &lt;code&gt;NarHash&lt;/code&gt; mismatch error. To fix
@@ -290,7 +311,6 @@ in your &lt;code&gt;flake.lock&lt;/code&gt; file. After that, you can run your &
   inputs,
   ...
 }: let
-  # Use &quot;&quot; for simple strings, &apos;&apos; &apos;&apos; for multiline
   blocklist_base = builtins.readFile inputs.oisd;
   extraBlocklist = &quot;&quot;;
   blocklist_txt = pkgs.writeText &quot;blocklist.txt&quot; &apos;&apos;
