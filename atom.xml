@@ -10,6 +10,7 @@ crates.io, or you’re packaging an existing Rust project for nixpkgs.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;Nixpkgs is a big repository, so it helps to start with a focused workflow:
 create a branch, add a package under &lt;code&gt;pkgs/by-name/&lt;/code&gt;, build it, then open a PR.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Clone nixpkgs&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;Fork and clone &lt;code&gt;NixOS/nixpkgs&lt;/code&gt;:&lt;/li&gt;
@@ -24,17 +25,20 @@ git remote add upstream git@github.com:NixOS/nixpkgs.git
 &lt;/ol&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch --unshallow --tags
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Create a branch and add package:&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;Create a branch before changes preferably:&lt;/li&gt;
 &lt;/ol&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git switch -c mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Add the package under pkgs/by-name&lt;/h2&gt;
 &lt;p&gt;New top-level packages should generally go under
 &lt;code&gt;pkgs/by-name/&amp;lt;2 letters&amp;gt;/&amp;lt;name&amp;gt;/package.nix&lt;/code&gt; (e.g.
 &lt;code&gt;pkgs/by-name/md/mdbook-rss-feed/package.nix&lt;/code&gt;). Packages in &lt;code&gt;pkgs/by-name&lt;/code&gt; are
 picked up automatically and usually don’t require edits to &lt;code&gt;all-packages.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Write package.nix (Rust crate example)&lt;/h2&gt;
 &lt;p&gt;Start with &lt;code&gt;rustPlatform.buildRustPackage&lt;/code&gt; and &lt;code&gt;fetchCrate&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
@@ -49,7 +53,7 @@ rustPlatform.buildRustPackage rec {
 
   src = fetchCrate {
     inherit pname version;
-    hash = &quot;output of nix-prefetch-url above&quot;;
+    hash = &quot;nix hash convert shown below&quot;;
   };
 
   cargoHash = lib.fakeHash;
@@ -69,6 +73,7 @@ rustPlatform.buildRustPackage rec {
   };
 }
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Prefetch the crate hash:&lt;/h2&gt;
 &lt;p&gt;Use &lt;code&gt;fetchCrate&lt;/code&gt; / &lt;code&gt;crate2nix&lt;/code&gt; style workflow, or just prefetch the &lt;code&gt;crates.io&lt;/code&gt;
 tarball:&lt;/p&gt;
@@ -81,7 +86,13 @@ tarball:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The above commands output looks like: &lt;code&gt;sha256-...=&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;Put the resulting &lt;code&gt;sha256-...&lt;/code&gt; into &lt;code&gt;src.hash&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Put the resulting &lt;code&gt;sha256-...&lt;/code&gt; into &lt;code&gt;src.hash&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;  src = fetchCrate {
+    inherit pname version;
+    hash = &quot;sha256-...&quot;;
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Get cargoHash via a failing build&lt;/h2&gt;
 &lt;p&gt;In the &lt;code&gt;nixpkgs&lt;/code&gt; root, run:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#mdbook-rss-feed

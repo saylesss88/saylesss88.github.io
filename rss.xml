@@ -9,6 +9,7 @@ crates.io, or you’re packaging an existing Rust project for nixpkgs.</p>
 </blockquote>
 <p>Nixpkgs is a big repository, so it helps to start with a focused workflow:
 create a branch, add a package under <code>pkgs/by-name/</code>, build it, then open a PR.</p>
+<hr />
 <h2>Clone nixpkgs</h2>
 <ol>
 <li>Fork and clone <code>NixOS/nixpkgs</code>:</li>
@@ -23,17 +24,20 @@ git remote add upstream git@github.com:NixOS/nixpkgs.git
 </ol>
 <pre><code class="language-bash">git fetch --unshallow --tags
 </code></pre>
+<hr />
 <h2>Create a branch and add package:</h2>
 <ol>
 <li>Create a branch before changes preferably:</li>
 </ol>
 <pre><code class="language-bash">git switch -c mdbook-rss-feed
 </code></pre>
+<hr />
 <h2>Add the package under pkgs/by-name</h2>
 <p>New top-level packages should generally go under
 <code>pkgs/by-name/&lt;2 letters&gt;/&lt;name&gt;/package.nix</code> (e.g.
 <code>pkgs/by-name/md/mdbook-rss-feed/package.nix</code>). Packages in <code>pkgs/by-name</code> are
 picked up automatically and usually don’t require edits to <code>all-packages.nix</code>.</p>
+<hr />
 <h2>Write package.nix (Rust crate example)</h2>
 <p>Start with <code>rustPlatform.buildRustPackage</code> and <code>fetchCrate</code>:</p>
 <pre><code class="language-nix">{
@@ -48,7 +52,7 @@ rustPlatform.buildRustPackage rec {
 
   src = fetchCrate {
     inherit pname version;
-    hash = "output of nix-prefetch-url above";
+    hash = "nix hash convert shown below";
   };
 
   cargoHash = lib.fakeHash;
@@ -68,6 +72,7 @@ rustPlatform.buildRustPackage rec {
   };
 }
 </code></pre>
+<hr />
 <h2>Prefetch the crate hash:</h2>
 <p>Use <code>fetchCrate</code> / <code>crate2nix</code> style workflow, or just prefetch the <code>crates.io</code>
 tarball:</p>
@@ -80,7 +85,13 @@ tarball:</p>
 <pre><code class="language-bash">nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
 </code></pre>
 <p>The above commands output looks like: <code>sha256-...=</code></p>
-<p>Put the resulting <code>sha256-...</code> into <code>src.hash</code>.</p>
+<p>Put the resulting <code>sha256-...</code> into <code>src.hash</code>:</p>
+<pre><code class="language-nix">  src = fetchCrate {
+    inherit pname version;
+    hash = "sha256-...";
+  };
+</code></pre>
+<hr />
 <h2>Get cargoHash via a failing build</h2>
 <p>In the <code>nixpkgs</code> root, run:</p>
 <pre><code class="language-bash">nix build .#mdbook-rss-feed
