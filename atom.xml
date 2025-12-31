@@ -1,18 +1,15 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;h1&gt;Packaging a Rust crate for Nixpkgs&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;h1&gt;Packaging a Rust crate for Nixpkgs&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;NOTE: This example assumes you’re packaging a crate that’s already on
 crates.io, or you’re packaging an existing Rust project for nixpkgs.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;Nixpkgs is a big repository, so it helps to start with a focused workflow:
 create a branch, add a package under &lt;code&gt;pkgs/by-name/&lt;/code&gt;, build it, then open a PR.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;NOTE: Maintainers prefer a single commit for your package with a separate
-commit if you need to add yourself to &lt;code&gt;maintainers-list.nix&lt;/code&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;Since I’m building an mdbook preprocessor, I can check out the existing
-preprocessors within Nixpkgs to see their structure. They are located in
-&lt;code&gt;nixpkgs/pkgs/by-name/md/&lt;/code&gt;, which is where I’ll place my package as well.&lt;/p&gt;
 &lt;h2&gt;Clone nixpkgs&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;Fork and clone &lt;code&gt;NixOS/nixpkgs&lt;/code&gt;:&lt;/li&gt;
@@ -37,9 +34,7 @@ git remote add upstream git@github.com:NixOS/nixpkgs.git
 &lt;p&gt;New top-level packages should generally go under
 &lt;code&gt;pkgs/by-name/&amp;lt;2 letters&amp;gt;/&amp;lt;name&amp;gt;/package.nix&lt;/code&gt; (e.g.
 &lt;code&gt;pkgs/by-name/md/mdbook-rss-feed/package.nix&lt;/code&gt;). Packages in &lt;code&gt;pkgs/by-name&lt;/code&gt; are
-picked up automatically and usually don’t require edits to
-&lt;code&gt;all-packages.nix&lt;/code&gt;. 2. Add the package under
-&lt;code&gt;pkgs/by-name/md/mdbook-rss-feed/package.nix&lt;/code&gt;&lt;/p&gt;
+picked up automatically and usually don’t require edits to &lt;code&gt;all-packages.nix&lt;/code&gt;.&lt;/p&gt;
 &lt;h2&gt;Write package.nix (Rust crate example)&lt;/h2&gt;
 &lt;p&gt;Start with &lt;code&gt;rustPlatform.buildRustPackage&lt;/code&gt; and &lt;code&gt;fetchCrate&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
@@ -97,7 +92,7 @@ specified: sha256-....
 got: sha256-1...
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Copy the &lt;code&gt;got&lt;/code&gt; value into &lt;code&gt;cargoHash&lt;/code&gt;, rebuild, and it should succeed.&lt;/p&gt;
-&lt;p&gt;Sanity check from &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory):&lt;/p&gt;
+&lt;p&gt;Sanity check: from &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory):&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;./result/bin/mdbook-rss-feed --version
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
@@ -161,49 +156,6 @@ git push -u origin mdbook-rss-feed
 &lt;/ol&gt;
 &lt;p&gt;The package will go through CI checks, and once green + approved by a
 maintainer, it’ll land in nixpkgs.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Example PR template filled out &lt;/summary&gt;
-&lt;pre&gt;&lt;code class=&quot;language-md&quot;&gt;mdbook-rss-feed: init at 1.3.0
-
-mdBook preprocessor that generates RSS, Atom, and JSON feeds with rich HTML
-previews, optional full-content entries, and pagination support.
-
-https://crates.io/crates/mdbook-rss-feed
-
-## Things done
-
-- Built on platform(s)
-  - [x] x86_64-linux
-  - [ ] aarch64-linux
-  - [ ] x86_64-darwin
-  - [ ] aarch64-darwin
-- Tested, as applicable:
-  - [ ] [NixOS tests](https://nixos.org/manual/nixos/unstable/index.html#sec-nixos-tests)
-        in
-        [nixos/tests](https://github.com/NixOS/nixpkgs/blob/master/nixos/tests).
-  - [ ] [Package tests](https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#package-tests)
-        at `passthru.tests`.
-  - [ ] Tests in
-        [lib/tests](https://github.com/NixOS/nixpkgs/blob/master/lib/tests) or
-        [pkgs/test](https://github.com/NixOS/nixpkgs/blob/master/pkgs/test) for
-        functions and &quot;core&quot; functionality.
-- [ ] Ran `nixpkgs-review` on this PR. See
-      [nixpkgs-review usage](https://github.com/Mic92/nixpkgs-review#usage).
-- [x] Tested basic functionality of all binary files, usually in
-      `./result/bin/`.
-  - `./result/bin/mdbook-rss-feed --version` reports `mdbook-rss-feed 1.3.0`
-- Nixpkgs Release Notes
-  - [ ] Package update: when the change is major or breaking.
-- NixOS Release Notes
-  - [ ] Module addition: when adding a new NixOS module.
-  - [ ] Module update: when the change is significant.
-- [x] Fits
-      [CONTRIBUTING.md](https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md),
-      [pkgs/README.md](https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md),
-      [maintainers/README.md](https://github.com/NixOS/nixpkgs/blob/master/maintainers/README.md)
-      and other READMEs.
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/details&gt;
 </content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-25T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
@@ -15073,6 +15025,377 @@ clone Nixpkgs, how to make changes to package definitions, and how to test those
 changes locally before contributing them back upstream. This chapter will
 empower you to not just use existing Nix packages, but also to customize and
 extend them to fit your specific needs.&lt;/p&gt;
+</content></entry><entry><title>Nixpkgs Overlays</title><id>https://saylesss88.github.io/nixpkgs/overlay.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/overlay.html" rel="alternate"/><content type="html">&lt;h1&gt;Nixpkgs Overlays&lt;/h1&gt;
+&lt;p&gt;The following is done with a local clone of Nixpkgs located at &lt;code&gt;~/src/nixpkgs&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;In this example, we will create an overlay to override the version of
+&lt;code&gt;btrfs-progs&lt;/code&gt;. In the root directory of our local clone of Nixpkgs
+(i.e.&lt;code&gt;~/src/nixpkgs&lt;/code&gt;) we can run the following command to locate &lt;code&gt;btrfs-progs&lt;/code&gt;
+within Nixpkgs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;fd &apos;btrfs-progs&apos; .
+./pkgs/by-name/bt/btrfs-progs/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Open the &lt;code&gt;package.nix&lt;/code&gt; in the above directory and copy the &lt;code&gt;src&lt;/code&gt; block within
+the &lt;code&gt;stdenv.mkDerivation&lt;/code&gt; block like so:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# package.nix
+  version = &quot;6.14&quot;;
+
+  src = fetchurl {
+    url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
+    hash = &quot;sha256-31q4BPyzbikcQq2DYfgBrR4QJBtDvTBP5Qzj355+PaE=&quot;;
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When we use the above &lt;code&gt;src&lt;/code&gt; block in our overlay we’ll need to add
+&lt;code&gt;src = self.fetchurl&lt;/code&gt; for our overlay to have access to &lt;code&gt;fetchurl&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;We will replace the version with our desired version number. To find another
+version that actually exists we need to check their github repos
+&lt;a href=&quot;https://github.com/kdave/btrfs-progs/releases&quot;&gt;btrfs-progs Releases&lt;/a&gt;. I can see
+that the previous version was &lt;code&gt;v6.13&lt;/code&gt;, lets try that.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs
+hx overlay.nix
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We will change the version to &lt;code&gt;6.13&lt;/code&gt; for demonstration purposes. All that is
+really required is changing the version and 1 character in the &lt;code&gt;hash&lt;/code&gt; which
+would cause a refetch and recalculation of the hash. We will use an empty string
+to follow convention:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# overlay.nix
+self: super: {
+  btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
+      version = &quot;6.13&quot;;
+
+      # Notice the `self` added here
+      src = self.fetchurl {
+        url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
+        hash = &quot;&quot;;
+      };
+    };
+  });
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To build this with the file right from the root of the local Nixpkgs (i.e.
+&lt;code&gt;~/src/nixpkgs&lt;/code&gt;) you could run the following. Running the command this way
+avoids the impurity of looking it up in the &lt;code&gt;~/.config&lt;/code&gt; directory:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A btrfs-progs --arg overlays &apos;[ (import ./overlay.nix) ]&apos;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The compiler will give you back the correct &lt;code&gt;hash&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+got:    sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Replace the empty &lt;code&gt;hash&lt;/code&gt; with the new hash value we just got from the compiler
+so the &lt;code&gt;overlay.nix&lt;/code&gt; would look like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;self: super: {
+  btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
+    version = &quot;6.13&quot;;
+
+    src = self.fetchurl {
+      url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
+      hash = &quot;sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=&quot;;
+    };
+  });
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Try building it again:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A btrfs-progs --arg overlays &apos;[ (import ./overlay.nix) ]&apos;
+checking for references to /build/ in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13...
+gzipping man pages under /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/share/man/
+patching script interpreter paths in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin/fsck.btrfs: interpreter directive changed from &quot;#!/bin/sh -f&quot; to &quot;/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/sh -f&quot;
+stripping (with command strip and flags -S -p) in  /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/lib /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can inspect it with the repl:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs
+nix repl
+nix-repl&amp;gt; :a import ./. { overlays = [ (import ./overlay.nix) ]; }
+nix-repl&amp;gt; btrfs-progs
+«derivation /nix/store/6yxhj84cwcsnrd87rcxbd6w08l9ikc6p-btrfs-progs-6.13.drv»
+nix-repl&amp;gt; btrfs-progs.drvAttrs.buildInputs
+[
+  «derivation /nix/store/yg4llzkcla5rppv8r1iikyamfxg3g4sg-acl-2.3.2.drv»
+  «derivation /nix/store/vqczbcwjnid6bs4cv3skl7kyd6kkzcfx-attr-2.5.2.drv»
+  «derivation /nix/store/xrvx0azszpdh2x0lnldakqx25vfxab19-e2fsprogs-1.47.2.drv»
+  «derivation /nix/store/iil4b8adk615zhp6wmzjx16z1v2f8f4j-util-linux-minimal-2.41.drv»
+  «derivation /nix/store/wwld8wp91m26wz69gp8vzh090sh5ygxd-lzo-2.10.drv»
+  «derivation /nix/store/w4ncw24gdfkbx9779xpgjli5sagi506m-systemd-minimal-libs-257.5.drv»
+  «derivation /nix/store/dmh4lvmq6n8hy56q93kplvnfnlwqzzv5-zlib-1.3.1.drv»
+  «derivation /nix/store/h8iwhnr636dwb72qqcyzp111ajjxgzr2-zstd-1.5.7.drv»
+]
+nix-repl&amp;gt; btrfs-progs.drvAttrs.version
+&quot;6.13&quot;
+nix-repl&amp;gt; btrfs-progs.drvAttrs.src
+«derivation /nix/store/y5nkz1xczxha4xl93qq3adndyc46dcvf-btrfs-progs-v6.13.tar.xz.drv»
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Using &lt;code&gt;:a&lt;/code&gt; adds the attributes from the resulting set into scope and avoids
+bringing the entire &lt;code&gt;nixpkgs&lt;/code&gt; set into scope.&lt;/p&gt;
+&lt;p&gt;To see whats available, you can for example type &lt;code&gt;btrfs-progs.drvAttrs.&lt;/code&gt; then
+hit &lt;code&gt;TAB&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Another way to do this is to move our overlay to the
+&lt;code&gt;~/.config/nixpkgs/overlays&lt;/code&gt; directory and rename the file like the following,
+agian this adds an impurity because it relies on your &lt;code&gt;~/.config&lt;/code&gt; directory
+which is different from user to user:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mv overlay.nix ~/.config/nixpkgs/overlays/btrfs-progs.nix
+cd ~/src/nixpkgs
+nix-build -A btrfs-progs
+checking for references to /build/ in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13...
+gzipping man pages under /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/share/man/
+patching script interpreter paths in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin/fsck.btrfs: interpreter directive changed from &quot;#!/bin/sh -f&quot; to &quot;/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/sh -f&quot;
+stripping (with command strip and flags -S -p) in  /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/lib /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin
+/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Overlays with Flakes&lt;/h2&gt;
+&lt;p&gt;In a flake, overlays are defined in the &lt;code&gt;outputs.overlays&lt;/code&gt; attribute set of the
+&lt;code&gt;flake.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;They are then applied to &lt;code&gt;nixpkgs&lt;/code&gt; inputs using
+&lt;code&gt;inputs.nixpkgs.follows = &quot;nixpkgs&quot;;&lt;/code&gt; (or similar) and the overlays attribute on
+the input.&lt;/p&gt;
+&lt;p&gt;Example of flake usage:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  description = &quot;My NixOS flake with custom overlays&quot;;
+
+  inputs = {
+    nixpkgs.url = &quot;github:NixOS/nixpkgs/nixos-unstable&quot;;
+  };
+
+  outputs = { self, nixpkgs, ... }: {
+
+    overlays.myCustomOverlay = final: prev: {
+      btrfs-progs = prev.btrfs-progs.overrideAttrs (old: rec {
+        version = &quot;6.13&quot;;
+        src = self.fetchurl {
+          url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
+          hash = &quot;sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=&quot;;
+        };
+      });
+    };
+
+    nixosConfigurations.my-system = nixpkgs.lib.nixosSystem {
+      system = &quot;x86_64-linux&quot;;
+      modules = [
+        # Apply the overlay
+        { nixpkgs.overlays = [ self.overlays.myCustomOverlay ]; }
+        ./configuration.nix
+      ];
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix flake show
+path:/home/jr/btrfs-progs?lastModified=1749655369&amp;amp;narHash=sha256-ln6dLiqo7TxStQSXgcIwfbdt7STGw4ZHftZRfWpY/JQ%3D
+├───nixosConfigurations
+│   └───my-system: NixOS configuration
+└───overlays
+    └───myCustomOverlay: Nixpkgs overlay
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Local Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/local_package.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/local_package.html" rel="alternate"/><content type="html">&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;h1&gt;Creating and Building a Local Package within a Nixpkgs Clone&lt;/h1&gt;
+&lt;p&gt;This chapter demonstrates the fundamental pattern for creating a package. Every
+package recipe is a file that declares a function. This function takes the
+packages dependencies as argument.&lt;/p&gt;
+&lt;p&gt;In this example we’ll make a simple package with &lt;code&gt;coreutils&lt;/code&gt; and build it.
+Demonstrating the process of building and testing a local package.&lt;/p&gt;
+&lt;p&gt;This chapter will assume you have already have a cloned fork of Nixpkgs. I
+choose to clone mine to the &lt;code&gt;~/src/&lt;/code&gt; directory.&lt;/p&gt;
+&lt;p&gt;You can check out the &lt;code&gt;nixpkgs/pkgs/README.md&lt;/code&gt;
+&lt;a href=&quot;https://github.com/NixOS/nixpkgs/tree/master/pkgs&quot;&gt;Here&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The Nixpkgs Contributing Guide can be found
+&lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md&quot;&gt;Here&lt;/a&gt;&lt;/p&gt;
+&lt;h2&gt;Create your Package directory and a &lt;code&gt;default.nix&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;For this example, we’ll create a package called &lt;code&gt;testPackage&lt;/code&gt; and will place it
+in the &lt;code&gt;nixpkgs/pkgs/misc&lt;/code&gt; directory.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs/pkgs/misc
+mkdir testPackage &amp;amp;&amp;amp; cd testPackage
+hx default.nix
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# default.nix
+{
+  runCommand,
+  coreutils,
+}:
+runCommand &quot;testPackage&quot; {
+  nativeBuildInputs = [
+    coreutils
+  ];
+} &apos;&apos;
+
+  echo &apos;This is a Test&apos; &amp;gt; $out
+&apos;&apos;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we need to add our &lt;code&gt;testPackage&lt;/code&gt; to &lt;code&gt;all-packages.nix&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd pkgs/top-level
+hx all-packages.nix
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;all-packages.nix&lt;/code&gt; is a centralized module that defines all available package
+expressions.&lt;/p&gt;
+&lt;p&gt;We’ll add our package in the list alphabetically:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# all-packages.nix
+# `/msc` # editor search inside file
+# Scroll down to t&apos;s
+# snip ...
+termusic = callPackage ../applications/autio/termusic { };
+
+# we add our package here
+testPackage = callPackage ../misc/testPackage { };
+
+tfk8s = callPackage ../applications/misc/tfk8s { };
+# snip ...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;callPackage&lt;/code&gt; is a core utility in Nixpkgs. It takes a Nix expression (like
+our &lt;code&gt;default.nix&lt;/code&gt; file, which defines a function) and automatically provides
+the function with any arguments it declares, by looking them up within the
+&lt;code&gt;pkgs&lt;/code&gt; set (or the scope where &lt;code&gt;callPackage&lt;/code&gt; is invoked). This means you only
+need to list the dependencies your package needs in its &lt;code&gt;default.nix&lt;/code&gt; function
+signature, and &lt;code&gt;callPackage&lt;/code&gt; will “inject” the correct versions of those
+packages. This is what the &lt;code&gt;callPackage&lt;/code&gt; Nix Pill demonstrates at a lower
+level.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;Understanding &lt;code&gt;pkgs/by-name/&lt;/code&gt; and other locations&lt;/h2&gt;
+&lt;p&gt;Nixpkgs uses different conventions for package placement:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Older categories (e.g., &lt;code&gt;pkgs/misc/&lt;/code&gt;, &lt;code&gt;pkgs/applications/&lt;/code&gt;):&lt;/strong&gt; Packages
+within these directories typically use &lt;code&gt;default.nix&lt;/code&gt; as their definition file
+(e.g., &lt;code&gt;pkgs/misc/testPackage/default.nix&lt;/code&gt;). &lt;strong&gt;These packages are NOT
+automatically included&lt;/strong&gt; in the top-level &lt;code&gt;pkgs&lt;/code&gt; set; they &lt;em&gt;must&lt;/em&gt; be This
+chapter will assume you have already have a cloned fork of Nixpkgs. explicitly
+added via a &lt;code&gt;callPackage&lt;/code&gt; entry in &lt;code&gt;pkgs/top-level/all-packages.nix&lt;/code&gt;. This is
+the method demonstrated in this chapter for our &lt;code&gt;testPackage&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The new &lt;code&gt;pkgs/by-name/&lt;/code&gt; convention:&lt;/strong&gt; This is the &lt;em&gt;preferred location for
+new packages&lt;/em&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Packages here are placed in a directory structure like
+&lt;code&gt;pkgs/by-name/&amp;lt;first-two-letters&amp;gt;/&amp;lt;package-name&amp;gt;/&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Crucially, their main definition file is named &lt;code&gt;package.nix&lt;/code&gt; (e.g.,
+&lt;code&gt;pkgs/by-name/te/testPackage/package.nix&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Packages placed within &lt;code&gt;pkgs/by-name/&lt;/code&gt; are automatically discovered and
+exposed&lt;/strong&gt; by Nixpkgs’ top-level &lt;code&gt;pkgs&lt;/code&gt; set. They &lt;strong&gt;do not&lt;/strong&gt; require a manual
+&lt;code&gt;callPackage&lt;/code&gt; entry in &lt;code&gt;all-packages.nix&lt;/code&gt;. This results in a more modular
+and scalable approach, reducing manual maintenance.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ : While this example uses &lt;code&gt;pkgs/misc/&lt;/code&gt; to demonstrate explicit
+&lt;code&gt;callPackage&lt;/code&gt; usage, when contributing a &lt;em&gt;new&lt;/em&gt; package to Nixpkgs, you should
+nearly always place it within &lt;code&gt;pkgs/by-name/&lt;/code&gt; and name its definition file
+&lt;code&gt;package.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md&quot;&gt;pkgs/by-name/README&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;There are some
+&lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md#limitations&quot;&gt;Limitations&lt;/a&gt;
+to this approach.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/nixpkgs-vet&quot;&gt;nixpkgs-vet&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Previously, packages were manually added to &lt;code&gt;all-packages.nix&lt;/code&gt;. While this is no
+longer needed in most cases, understanding the old method provides useful
+context for troubleshooting legacy configurations or custom integrations.&lt;/p&gt;
+&lt;h2&gt;Try Building the Package&lt;/h2&gt;
+&lt;p&gt;Move to the root directory of Nixpkgs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Try building it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A testPackage
+this derivation will be built:
+this derivation will be built:
+  /nix/store/yrbjsxmgzkl24n75sqjfxbpv5cs3b9hc-testPackage.drv
+building &apos;/nix/store/yrbjsxmgzkl24n75sqjfxbpv5cs3b9hc-testPackage.drv&apos;...
+/nix/store/3012zlv30vn6ifihr1jxbg5z3ysw0hl3-testPackage
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;runCommand&lt;/code&gt; is a simple builder, it takes 3 arguments. The first is the package
+name the second is the derivation attributes, and the third is the script to
+run.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cat ~/src/nixpkgs/result
+───────┬──────────────────────────────
+       │ File: result
+───────┼──────────────────────────────
+   1   │ This is a Test
+───────┴──────────────────────────────
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-instantiate --eval -A testPackage.meta.position
+&quot;/home/jr/src/nixpkgs/pkgs/misc/testPackage/default.nix:6&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Tools like &lt;code&gt;nix search&lt;/code&gt; and the Nixpkgs website use the &lt;code&gt;meta&lt;/code&gt; information for
+documentation and discoverability. It can also be useful for debugging and helps
+to provide better error messages. The above command shows that the
+&lt;code&gt;meta.position&lt;/code&gt; attribute points to the file and line where the package
+definition begins, which is very useful for debugging.&lt;/p&gt;
+&lt;p&gt;Typically a file will have a &lt;code&gt;meta&lt;/code&gt; attribute that looks similar to the
+following:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;meta = with lib; {
+    homepage = &quot;https://www.openssl.org/&quot;;
+    description = &quot;A cryptographic library that implements the SSL and TLS protocols&quot;;
+    license = licenses.openssl;
+    platforms = platforms.all;
+} // extraMeta;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For example, the following shows how Nix is able to discover different parts of
+your configuration:&lt;/p&gt;
+&lt;p&gt;Launch the &lt;code&gt;nix repl&lt;/code&gt; and load your local flake:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /src
+nix repl
+nix-repl&amp;gt; :lf nixpkgs
+nix-repl&amp;gt; outputs.legacyPackages.x86_64-linux.openssl.meta.position
+&quot;/nix/store/syvnmj3hhckkbncm94kfkbl76qsdqqj3-source/pkgs/development/libraries/openssl/default.nix:303&quot;
+nix-repl&amp;gt; builtins.unsafeGetAttrPos &quot;description&quot; outputs.legacyPackages.x86_64-linux.openssl.meta
+{
+  column = 9;
+  file = &quot;/nix/store/syvnmj3hhckkbncm94kfkbl76qsdqqj3-source/pkgs/development/libraries/openssl/default.nix&quot;;
+  line = 303;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Lets create just the &lt;code&gt;meta.description&lt;/code&gt; for demonstration purposes.&lt;/p&gt;
+&lt;h2&gt;Adding the meta attribute&lt;/h2&gt;
+&lt;p&gt;Since we don’t have a &lt;code&gt;meta&lt;/code&gt; attribute this points to a default value that’s
+incorrect.&lt;/p&gt;
+&lt;p&gt;Let’s add the &lt;code&gt;meta&lt;/code&gt; attribute and try it again:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# default.nix
+{
+  runCommand,
+  coreutils,
+}:
+runCommand &quot;testPackage&quot; {
+  nativeBuildInputs = [
+    coreutils
+  ];
+
+  meta = {
+    description = &quot;test package&quot;;
+};
+} &apos;&apos;
+
+  echo &apos;This is a Test&apos; &amp;gt; $out
+&apos;&apos;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-instantiate --eval -A testPackage.meta.position
+&quot;/home/jr/src/nixpkgs/pkgs/misc/testPackage/default.nix:11&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now it points us to the 11’th line, right where our &lt;code&gt;meta.description&lt;/code&gt; is.&lt;/p&gt;
+&lt;p&gt;Let’s stage our package so nix recognises it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/nixpkgs
+git add pkgs/misc/testPackage/
+nix edit .#testPackage
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I used &lt;code&gt;nix edit&lt;/code&gt; here to ensure it was picked up properly.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;default.nix&lt;/code&gt; that we’ve been working on should open in your &lt;code&gt;$EDITOR&lt;/code&gt;&lt;/p&gt;
 </content></entry><entry><title>Fork, Clone, Contribute</title><id>https://saylesss88.github.io/nixpkgs/fork_clone_contribute.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/fork_clone_contribute.html" rel="alternate"/><content type="html">&lt;h1&gt;Fork, Clone, Contribute&lt;/h1&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -15313,373 +15636,6 @@ required. Confirm latest stable: If you’re targeting a stable branch,
 via NixOS status.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-</content></entry><entry><title>Local Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/local_package.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/local_package.html" rel="alternate"/><content type="html">&lt;h1&gt;Creating and Building a Local Package within a Nixpkgs Clone&lt;/h1&gt;
-&lt;p&gt;This chapter demonstrates the fundamental pattern for creating a package. Every
-package recipe is a file that declares a function. This function takes the
-packages dependencies as argument.&lt;/p&gt;
-&lt;p&gt;In this example we’ll make a simple package with &lt;code&gt;coreutils&lt;/code&gt; and build it.
-Demonstrating the process of building and testing a local package.&lt;/p&gt;
-&lt;p&gt;This chapter will assume you have already have a cloned fork of Nixpkgs. I
-choose to clone mine to the &lt;code&gt;~/src/&lt;/code&gt; directory.&lt;/p&gt;
-&lt;p&gt;You can check out the &lt;code&gt;nixpkgs/pkgs/README.md&lt;/code&gt;
-&lt;a href=&quot;https://github.com/NixOS/nixpkgs/tree/master/pkgs&quot;&gt;Here&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;The Nixpkgs Contributing Guide can be found
-&lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md&quot;&gt;Here&lt;/a&gt;&lt;/p&gt;
-&lt;h2&gt;Create your Package directory and a &lt;code&gt;default.nix&lt;/code&gt;&lt;/h2&gt;
-&lt;p&gt;For this example, we’ll create a package called &lt;code&gt;testPackage&lt;/code&gt; and will place it
-in the &lt;code&gt;nixpkgs/pkgs/misc&lt;/code&gt; directory.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs/pkgs/misc
-mkdir testPackage &amp;amp;&amp;amp; cd testPackage
-hx default.nix
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# default.nix
-{
-  runCommand,
-  coreutils,
-}:
-runCommand &quot;testPackage&quot; {
-  nativeBuildInputs = [
-    coreutils
-  ];
-} &apos;&apos;
-
-  echo &apos;This is a Test&apos; &amp;gt; $out
-&apos;&apos;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now we need to add our &lt;code&gt;testPackage&lt;/code&gt; to &lt;code&gt;all-packages.nix&lt;/code&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd pkgs/top-level
-hx all-packages.nix
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;all-packages.nix&lt;/code&gt; is a centralized module that defines all available package
-expressions.&lt;/p&gt;
-&lt;p&gt;We’ll add our package in the list alphabetically:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# all-packages.nix
-# `/msc` # editor search inside file
-# Scroll down to t&apos;s
-# snip ...
-termusic = callPackage ../applications/autio/termusic { };
-
-# we add our package here
-testPackage = callPackage ../misc/testPackage { };
-
-tfk8s = callPackage ../applications/misc/tfk8s { };
-# snip ...
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;code&gt;callPackage&lt;/code&gt; is a core utility in Nixpkgs. It takes a Nix expression (like
-our &lt;code&gt;default.nix&lt;/code&gt; file, which defines a function) and automatically provides
-the function with any arguments it declares, by looking them up within the
-&lt;code&gt;pkgs&lt;/code&gt; set (or the scope where &lt;code&gt;callPackage&lt;/code&gt; is invoked). This means you only
-need to list the dependencies your package needs in its &lt;code&gt;default.nix&lt;/code&gt; function
-signature, and &lt;code&gt;callPackage&lt;/code&gt; will “inject” the correct versions of those
-packages. This is what the &lt;code&gt;callPackage&lt;/code&gt; Nix Pill demonstrates at a lower
-level.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h2&gt;Understanding &lt;code&gt;pkgs/by-name/&lt;/code&gt; and other locations&lt;/h2&gt;
-&lt;p&gt;Nixpkgs uses different conventions for package placement:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Older categories (e.g., &lt;code&gt;pkgs/misc/&lt;/code&gt;, &lt;code&gt;pkgs/applications/&lt;/code&gt;):&lt;/strong&gt; Packages
-within these directories typically use &lt;code&gt;default.nix&lt;/code&gt; as their definition file
-(e.g., &lt;code&gt;pkgs/misc/testPackage/default.nix&lt;/code&gt;). &lt;strong&gt;These packages are NOT
-automatically included&lt;/strong&gt; in the top-level &lt;code&gt;pkgs&lt;/code&gt; set; they &lt;em&gt;must&lt;/em&gt; be This
-chapter will assume you have already have a cloned fork of Nixpkgs. explicitly
-added via a &lt;code&gt;callPackage&lt;/code&gt; entry in &lt;code&gt;pkgs/top-level/all-packages.nix&lt;/code&gt;. This is
-the method demonstrated in this chapter for our &lt;code&gt;testPackage&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;The new &lt;code&gt;pkgs/by-name/&lt;/code&gt; convention:&lt;/strong&gt; This is the &lt;em&gt;preferred location for
-new packages&lt;/em&gt;.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Packages here are placed in a directory structure like
-&lt;code&gt;pkgs/by-name/&amp;lt;first-two-letters&amp;gt;/&amp;lt;package-name&amp;gt;/&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Crucially, their main definition file is named &lt;code&gt;package.nix&lt;/code&gt; (e.g.,
-&lt;code&gt;pkgs/by-name/te/testPackage/package.nix&lt;/code&gt;).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Packages placed within &lt;code&gt;pkgs/by-name/&lt;/code&gt; are automatically discovered and
-exposed&lt;/strong&gt; by Nixpkgs’ top-level &lt;code&gt;pkgs&lt;/code&gt; set. They &lt;strong&gt;do not&lt;/strong&gt; require a manual
-&lt;code&gt;callPackage&lt;/code&gt; entry in &lt;code&gt;all-packages.nix&lt;/code&gt;. This results in a more modular
-and scalable approach, reducing manual maintenance.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ : While this example uses &lt;code&gt;pkgs/misc/&lt;/code&gt; to demonstrate explicit
-&lt;code&gt;callPackage&lt;/code&gt; usage, when contributing a &lt;em&gt;new&lt;/em&gt; package to Nixpkgs, you should
-nearly always place it within &lt;code&gt;pkgs/by-name/&lt;/code&gt; and name its definition file
-&lt;code&gt;package.nix&lt;/code&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md&quot;&gt;pkgs/by-name/README&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;There are some
-&lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md#limitations&quot;&gt;Limitations&lt;/a&gt;
-to this approach.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/nixpkgs-vet&quot;&gt;nixpkgs-vet&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Previously, packages were manually added to &lt;code&gt;all-packages.nix&lt;/code&gt;. While this is no
-longer needed in most cases, understanding the old method provides useful
-context for troubleshooting legacy configurations or custom integrations.&lt;/p&gt;
-&lt;h2&gt;Try Building the Package&lt;/h2&gt;
-&lt;p&gt;Move to the root directory of Nixpkgs:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Try building it:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A testPackage
-this derivation will be built:
-this derivation will be built:
-  /nix/store/yrbjsxmgzkl24n75sqjfxbpv5cs3b9hc-testPackage.drv
-building &apos;/nix/store/yrbjsxmgzkl24n75sqjfxbpv5cs3b9hc-testPackage.drv&apos;...
-/nix/store/3012zlv30vn6ifihr1jxbg5z3ysw0hl3-testPackage
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;runCommand&lt;/code&gt; is a simple builder, it takes 3 arguments. The first is the package
-name the second is the derivation attributes, and the third is the script to
-run.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cat ~/src/nixpkgs/result
-───────┬──────────────────────────────
-       │ File: result
-───────┼──────────────────────────────
-   1   │ This is a Test
-───────┴──────────────────────────────
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-instantiate --eval -A testPackage.meta.position
-&quot;/home/jr/src/nixpkgs/pkgs/misc/testPackage/default.nix:6&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Tools like &lt;code&gt;nix search&lt;/code&gt; and the Nixpkgs website use the &lt;code&gt;meta&lt;/code&gt; information for
-documentation and discoverability. It can also be useful for debugging and helps
-to provide better error messages. The above command shows that the
-&lt;code&gt;meta.position&lt;/code&gt; attribute points to the file and line where the package
-definition begins, which is very useful for debugging.&lt;/p&gt;
-&lt;p&gt;Typically a file will have a &lt;code&gt;meta&lt;/code&gt; attribute that looks similar to the
-following:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;meta = with lib; {
-    homepage = &quot;https://www.openssl.org/&quot;;
-    description = &quot;A cryptographic library that implements the SSL and TLS protocols&quot;;
-    license = licenses.openssl;
-    platforms = platforms.all;
-} // extraMeta;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;For example, the following shows how Nix is able to discover different parts of
-your configuration:&lt;/p&gt;
-&lt;p&gt;Launch the &lt;code&gt;nix repl&lt;/code&gt; and load your local flake:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /src
-nix repl
-nix-repl&amp;gt; :lf nixpkgs
-nix-repl&amp;gt; outputs.legacyPackages.x86_64-linux.openssl.meta.position
-&quot;/nix/store/syvnmj3hhckkbncm94kfkbl76qsdqqj3-source/pkgs/development/libraries/openssl/default.nix:303&quot;
-nix-repl&amp;gt; builtins.unsafeGetAttrPos &quot;description&quot; outputs.legacyPackages.x86_64-linux.openssl.meta
-{
-  column = 9;
-  file = &quot;/nix/store/syvnmj3hhckkbncm94kfkbl76qsdqqj3-source/pkgs/development/libraries/openssl/default.nix&quot;;
-  line = 303;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Lets create just the &lt;code&gt;meta.description&lt;/code&gt; for demonstration purposes.&lt;/p&gt;
-&lt;h2&gt;Adding the meta attribute&lt;/h2&gt;
-&lt;p&gt;Since we don’t have a &lt;code&gt;meta&lt;/code&gt; attribute this points to a default value that’s
-incorrect.&lt;/p&gt;
-&lt;p&gt;Let’s add the &lt;code&gt;meta&lt;/code&gt; attribute and try it again:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# default.nix
-{
-  runCommand,
-  coreutils,
-}:
-runCommand &quot;testPackage&quot; {
-  nativeBuildInputs = [
-    coreutils
-  ];
-
-  meta = {
-    description = &quot;test package&quot;;
-};
-} &apos;&apos;
-
-  echo &apos;This is a Test&apos; &amp;gt; $out
-&apos;&apos;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-instantiate --eval -A testPackage.meta.position
-&quot;/home/jr/src/nixpkgs/pkgs/misc/testPackage/default.nix:11&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now it points us to the 11’th line, right where our &lt;code&gt;meta.description&lt;/code&gt; is.&lt;/p&gt;
-&lt;p&gt;Let’s stage our package so nix recognises it:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/nixpkgs
-git add pkgs/misc/testPackage/
-nix edit .#testPackage
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I used &lt;code&gt;nix edit&lt;/code&gt; here to ensure it was picked up properly.&lt;/p&gt;
-&lt;p&gt;The &lt;code&gt;default.nix&lt;/code&gt; that we’ve been working on should open in your &lt;code&gt;$EDITOR&lt;/code&gt;&lt;/p&gt;
-</content></entry><entry><title>Nixpkgs Overlays</title><id>https://saylesss88.github.io/nixpkgs/overlay.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/overlay.html" rel="alternate"/><content type="html">&lt;h1&gt;Nixpkgs Overlays&lt;/h1&gt;
-&lt;p&gt;The following is done with a local clone of Nixpkgs located at &lt;code&gt;~/src/nixpkgs&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;In this example, we will create an overlay to override the version of
-&lt;code&gt;btrfs-progs&lt;/code&gt;. In the root directory of our local clone of Nixpkgs
-(i.e.&lt;code&gt;~/src/nixpkgs&lt;/code&gt;) we can run the following command to locate &lt;code&gt;btrfs-progs&lt;/code&gt;
-within Nixpkgs:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;fd &apos;btrfs-progs&apos; .
-./pkgs/by-name/bt/btrfs-progs/
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Open the &lt;code&gt;package.nix&lt;/code&gt; in the above directory and copy the &lt;code&gt;src&lt;/code&gt; block within
-the &lt;code&gt;stdenv.mkDerivation&lt;/code&gt; block like so:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# package.nix
-  version = &quot;6.14&quot;;
-
-  src = fetchurl {
-    url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
-    hash = &quot;sha256-31q4BPyzbikcQq2DYfgBrR4QJBtDvTBP5Qzj355+PaE=&quot;;
-  };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;When we use the above &lt;code&gt;src&lt;/code&gt; block in our overlay we’ll need to add
-&lt;code&gt;src = self.fetchurl&lt;/code&gt; for our overlay to have access to &lt;code&gt;fetchurl&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;We will replace the version with our desired version number. To find another
-version that actually exists we need to check their github repos
-&lt;a href=&quot;https://github.com/kdave/btrfs-progs/releases&quot;&gt;btrfs-progs Releases&lt;/a&gt;. I can see
-that the previous version was &lt;code&gt;v6.13&lt;/code&gt;, lets try that.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs
-hx overlay.nix
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We will change the version to &lt;code&gt;6.13&lt;/code&gt; for demonstration purposes. All that is
-really required is changing the version and 1 character in the &lt;code&gt;hash&lt;/code&gt; which
-would cause a refetch and recalculation of the hash. We will use an empty string
-to follow convention:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# overlay.nix
-self: super: {
-  btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
-      version = &quot;6.13&quot;;
-
-      # Notice the `self` added here
-      src = self.fetchurl {
-        url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
-        hash = &quot;&quot;;
-      };
-    };
-  });
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;To build this with the file right from the root of the local Nixpkgs (i.e.
-&lt;code&gt;~/src/nixpkgs&lt;/code&gt;) you could run the following. Running the command this way
-avoids the impurity of looking it up in the &lt;code&gt;~/.config&lt;/code&gt; directory:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A btrfs-progs --arg overlays &apos;[ (import ./overlay.nix) ]&apos;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The compiler will give you back the correct &lt;code&gt;hash&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-got:    sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Replace the empty &lt;code&gt;hash&lt;/code&gt; with the new hash value we just got from the compiler
-so the &lt;code&gt;overlay.nix&lt;/code&gt; would look like this:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;self: super: {
-  btrfs-progs = super.btrfs-progs.overrideAttrs (old: rec {
-    version = &quot;6.13&quot;;
-
-    src = self.fetchurl {
-      url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
-      hash = &quot;sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=&quot;;
-    };
-  });
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Try building it again:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A btrfs-progs --arg overlays &apos;[ (import ./overlay.nix) ]&apos;
-checking for references to /build/ in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13...
-gzipping man pages under /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/share/man/
-patching script interpreter paths in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
-/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin/fsck.btrfs: interpreter directive changed from &quot;#!/bin/sh -f&quot; to &quot;/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/sh -f&quot;
-stripping (with command strip and flags -S -p) in  /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/lib /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin
-/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;We can inspect it with the repl:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/src/nixpkgs
-nix repl
-nix-repl&amp;gt; :a import ./. { overlays = [ (import ./overlay.nix) ]; }
-nix-repl&amp;gt; btrfs-progs
-«derivation /nix/store/6yxhj84cwcsnrd87rcxbd6w08l9ikc6p-btrfs-progs-6.13.drv»
-nix-repl&amp;gt; btrfs-progs.drvAttrs.buildInputs
-[
-  «derivation /nix/store/yg4llzkcla5rppv8r1iikyamfxg3g4sg-acl-2.3.2.drv»
-  «derivation /nix/store/vqczbcwjnid6bs4cv3skl7kyd6kkzcfx-attr-2.5.2.drv»
-  «derivation /nix/store/xrvx0azszpdh2x0lnldakqx25vfxab19-e2fsprogs-1.47.2.drv»
-  «derivation /nix/store/iil4b8adk615zhp6wmzjx16z1v2f8f4j-util-linux-minimal-2.41.drv»
-  «derivation /nix/store/wwld8wp91m26wz69gp8vzh090sh5ygxd-lzo-2.10.drv»
-  «derivation /nix/store/w4ncw24gdfkbx9779xpgjli5sagi506m-systemd-minimal-libs-257.5.drv»
-  «derivation /nix/store/dmh4lvmq6n8hy56q93kplvnfnlwqzzv5-zlib-1.3.1.drv»
-  «derivation /nix/store/h8iwhnr636dwb72qqcyzp111ajjxgzr2-zstd-1.5.7.drv»
-]
-nix-repl&amp;gt; btrfs-progs.drvAttrs.version
-&quot;6.13&quot;
-nix-repl&amp;gt; btrfs-progs.drvAttrs.src
-«derivation /nix/store/y5nkz1xczxha4xl93qq3adndyc46dcvf-btrfs-progs-v6.13.tar.xz.drv»
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Using &lt;code&gt;:a&lt;/code&gt; adds the attributes from the resulting set into scope and avoids
-bringing the entire &lt;code&gt;nixpkgs&lt;/code&gt; set into scope.&lt;/p&gt;
-&lt;p&gt;To see whats available, you can for example type &lt;code&gt;btrfs-progs.drvAttrs.&lt;/code&gt; then
-hit &lt;code&gt;TAB&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Another way to do this is to move our overlay to the
-&lt;code&gt;~/.config/nixpkgs/overlays&lt;/code&gt; directory and rename the file like the following,
-agian this adds an impurity because it relies on your &lt;code&gt;~/.config&lt;/code&gt; directory
-which is different from user to user:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mv overlay.nix ~/.config/nixpkgs/overlays/btrfs-progs.nix
-cd ~/src/nixpkgs
-nix-build -A btrfs-progs
-checking for references to /build/ in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13...
-gzipping man pages under /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/share/man/
-patching script interpreter paths in /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
-/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin/fsck.btrfs: interpreter directive changed from &quot;#!/bin/sh -f&quot; to &quot;/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/sh -f&quot;
-stripping (with command strip and flags -S -p) in  /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/lib /nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13/bin
-/nix/store/szd6lizahidjniz85a0g1wsrfknirhwb-btrfs-progs-6.13
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h2&gt;Overlays with Flakes&lt;/h2&gt;
-&lt;p&gt;In a flake, overlays are defined in the &lt;code&gt;outputs.overlays&lt;/code&gt; attribute set of the
-&lt;code&gt;flake.nix&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;They are then applied to &lt;code&gt;nixpkgs&lt;/code&gt; inputs using
-&lt;code&gt;inputs.nixpkgs.follows = &quot;nixpkgs&quot;;&lt;/code&gt; (or similar) and the overlays attribute on
-the input.&lt;/p&gt;
-&lt;p&gt;Example of flake usage:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
-{
-  description = &quot;My NixOS flake with custom overlays&quot;;
-
-  inputs = {
-    nixpkgs.url = &quot;github:NixOS/nixpkgs/nixos-unstable&quot;;
-  };
-
-  outputs = { self, nixpkgs, ... }: {
-
-    overlays.myCustomOverlay = final: prev: {
-      btrfs-progs = prev.btrfs-progs.overrideAttrs (old: rec {
-        version = &quot;6.13&quot;;
-        src = self.fetchurl {
-          url = &quot;mirror://kernel/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${version}.tar.xz&quot;;
-          hash = &quot;sha256-ZbPyERellPgAE7QyYg7sxqfisMBeq5cTb/UGx01z7po=&quot;;
-        };
-      });
-    };
-
-    nixosConfigurations.my-system = nixpkgs.lib.nixosSystem {
-      system = &quot;x86_64-linux&quot;;
-      modules = [
-        # Apply the overlay
-        { nixpkgs.overlays = [ self.overlays.myCustomOverlay ]; }
-        ./configuration.nix
-      ];
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix flake show
-path:/home/jr/btrfs-progs?lastModified=1749655369&amp;amp;narHash=sha256-ln6dLiqo7TxStQSXgcIwfbdt7STGw4ZHftZRfWpY/JQ%3D
-├───nixosConfigurations
-│   └───my-system: NixOS configuration
-└───overlays
-    └───myCustomOverlay: Nixpkgs overlay
-&lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>Readme1</title><id>https://saylesss88.github.io/nix/index.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/index.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening README&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
