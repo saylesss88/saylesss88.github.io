@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Packaging a Rust crate for Nixpkgs</title><link>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</link><description><![CDATA[<h1>Packaging a Rust crate for Nixpkgs</h1>
 <blockquote>
-<p>NOTE: This example assumes that you’ve already pushed a crate to <code>crates.io</code>,
-or are packaging an existing rust crate for Nixpkgs.</p>
+<p>NOTE: This example assumes you’re packaging a crate that’s already on
+crates.io, or you’re packaging an existing Rust project for nixpkgs.</p>
 </blockquote>
-<p>Since I’m building an mdbook preprocessor, I can check out the existing
-preprocessors within Nixpkgs to see their structure. They are located in
-<code>nixpkgs/pkgs/by-name/md/</code>, which is where I’ll place my package as well.</p>
+<p>Nixpkgs is a big repository, so it helps to start with a focused workflow:
+create a branch, add a package under <code>pkgs/by-name/</code>, build it, then open a PR.</p>
 <blockquote>
 <p>NOTE: Maintainers prefer a single commit for your package with a separate
 commit if you need to add yourself to <code>maintainers-list.nix</code></p>
 </blockquote>
+<p>Since I’m building an mdbook preprocessor, I can check out the existing
+preprocessors within Nixpkgs to see their structure. They are located in
+<code>nixpkgs/pkgs/by-name/md/</code>, which is where I’ll place my package as well.</p>
+<h2>Clone nixpkgs</h2>
 <ol>
 <li>Fork and clone <code>NixOS/nixpkgs</code>:</li>
 </ol>
@@ -29,35 +32,15 @@ git remote add upstream git@github.com:NixOS/nixpkgs.git
 </ol>
 <pre><code class="language-bash">git switch -c mdbook-rss-feed
 </code></pre>
-<ol start="2">
-<li>
-<p>Add the package under <code>pkgs/by-name/md/mdbook-rss-feed/package.nix</code></p>
-</li>
-<li>
-<p>Prefetch the crate source:</p>
-</li>
-</ol>
-<p>Use <code>fetchCrate</code> / <code>crate2nix</code> style workflow, or just prefetch the <code>crates.io</code>
-tarball:</p>
-<pre><code class="language-bash">nix-prefetch-url \
-  --unpack \
-  https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download
-</code></pre>
-<p>That prints a base32 hash: <code>0932843lknasdlfkm2lkdnflaknldvdsvser</code></p>
-<p>Convert it to sri format:</p>
-<pre><code class="language-bash">nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
-</code></pre>
-<p>The above commands output looks like: <code>sha256-...=</code></p>
-<p>Use the sri formatted hash as the <code>src</code> hash:</p>
-<pre><code class="language-nix">src = fetchCrate {
-  inherit pname version;
-  sha256 = "output of nix hash convert above";
-};
-</code></pre>
-<ol start="4">
-<li>Get <code>cargoHash</code> via a failing build</li>
-</ol>
-<p>Once <code>src</code> is wired up, do the usual <code>cargoHash</code> dance:</p>
+<h2>Add the package under pkgs/by-name</h2>
+<p>New top-level packages should generally go under
+<code>pkgs/by-name/&lt;2 letters&gt;/&lt;name&gt;/package.nix</code> (e.g.
+<code>pkgs/by-name/md/mdbook-rss-feed/package.nix</code>). Packages in <code>pkgs/by-name</code> are
+picked up automatically and usually don’t require edits to
+<code>all-packages.nix</code>. 2. Add the package under
+<code>pkgs/by-name/md/mdbook-rss-feed/package.nix</code></p>
+<h2>Write package.nix (Rust crate example)</h2>
+<p>Start with <code>rustPlatform.buildRustPackage</code> and <code>fetchCrate</code>:</p>
 <pre><code class="language-nix">{
   lib,
   rustPlatform,
@@ -90,7 +73,21 @@ rustPlatform.buildRustPackage rec {
   };
 }
 </code></pre>
-<p>Then in the <code>nixpkgs</code> root, run:</p>
+<h2>Prefetch the crate hash:</h2>
+<p>Use <code>fetchCrate</code> / <code>crate2nix</code> style workflow, or just prefetch the <code>crates.io</code>
+tarball:</p>
+<pre><code class="language-bash">nix-prefetch-url \
+  --unpack \
+  https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download
+</code></pre>
+<p>That prints a base32 hash: <code>0932843lknasdlfkm2lkdnflaknldvdsvser</code></p>
+<p>Convert it to sri format:</p>
+<pre><code class="language-bash">nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
+</code></pre>
+<p>The above commands output looks like: <code>sha256-...=</code></p>
+<p>Put the resulting <code>sha256-...</code> into <code>src.hash</code>.</p>
+<h2>Get cargoHash via a failing build</h2>
+<p>In the <code>nixpkgs</code> root, run:</p>
 <pre><code class="language-bash">nix build .#mdbook-rss-feed
 </code></pre>
 <p>Nix will fail with a message like:</p>
@@ -98,15 +95,14 @@ rustPlatform.buildRustPackage rec {
 specified: sha256-....
 got: sha256-1...
 </code></pre>
-<p>Copy the <code>got</code> value into <code>cargoHash</code>, rebuild, and you’re done.</p>
-<ol start="4">
-<li>Test from <code>nixpkgs</code> root (i.e., the <code>nixpkgs</code> directory):</li>
-</ol>
+<p>Copy the <code>got</code> value into <code>cargoHash</code>, rebuild, and it should succeed.</p>
+<p>Sanity check from <code>nixpkgs</code> root (i.e., the <code>nixpkgs</code> directory):</p>
 <pre><code class="language-bash">./result/bin/mdbook-rss-feed --version
 </code></pre>
 <hr />
 <h2>Adding yourself as maintainer</h2>
-<p>Edit <code>nixpkgs/maintainers/maintainer-list.nix</code>:</p>
+<p>Edit <code>nixpkgs/maintainers/maintainer-list.nix</code> add your user in alphabetical
+order:</p>
 <pre><code class="language-nix">your-handle = {
   email = "you@example.com";
   name = "Your Name";
@@ -114,23 +110,15 @@ got: sha256-1...
   githubId = 12345678;
 };
 </code></pre>
-<ul>
-<li>You can get <code>githubId</code> from <code>https://api.github.com/users/your-user</code></li>
-</ul>
-<p><strong>Use the handle in your package</strong>:</p>
-<pre><code class="language-nix">meta = {
-  # ...
-  maintainers = [ lib.maintainers.your-user ];
-};
-</code></pre>
+<p>If you specify <code>github</code>, nixpkgs expects <code>githubId</code> too. You can get it from:
+<code>https://api.github.com/users/&lt;user&gt;</code>.</p>
 <p>The nixpkgs maintainers prefer if you add the <code>maintainer-list.nix</code> as a
 separate commit.</p>
+<pre><code class="language-bash">git commit -m "maintainers: add &lt;user&gt;"
+</code></pre>
 <hr />
 <h2>Treefmt</h2>
-<p>Nixpkgs uses a treefmt-nix wrapped formatter, so the raw <code>treefmt</code> binary
-complaining about “no treefmt.toml” is normal. Make sure you don’t skip this, a
-missing space can make your PRs checks fail.</p>
-<p>Run formatting the nixpkgs way, from the repo root:</p>
+<p>Run treefmt the nixpkgs way, from the repo root:</p>
 <pre><code class="language-bash">nix develop --command treefmt
 nix fmt
 </code></pre>
@@ -140,12 +128,12 @@ nix fmt
 <pre><code class="language-bash">git fetch upstream --tags
 git rebase upstream/master
 </code></pre>
-<p>Push updates to your PR branch:</p>
+<p>Commit and push your PR branch:</p>
 <p><strong>Then commit and push</strong></p>
 <pre><code class="language-bash">git commit -m "mdbook-rss-feed: init at 1.3.0"
 # First push
 git push origin mdbook-rss-feed
-# subsequent pushes
+# Use `--force-with-lease` only if you rebased/amended and need to rewrite the PR branch.
 # git push --force-with-lease origin mdbook-rss-feed
 </code></pre>
 <p><code>--force-with-lease</code> is the recommended safe force-push for PR branches.</p>
