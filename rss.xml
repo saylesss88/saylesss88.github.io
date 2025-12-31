@@ -1,4 +1,148 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Hardening Networking</title><link>https://saylesss88.github.io/nix/hardening_networking.html</link><description><![CDATA[<h1>Hardening Networking</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Packaging a Rust crate for Nixpkgs</title><link>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</link><description><![CDATA[<h1>Packaging a Rust crate for Nixpkgs</h1>
+<blockquote>
+<p>NOTE: This example assumes that you’ve already pushed a crate to <code>crates.io</code>,
+or are packaging an existing rust crate for Nixpkgs.</p>
+</blockquote>
+<p>Since I’m building an mdbook preprocessor, I can check out the existing
+preprocessors within Nixpkgs to see their structure. They are located in
+<code>nixpkgs/pkgs/by-name/md/</code>, which is where I’ll place my package as well.</p>
+<p>First you’ll want to fork and clone Nixpkgs, I was able to do this with a
+shallow clone:
+<a href="https://saylesss88.github.io/Working_with_Nixpkgs_Locally_10.html">Local Nixpkgs</a></p>
+<ol>
+<li>Create a branch for your PR:</li>
+</ol>
+<pre><code class="language-bash">git switch -c mdbook-rss-feed
+</code></pre>
+<ol start="2">
+<li>Prefetch the crate source:</li>
+</ol>
+<p>Use <code>fetchCrate</code> / <code>crate2nix</code> style workflow, or just prefetch the <code>crates.io</code>
+tarball:</p>
+<pre><code class="language-bash">nix-prefetch-url \
+  --unpack \
+  https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download
+</code></pre>
+<p>That prints a <code>sha256-...</code> hash after downloading the crate source.</p>
+<p>Use that as the <code>src</code> hash:</p>
+<pre><code class="language-nix">src = builtins.fetchTarball {
+  url = "https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download";
+  sha256 = "output of nix-prefetch-url above";
+};
+</code></pre>
+<ol start="3">
+<li>Get <code>cargoHash</code> via a failing build</li>
+</ol>
+<p>Once <code>src</code> is wired up, do the usual <code>cargoHash</code> dance:</p>
+<pre><code class="language-nix">{
+  lib,
+  rustPlatform,
+  versionCheckHook,
+}:
+rustPlatform.buildRustPackage rec {
+  pname = "mdbook-rss-feed";
+  version = "1.3.0";
+
+  src = builtins.fetchTarball {
+    url = "https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download";
+    sha256 = "output of nix-prefetch-url above";
+  };
+
+  cargoHash = lib.fakeHash;
+
+  nativeInstallCheckInuts = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
+
+  meta = {
+    description = "mdBook preprocessor that generates RSS, Atom, and JSON feeds";
+    mainProgram = "mdbook-rss-feed";
+    homePage = "https://crates.io/crates/mdbook-rss-feed";
+    license = lib.licenses.asl20;
+    maintainers = [lib.maintainers.saylesss88]
+  };
+}
+</code></pre>
+<p>Then in the <code>nixpkgs</code> root, run:</p>
+<pre><code class="language-bash">nix-build -A mdbook-rss-feed
+</code></pre>
+<p>Nix will fail with a message like:</p>
+<pre><code class="language-text">hash mismatch
+specified: sha256-....
+got: sha256-1...
+</code></pre>
+<p>Copy the <code>got</code> value into <code>cargoHash</code>, rebuild, and you’re done.</p>
+<ol start="4">
+<li>Test from <code>nixpkgs</code> root (i.e., the <code>nixpkgs</code> directory):</li>
+</ol>
+<pre><code class="language-bash">./result/bin/mdbook-rss-feed --version
+</code></pre>
+<hr />
+<h2>Adding yourself as maintainer</h2>
+<p>Edit <code>nixpkgs/maintainers/maintainer-list.nix</code>:</p>
+<pre><code class="language-nix">your-handle = {
+  email = "you@example.com";
+  name = "Your Name";
+  github = "your-gh-handle";
+  # Optional
+  # githubId = 12345678;
+};
+</code></pre>
+<ul>
+<li>You can get <code>githubId</code> from <code>https://api.github.com/users/your-user</code></li>
+</ul>
+<p><strong>Use the handle in your package</strong>:</p>
+<pre><code class="language-nix">meta = {
+  # ...
+  maintainers = [lib.maintainers.your-user];
+};
+</code></pre>
+<hr />
+<h2>Quick upstream sync check</h2>
+<p>From the <code>mdbook-rss-feed</code> branch:</p>
+<pre><code class="language-bash"># Ensure you have upstream remote (NixOS/nixpkgs)
+git remote -v   # should show 'upstream' -&gt; https://github.com/NixOS/nixpkgs.git
+
+# if missing, add it:
+# git remote add upstream https://github.com/NixOS/nixpkgs.git
+
+# Fetch the latest upstream
+git fetch upstream master
+
+# See if anything new happened since your branch base
+git log --oneline upstream/master..mdbook-rss-feed  # our changes
+git log --oneline mdbook-rss-feed..upstream/master  # upstream changes
+</code></pre>
+<p>If <code>mdbook-rss-feed..upstream/master</code> shows commits, rebase to stay current:</p>
+<pre><code class="language-bash">git rebase upstream/master
+# resolve any conflicts if they appear (unlikely for new packages)
+git rebase --continue
+</code></pre>
+<p><strong>Then commit and push</strong></p>
+<pre><code class="language-bash">git commit -m "mdbook-rss-feed: init at 1.3.0"
+git push -u origin mdbook-rss-feed
+</code></pre>
+<p>Then:</p>
+<ol>
+<li>
+<p>Go to GitHub -&gt; your fork</p>
+</li>
+<li>
+<p>Click “Compare &amp; pull request” on the <code>mdbook-rss-feed</code> branch</p>
+</li>
+<li>
+<p>Fill out the PR template (why useful, tested on x86_64-linux, etc.)</p>
+</li>
+<li>
+<p>Submit!</p>
+</li>
+</ol>
+<p>The package will go through CI checks, and once green + approved by a
+maintainer, it’ll land in nixpkgs.</p>
+<details>
+<summary> ✔️ Example PR template filled out </summary>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</guid><pubDate>Wed, 31 Dec 2025 00:00:00 +0000</pubDate></item><item><title>Hardening Networking</title><link>https://saylesss88.github.io/nix/hardening_networking.html</link><description><![CDATA[<h1>Hardening Networking</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
@@ -294,6 +438,22 @@ inputs = {
 <p>add it to the <code>extraBlocklist</code> variable in the following <code>dnscrypt-proxy.nix</code>:</p>
 <pre><code class="language-nix"># dnscrypt-proxy.nix
 extraBlocklist = builtins.readFile inputs.hagezi;
+</code></pre>
+<p>More blocklist url’s:</p>
+<pre><code class="language-text"># NextDNS CNAME cloaking list
+https://raw.githubusercontent.com/nextdns/cname-cloaking-blocklist/master/domains
+
+# AdGuard Simplified Domain Names filter
+https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+
+# OISD Big list
+https://big.oisd.nl/domainswild
+
+# HaGeZi Multi PRO
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt
+
+# HaGeZi Threat Intelligence Feeds
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif-onlydomains.txt
 </code></pre>
 </details>
 <blockquote>
