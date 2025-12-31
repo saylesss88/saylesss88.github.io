@@ -7,16 +7,36 @@ or are packaging an existing rust crate for Nixpkgs.&lt;/p&gt;
 &lt;p&gt;Since I’m building an mdbook preprocessor, I can check out the existing
 preprocessors within Nixpkgs to see their structure. They are located in
 &lt;code&gt;nixpkgs/pkgs/by-name/md/&lt;/code&gt;, which is where I’ll place my package as well.&lt;/p&gt;
-&lt;p&gt;First you’ll want to fork and clone Nixpkgs, I was able to do this with a
-shallow clone:
-&lt;a href=&quot;https://saylesss88.github.io/Working_with_Nixpkgs_Locally_10.html&quot;&gt;Local Nixpkgs&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: Maintainers prefer a single commit for your package with a separate
+commit if you need to add yourself to &lt;code&gt;maintainers-list.nix&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
 &lt;ol&gt;
-&lt;li&gt;Create a branch for your PR:&lt;/li&gt;
+&lt;li&gt;Fork and clone &lt;code&gt;NixOS/nixpkgs&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git clone git@github.com:your-user/nixpkgs.git
+cd nixpkgs
+git remote add upstream git@github.com:NixOS/nixpkgs.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(SSH avoids HTTPS helper issues)&lt;/p&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;If your clone is shallow, convert it to full history (doesn’t lose work):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch --unshallow --tags
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Create a branch and add package:&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;Create a branch before changes preferably:&lt;/li&gt;
 &lt;/ol&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git switch -c mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
 &lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Prefetch the crate source:&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Add the package under &lt;code&gt;pkgs/by-name/md/mdbook-rss-feed/package.nix&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Prefetch the crate source:&lt;/p&gt;
+&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;Use &lt;code&gt;fetchCrate&lt;/code&gt; / &lt;code&gt;crate2nix&lt;/code&gt; style workflow, or just prefetch the &lt;code&gt;crates.io&lt;/code&gt;
 tarball:&lt;/p&gt;
@@ -24,32 +44,38 @@ tarball:&lt;/p&gt;
   --unpack \
   https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;That prints a &lt;code&gt;sha256-...&lt;/code&gt; hash after downloading the crate source.&lt;/p&gt;
-&lt;p&gt;Use that as the &lt;code&gt;src&lt;/code&gt; hash:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;src = builtins.fetchTarball {
-  url = &quot;https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download&quot;;
-  sha256 = &quot;output of nix-prefetch-url above&quot;;
+&lt;p&gt;That prints a base32 hash: &lt;code&gt;0932843lknasdlfkm2lkdnflaknldvdsvser&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Convert it to sri format:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The above commands output looks like: &lt;code&gt;sha256-...=&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Use the sri formatted hash as the &lt;code&gt;src&lt;/code&gt; hash:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;src = fetchCrate {
+  inherit pname version;
+  sha256 = &quot;output of nix hash convert above&quot;;
 };
 &lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
+&lt;ol start=&quot;4&quot;&gt;
 &lt;li&gt;Get &lt;code&gt;cargoHash&lt;/code&gt; via a failing build&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;Once &lt;code&gt;src&lt;/code&gt; is wired up, do the usual &lt;code&gt;cargoHash&lt;/code&gt; dance:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
   lib,
   rustPlatform,
+  fetchCrate
   versionCheckHook,
 }:
 rustPlatform.buildRustPackage rec {
   pname = &quot;mdbook-rss-feed&quot;;
   version = &quot;1.3.0&quot;;
 
-  src = builtins.fetchTarball {
-    url = &quot;https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download&quot;;
-    sha256 = &quot;output of nix-prefetch-url above&quot;;
+  src = fetchCrate {
+    inherit pname version;
+    hash = &quot;output of nix-prefetch-url above&quot;;
   };
 
   cargoHash = lib.fakeHash;
+  # Or cargoHash = &quot;sha256-AAAAAAAAAAAAAAAAAAAA=&quot;
 
   nativeInstallCheckInuts = [
     versionCheckHook
@@ -61,12 +87,12 @@ rustPlatform.buildRustPackage rec {
     mainProgram = &quot;mdbook-rss-feed&quot;;
     homePage = &quot;https://crates.io/crates/mdbook-rss-feed&quot;;
     license = lib.licenses.asl20;
-    maintainers = [lib.maintainers.saylesss88]
+    maintainers = [ lib.maintainers.sayls88 ];
   };
 }
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Then in the &lt;code&gt;nixpkgs&lt;/code&gt; root, run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A mdbook-rss-feed
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Nix will fail with a message like:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;hash mismatch
@@ -86,8 +112,7 @@ got: sha256-1...
   email = &quot;you@example.com&quot;;
   name = &quot;Your Name&quot;;
   github = &quot;your-gh-handle&quot;;
-  # Optional
-  # githubId = 12345678;
+  githubId = 12345678;
 };
 &lt;/code&gt;&lt;/pre&gt;
 &lt;ul&gt;
@@ -96,30 +121,37 @@ got: sha256-1...
 &lt;p&gt;&lt;strong&gt;Use the handle in your package&lt;/strong&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;meta = {
   # ...
-  maintainers = [lib.maintainers.your-user];
+  maintainers = [ lib.maintainers.your-user ];
 };
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The nixpkgs maintainers prefer if you add the &lt;code&gt;maintainer-list.nix&lt;/code&gt; as a
+separate commit.&lt;/p&gt;
 &lt;hr /&gt;
-&lt;h2&gt;Quick upstream sync check&lt;/h2&gt;
+&lt;h2&gt;Treefmt&lt;/h2&gt;
+&lt;p&gt;Nixpkgs uses a treefmt-nix wrapped formatter, so the raw &lt;code&gt;treefmt&lt;/code&gt; binary
+complaining about “no treefmt.toml” is normal. Make sure you don’t skip this, a
+missing space can make your PRs checks fail.&lt;/p&gt;
+&lt;p&gt;Run formatting the nixpkgs way, from the repo root:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix develop --command treefmt
+nix fmt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Rebase and push safely&lt;/h2&gt;
 &lt;p&gt;From the &lt;code&gt;mdbook-rss-feed&lt;/code&gt; branch:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Ensure you have upstream remote (NixOS/nixpkgs)
-git remote -v   # should show &apos;upstream&apos; -&amp;gt; https://github.com/NixOS/nixpkgs.git
-
-# if missing, add it:
-# git remote add upstream https://github.com/NixOS/nixpkgs.git
-
-# Fetch the latest upstream
-git fetch upstream master
-
-# See if anything new happened since your branch base
-git log --oneline upstream/master..mdbook-rss-feed  # our changes
-git log --oneline mdbook-rss-feed..upstream/master  # upstream changes
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch upstream --tags
+git rebase upstream/master
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If &lt;code&gt;mdbook-rss-feed..upstream/master&lt;/code&gt; shows commits, rebase to stay current:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git rebase upstream/master
-# resolve any conflicts if they appear (unlikely for new packages)
-git rebase --continue
+&lt;p&gt;Push updates to your PR branch:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Then commit and push&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git commit -m &quot;mdbook-rss-feed: init at 1.3.0&quot;
+# First push
+git push origin mdbook-rss-feed
+# subsequent pushes
+# git push --force-with-lease origin mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;--force-with-lease&lt;/code&gt; is the recommended safe force-push for PR branches.&lt;/p&gt;
+&lt;p&gt;If &lt;code&gt;--force-with-lease&lt;/code&gt; says “stale info”, fetch the remote branch ref first,
+then retry.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Then commit and push&lt;/strong&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git commit -m &quot;mdbook-rss-feed: init at 1.3.0&quot;
 git push -u origin mdbook-rss-feed
