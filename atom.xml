@@ -1,24 +1,136 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>rust_crate_to_nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T15:10:38+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;h2&gt;Quick upstream sync check&lt;/h2&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2025-12-31T18:33:19+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;h1&gt;Packaging a Rust crate for Nixpkgs&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: This example assumes you’re packaging a crate that’s already on
+crates.io, or you’re packaging an existing Rust project for nixpkgs.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Nixpkgs is a big repository, so it helps to start with a focused workflow:
+create a branch, add a package under &lt;code&gt;pkgs/by-name/&lt;/code&gt;, build it, then open a PR.&lt;/p&gt;
+&lt;h2&gt;Clone nixpkgs&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;Fork and clone &lt;code&gt;NixOS/nixpkgs&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git clone git@github.com:your-user/nixpkgs.git
+cd nixpkgs
+git remote add upstream git@github.com:NixOS/nixpkgs.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(SSH avoids HTTPS helper issues)&lt;/p&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;If your clone is shallow, convert it to full history (doesn’t lose work):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch --unshallow --tags
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Create a branch and add package:&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;Create a branch before changes preferably:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git switch -c mdbook-rss-feed
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Add the package under pkgs/by-name&lt;/h2&gt;
+&lt;p&gt;New top-level packages should generally go under
+&lt;code&gt;pkgs/by-name/&amp;lt;2 letters&amp;gt;/&amp;lt;name&amp;gt;/package.nix&lt;/code&gt; (e.g.
+&lt;code&gt;pkgs/by-name/md/mdbook-rss-feed/package.nix&lt;/code&gt;). Packages in &lt;code&gt;pkgs/by-name&lt;/code&gt; are
+picked up automatically and usually don’t require edits to &lt;code&gt;all-packages.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;h2&gt;Write package.nix (Rust crate example)&lt;/h2&gt;
+&lt;p&gt;Start with &lt;code&gt;rustPlatform.buildRustPackage&lt;/code&gt; and &lt;code&gt;fetchCrate&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  lib,
+  rustPlatform,
+  fetchCrate
+  versionCheckHook,
+}:
+rustPlatform.buildRustPackage rec {
+  pname = &quot;mdbook-rss-feed&quot;;
+  version = &quot;1.3.0&quot;;
+
+  src = fetchCrate {
+    inherit pname version;
+    hash = &quot;output of nix-prefetch-url above&quot;;
+  };
+
+  cargoHash = lib.fakeHash;
+  # Or cargoHash = &quot;sha256-AAAAAAAAAAAAAAAAAAAA=&quot;
+
+  nativeInstallCheckInuts = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
+
+  meta = {
+    description = &quot;mdBook preprocessor that generates RSS, Atom, and JSON feeds&quot;;
+    mainProgram = &quot;mdbook-rss-feed&quot;;
+    homePage = &quot;https://crates.io/crates/mdbook-rss-feed&quot;;
+    license = lib.licenses.asl20;
+    maintainers = [ lib.maintainers.sayls88 ];
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Prefetch the crate hash:&lt;/h2&gt;
+&lt;p&gt;Use &lt;code&gt;fetchCrate&lt;/code&gt; / &lt;code&gt;crate2nix&lt;/code&gt; style workflow, or just prefetch the &lt;code&gt;crates.io&lt;/code&gt;
+tarball:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-prefetch-url \
+  --unpack \
+  https://crates.io/api/v1/crates/mdbook-rss-feed/1.3.0/download
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That prints a base32 hash: &lt;code&gt;0932843lknasdlfkm2lkdnflaknldvdsvser&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Convert it to sri format:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The above commands output looks like: &lt;code&gt;sha256-...=&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Put the resulting &lt;code&gt;sha256-...&lt;/code&gt; into &lt;code&gt;src.hash&lt;/code&gt;.&lt;/p&gt;
+&lt;h2&gt;Get cargoHash via a failing build&lt;/h2&gt;
+&lt;p&gt;In the &lt;code&gt;nixpkgs&lt;/code&gt; root, run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#mdbook-rss-feed
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Nix will fail with a message like:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;hash mismatch
+specified: sha256-....
+got: sha256-1...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Copy the &lt;code&gt;got&lt;/code&gt; value into &lt;code&gt;cargoHash&lt;/code&gt;, rebuild, and it should succeed.&lt;/p&gt;
+&lt;p&gt;Sanity check: from &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;./result/bin/mdbook-rss-feed --version
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Adding yourself as maintainer&lt;/h2&gt;
+&lt;p&gt;Edit &lt;code&gt;nixpkgs/maintainers/maintainer-list.nix&lt;/code&gt; add your user in alphabetical
+order:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;your-handle = {
+  email = &quot;you@example.com&quot;;
+  name = &quot;Your Name&quot;;
+  github = &quot;your-gh-handle&quot;;
+  githubId = 12345678;
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you specify &lt;code&gt;github&lt;/code&gt;, nixpkgs expects &lt;code&gt;githubId&lt;/code&gt; too. You can get it from:
+&lt;code&gt;https://api.github.com/users/&amp;lt;user&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The nixpkgs maintainers prefer if you add the &lt;code&gt;maintainer-list.nix&lt;/code&gt; as a
+separate commit.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git commit -m &quot;maintainers: add &amp;lt;user&amp;gt;&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Treefmt&lt;/h2&gt;
+&lt;p&gt;Run treefmt the nixpkgs way, from the repo root:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix develop --command treefmt
+nix fmt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Rebase and push safely&lt;/h2&gt;
 &lt;p&gt;From the &lt;code&gt;mdbook-rss-feed&lt;/code&gt; branch:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Ensure you have upstream remote (NixOS/nixpkgs)
-git remote -v   # should show &apos;upstream&apos; -&amp;gt; https://github.com/NixOS/nixpkgs.git
-
-# if missing, add it:
-# git remote add upstream https://github.com/NixOS/nixpkgs.git
-
-# Fetch the latest upstream
-git fetch upstream master
-
-# See if anything new happened since your branch base
-git log --oneline upstream/master..mdbook-rss-feed  # our changes
-git log --oneline mdbook-rss-feed..upstream/master  # upstream changes
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch upstream --tags
+git rebase upstream/master
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If &lt;code&gt;mdbook-rss-feed..upstream/master&lt;/code&gt; shows commits, rebase to stay current:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git rebase upstream/master
-# resolve any conflicts if they appear (unlikely for new packages)
-git rebase --continue
+&lt;p&gt;Commit and push your PR branch:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Then commit and push&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git commit -m &quot;mdbook-rss-feed: init at 1.3.0&quot;
+# First push
+git push origin mdbook-rss-feed
+# Use `--force-with-lease` only if you rebased/amended and need to rewrite the PR branch.
+# git push --force-with-lease origin mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;--force-with-lease&lt;/code&gt; is the recommended safe force-push for PR branches.&lt;/p&gt;
+&lt;p&gt;If &lt;code&gt;--force-with-lease&lt;/code&gt; says “stale info”, fetch the remote branch ref first,
+then retry.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Then commit and push&lt;/strong&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git commit -m &quot;mdbook-rss-feed: init at 1.3.0&quot;
 git push -u origin mdbook-rss-feed
@@ -40,9 +152,7 @@ git push -u origin mdbook-rss-feed
 &lt;/ol&gt;
 &lt;p&gt;The package will go through CI checks, and once green + approved by a
 maintainer, it’ll land in nixpkgs.&lt;/p&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Example PR template filled out &lt;/summary&gt;
-</content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2025-12-31T15:10:38+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-25T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
+</content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-25T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
