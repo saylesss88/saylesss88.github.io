@@ -1,11 +1,16 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2025-12-31T18:33:19+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;h1&gt;Packaging a Rust crate for Nixpkgs&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-01T00:21:41+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;h1&gt;Packaging a Rust crate for Nixpkgs&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;NOTE: This example assumes you’re packaging a crate that’s already on
 crates.io, or you’re packaging an existing Rust project for nixpkgs.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;Nixpkgs is a big repository, so it helps to start with a focused workflow:
 create a branch, add a package under &lt;code&gt;pkgs/by-name/&lt;/code&gt;, build it, then open a PR.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Clone nixpkgs&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;Fork and clone &lt;code&gt;NixOS/nixpkgs&lt;/code&gt;:&lt;/li&gt;
@@ -20,23 +25,26 @@ git remote add upstream git@github.com:NixOS/nixpkgs.git
 &lt;/ol&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch --unshallow --tags
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Create a branch and add package:&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;Create a branch before changes preferably:&lt;/li&gt;
 &lt;/ol&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git switch -c mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Add the package under pkgs/by-name&lt;/h2&gt;
 &lt;p&gt;New top-level packages should generally go under
 &lt;code&gt;pkgs/by-name/&amp;lt;2 letters&amp;gt;/&amp;lt;name&amp;gt;/package.nix&lt;/code&gt; (e.g.
 &lt;code&gt;pkgs/by-name/md/mdbook-rss-feed/package.nix&lt;/code&gt;). Packages in &lt;code&gt;pkgs/by-name&lt;/code&gt; are
 picked up automatically and usually don’t require edits to &lt;code&gt;all-packages.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Write package.nix (Rust crate example)&lt;/h2&gt;
 &lt;p&gt;Start with &lt;code&gt;rustPlatform.buildRustPackage&lt;/code&gt; and &lt;code&gt;fetchCrate&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
   lib,
   rustPlatform,
-  fetchCrate
+  fetchCrate,
   versionCheckHook,
 }:
 rustPlatform.buildRustPackage rec {
@@ -45,11 +53,10 @@ rustPlatform.buildRustPackage rec {
 
   src = fetchCrate {
     inherit pname version;
-    hash = &quot;output of nix-prefetch-url above&quot;;
+    hash = &quot;output of `nix hash convert` shown below&quot;;
   };
 
   cargoHash = lib.fakeHash;
-  # Or cargoHash = &quot;sha256-AAAAAAAAAAAAAAAAAAAA=&quot;
 
   nativeInstallCheckInuts = [
     versionCheckHook
@@ -65,6 +72,7 @@ rustPlatform.buildRustPackage rec {
   };
 }
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Prefetch the crate hash:&lt;/h2&gt;
 &lt;p&gt;Use &lt;code&gt;fetchCrate&lt;/code&gt; / &lt;code&gt;crate2nix&lt;/code&gt; style workflow, or just prefetch the &lt;code&gt;crates.io&lt;/code&gt;
 tarball:&lt;/p&gt;
@@ -77,10 +85,18 @@ tarball:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix hash convert --hash-algo sha256 --from nix32 --to sri 0932843lknasdlfkm2lkdnflaknldvdsvser
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The above commands output looks like: &lt;code&gt;sha256-...=&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;Put the resulting &lt;code&gt;sha256-...&lt;/code&gt; into &lt;code&gt;src.hash&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Put the resulting &lt;code&gt;sha256-...&lt;/code&gt; into &lt;code&gt;src.hash&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;  src = fetchCrate {
+    inherit pname version;
+    hash = &quot;sha256-...&quot;;
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Get cargoHash via a failing build&lt;/h2&gt;
-&lt;p&gt;In the &lt;code&gt;nixpkgs&lt;/code&gt; root, run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#mdbook-rss-feed
+&lt;p&gt;In the &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory), run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A mdbook-rss-feed
+# OR nix3 format
+nix build .#mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Nix will fail with a message like:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;hash mismatch
@@ -88,7 +104,7 @@ specified: sha256-....
 got: sha256-1...
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Copy the &lt;code&gt;got&lt;/code&gt; value into &lt;code&gt;cargoHash&lt;/code&gt;, rebuild, and it should succeed.&lt;/p&gt;
-&lt;p&gt;Sanity check: from &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory):&lt;/p&gt;
+&lt;p&gt;Sanity check: from &lt;code&gt;nixpkgs&lt;/code&gt; root :&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;./result/bin/mdbook-rss-feed --version
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
@@ -110,7 +126,9 @@ separate commit.&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Treefmt&lt;/h2&gt;
-&lt;p&gt;Run treefmt the nixpkgs way, from the repo root:&lt;/p&gt;
+&lt;p&gt;Run treefmt the nixpkgs way, from the repo root. Run this right before you push,
+my editors formatter does something different with single entry lists than what
+Nixpkgs wants:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix develop --command treefmt
 nix fmt
 &lt;/code&gt;&lt;/pre&gt;
@@ -19980,7 +19998,11 @@ can be deleted or rolled back as needed.&lt;/li&gt;
 &lt;p&gt;&lt;a href=&quot;https://btrfs.readthedocs.io/en/latest/Subvolumes.html&quot;&gt;BTRFS Subvolumes&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;To continue following along and set up impermanence
 &lt;a href=&quot;https://saylesss88.github.io/installation/unencrypted/impermanence.html&quot;&gt;Click Here&lt;/a&gt;&lt;/p&gt;
-</content></entry><entry><title>Local Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/local_package.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/local_package.html" rel="alternate"/><content type="html">&lt;h1&gt;Creating and Building a Local Package within a Nixpkgs Clone&lt;/h1&gt;
+</content></entry><entry><title>Local Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/local_package.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/local_package.html" rel="alternate"/><content type="html">&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;h1&gt;Creating and Building a Local Package within a Nixpkgs Clone&lt;/h1&gt;
 &lt;p&gt;This chapter demonstrates the fundamental pattern for creating a package. Every
 package recipe is a file that declares a function. This function takes the
 packages dependencies as argument.&lt;/p&gt;
@@ -20705,8 +20727,6 @@ storage-efficient for local development on large repositories.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2&gt;III. Setting Up a Local Nixpkgs Repository Efficiently&lt;/h2&gt;
-&lt;details&gt;
-&lt;summary&gt;Click To See How to set up Nixpkgs Locally&lt;/summary&gt;
 &lt;ul&gt;
 &lt;li&gt;Cloning Nixpkgs requires careful consideration due to its size.&lt;/li&gt;
 &lt;/ul&gt;
@@ -20742,6 +20762,7 @@ cd nixpkgs
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;man nix3 registry
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The above command will open the &lt;code&gt;openssl/default.nix&lt;/code&gt; in your &lt;code&gt;$EDITOR&lt;/code&gt;.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;A.1 Full Fork and Clone of Nixpkgs&lt;/h2&gt;
 &lt;p&gt;If you want to contribute to Nixpkgs, you need to set up a local version
 following the
@@ -20756,10 +20777,77 @@ the &lt;a href=&quot;https://github.com/nixos/nixpkgs/&quot;&gt;Nixpkgs reposito
 &lt;p&gt;&lt;a href=&quot;https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#cloning-your-forked-repository&quot;&gt;Clone the forked repo&lt;/a&gt;
 into a local &lt;code&gt;nixpkgs&lt;/code&gt; directory.&lt;/p&gt;
 &lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#configuring-git-to-sync-your-fork-with-the-upstream-repository&quot;&gt;Configure the upstream Nixpkgs repo&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
 &lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git clone git@github.com:your-user/nixpkgs.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#configuring-git-to-sync-your-fork-with-the-upstream-repository&quot;&gt;Configure the upstream Nixpkgs repo&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git remote add upstream git@github.com:NixOS/nixpkgs.git
+# Check them out
+git remove -v
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;The Three Master Branches&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Upstream Master&lt;/strong&gt; (upstream/master):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Where it is&lt;/strong&gt;: On the official NixOS servers.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Role&lt;/strong&gt;: The absolute source of truth. Thousands of people are pushing to
+this daily.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Local Master&lt;/strong&gt; (master):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Where it is&lt;/strong&gt;: On your physical computer.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Role&lt;/strong&gt;: Your working copy. This is the only one you can actually “rebase” or
+“commit” to directly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Origin Master&lt;/strong&gt; (origin/master):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Where it is&lt;/strong&gt;: On your GitHub fork (github.com/your-user/nixpkgs).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Role&lt;/strong&gt;: A personal backup and a place to host your code so you can open Pull
+Requests.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Create a branch&lt;/h3&gt;
+&lt;p&gt;In the nixpkgs ecosystem, the “cleanest” way to work is to &lt;strong&gt;never&lt;/strong&gt; add your
+own commits to your local master.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Keep your &lt;code&gt;master&lt;/code&gt; as a “pure mirror” of &lt;code&gt;upstream/master&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Whenever you want to fix a package or add something new, create a feature
+branch:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git checkout -b fix-my-package master
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This way, syncing is as simple as a reset:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Total reset of your local master to match the official one
+git fetch upstream
+git checkout master
+git reset --hard upstream/master
+git push origin master --force
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Pushing a PR&lt;/h3&gt;
+&lt;p&gt;When you’re ready to push changes you push to &lt;code&gt;origin/feature-branch&lt;/code&gt;, visit
+your fork on github.com and submit the PR.&lt;/p&gt;
 &lt;h2&gt;B. Managing Branches with Worktrees&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -20778,7 +20866,6 @@ separate checked-out files.&lt;/p&gt;
 (&lt;code&gt;nixos-unstable&lt;/code&gt; in this case).&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;/details&gt;
 &lt;h1&gt;IV. Debugging Missing Dependencies: A Practical Example&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; Click to see icat Example &lt;/summary&gt;
