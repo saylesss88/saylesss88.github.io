@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Thu, 1 Jan 2026 00:21:41 +0000</pubDate></item><item><title>Packaging a Rust crate for Nixpkgs</title><link>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</link><description><![CDATA[<details>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Thu, 1 Jan 2026 15:51:26 +0000</pubDate></item><item><title>Packaging a Rust crate for Nixpkgs</title><link>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</link><description><![CDATA[<details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
 </details>
@@ -169,6 +169,88 @@ git push -u origin mdbook-rss-feed
 </ol>
 <p>The package will go through CI checks, and once green + approved by a
 maintainer, it’ll land in nixpkgs.</p>
+<hr />
+<h2>Recovering from Mistakes</h2>
+<p>You’re bound to make mistakes, if you learn some Git basics it will help you
+quite a bit.</p>
+<p>You should avoid adding new commits for small fixes like typos, formatting, or
+minor adjustments requested in review. For substantial changes that add
+functionality, a new commit may be more appropriate.</p>
+<p>Say that we pushed our PR and one of the maintainers gave us a suggested change,
+(they want us to follow conventions and remove a trailing period from our
+packages description for this example).</p>
+<ol>
+<li>
+<p>Make the edit locally (remove the trailing period in the file)</p>
+</li>
+<li>
+<p>Stage the change: <code>git add pkgs/by-name/xx/your-package/package.nix</code> (avoid
+<code>git add -A</code> as it stages everything, which can accidentally include
+unrelated files)</p>
+</li>
+<li>
+<p>Amend the commit: <code>git commit --amend --no-edit</code>(this preserves your original
+commit message, if you want to change the commit message use
+<code>git commit --amend</code>)</p>
+</li>
+<li>
+<p>Force push: <code>git push --force-with-lease</code> (This is safer than just using
+<code>--force</code> because it will fail if someone else has pushed commits to your
+branch that you don’t have locally)</p>
+</li>
+</ol>
+<p><strong>Alternative for Multiple Commits</strong></p>
+<p>Interactive rebase is useful when your PR has several “WIP” commits (or you
+added a small review fix as a separate commit) and you want to present a cleaner
+history before merge.</p>
+<p>You can use interactive rebase to squash all your would be small fix commits
+into a single commit they belong to.</p>
+<p>Avoid squashing if the commits represent distinct, reviewable changes that stand
+on their own.</p>
+<p><strong>Basic Workflow (squash/fixup)</strong></p>
+<ol>
+<li>Decide how many commits back you want to edit (example: last 3 commits):</li>
+</ol>
+<pre><code class="language-bash">git rebase -i HEAD~3
+</code></pre>
+<ol start="2">
+<li>Your editor opens with a “todo” list (oldest at top). Change later commits
+from <code>pick</code> to <code>fixup</code> or <code>squash</code>:</li>
+</ol>
+<ul>
+<li>
+<p><code>fixup</code> = combine into the previous commit, discard this commit message.</p>
+</li>
+<li>
+<p><code>squash</code> = combine, but keep/edit commit messages.</p>
+</li>
+</ul>
+<p>Example todo:</p>
+<pre><code class="language-text">pick 1111111 mdbook-rss-feed: init at 0.1.0
+pick 2222222 mdbook-rss-feed: fix trailing period
+pick 3333333 mdbook-rss-feed: formatting
+</code></pre>
+<p>Change to:</p>
+<pre><code class="language-text">pick 1111111 mdbook-rss-feed: init at 0.1.0
+fixup 2222222 mdbook-rss-feed: fix trailing period
+fixup 3333333 mdbook-rss-feed: formatting
+</code></pre>
+<ol start="3">
+<li>Save/close: if you squashed, Git will prompt you to edit the final combined
+message.</li>
+</ol>
+<p><strong>Push updated history</strong></p>
+<p>You have to force-push because <code>rebase</code> rewrites commit SHAs:</p>
+<pre><code class="language-bash">git push --force-with-lease
+# If something goes wrong
+# git rebase --abort
+# If you hit conflicts, fix the files, then:
+# git add &lt;files&gt;
+# git rebase --continue
+</code></pre>
+<p>If you have an unrelated change accidentally included (for example: you staged
+an extra file), it’s usually better to fix it via rebase/splitting before
+reviewers spend time re-reviewing noise.</p>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</guid><pubDate>Wed, 31 Dec 2025 00:00:00 +0000</pubDate></item><item><title>Hardening Networking</title><link>https://saylesss88.github.io/nix/hardening_networking.html</link><description><![CDATA[<h1>Hardening Networking</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>

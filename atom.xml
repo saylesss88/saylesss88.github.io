@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-01T00:21:41+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;details&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-01T15:51:26+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
 &lt;/details&gt;
@@ -170,6 +170,88 @@ git push -u origin mdbook-rss-feed
 &lt;/ol&gt;
 &lt;p&gt;The package will go through CI checks, and once green + approved by a
 maintainer, it’ll land in nixpkgs.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Recovering from Mistakes&lt;/h2&gt;
+&lt;p&gt;You’re bound to make mistakes, if you learn some Git basics it will help you
+quite a bit.&lt;/p&gt;
+&lt;p&gt;You should avoid adding new commits for small fixes like typos, formatting, or
+minor adjustments requested in review. For substantial changes that add
+functionality, a new commit may be more appropriate.&lt;/p&gt;
+&lt;p&gt;Say that we pushed our PR and one of the maintainers gave us a suggested change,
+(they want us to follow conventions and remove a trailing period from our
+packages description for this example).&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Make the edit locally (remove the trailing period in the file)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Stage the change: &lt;code&gt;git add pkgs/by-name/xx/your-package/package.nix&lt;/code&gt; (avoid
+&lt;code&gt;git add -A&lt;/code&gt; as it stages everything, which can accidentally include
+unrelated files)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Amend the commit: &lt;code&gt;git commit --amend --no-edit&lt;/code&gt;(this preserves your original
+commit message, if you want to change the commit message use
+&lt;code&gt;git commit --amend&lt;/code&gt;)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Force push: &lt;code&gt;git push --force-with-lease&lt;/code&gt; (This is safer than just using
+&lt;code&gt;--force&lt;/code&gt; because it will fail if someone else has pushed commits to your
+branch that you don’t have locally)&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;Alternative for Multiple Commits&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Interactive rebase is useful when your PR has several “WIP” commits (or you
+added a small review fix as a separate commit) and you want to present a cleaner
+history before merge.&lt;/p&gt;
+&lt;p&gt;You can use interactive rebase to squash all your would be small fix commits
+into a single commit they belong to.&lt;/p&gt;
+&lt;p&gt;Avoid squashing if the commits represent distinct, reviewable changes that stand
+on their own.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Basic Workflow (squash/fixup)&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Decide how many commits back you want to edit (example: last 3 commits):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git rebase -i HEAD~3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Your editor opens with a “todo” list (oldest at top). Change later commits
+from &lt;code&gt;pick&lt;/code&gt; to &lt;code&gt;fixup&lt;/code&gt; or &lt;code&gt;squash&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;fixup&lt;/code&gt; = combine into the previous commit, discard this commit message.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;squash&lt;/code&gt; = combine, but keep/edit commit messages.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Example todo:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;pick 1111111 mdbook-rss-feed: init at 0.1.0
+pick 2222222 mdbook-rss-feed: fix trailing period
+pick 3333333 mdbook-rss-feed: formatting
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Change to:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;pick 1111111 mdbook-rss-feed: init at 0.1.0
+fixup 2222222 mdbook-rss-feed: fix trailing period
+fixup 3333333 mdbook-rss-feed: formatting
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Save/close: if you squashed, Git will prompt you to edit the final combined
+message.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;Push updated history&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;You have to force-push because &lt;code&gt;rebase&lt;/code&gt; rewrites commit SHAs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git push --force-with-lease
+# If something goes wrong
+# git rebase --abort
+# If you hit conflicts, fix the files, then:
+# git add &amp;lt;files&amp;gt;
+# git rebase --continue
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you have an unrelated change accidentally included (for example: you staged
+an extra file), it’s usually better to fix it via rebase/splitting before
+reviewers spend time re-reviewing noise.&lt;/p&gt;
 </content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-25T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
