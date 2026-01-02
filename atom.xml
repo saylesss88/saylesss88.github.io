@@ -57,7 +57,6 @@ rustPlatform.buildRustPackage rec {
   };
 
   cargoHash = lib.fakeHash;
-  # Or cargoHash = &quot;sha256-AAAAAAAAAAAAAAAAAAAA=&quot;
 
   nativeInstallCheckInuts = [
     versionCheckHook
@@ -94,8 +93,10 @@ tarball:&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Get cargoHash via a failing build&lt;/h2&gt;
-&lt;p&gt;In the &lt;code&gt;nixpkgs&lt;/code&gt; root, run:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#mdbook-rss-feed
+&lt;p&gt;In the &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory), run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix-build -A mdbook-rss-feed
+# OR nix3 format
+nix build .#mdbook-rss-feed
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Nix will fail with a message like:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;hash mismatch
@@ -103,7 +104,7 @@ specified: sha256-....
 got: sha256-1...
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Copy the &lt;code&gt;got&lt;/code&gt; value into &lt;code&gt;cargoHash&lt;/code&gt;, rebuild, and it should succeed.&lt;/p&gt;
-&lt;p&gt;Sanity check: from &lt;code&gt;nixpkgs&lt;/code&gt; root (i.e., the &lt;code&gt;nixpkgs&lt;/code&gt; directory):&lt;/p&gt;
+&lt;p&gt;Sanity check: from &lt;code&gt;nixpkgs&lt;/code&gt; root :&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;./result/bin/mdbook-rss-feed --version
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
@@ -125,7 +126,9 @@ separate commit.&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Treefmt&lt;/h2&gt;
-&lt;p&gt;Run treefmt the nixpkgs way, from the repo root:&lt;/p&gt;
+&lt;p&gt;Run treefmt the nixpkgs way, from the repo root. Run this right before you push,
+my editors formatter does something different with single entry lists than what
+Nixpkgs wants:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix develop --command treefmt
 nix fmt
 &lt;/code&gt;&lt;/pre&gt;
@@ -167,6 +170,88 @@ git push -u origin mdbook-rss-feed
 &lt;/ol&gt;
 &lt;p&gt;The package will go through CI checks, and once green + approved by a
 maintainer, it’ll land in nixpkgs.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Recovering from Mistakes&lt;/h2&gt;
+&lt;p&gt;You’re bound to make mistakes, if you learn some Git basics it will help you
+quite a bit.&lt;/p&gt;
+&lt;p&gt;You should avoid adding new commits for small fixes like typos, formatting, or
+minor adjustments requested in review. For substantial changes that add
+functionality, a new commit may be more appropriate.&lt;/p&gt;
+&lt;p&gt;Say that we pushed our PR and one of the maintainers gave us a suggested change,
+(they want us to follow conventions and remove a trailing period from our
+packages description for this example).&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Make the edit locally (remove the trailing period in the file)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Stage the change: &lt;code&gt;git add pkgs/by-name/xx/your-package/package.nix&lt;/code&gt; (avoid
+&lt;code&gt;git add -A&lt;/code&gt; as it stages everything, which can accidentally include
+unrelated files)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Amend the commit: &lt;code&gt;git commit --amend --no-edit&lt;/code&gt;(this preserves your original
+commit message, if you want to change the commit message use
+&lt;code&gt;git commit --amend&lt;/code&gt;)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Force push: &lt;code&gt;git push --force-with-lease&lt;/code&gt; (This is safer than just using
+&lt;code&gt;--force&lt;/code&gt; because it will fail if someone else has pushed commits to your
+branch that you don’t have locally)&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;Alternative for Multiple Commits&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Interactive rebase is useful when your PR has several “WIP” commits (or you
+added a small review fix as a separate commit) and you want to present a cleaner
+history before merge.&lt;/p&gt;
+&lt;p&gt;You can use interactive rebase to squash all your would be small fix commits
+into a single commit they belong to.&lt;/p&gt;
+&lt;p&gt;Avoid squashing if the commits represent distinct, reviewable changes that stand
+on their own.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Basic Workflow (squash/fixup)&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Decide how many commits back you want to edit (example: last 3 commits):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git rebase -i HEAD~3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Your editor opens with a “todo” list (oldest at top). Change later commits
+from &lt;code&gt;pick&lt;/code&gt; to &lt;code&gt;fixup&lt;/code&gt; or &lt;code&gt;squash&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;fixup&lt;/code&gt; = combine into the previous commit, discard this commit message.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;squash&lt;/code&gt; = combine, but keep/edit commit messages.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Example todo:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;pick 1111111 mdbook-rss-feed: init at 0.1.0
+pick 2222222 mdbook-rss-feed: fix trailing period
+pick 3333333 mdbook-rss-feed: formatting
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Change to:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;pick 1111111 mdbook-rss-feed: init at 0.1.0
+fixup 2222222 mdbook-rss-feed: fix trailing period
+fixup 3333333 mdbook-rss-feed: formatting
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Save/close: if you squashed, Git will prompt you to edit the final combined
+message.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;Push updated history&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;You have to force-push because &lt;code&gt;rebase&lt;/code&gt; rewrites commit SHAs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git push --force-with-lease
+# If something goes wrong
+# git rebase --abort
+# If you hit conflicts, fix the files, then:
+# git add &amp;lt;files&amp;gt;
+# git rebase --continue
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you have an unrelated change accidentally included (for example: you staged
+an extra file), it’s usually better to fix it via rebase/splitting before
+reviewers spend time re-reviewing noise.&lt;/p&gt;
 </content></entry><entry><title>Hardening Networking</title><id>https://saylesss88.github.io/nix/hardening_networking.html</id><updated>2025-12-25T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/hardening_networking.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening Networking&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
@@ -6791,6 +6876,43 @@ security-focused guest.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;For deeper NixOS-specific hardening, see:
 &lt;a href=&quot;https://saylesss88.github.io/nix/hardening_NixOS.html&quot;&gt;hardening NixOS&lt;/a&gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Nix Toolbox&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ Warning: toolbx containers are integrated with the host system, don’t do
+things you wouldn’t do on your host. Toolbx containers are not fully isolated
+environments like VMs.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;That said, they are a fast and convenient way to spin up a Nix development
+environment. Know the limitations and benefits, and when you need more
+isolation, just spin up a VM instead.&lt;/p&gt;
+&lt;p&gt;Secureblue enforces restrictive container image policies by default, blocking
+unsigned or unverified images from registries like GitHub Container Registry.
+This requires explicit trust configuration for each container source.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ujust set-container-userns on
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Without this setting, containers will fail with &lt;code&gt;OCI permission denied&lt;/code&gt; errors.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Allow the Nix-Toolbox Image&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# For system-wide configuration (affects all users)
+run0 podman image trust set -t accept ghcr.io/thrix/nix-toolbox
+
+# For user-specific configuration (recommended for development)
+podman image trust set -t accept ghcr.io/thrix/nix-toolbox
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;-t accept&lt;/code&gt; flag allows images from this registry without requiring
+signature verification.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Check that the policy has been updated correctly:
+podman image trust show
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Create the &lt;code&gt;nix-toolbox&lt;/code&gt; container:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;toolbox create --image ghcr.io/thrix/nix-toolbox:42
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You will be prompted whether you want Home Manager installed or not as well.&lt;/p&gt;
+&lt;p&gt;Enter the toolbox:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;toolbox enter nix-toolbox-42
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can then use nix and home-manager to setup a fully declarative
+dev-environment.&lt;/p&gt;
 &lt;hr /&gt;
 &lt;h3&gt;Real-world recovery example&lt;/h3&gt;
 &lt;p&gt;Secureblue’s design and the underlying firmware safeguards also make certain
@@ -15712,6 +15834,623 @@ required. Confirm latest stable: If you’re targeting a stable branch,
 via NixOS status.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
+</content></entry><entry><title>Nix Lang</title><id>https://saylesss88.github.io/nix/nix_language.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/nix_language.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Language&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;!-- ![lambda1](../images/lambda1.png) --&gt;
+&lt;h2&gt;Nix Expression Language Syntax Overview&lt;/h2&gt;
+&lt;p&gt;The Nix language is designed for conveniently creating and composing
+&lt;em&gt;derivations&lt;/em&gt; precise descriptions of how contents of files are used to derive
+new files. –&lt;a href=&quot;https://nix.dev/manual/nix/2.28/language/&quot;&gt;Nix Reference Manual&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Nix is often described as “JSON with functions.” It’s a declarative language
+where you define outcomes, not step-by-step instructions. Instead of writing
+sequential code, you create expressions that describe data structures,
+functions, and dependencies. These expressions are evaluated lazily, meaning Nix
+computes values only when needed, making it efficient for managing large
+systems.&lt;/p&gt;
+&lt;p&gt;You can plug most of the following into the &lt;code&gt;nix repl&lt;/code&gt; I’m showing it in a
+single code block here for brevity:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# Comments Look Like This!
+
+# Strings
+&quot;This is a string&quot;          # String literal
+
+&apos;&apos;
+one
+two                        # multi-line String
+three
+&apos;&apos;
+
+(&quot;foo&quot; + &quot;bar&quot;)           # =&amp;gt; &quot;foobar&quot;
+
+&quot;foo&quot; != &quot;bar&quot;   # Inequality test  # =&amp;gt; true
+
+!false      # =&amp;gt; true
+
+(&quot;Home dir is ${builtins.getEnv &quot;HOME&quot;}&quot;)  # String Interpolation
+# =&amp;gt; &quot;Home dir is /home/jr&quot;
+
+&quot;3 6 ${builtins.toString 9}&quot;
+# =&amp;gt; &quot;3 6 9&quot;
+
+&quot;goodbye ${ { d = &quot;world&quot;;}.d}&quot;
+# =&amp;gt; &quot;goodbye world&quot;
+
+# Booleans
+
+(false &amp;amp;&amp;amp; true)    # AND         # =&amp;gt; false
+
+(true || false)    # OR         # =&amp;gt; true
+
+(if 6 &amp;lt; 9 then &quot;yay&quot; else &quot;nay&quot;)  # =&amp;gt; &quot;yay&quot;
+
+null      # Null Value
+
+679       # Integer
+
+(6 + 7 + 9) # =&amp;gt; 22   # Addition
+
+(9 - 3  - 2) # =&amp;gt; 4   # Subtraction
+
+(6 / 3)  # =&amp;gt; 2       # Division
+6.79      # Floating Point
+
+/etc/nixos      # Absolute Path
+
+../modules/nixos/boot.nix    # relative
+
+# Let expressions
+
+(let a = &quot;2&quot;; in                   # Let expressions are a way to create variables
+a + a + builtins.toString &quot;4&quot;)
+# =&amp;gt; &quot;224&quot;
+
+(let first = &quot;firstname&quot;; in
+&quot;lastname &quot; first)
+# =&amp;gt; &quot;lastname firstname&quot;
+
+# Lists
+
+[ 1 2 &quot;three&quot; &quot;bar&quot; &quot;baz&quot; ]   # lists are whitespace separated
+
+builtins.elemAt [ 1 2 3 4 5 ] 3
+# =&amp;gt; 4
+
+builtins.length [ 1 2 3 4 ]
+# =&amp;gt; 4
+
+# Attrsets
+
+{ first = &quot;Jim&quot;; last = &quot;Bo&quot;; }.last # Attribute selection
+# =&amp;gt; &quot;Bo&quot;
+
+{ a = 1; b = 3; } // { c = 4; b = 2; }   # Attribute Set merging
+# =&amp;gt; { a = 1; b = 2; c = 4; }               # Right Side takes precedence
+
+builtins.listToAttrs [ { name = &quot;Jr&quot;; value = &quot;Jr Juniorville&quot;; } {name = &quot;$&quot;; value = &quot;JR&quot;; } { name = &quot;jr&quot;; value = &quot;jr
+ville&quot;; }]
+# =&amp;gt; { &quot;$&quot; = &quot;JR&quot;; Jr = &quot;Jr Juniorville&quot;; jr = &quot;jrville&quot;; }
+
+# Control Flow
+
+if 2 * 2 == 4
+then &quot;yes!&quot;
+else &quot;no!&quot;
+# =&amp;gt; &quot;yes!&quot;
+
+assert 2 * 2
+== 4; &quot;yes!&quot;
+# =&amp;gt; &quot;yes!&quot;
+
+with builtins;
+head [ 5 6 7 ]
+# =&amp;gt; 5
+
+# or
+
+builtins.head[ 5 6 7 ]
+
+inherit pkgs     # pkgs = pkgs;
+src;             # src = src;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Understanding Laziness&lt;/h3&gt;
+&lt;p&gt;Nix expressions are evaluated lazily, meaning Nix computes values only when
+needed. This is a powerful feature that makes Nix efficient for managing large
+systems, as it avoids unnecessary computations.&lt;/p&gt;
+&lt;p&gt;For example, observe how &lt;code&gt;a&lt;/code&gt; is never evaluated in the following &lt;code&gt;nix-repl&lt;/code&gt;
+session:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; let a = builtins.div 4 0; b = 6; in b
+6
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Since &lt;code&gt;a&lt;/code&gt; isn’t used in the final result, there’s no division by zero error.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Strings and String Interpolation&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Strings&lt;/strong&gt;: Strings are enclosed in double quotes (&lt;code&gt;&quot;&lt;/code&gt;) or two single quotes
+(&lt;code&gt;&apos;&apos;&lt;/code&gt;).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; &quot;stringDaddy&quot;
+&quot;stringDaddy&quot;
+nix-repl&amp;gt; &apos;&apos;
+  This is a
+  multi-line
+  string
+&apos;&apos;
+&quot;This is a\nmulti-line\nstring.\n&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;a href=&quot;https://nix.dev/manual/nix/2.24/language/string-interpolation&quot;&gt;string interpolation&lt;/a&gt;.
+is a language feature where a string, path, or attribute name can contain an
+expressions enclosed in &lt;code&gt;${ }&lt;/code&gt;. This construct is called an &lt;em&gt;interpolated
+string&lt;/em&gt;, and the expression inside is an &lt;em&gt;interpolated expression&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Rather than writing:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let path = &quot;/usr/local&quot;; in &quot;--prefix=${path}&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This evaluates to &lt;code&gt;&quot;--prefix=/usr/local&quot;&lt;/code&gt;. Interpolated expressions must
+evaluate to a string, path, or an attribute set with an &lt;code&gt;outPath&lt;/code&gt; or
+&lt;code&gt;__toString&lt;/code&gt; attribute.&lt;/p&gt;
+&lt;h3&gt;Attribute Sets&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Attribute sets&lt;/strong&gt; are all over Nix code and deserve their own section, they are
+name-value pairs wrapped in curly braces, where the names must be unique:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  string = &quot;hello&quot;;
+  int = 8;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Attribute names usually don’t need quotes.&lt;/p&gt;
+&lt;p&gt;You can access attributes using &lt;em&gt;dot notation&lt;/em&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let person = { name = &quot;Alice&quot;; age = 30; }; in person.name
+&quot;Alice&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You will sometimes see attribute sets with &lt;code&gt;rec&lt;/code&gt; prepended. This allows access
+to attributes within the set:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
+  x = y;
+  y = 123;
+}.x
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;: &lt;code&gt;123&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;or&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
+  one = 1;
+  two = one + 1;
+  three = two + 1;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; {
+  one = 1;
+  three = 3;
+  two = 2;
+ }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# This would fail:
+{
+  one = 1;
+  two = one + 1;  # Error: undefined variable &apos;one&apos;
+  three = two + 1;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Recursive sets introduce the danger of &lt;em&gt;infinite recursion&lt;/em&gt; For example:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
+  x = y;
+  y = x;
+}.x
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Will crash with an &lt;code&gt;infinite recursion encountered&lt;/code&gt; error message.&lt;/p&gt;
+&lt;p&gt;The
+&lt;a href=&quot;https://nix.dev/manual/nix/2.24/language/operators.html#update&quot;&gt;attribute set update operator&lt;/a&gt;
+merges two attribute sets.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Example&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = 1; b = 2; } // { b = 3; c = 4; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = 1; b = 3; c = 4; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;However, names on the right take precedence, and updates are shallow.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Example&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = { b = 1; }; } // { a = { c = 3; }; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = { c = 3; }; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Above, key &lt;code&gt;b&lt;/code&gt; was completely removed, because the whole &lt;code&gt;a&lt;/code&gt; value was replaced.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Inheriting Attributes&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Click to see Output:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let x = 123; in
+{
+  inherit x;
+  y = 456;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;is equivalent to&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let x = 123; in
+{
+  x = x;
+  y = 456;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which are both equivalent to&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  x = 123;
+  y = 456;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗: This works because &lt;code&gt;x&lt;/code&gt; is added to the lexical scope by the &lt;code&gt;let&lt;/code&gt;
+construct.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Now that we understand attribute sets lets move on to functions, a powerful
+feature of the Nix language that gives you the ability to reuse and share
+logical pieces of code.&lt;/p&gt;
+&lt;h3&gt;Functions(lambdas):&lt;/h3&gt;
+&lt;p&gt;Functions in Nix help you build reusable components and are the the building
+blocks of Nix. In the next chapter we’ll go even further into Nix functions and
+how to use them but I will touch on them here.&lt;/p&gt;
+&lt;p&gt;Nix functions have this form:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;pattern: body
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The following is a function that expects an integer and returns it increased by
+1:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;x: x + 1   # lambda function, not bound to a variable
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The pattern tells us what the argument of the function has to look like, and
+binds variables in the body to (parts of) the argument.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;(x: x + 5) 200
+205
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;They are all lambdas (i.e. anonymous functions without names) until we assign
+them to a variable like the following example.&lt;/p&gt;
+&lt;p&gt;Functions are defined using this syntax, where &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; are attributes passed
+into the function:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  my_function = x: y: x + y;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The code below calls a function called &lt;code&gt;my_function&lt;/code&gt; with the parameters &lt;code&gt;2&lt;/code&gt; and
+&lt;code&gt;3&lt;/code&gt;, and assigns its output to the &lt;code&gt;my_value&lt;/code&gt; field:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  my_value = my_function 2 3;
+}
+my_value
+5
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The body of the function automatically returns the result of the function.
+Functions are called by spaces between it and its parameters. No commas are
+needed to separate parameters.&lt;/p&gt;
+&lt;p&gt;The following is a function that expects an attribute set with required
+attributes &lt;code&gt;a&lt;/code&gt; and &lt;code&gt;b&lt;/code&gt; and concatenates them:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a, b }: a + b
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Default Values in Functions&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;Functions in Nix can define &lt;strong&gt;default values&lt;/strong&gt; for their arguments. This allows
+for more flexible function calls where some arguments are optional.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ x, y ? &quot;foo&quot;, z ? &quot;bar&quot; }: z + y + x
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Specifies a function that only requires an attribute named &lt;code&gt;x&lt;/code&gt;, but optionally
+accepts &lt;code&gt;y&lt;/code&gt; and &lt;code&gt;z&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;@-patterns in functions&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;An &lt;code&gt;@-pattern&lt;/code&gt; provides a means of referring to the whole value being matched by
+the function’s argument pattern, in addition to destructuring it. This is
+especially useful when you want to access attributes that are not explicitly
+destructured in the pattern:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;args@{ x, y, z, ... }: z + y + x + args.a
+# or
+{ x, y, z, ... } @ args: z + y + x + args.a
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Here, &lt;code&gt;args&lt;/code&gt; is bound to the argument as &lt;em&gt;passed&lt;/em&gt;, which is further matched
+against the pattern &lt;code&gt;{ x, y, z, ... }&lt;/code&gt;. The &lt;code&gt;@-pattern&lt;/code&gt; makes mainly sense
+with an ellipsis(&lt;code&gt;...&lt;/code&gt;) as you can access attribute names as &lt;code&gt;a&lt;/code&gt;, using
+&lt;code&gt;args.a&lt;/code&gt;, which was given as an additional attribute to the function.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;We will expand on Functions in
+&lt;a href=&quot;https://saylesss88.github.io/Understanding_Nix_Functions_2.html&quot;&gt;This Chapter&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;If, Let, and With Expressions&lt;/h3&gt;
+&lt;p&gt;Nix is a pure expression language, meaning every construct evaluates to a value
+— there are no statements. Because of this, &lt;strong&gt;if expressions&lt;/strong&gt; in Nix work
+differently than in imperative languages, where conditional logic often relies
+on statements (&lt;code&gt;if&lt;/code&gt;, &lt;code&gt;elsif&lt;/code&gt;, etc.).&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;If expressions in Nix&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;Since everything in Nix is an expression, an &lt;code&gt;if&lt;/code&gt; expression must always produce
+a value:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; a = 6
+nix-repl&amp;gt; b = 10
+nix-repl&amp;gt; if a &amp;gt; b then &quot;yes&quot; else &quot;no&quot;
+&quot;no&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, &lt;code&gt;&quot;no&quot;&lt;/code&gt; is the result because &lt;code&gt;a&lt;/code&gt;(6) is not greater than &lt;code&gt;b&lt;/code&gt;(10). Notice
+that there’s no separate conditional statement – the entire construct evaluates
+to a value.&lt;/p&gt;
+&lt;p&gt;Another example, integrating built-in functions:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  key = if builtins.pathExists ./path then &quot;YES&quot; else &quot;NO!&quot;;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If &lt;code&gt;./path&lt;/code&gt; exists it will evaluate to the value &lt;code&gt;&quot;YES&quot;&lt;/code&gt; or else it will
+evaluate to &lt;code&gt;&quot;NO!&quot;&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Thus, the final result of the expression would be:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ key = &quot;YES&quot;; }
+# or
+{ key = &quot;NO!&quot;; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Since Nix does not have statements, Nix’s &lt;code&gt;if&lt;/code&gt; statements behave more like
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Ternary_conditional_operator&quot;&gt;ternary operators&lt;/a&gt;
+(&lt;code&gt;condition ? value_if_true : value_if_false&lt;/code&gt;) in other languages.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Let expressions&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;Let expressions in Nix is primarily a mechanism for local variable binding and
+scoping. It allows you to define named values that are only accessible within
+the &lt;code&gt;in&lt;/code&gt; block of the &lt;code&gt;let&lt;/code&gt; expression. This is useful for keeping code clean
+and avoiding repitition.&lt;/p&gt;
+&lt;p&gt;For example:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
+  a = &quot;foo&quot;;
+  b = &quot;fighter&quot;;
+in a + b
+&quot;foofighter&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, &lt;code&gt;a&lt;/code&gt; and &lt;code&gt;b&lt;/code&gt; are defined inside the &lt;code&gt;let&lt;/code&gt; block, and their values are used
+in the &lt;code&gt;in&lt;/code&gt; expression. Since everything in Nix is an expression, &lt;code&gt;a + b&lt;/code&gt;
+evaluates to &lt;code&gt;&quot;foofighter&quot;&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Using Let Expressions Inside Attribute Sets&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Let expressions are commonly used when defining attribute sets (Click for
+output):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
+  appName = &quot;nix-app&quot;;
+  version = &quot;1.0&quot;;
+in {
+  name = appName;
+  fullName = appName + &quot;-&quot; + version;
+}
+~{
+~  name = &quot;nix-app&quot;;
+~  fullName = &quot;nix-app-1.0&quot;;
+~}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This allows you to reuse values within an attribute set, making the code more
+modular and preventing duplication.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Let Expressions in Function Arguments&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;You can also use let expressions within function arguments to define
+intermediate values before returning an output:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs, lib }:
+let
+  someVar = &quot;hello&quot;;
+  otherVar = &quot;world&quot;;
+in
+{ inherit pkgs lib someVar otherVar; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Result:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  pkgs = &amp;lt;value&amp;gt;;
+  lib = &amp;lt;value&amp;gt;;
+  someVar = &quot;hello&quot;;
+  otherVar = &quot;world&quot;;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, &lt;code&gt;inherit&lt;/code&gt; brings &lt;code&gt;pkgs&lt;/code&gt; and &lt;code&gt;lib&lt;/code&gt; into the resulting attribute set,
+alongside the locally defined variables &lt;code&gt;someVar&lt;/code&gt; and &lt;code&gt;otherVar&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Key Takeaways&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Let expressions allow local variable bindings that are only visible inside the
+in block. They also help avoid repitition and improve readability.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Commonly used inside attribute sets or function arguments.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Their scope is limited to the expression in which they are declared.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;With expressions&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;A &lt;code&gt;with&lt;/code&gt; expression in Nix is primarily used to simplify access to attributes
+within an attribute set. Instead of repeatedly referring to a long attribute
+path, with temporarily brings the attributes into scope, allowing direct access
+without prefixing them.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Basic Example: Reducing Attribute Path Usage&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Consider the following expressions:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; longName = { a = 3; b = 4; }
+nix-repl&amp;gt; longName.a + longName.b
+7
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, we must explicitly reference &lt;code&gt;longName.a&lt;/code&gt; and &lt;code&gt;longName.b&lt;/code&gt;. Using a &lt;code&gt;with&lt;/code&gt;
+expression simplifies this:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; with longName; a + b
+7
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, within the scope of the with expression, &lt;code&gt;a&lt;/code&gt; and &lt;code&gt;b&lt;/code&gt; are accessible without
+prefixing them with &lt;code&gt;longName&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Practical Use Case: Working with &lt;code&gt;pkgs&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;One of the most common uses of &lt;code&gt;with&lt;/code&gt; that you’ll see is when dealing with
+packages from &lt;code&gt;nixpkgs&lt;/code&gt; is writing the following:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs }:
+with pkgs; {
+  myPackages = [ vim git neofetch ];
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Instead of writing this:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs }:
+{
+  myPackages = [ pkgs.vim pkgs.git pkgs.neofetch ];
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Tip: Overusing &lt;code&gt;with lib;&lt;/code&gt; or &lt;code&gt;with pkgs;&lt;/code&gt; can reduce clarity, it may be fine
+for smaller modules where the scope is limited. For larger configurations,
+explicit references (&lt;code&gt;pkgs.something&lt;/code&gt;) often make dependencies clearer and
+prevent ambiguity.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;Nix Language Quirks&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;with&lt;/code&gt; gets less priority than &lt;code&gt;let&lt;/code&gt;. This can be confusing, especially if
+you like to write &lt;code&gt;with pkgs;&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; pkgs = { x = 2; }
+
+nix-repl&amp;gt; with pkgs; x
+2
+
+nix-repl&amp;gt; with pkgs; let x = 4; in x
+4
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This shows us that the &lt;code&gt;let&lt;/code&gt; binding overrides the &lt;code&gt;with&lt;/code&gt; binding.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let x = 4; in with pkgs; x
+4
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Still returns &lt;code&gt;4&lt;/code&gt;, but the reasoning is different. The &lt;code&gt;with&lt;/code&gt; expression doesn’t
+define new bindings; it simply makes attributes from &lt;code&gt;pkgs&lt;/code&gt; available as
+unqualified names. However, because &lt;code&gt;let x = 4&lt;/code&gt; is &lt;strong&gt;outside&lt;/strong&gt; the &lt;code&gt;with&lt;/code&gt;, it
+already extablished &lt;code&gt;x = 4&lt;/code&gt;, so when &lt;code&gt;with pkgs; x&lt;/code&gt; is evaluated inside, &lt;code&gt;x&lt;/code&gt;
+still refers to the &lt;strong&gt;outer&lt;/strong&gt; &lt;code&gt;let&lt;/code&gt; binding, not the one from &lt;code&gt;pkgs&lt;/code&gt;.&lt;/p&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Default values aren’t bound in &lt;code&gt;@-patterns&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;In the following example, calling a function that binds a default value &lt;code&gt;&quot;baz&quot;&lt;/code&gt;
+to the attribute &lt;code&gt;b&lt;/code&gt; of an argument using an alias (&lt;code&gt;@&lt;/code&gt;) pattern, with an empty
+attribute set as argument, results in the alias variable inputs being bound to
+the original empty attribute set instead of including the default value:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;(inputs@(b ? &quot;baz&quot;): inputs) {}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Output:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This happens because the alias &lt;code&gt;inputs@&lt;/code&gt; binds to the argument as passed, before
+the default value for &lt;code&gt;b&lt;/code&gt; is applied.&lt;/p&gt;
+&lt;p&gt;The syntax requires curly brackets around the attribute set pattern for
+correctness, so the fixed syntax would be:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;(inputs@{b ? &quot;baz&quot;}: inputs) {}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;However, even with this fix, the inputs alias still refers to the original
+argument without defaults applied. So the quirk persists, showing how default
+values in &lt;code&gt;@-patterns&lt;/code&gt; do not propagate into the aliased variable.&lt;/p&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Destructuring function arguments:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; f = { x ? 2, y ? 4 }: x + y
+
+nix-repl&amp;gt; f { }
+6
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The function &lt;code&gt;f&lt;/code&gt; takes an attribute set with default values (&lt;code&gt;x = 2&lt;/code&gt;, &lt;code&gt;y = 4&lt;/code&gt;)&lt;/p&gt;
+&lt;p&gt;When called with &lt;code&gt;{}&lt;/code&gt; (an empty set), it falls back to the default values
+(&lt;code&gt;2 + 4&lt;/code&gt; -&amp;gt; &lt;code&gt;6&lt;/code&gt;)&lt;/p&gt;
+&lt;p&gt;Using &lt;code&gt;@args&lt;/code&gt; to capture the entire input set:&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;@args&lt;/code&gt; syntax allows us to retain access to the full attribute set, even
+after destructuring:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; f = { x ? 1, y ? 2, ... }@args: with args; x + y + z
+
+nix-repl&amp;gt; f { z = 3; }
+6
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;{ x ? 1, y ? 2, ... }&lt;/code&gt; syntax means &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; have defaults, while &lt;code&gt;...&lt;/code&gt;
+allows additional attributes.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;@args&lt;/code&gt; binds the entire attribute set (&lt;code&gt;args&lt;/code&gt;) so that we can access &lt;code&gt;z&lt;/code&gt;, which
+wouldn’t be destructured by default.&lt;/p&gt;
+&lt;p&gt;When calling &lt;code&gt;f { z = 3; }&lt;/code&gt;, we pass an extra attribute (&lt;code&gt;z = 3&lt;/code&gt;), making
+&lt;code&gt;x + y + z&lt;/code&gt; → &lt;code&gt;1 + 2 + 3 = 6&lt;/code&gt;.&lt;/p&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Imports and namespaces&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;There is a keyword import, but it’s equivalent in other languages is eval. It
+can be used for namespacing too:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
+  pkgs = import &amp;lt;nixpkgs&amp;gt; {};
+  lib = import &amp;lt;nixpkgs/lib&amp;gt;;
+in
+  pkgs.runCommand (lib.strings.removePrefix &quot;....
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;consider using &lt;code&gt;import&lt;/code&gt; here as using &lt;code&gt;qualified import ...&lt;/code&gt; in Haskell or
+&lt;code&gt;import ...&lt;/code&gt; in Python.&lt;/p&gt;
+&lt;p&gt;Another way of importing is with &lt;code&gt;import ...;&lt;/code&gt;, which corresponds to Python
+&lt;code&gt;from ... import *&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;But because of not very great IDE support in Nix, &lt;code&gt;with import ...;&lt;/code&gt; is
+discouraged. Rather use inherit, especially if you are targeting source code for
+Nix newcomers:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
+  lib = import &amp;lt;nixpkgs/lib&amp;gt;;
+  inherit (lib.strings)
+    removePrefix removeSuffix
+  ;
+  inherit (lib.lists)
+    isList init drop
+  ;
+in
+  removePrefix ...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;inherit&lt;/code&gt; has higher priority than &lt;code&gt;with&lt;/code&gt;, and conflicts with &lt;code&gt;let&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; let pkgs = { x = 1; }; x = 2; x = 3; inherit (pkgs) x; in x
+error: attribute ‘x’ at (string):1:31 already defined at (string):1:24
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This makes it a sane citizen of Nix lanugage… except it has a twin, called
+&lt;code&gt;{ inherit ...; }&lt;/code&gt;. They DON’T do the same - &lt;code&gt;let inherit ...&lt;/code&gt; adds
+let-bindings, and &lt;code&gt;{ inherit ...; }&lt;/code&gt; adds attributes to a record.
+–&lt;a href=&quot;https://nixos.wiki/wiki/Nix_Language_Quirks&quot;&gt;https://nixos.wiki/wiki/Nix_Language_Quirks&lt;/a&gt;&lt;/p&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Only attribute names can be interpolated, not Nix code:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; let ${&quot;y&quot;} = 4; in y
+4
+
+nix-repl&amp;gt; with { ${&quot;y&quot;} = 4; }; y
+4
+
+let y = 1; x = ${y}; in x
+error: syntax error, unexpected DOLLAR_CURLY
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Conclusion&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;let&lt;/code&gt; bindings introduce new local values and override anything from &lt;code&gt;with&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;with&lt;/code&gt; doesn’t create bindings - it only makes attributes available within its
+scope.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The order matters: If &lt;code&gt;let x = 4&lt;/code&gt; is outside &lt;code&gt;with&lt;/code&gt;, then &lt;code&gt;x = 4&lt;/code&gt; already
+exists before &lt;code&gt;with&lt;/code&gt; runs, so &lt;code&gt;with pkgs; x&lt;/code&gt; resolves to &lt;code&gt;4&lt;/code&gt;, not the value
+from &lt;code&gt;pkgs&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;Resources&lt;/h4&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Resources (Click to Expand) &lt;/summary&gt;
+&lt;p&gt;A few resources to help get you started with the Nix Language, I have actually
+grown to love the language. I find it fairly simple but powerful!&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nix.dev/tutorials/nix-language.html&quot;&gt;nix.dev nixlang-basics&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nix.dev/manual/nix/2.24/language/&quot;&gt;Nix Language Overview&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://learnxinyminutes.com/nix/&quot;&gt;learn nix in y minutes&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/tazjin/nix-1p&quot;&gt;nix onepager&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://zero-to-nix.com/concepts/nix-language/&quot;&gt;zero-to-nix nix lang&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nixos.org/guides/nix-pills/04-basics-of-language.html&quot;&gt;nix-pills basics of nixlang&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nixos.org/guides/nix-pills/04-basics-of-language&quot;&gt;Basics of the Language Pill&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;builtins.head[ 5 6 7 ]
+&lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>Readme1</title><id>https://saylesss88.github.io/nix/index.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/index.html" rel="alternate"/><content type="html">&lt;h1&gt;Hardening README&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
@@ -16372,621 +17111,6 @@ relevant).&lt;/p&gt;
 &lt;p&gt;&lt;a href=&quot;https://github.com/nix-community/impermanence&quot;&gt;nix-community impermanence module&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-</content></entry><entry><title>Nix Lang</title><id>https://saylesss88.github.io/nix/nix_language.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/nix_language.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Language&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;!-- ![lambda1](../images/lambda1.png) --&gt;
-&lt;h2&gt;Nix Expression Language Syntax Overview&lt;/h2&gt;
-&lt;p&gt;The Nix language is designed for conveniently creating and composing
-&lt;em&gt;derivations&lt;/em&gt; precise descriptions of how contents of files are used to derive
-new files. –&lt;a href=&quot;https://nix.dev/manual/nix/2.28/language/&quot;&gt;Nix Reference Manual&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Nix is often described as “JSON with functions.” It’s a declarative language
-where you define outcomes, not step-by-step instructions. Instead of writing
-sequential code, you create expressions that describe data structures,
-functions, and dependencies. These expressions are evaluated lazily, meaning Nix
-computes values only when needed, making it efficient for managing large
-systems.&lt;/p&gt;
-&lt;p&gt;You can plug most of the following into the &lt;code&gt;nix repl&lt;/code&gt; I’m showing it in a
-single code block here for brevity:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# Comments Look Like This!
-
-# Strings
-&quot;This is a string&quot;          # String literal
-
-&apos;&apos;
-one
-two                        # multi-line String
-three
-&apos;&apos;
-
-(&quot;foo&quot; + &quot;bar&quot;)           # =&amp;gt; &quot;foobar&quot;
-
-&quot;foo&quot; != &quot;bar&quot;   # Inequality test  # =&amp;gt; true
-
-!false      # =&amp;gt; true
-
-(&quot;Home dir is ${builtins.getEnv &quot;HOME&quot;}&quot;)  # String Interpolation
-# =&amp;gt; &quot;Home dir is /home/jr&quot;
-
-&quot;3 6 ${builtins.toString 9}&quot;
-# =&amp;gt; &quot;3 6 9&quot;
-
-&quot;goodbye ${ { d = &quot;world&quot;;}.d}&quot;
-# =&amp;gt; &quot;goodbye world&quot;
-
-# Booleans
-
-(false &amp;amp;&amp;amp; true)    # AND         # =&amp;gt; false
-
-(true || false)    # OR         # =&amp;gt; true
-
-(if 6 &amp;lt; 9 then &quot;yay&quot; else &quot;nay&quot;)  # =&amp;gt; &quot;yay&quot;
-
-null      # Null Value
-
-679       # Integer
-
-(6 + 7 + 9) # =&amp;gt; 22   # Addition
-
-(9 - 3  - 2) # =&amp;gt; 4   # Subtraction
-
-(6 / 3)  # =&amp;gt; 2       # Division
-6.79      # Floating Point
-
-/etc/nixos      # Absolute Path
-
-../modules/nixos/boot.nix    # relative
-
-# Let expressions
-
-(let a = &quot;2&quot;; in                   # Let expressions are a way to create variables
-a + a + builtins.toString &quot;4&quot;)
-# =&amp;gt; &quot;224&quot;
-
-(let first = &quot;firstname&quot;; in
-&quot;lastname &quot; first)
-# =&amp;gt; &quot;lastname firstname&quot;
-
-# Lists
-
-[ 1 2 &quot;three&quot; &quot;bar&quot; &quot;baz&quot; ]   # lists are whitespace separated
-
-builtins.elemAt [ 1 2 3 4 5 ] 3
-# =&amp;gt; 4
-
-builtins.length [ 1 2 3 4 ]
-# =&amp;gt; 4
-
-# Attrsets
-
-{ first = &quot;Jim&quot;; last = &quot;Bo&quot;; }.last # Attribute selection
-# =&amp;gt; &quot;Bo&quot;
-
-{ a = 1; b = 3; } // { c = 4; b = 2; }   # Attribute Set merging
-# =&amp;gt; { a = 1; b = 2; c = 4; }               # Right Side takes precedence
-
-builtins.listToAttrs [ { name = &quot;Jr&quot;; value = &quot;Jr Juniorville&quot;; } {name = &quot;$&quot;; value = &quot;JR&quot;; } { name = &quot;jr&quot;; value = &quot;jr
-ville&quot;; }]
-# =&amp;gt; { &quot;$&quot; = &quot;JR&quot;; Jr = &quot;Jr Juniorville&quot;; jr = &quot;jrville&quot;; }
-
-# Control Flow
-
-if 2 * 2 == 4
-then &quot;yes!&quot;
-else &quot;no!&quot;
-# =&amp;gt; &quot;yes!&quot;
-
-assert 2 * 2
-== 4; &quot;yes!&quot;
-# =&amp;gt; &quot;yes!&quot;
-
-with builtins;
-head [ 5 6 7 ]
-# =&amp;gt; 5
-
-# or
-
-builtins.head[ 5 6 7 ]
-
-inherit pkgs     # pkgs = pkgs;
-src;             # src = src;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h3&gt;Understanding Laziness&lt;/h3&gt;
-&lt;p&gt;Nix expressions are evaluated lazily, meaning Nix computes values only when
-needed. This is a powerful feature that makes Nix efficient for managing large
-systems, as it avoids unnecessary computations.&lt;/p&gt;
-&lt;p&gt;For example, observe how &lt;code&gt;a&lt;/code&gt; is never evaluated in the following &lt;code&gt;nix-repl&lt;/code&gt;
-session:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; let a = builtins.div 4 0; b = 6; in b
-6
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Since &lt;code&gt;a&lt;/code&gt; isn’t used in the final result, there’s no division by zero error.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;Strings and String Interpolation&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;Strings&lt;/strong&gt;: Strings are enclosed in double quotes (&lt;code&gt;&quot;&lt;/code&gt;) or two single quotes
-(&lt;code&gt;&apos;&apos;&lt;/code&gt;).&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; &quot;stringDaddy&quot;
-&quot;stringDaddy&quot;
-nix-repl&amp;gt; &apos;&apos;
-  This is a
-  multi-line
-  string
-&apos;&apos;
-&quot;This is a\nmulti-line\nstring.\n&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;a href=&quot;https://nix.dev/manual/nix/2.24/language/string-interpolation&quot;&gt;string interpolation&lt;/a&gt;.
-is a language feature where a string, path, or attribute name can contain an
-expressions enclosed in &lt;code&gt;${ }&lt;/code&gt;. This construct is called an &lt;em&gt;interpolated
-string&lt;/em&gt;, and the expression inside is an &lt;em&gt;interpolated expression&lt;/em&gt;.&lt;/p&gt;
-&lt;p&gt;Rather than writing:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let path = &quot;/usr/local&quot;; in &quot;--prefix=${path}&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This evaluates to &lt;code&gt;&quot;--prefix=/usr/local&quot;&lt;/code&gt;. Interpolated expressions must
-evaluate to a string, path, or an attribute set with an &lt;code&gt;outPath&lt;/code&gt; or
-&lt;code&gt;__toString&lt;/code&gt; attribute.&lt;/p&gt;
-&lt;h3&gt;Attribute Sets&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;Attribute sets&lt;/strong&gt; are all over Nix code and deserve their own section, they are
-name-value pairs wrapped in curly braces, where the names must be unique:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  string = &quot;hello&quot;;
-  int = 8;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Attribute names usually don’t need quotes.&lt;/p&gt;
-&lt;p&gt;You can access attributes using &lt;em&gt;dot notation&lt;/em&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let person = { name = &quot;Alice&quot;; age = 30; }; in person.name
-&quot;Alice&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;You will sometimes see attribute sets with &lt;code&gt;rec&lt;/code&gt; prepended. This allows access
-to attributes within the set:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
-  x = y;
-  y = 123;
-}.x
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;: &lt;code&gt;123&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;or&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
-  one = 1;
-  two = one + 1;
-  three = two + 1;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; {
-  one = 1;
-  three = 3;
-  two = 2;
- }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# This would fail:
-{
-  one = 1;
-  two = one + 1;  # Error: undefined variable &apos;one&apos;
-  three = two + 1;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Recursive sets introduce the danger of &lt;em&gt;infinite recursion&lt;/em&gt; For example:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
-  x = y;
-  y = x;
-}.x
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Will crash with an &lt;code&gt;infinite recursion encountered&lt;/code&gt; error message.&lt;/p&gt;
-&lt;p&gt;The
-&lt;a href=&quot;https://nix.dev/manual/nix/2.24/language/operators.html#update&quot;&gt;attribute set update operator&lt;/a&gt;
-merges two attribute sets.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Example&lt;/strong&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = 1; b = 2; } // { b = 3; c = 4; }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = 1; b = 3; c = 4; }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;However, names on the right take precedence, and updates are shallow.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Example&lt;/strong&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = { b = 1; }; } // { a = { c = 3; }; }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = { c = 3; }; }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Above, key &lt;code&gt;b&lt;/code&gt; was completely removed, because the whole &lt;code&gt;a&lt;/code&gt; value was replaced.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Inheriting Attributes&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Click to see Output:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let x = 123; in
-{
-  inherit x;
-  y = 456;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;is equivalent to&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let x = 123; in
-{
-  x = x;
-  y = 456;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;which are both equivalent to&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  x = 123;
-  y = 456;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗: This works because &lt;code&gt;x&lt;/code&gt; is added to the lexical scope by the &lt;code&gt;let&lt;/code&gt;
-construct.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;Now that we understand attribute sets lets move on to functions, a powerful
-feature of the Nix language that gives you the ability to reuse and share
-logical pieces of code.&lt;/p&gt;
-&lt;h3&gt;Functions(lambdas):&lt;/h3&gt;
-&lt;p&gt;Functions in Nix help you build reusable components and are the the building
-blocks of Nix. In the next chapter we’ll go even further into Nix functions and
-how to use them but I will touch on them here.&lt;/p&gt;
-&lt;p&gt;Nix functions have this form:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;pattern: body
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The following is a function that expects an integer and returns it increased by
-1:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;x: x + 1   # lambda function, not bound to a variable
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The pattern tells us what the argument of the function has to look like, and
-binds variables in the body to (parts of) the argument.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;(x: x + 5) 200
-205
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;They are all lambdas (i.e. anonymous functions without names) until we assign
-them to a variable like the following example.&lt;/p&gt;
-&lt;p&gt;Functions are defined using this syntax, where &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; are attributes passed
-into the function:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  my_function = x: y: x + y;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The code below calls a function called &lt;code&gt;my_function&lt;/code&gt; with the parameters &lt;code&gt;2&lt;/code&gt; and
-&lt;code&gt;3&lt;/code&gt;, and assigns its output to the &lt;code&gt;my_value&lt;/code&gt; field:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  my_value = my_function 2 3;
-}
-my_value
-5
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The body of the function automatically returns the result of the function.
-Functions are called by spaces between it and its parameters. No commas are
-needed to separate parameters.&lt;/p&gt;
-&lt;p&gt;The following is a function that expects an attribute set with required
-attributes &lt;code&gt;a&lt;/code&gt; and &lt;code&gt;b&lt;/code&gt; and concatenates them:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a, b }: a + b
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Default Values in Functions&lt;/strong&gt;:&lt;/p&gt;
-&lt;p&gt;Functions in Nix can define &lt;strong&gt;default values&lt;/strong&gt; for their arguments. This allows
-for more flexible function calls where some arguments are optional.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ x, y ? &quot;foo&quot;, z ? &quot;bar&quot; }: z + y + x
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Specifies a function that only requires an attribute named &lt;code&gt;x&lt;/code&gt;, but optionally
-accepts &lt;code&gt;y&lt;/code&gt; and &lt;code&gt;z&lt;/code&gt;.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;@-patterns in functions&lt;/strong&gt;:&lt;/p&gt;
-&lt;p&gt;An &lt;code&gt;@-pattern&lt;/code&gt; provides a means of referring to the whole value being matched by
-the function’s argument pattern, in addition to destructuring it. This is
-especially useful when you want to access attributes that are not explicitly
-destructured in the pattern:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;args@{ x, y, z, ... }: z + y + x + args.a
-# or
-{ x, y, z, ... } @ args: z + y + x + args.a
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Here, &lt;code&gt;args&lt;/code&gt; is bound to the argument as &lt;em&gt;passed&lt;/em&gt;, which is further matched
-against the pattern &lt;code&gt;{ x, y, z, ... }&lt;/code&gt;. The &lt;code&gt;@-pattern&lt;/code&gt; makes mainly sense
-with an ellipsis(&lt;code&gt;...&lt;/code&gt;) as you can access attribute names as &lt;code&gt;a&lt;/code&gt;, using
-&lt;code&gt;args.a&lt;/code&gt;, which was given as an additional attribute to the function.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;We will expand on Functions in
-&lt;a href=&quot;https://saylesss88.github.io/Understanding_Nix_Functions_2.html&quot;&gt;This Chapter&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;If, Let, and With Expressions&lt;/h3&gt;
-&lt;p&gt;Nix is a pure expression language, meaning every construct evaluates to a value
-— there are no statements. Because of this, &lt;strong&gt;if expressions&lt;/strong&gt; in Nix work
-differently than in imperative languages, where conditional logic often relies
-on statements (&lt;code&gt;if&lt;/code&gt;, &lt;code&gt;elsif&lt;/code&gt;, etc.).&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;If expressions in Nix&lt;/strong&gt;:&lt;/p&gt;
-&lt;p&gt;Since everything in Nix is an expression, an &lt;code&gt;if&lt;/code&gt; expression must always produce
-a value:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; a = 6
-nix-repl&amp;gt; b = 10
-nix-repl&amp;gt; if a &amp;gt; b then &quot;yes&quot; else &quot;no&quot;
-&quot;no&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Here, &lt;code&gt;&quot;no&quot;&lt;/code&gt; is the result because &lt;code&gt;a&lt;/code&gt;(6) is not greater than &lt;code&gt;b&lt;/code&gt;(10). Notice
-that there’s no separate conditional statement – the entire construct evaluates
-to a value.&lt;/p&gt;
-&lt;p&gt;Another example, integrating built-in functions:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  key = if builtins.pathExists ./path then &quot;YES&quot; else &quot;NO!&quot;;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If &lt;code&gt;./path&lt;/code&gt; exists it will evaluate to the value &lt;code&gt;&quot;YES&quot;&lt;/code&gt; or else it will
-evaluate to &lt;code&gt;&quot;NO!&quot;&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Thus, the final result of the expression would be:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ key = &quot;YES&quot;; }
-# or
-{ key = &quot;NO!&quot;; }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Since Nix does not have statements, Nix’s &lt;code&gt;if&lt;/code&gt; statements behave more like
-&lt;a href=&quot;https://en.wikipedia.org/wiki/Ternary_conditional_operator&quot;&gt;ternary operators&lt;/a&gt;
-(&lt;code&gt;condition ? value_if_true : value_if_false&lt;/code&gt;) in other languages.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Let expressions&lt;/strong&gt;:&lt;/p&gt;
-&lt;p&gt;Let expressions in Nix is primarily a mechanism for local variable binding and
-scoping. It allows you to define named values that are only accessible within
-the &lt;code&gt;in&lt;/code&gt; block of the &lt;code&gt;let&lt;/code&gt; expression. This is useful for keeping code clean
-and avoiding repitition.&lt;/p&gt;
-&lt;p&gt;For example:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
-  a = &quot;foo&quot;;
-  b = &quot;fighter&quot;;
-in a + b
-&quot;foofighter&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Here, &lt;code&gt;a&lt;/code&gt; and &lt;code&gt;b&lt;/code&gt; are defined inside the &lt;code&gt;let&lt;/code&gt; block, and their values are used
-in the &lt;code&gt;in&lt;/code&gt; expression. Since everything in Nix is an expression, &lt;code&gt;a + b&lt;/code&gt;
-evaluates to &lt;code&gt;&quot;foofighter&quot;&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Using Let Expressions Inside Attribute Sets&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Let expressions are commonly used when defining attribute sets (Click for
-output):&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
-  appName = &quot;nix-app&quot;;
-  version = &quot;1.0&quot;;
-in {
-  name = appName;
-  fullName = appName + &quot;-&quot; + version;
-}
-~{
-~  name = &quot;nix-app&quot;;
-~  fullName = &quot;nix-app-1.0&quot;;
-~}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This allows you to reuse values within an attribute set, making the code more
-modular and preventing duplication.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Let Expressions in Function Arguments&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;You can also use let expressions within function arguments to define
-intermediate values before returning an output:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs, lib }:
-let
-  someVar = &quot;hello&quot;;
-  otherVar = &quot;world&quot;;
-in
-{ inherit pkgs lib someVar otherVar; }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Result:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  pkgs = &amp;lt;value&amp;gt;;
-  lib = &amp;lt;value&amp;gt;;
-  someVar = &quot;hello&quot;;
-  otherVar = &quot;world&quot;;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Here, &lt;code&gt;inherit&lt;/code&gt; brings &lt;code&gt;pkgs&lt;/code&gt; and &lt;code&gt;lib&lt;/code&gt; into the resulting attribute set,
-alongside the locally defined variables &lt;code&gt;someVar&lt;/code&gt; and &lt;code&gt;otherVar&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Key Takeaways&lt;/strong&gt;:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Let expressions allow local variable bindings that are only visible inside the
-in block. They also help avoid repitition and improve readability.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Commonly used inside attribute sets or function arguments.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Their scope is limited to the expression in which they are declared.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;With expressions&lt;/strong&gt;:&lt;/p&gt;
-&lt;p&gt;A &lt;code&gt;with&lt;/code&gt; expression in Nix is primarily used to simplify access to attributes
-within an attribute set. Instead of repeatedly referring to a long attribute
-path, with temporarily brings the attributes into scope, allowing direct access
-without prefixing them.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Basic Example: Reducing Attribute Path Usage&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Consider the following expressions:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; longName = { a = 3; b = 4; }
-nix-repl&amp;gt; longName.a + longName.b
-7
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Here, we must explicitly reference &lt;code&gt;longName.a&lt;/code&gt; and &lt;code&gt;longName.b&lt;/code&gt;. Using a &lt;code&gt;with&lt;/code&gt;
-expression simplifies this:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; with longName; a + b
-7
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now, within the scope of the with expression, &lt;code&gt;a&lt;/code&gt; and &lt;code&gt;b&lt;/code&gt; are accessible without
-prefixing them with &lt;code&gt;longName&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Practical Use Case: Working with &lt;code&gt;pkgs&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;One of the most common uses of &lt;code&gt;with&lt;/code&gt; that you’ll see is when dealing with
-packages from &lt;code&gt;nixpkgs&lt;/code&gt; is writing the following:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs }:
-with pkgs; {
-  myPackages = [ vim git neofetch ];
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Instead of writing this:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs }:
-{
-  myPackages = [ pkgs.vim pkgs.git pkgs.neofetch ];
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Tip: Overusing &lt;code&gt;with lib;&lt;/code&gt; or &lt;code&gt;with pkgs;&lt;/code&gt; can reduce clarity, it may be fine
-for smaller modules where the scope is limited. For larger configurations,
-explicit references (&lt;code&gt;pkgs.something&lt;/code&gt;) often make dependencies clearer and
-prevent ambiguity.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;Nix Language Quirks&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;code&gt;with&lt;/code&gt; gets less priority than &lt;code&gt;let&lt;/code&gt;. This can be confusing, especially if
-you like to write &lt;code&gt;with pkgs;&lt;/code&gt;:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; pkgs = { x = 2; }
-
-nix-repl&amp;gt; with pkgs; x
-2
-
-nix-repl&amp;gt; with pkgs; let x = 4; in x
-4
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This shows us that the &lt;code&gt;let&lt;/code&gt; binding overrides the &lt;code&gt;with&lt;/code&gt; binding.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let x = 4; in with pkgs; x
-4
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Still returns &lt;code&gt;4&lt;/code&gt;, but the reasoning is different. The &lt;code&gt;with&lt;/code&gt; expression doesn’t
-define new bindings; it simply makes attributes from &lt;code&gt;pkgs&lt;/code&gt; available as
-unqualified names. However, because &lt;code&gt;let x = 4&lt;/code&gt; is &lt;strong&gt;outside&lt;/strong&gt; the &lt;code&gt;with&lt;/code&gt;, it
-already extablished &lt;code&gt;x = 4&lt;/code&gt;, so when &lt;code&gt;with pkgs; x&lt;/code&gt; is evaluated inside, &lt;code&gt;x&lt;/code&gt;
-still refers to the &lt;strong&gt;outer&lt;/strong&gt; &lt;code&gt;let&lt;/code&gt; binding, not the one from &lt;code&gt;pkgs&lt;/code&gt;.&lt;/p&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Default values aren’t bound in &lt;code&gt;@-patterns&lt;/code&gt;&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;In the following example, calling a function that binds a default value &lt;code&gt;&quot;baz&quot;&lt;/code&gt;
-to the attribute &lt;code&gt;b&lt;/code&gt; of an argument using an alias (&lt;code&gt;@&lt;/code&gt;) pattern, with an empty
-attribute set as argument, results in the alias variable inputs being bound to
-the original empty attribute set instead of including the default value:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;(inputs@(b ? &quot;baz&quot;): inputs) {}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Output:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This happens because the alias &lt;code&gt;inputs@&lt;/code&gt; binds to the argument as passed, before
-the default value for &lt;code&gt;b&lt;/code&gt; is applied.&lt;/p&gt;
-&lt;p&gt;The syntax requires curly brackets around the attribute set pattern for
-correctness, so the fixed syntax would be:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;(inputs@{b ? &quot;baz&quot;}: inputs) {}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;However, even with this fix, the inputs alias still refers to the original
-argument without defaults applied. So the quirk persists, showing how default
-values in &lt;code&gt;@-patterns&lt;/code&gt; do not propagate into the aliased variable.&lt;/p&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Destructuring function arguments:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; f = { x ? 2, y ? 4 }: x + y
-
-nix-repl&amp;gt; f { }
-6
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The function &lt;code&gt;f&lt;/code&gt; takes an attribute set with default values (&lt;code&gt;x = 2&lt;/code&gt;, &lt;code&gt;y = 4&lt;/code&gt;)&lt;/p&gt;
-&lt;p&gt;When called with &lt;code&gt;{}&lt;/code&gt; (an empty set), it falls back to the default values
-(&lt;code&gt;2 + 4&lt;/code&gt; -&amp;gt; &lt;code&gt;6&lt;/code&gt;)&lt;/p&gt;
-&lt;p&gt;Using &lt;code&gt;@args&lt;/code&gt; to capture the entire input set:&lt;/p&gt;
-&lt;p&gt;The &lt;code&gt;@args&lt;/code&gt; syntax allows us to retain access to the full attribute set, even
-after destructuring:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; f = { x ? 1, y ? 2, ... }@args: with args; x + y + z
-
-nix-repl&amp;gt; f { z = 3; }
-6
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The &lt;code&gt;{ x ? 1, y ? 2, ... }&lt;/code&gt; syntax means &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; have defaults, while &lt;code&gt;...&lt;/code&gt;
-allows additional attributes.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;@args&lt;/code&gt; binds the entire attribute set (&lt;code&gt;args&lt;/code&gt;) so that we can access &lt;code&gt;z&lt;/code&gt;, which
-wouldn’t be destructured by default.&lt;/p&gt;
-&lt;p&gt;When calling &lt;code&gt;f { z = 3; }&lt;/code&gt;, we pass an extra attribute (&lt;code&gt;z = 3&lt;/code&gt;), making
-&lt;code&gt;x + y + z&lt;/code&gt; → &lt;code&gt;1 + 2 + 3 = 6&lt;/code&gt;.&lt;/p&gt;
-&lt;ol start=&quot;4&quot;&gt;
-&lt;li&gt;Imports and namespaces&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;There is a keyword import, but it’s equivalent in other languages is eval. It
-can be used for namespacing too:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
-  pkgs = import &amp;lt;nixpkgs&amp;gt; {};
-  lib = import &amp;lt;nixpkgs/lib&amp;gt;;
-in
-  pkgs.runCommand (lib.strings.removePrefix &quot;....
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;consider using &lt;code&gt;import&lt;/code&gt; here as using &lt;code&gt;qualified import ...&lt;/code&gt; in Haskell or
-&lt;code&gt;import ...&lt;/code&gt; in Python.&lt;/p&gt;
-&lt;p&gt;Another way of importing is with &lt;code&gt;import ...;&lt;/code&gt;, which corresponds to Python
-&lt;code&gt;from ... import *&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;But because of not very great IDE support in Nix, &lt;code&gt;with import ...;&lt;/code&gt; is
-discouraged. Rather use inherit, especially if you are targeting source code for
-Nix newcomers:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
-  lib = import &amp;lt;nixpkgs/lib&amp;gt;;
-  inherit (lib.strings)
-    removePrefix removeSuffix
-  ;
-  inherit (lib.lists)
-    isList init drop
-  ;
-in
-  removePrefix ...
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;inherit&lt;/code&gt; has higher priority than &lt;code&gt;with&lt;/code&gt;, and conflicts with &lt;code&gt;let&lt;/code&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; let pkgs = { x = 1; }; x = 2; x = 3; inherit (pkgs) x; in x
-error: attribute ‘x’ at (string):1:31 already defined at (string):1:24
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This makes it a sane citizen of Nix lanugage… except it has a twin, called
-&lt;code&gt;{ inherit ...; }&lt;/code&gt;. They DON’T do the same - &lt;code&gt;let inherit ...&lt;/code&gt; adds
-let-bindings, and &lt;code&gt;{ inherit ...; }&lt;/code&gt; adds attributes to a record.
-–&lt;a href=&quot;https://nixos.wiki/wiki/Nix_Language_Quirks&quot;&gt;https://nixos.wiki/wiki/Nix_Language_Quirks&lt;/a&gt;&lt;/p&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;Only attribute names can be interpolated, not Nix code:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;nix-repl&amp;gt; let ${&quot;y&quot;} = 4; in y
-4
-
-nix-repl&amp;gt; with { ${&quot;y&quot;} = 4; }; y
-4
-
-let y = 1; x = ${y}; in x
-error: syntax error, unexpected DOLLAR_CURLY
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Conclusion&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;let&lt;/code&gt; bindings introduce new local values and override anything from &lt;code&gt;with&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;with&lt;/code&gt; doesn’t create bindings - it only makes attributes available within its
-scope.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;The order matters: If &lt;code&gt;let x = 4&lt;/code&gt; is outside &lt;code&gt;with&lt;/code&gt;, then &lt;code&gt;x = 4&lt;/code&gt; already
-exists before &lt;code&gt;with&lt;/code&gt; runs, so &lt;code&gt;with pkgs; x&lt;/code&gt; resolves to &lt;code&gt;4&lt;/code&gt;, not the value
-from &lt;code&gt;pkgs&lt;/code&gt;.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h4&gt;Resources&lt;/h4&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Resources (Click to Expand) &lt;/summary&gt;
-&lt;p&gt;A few resources to help get you started with the Nix Language, I have actually
-grown to love the language. I find it fairly simple but powerful!&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://nix.dev/tutorials/nix-language.html&quot;&gt;nix.dev nixlang-basics&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://nix.dev/manual/nix/2.24/language/&quot;&gt;Nix Language Overview&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://learnxinyminutes.com/nix/&quot;&gt;learn nix in y minutes&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://github.com/tazjin/nix-1p&quot;&gt;nix onepager&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://zero-to-nix.com/concepts/nix-language/&quot;&gt;zero-to-nix nix lang&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://nixos.org/guides/nix-pills/04-basics-of-language.html&quot;&gt;nix-pills basics of nixlang&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://nixos.org/guides/nix-pills/04-basics-of-language&quot;&gt;Basics of the Language Pill&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/details&gt;
 </content></entry><entry><title>Nix Package Manager</title><id>https://saylesss88.github.io/nix/nix_package_manager.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/nix_package_manager.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Package Manager&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
@@ -21375,6 +21499,11 @@ actively update the information.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;/details&gt;
+&lt;pre&gt;&lt;code&gt;`````nix repl
+(let a = &quot;2&quot;; in                   # Let expressions are a way to create variables
+a + a + builtins.toString &quot;4&quot;)
+`````
+&lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>Understanding Nix Functions</title><id>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</id><updated>2025-11-21T00:00:00+00:00</updated><link href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html" rel="alternate"/><content type="html">&lt;h1&gt;Chapter 2&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
