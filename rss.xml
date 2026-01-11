@@ -1,4 +1,406 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sat, 3 Jan 2026 19:48:06 +0000</pubDate></item><item><title>Packaging a Rust crate for Nixpkgs</title><link>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</link><description><![CDATA[<details>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 11 Jan 2026 23:17:41 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/nixos_containers.html</link><description><![CDATA[<h1>NixOS Containers</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="images/boxes.cleaned.png" alt="boxes" /></p>
+<p>NixOS containers are lightweight <code>systemd-nspawn</code> containers managed
+declaratively through your NixOS configuration. They allow you to run separate,
+minimal NixOS instances on the same machine, each with its own services,
+packages, and (optionally) network stack.</p>
+<ul>
+<li><a href="https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html?__goaway_challenge=meta-refresh&amp;__goaway_id=5497ebb54af7da76c7cff2e5210fe9ab&amp;__goaway_referer=https%3A%2F%2Fsearch.brave.com%2F">freedesktop systemd-nspawn</a></li>
+</ul>
+<blockquote>
+<p>❗ NixOS’ containers do not provide full security out of the box (just like
+docker). They do give you a separate chroot, but a privileged user (root) in a
+container can escape the container and become root on the host system.
+–<a href="https://blog.beardhatcode.be/2020/12/Declarative-Nixos-Containers.html">beardhatcode Declarative-Nixos-Containers</a></p>
+</blockquote>
+<p><strong>Common Use Cases</strong></p>
+<ul>
+<li>
+<p><strong>Isolating services</strong>: Run a web server, database, or any service in its own
+container, so it can’t interfere with the main system or other services</p>
+</li>
+<li>
+<p><strong>Testing and development</strong>: Try out new configurations, packages, or services
+in a sandboxed environment.</p>
+</li>
+<li>
+<p><strong>Reproducible deployments</strong>: Because containers are defined declaratively,
+you can reproduce the exact same environment anywhere.</p>
+</li>
+<li>
+<p><strong>Running multiple versions of a service</strong>: For example, testing different
+versions of Git or HTTP servers side by side.</p>
+</li>
+</ul>
+<hr />
+<h2>Hosting mdBook</h2>
+<p>Let’s say you want to host your mdBook. You can define a NixOS container that
+runs only the necessary service, isolated from your main system:</p>
+<pre><code class="language-nix">{
+  config,
+  lib,
+  ...
+}: {
+  containers.mdbook-host = {
+    autoStart = true;
+    ephemeral = true;
+    privateNetwork = false;  # Use the hosts network
+
+    bindMounts."/var/www/mdbook" = {
+      hostPath = "/home/jr/nix-book/book";
+      isReadOnly = true;
+    };
+
+    config = {containerPkgs, ...}: {
+      networking.useDHCP = lib.mkDefault true;
+
+      services.httpd = {
+        enable = true;
+        adminAddr = "yourEmail.com";
+        virtualHosts."localhost" = {
+          documentRoot = "/var/www/mdbook";
+          serverAliases = [];
+        };
+      };
+
+      networking.firewall.allowedTCPPorts = [80];
+      environment.systemPackages = with containerPkgs; [];
+      system.stateVersion = "25.05";
+    };
+  };
+}
+</code></pre>
+<ul>
+<li>
+<p><code>ephemeral</code>: if true, the container resets on each restart.</p>
+</li>
+<li>
+<p><code>autoStart</code>: Ensures the container starts automatically at boot.</p>
+</li>
+<li>
+<p><code>config</code>: Defines the containers NixOS configuration, just like a regular
+NixOS system.</p>
+</li>
+</ul>
+<p><strong>Mounts</strong></p>
+<pre><code class="language-nix">    bindMounts."/var/www/mdbook" = {
+      hostPath = "/home/jr/nix-book/book";
+      isReadOnly = true;
+    };
+</code></pre>
+<p>The <code>bindMount</code> settings above specify that <code>/var/www/mdbook</code> in the container
+should be linked to <code>/home/jr/nix-book/book</code> on the host.</p>
+<p><code>hostPath</code> must exist, and <code>/var/www/mdbook</code> must not exist for this to work.</p>
+<p>The above container is fairly simple because its <code>ReadOnly</code>, things get more
+complicated when you need HTTPD to have write privileges.</p>
+<p>When you create and run a NixOS container like <code>mdbook-host</code>. NixOS stores the
+container’s root filesystem and related container state data under:</p>
+<pre><code class="language-bash">ls /var/lib/nixos-containers/
+╭────────────╮
+│ empty list │  # It's empty because we set ephemeral to true
+╰────────────╯
+</code></pre>
+<p>This directory holds the container’s own filesystem image, including system
+files, installed packages, configuration, and any data internal to the
+container.</p>
+<hr />
+<h2>Check Container Status</h2>
+<pre><code class="language-bash">nixos-container list
+mdbook-host
+</code></pre>
+<pre><code class="language-bash">sudo systemctl status container@mdbook-host
+ Main PID: 32938 (systemd-nspawn)
+     Status: "Container running: Ready."
+</code></pre>
+<p><strong>Test HTTP server inside the container</strong></p>
+<p>We configured Apache (<code>httpd</code>) to serve <code>/var/www/mdbook</code> at <code>localhost</code></p>
+<p>Let’s check if Apache is running:</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
+● httpd.service - Apache HTTPD
+     Loaded: loaded (/etc/systemd/system/httpd.service; enabled; preset: ignored)
+     Active: active (running) since Fri 2025-08-15 10:14:39 EDT; 2min 18s ago
+</code></pre>
+<p>Check the Bind Mount:</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
+</code></pre>
+<ul>
+<li>You should see an <code>index.html</code> and any other files from <code>~/nix-book/book</code></li>
+</ul>
+<p>Test the Web Server:</p>
+<pre><code class="language-bash">curl http://localhost
+</code></pre>
+<ul>
+<li>You should see your book in HTTP format as raw HTML.</li>
+</ul>
+<p>Test on the web, in your browser visit:</p>
+<pre><code class="language-text">http://localhost/
+</code></pre>
+<ul>
+<li>You should see your book fully served</li>
+</ul>
+<hr />
+<h3>Troubleshooting</h3>
+<p>Make sure your book has the correct permissions to allow <code>hostPath</code> to read it:</p>
+<pre><code class="language-bash">sudo chmod -R o+rX ~/nix-book/book
+</code></pre>
+<p>If needed restart the container:</p>
+<pre><code class="language-bash">sudo nixos-container stop mdbook-host
+sudo nixos-container start mdbook-host
+</code></pre>
+<p>Ensure that <code>/var/www/mdbook</code> is being populated:</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
+</code></pre>
+<p>You should see an <code>index.html</code> and more</p>
+<pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
+</code></pre>
+<ul>
+<li>You should see <code>enabled</code> &amp; <code>active (running)</code></li>
+</ul>
+<p>Check the containers status:</p>
+<pre><code class="language-bash">sudo nixos-container status mdbook-host
+up
+</code></pre>
+<hr />
+<h2>Why Bother Serving your book to localhost?</h2>
+<ol>
+<li>Real-time updates without rebuilding the container</li>
+</ol>
+<ul>
+<li>Files added, changed, or removed from <code>~/nix-book/book</code> on the host are
+immediately reflected inside the container. This allows for:
+<ul>
+<li>
+<p>Rapid iteration and testing of your books content without rebuilding</p>
+</li>
+<li>
+<p>Easier debugging and fixing content or config issues on the fly.</p>
+</li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li>Keeps container images small and immutable</li>
+</ol>
+<ul>
+<li>Instead of baking book files into the container image (which requires
+rebuilding every change), the container image remains clean and generic.</li>
+</ul>
+<ol start="3">
+<li>Separation of concerns</li>
+</ol>
+<ul>
+<li>The container focuses on running the service, while the content is managed
+independently on the host. This separation improves maintainability and more.</li>
+</ul>
+<ol start="4">
+<li>Data persistence</li>
+</ol>
+<ul>
+<li>Since the files live on the host, they persist independently of the containers
+lifecycle: restarting, recreating, or destroying the container won’t lose your
+content.</li>
+</ul>
+<ol start="5">
+<li>Security Control</li>
+</ol>
+<ul>
+<li>You can carefully set permissions on the host directory, control read/write
+access, and isolate the container runtime from sensitive data.</li>
+</ul>
+<hr />
+<h2>Removing the State</h2>
+<p>To remove <code>/var/lib/nixos-containers/mdbook-host</code>, you need to remove the
+container configuration, rebuild, and then run the following commands to remove
+the immutable sticky bits that prevent deletion.</p>
+<pre><code class="language-bash"># Forcibly remove all attributes
+sudo chattr -R -i mdbook-host/
+sudo rm -rf mdbook-host/
+</code></pre>
+<h2>OCI deployment pipeline building a Rust App</h2>
+<ol>
+<li><code>nix-repl-server.nix</code>:</li>
+</ol>
+<pre><code class="language-nix">{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
+
+let
+  cfg = config.custom.nix-repl-server;
+
+  serverSource = inputs.mdbook-nix-repl + "/server";
+
+  # 1. Build the binary using your package definition
+  # serverPkg = pkgs.callPackage ./server-pkg.nix { };
+  serverPkg = pkgs.callPackage ./server-pkg.nix {
+    src = serverSource;
+  };
+
+  # 2. Build a minimal container image containing just the server + nix + deps
+  nixReplImage = pkgs.dockerTools.buildLayeredImage {
+    name = "nix-repl-server";
+    tag = "latest";
+
+    # dependencies needed at runtime inside the container
+    contents = [
+      serverPkg
+      pkgs.nix
+      pkgs.bashInteractive
+      pkgs.cacert
+      pkgs.tini
+      pkgs.coreutils
+    ];
+
+    config = {
+      Entrypoint = [
+        "${pkgs.tini}/bin/tini"
+        "--"
+      ];
+      Cmd = [ "${serverPkg}/bin/nix-repl-server" ];
+      ExposedPorts = {
+        "8080/tcp" = { };
+      };
+      # Important: Container must see 0.0.0.0 to receive traffic from host port mapping
+      Env = [
+        "NIX_REPL_BIND=0.0.0.0"
+        "NIX_CONFIG=experimental-features = nix-command flakes"
+        "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+      ];
+    };
+  };
+in
+{
+  options.custom.nix-repl-server = {
+    enable = lib.mkEnableOption "nix-repl-server container";
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8080;
+      description = "Host port to map to the container";
+    };
+    tokenFile = lib.mkOption {
+      type = lib.types.path;
+      default = "/etc/nix-repl-server.env";
+      description = "Path to file containing NIX_REPL_TOKEN=...";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    # Enable Podman backend
+    virtualisation.podman.enable = true;
+    virtualisation.oci-containers.backend = "podman";
+
+    # The OCI container definition
+    virtualisation.oci-containers.containers.nix-repl-server = {
+      image = "nix-repl-server:latest";
+
+      # This effectively "loads" the image into Podman on boot
+      imageFile = nixReplImage;
+
+      ports = [ "127.0.0.1:${toString cfg.port}:8080" ];
+
+      # Inject the token safely at runtime (not in Nix store)
+      environmentFiles = [ cfg.tokenFile ];
+
+      extraOptions = [
+        "--cap-drop=ALL"
+        "--security-opt=no-new-privileges"
+        "--pull=never" # Use the local loaded image
+      ];
+    };
+  };
+}
+</code></pre>
+<ol start="2">
+<li>server-pkg.nix</li>
+</ol>
+<pre><code class="language-nix">{
+  lib,
+  rustPlatform,
+  nix,
+  pkg-config,
+  openssl,
+  makeWrapper,
+  src,
+}:
+
+rustPlatform.buildRustPackage {
+  pname = "nix-repl-server";
+  version = "0.1.0";
+
+  # Point this to your actual source root (where Cargo.toml is)
+  # src = ./.;
+  inherit src;
+
+  # You must commit Cargo.lock for this to work
+  # cargoLock.lockFile = ../../../mdbook-nix-repl/server/Cargo.lock;
+  cargoLock.lockFile = "${src}/Cargo.lock";
+
+  postPatch = ''
+    cp Cargo.toml.inc Cargo.toml
+  '';
+
+  # Runtime dependencies (nix for evaluation)
+  nativeBuildInputs = [
+    pkg-config
+    makeWrapper
+  ];
+  buildInputs = [ openssl ];
+
+  doCheck = false;
+
+  # Ensure 'nix' is available in the path if your binary calls Command::new("nix")
+  postInstall = ''
+    wrapProgram $out/bin/nix-repl-server --prefix PATH : ${lib.makeBinPath [ nix ]}
+  '';
+
+  meta = with lib; {
+    description = "Secure Nix REPL server for mdbook-nix-repl";
+    platforms = platforms.linux;
+  };
+}
+</code></pre>
+<ol start="3">
+<li><code>flake.nix</code>, this URL leads to a Rust crate repo:</li>
+</ol>
+<pre><code class="language-nix">inputs = {
+  mdbook-nix-repl = {
+    url = "github:saylesss88/mdbook-nix-repl?dir=server";
+    flake = false;
+  };
+}
+</code></pre>
+<ol start="4">
+<li><code>configuration.nix</code>:</li>
+</ol>
+<pre><code class="language-nix">{ pkgs, inputs, ... }:
+{
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./users.nix
+    inputs.mdbook-nix-repl.nixosModules.default
+  ];
+
+  custom.nix-repl-server = {
+    enable = true;
+    port = 8080; # Optional, defaults to 8080
+    tokenFile = "/etc/nix-repl-server.env";
+  };
+# --snip--
+</code></pre>
+<hr />
+<h3>Resources</h3>
+<ul>
+<li><a href="https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction#">RedHat A Practical Intro to Container Technology</a></li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixos_containers.html</guid><pubDate>Sun, 11 Jan 2026 00:00:00 +0000</pubDate></item><item><title>Packaging a Rust crate for Nixpkgs</title><link>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</link><description><![CDATA[<details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
 </details>
@@ -14282,221 +14684,7 @@ clone Nixpkgs, how to make changes to package definitions, and how to test those
 changes locally before contributing them back upstream. This chapter will
 empower you to not just use existing Nix packages, but also to customize and
 extend them to fit your specific needs.</p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Debugging_and_Tracing_NixOS_Modules_9.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/nixos_containers.html</link><description><![CDATA[<h1>NixOS Containers</h1>
-<details>
-<summary> ✔️ Click to Expand Table of Contents</summary>
-<!-- toc -->
-</details>
-<p><img src="images/boxes.cleaned.png" alt="boxes" /></p>
-<p>NixOS containers are lightweight <code>systemd-nspawn</code> containers managed
-declaratively through your NixOS configuration. They allow you to run separate,
-minimal NixOS instances on the same machine, each with its own services,
-packages, and (optionally) network stack.</p>
-<blockquote>
-<p>❗ NixOS’ containers do not provide full security out of the box (just like
-docker). They do give you a separate chroot, but a privileged user (root) in a
-container can escape the container and become root on the host system.
-–<a href="https://blog.beardhatcode.be/2020/12/Declarative-Nixos-Containers.html">beardhatcode Declarative-Nixos-Containers</a></p>
-</blockquote>
-<p><strong>Common Use Cases</strong></p>
-<ul>
-<li>
-<p><strong>Isolating services</strong>: Run a web server, database, or any service in its own
-container, so it can’t interfere with the main system or other services</p>
-</li>
-<li>
-<p><strong>Testing and development</strong>: Try out new configurations, packages, or services
-in a sandboxed environment.</p>
-</li>
-<li>
-<p><strong>Reproducible deployments</strong>: Because containers are defined declaratively,
-you can reproduce the exact same environment anywhere.</p>
-</li>
-<li>
-<p><strong>Running multiple versions of a service</strong>: For example, testing different
-versions of Git or HTTP servers side by side.</p>
-</li>
-</ul>
-<h2>Hosting mdbook</h2>
-<p>Let’s say you want to host your mdBook. You can define a NixOS container that
-runs only the necessary service, isolated from your main system:</p>
-<pre><code class="language-nix">{
-  config,
-  lib,
-  ...
-}: {
-  containers.mdbook-host = {
-    autoStart = true;
-    ephemeral = true;
-    privateNetwork = false;  # Use the hosts network
-
-    bindMounts."/var/www/mdbook" = {
-      hostPath = "/home/jr/nix-book/book";
-      isReadOnly = true;
-    };
-
-    config = {containerPkgs, ...}: {
-      networking.useDHCP = lib.mkDefault true;
-
-      services.httpd = {
-        enable = true;
-        adminAddr = "yourEmail.com";
-        virtualHosts."localhost" = {
-          documentRoot = "/var/www/mdbook";
-          serverAliases = [];
-        };
-      };
-
-      networking.firewall.allowedTCPPorts = [80];
-      environment.systemPackages = with containerPkgs; [];
-      system.stateVersion = "25.05";
-    };
-  };
-}
-</code></pre>
-<ul>
-<li>
-<p><code>ephemeral</code>: if true, the container resets on each restart.</p>
-</li>
-<li>
-<p><code>autoStart</code>: Ensures the container starts automatically at boot.</p>
-</li>
-<li>
-<p><code>config</code>: Defines the containers NixOS configuration, just like a regular
-NixOS system.</p>
-</li>
-</ul>
-<p><strong>Mounts</strong></p>
-<pre><code class="language-nix">    bindMounts."/var/www/mdbook" = {
-      hostPath = "/home/jr/nix-book/book";
-      isReadOnly = true;
-    };
-</code></pre>
-<p>The <code>bindMount</code> settings above specify that <code>/var/www/mdbook</code> in the container
-should be linked to <code>/home/jr/nix-book/book</code> on the host.</p>
-<p><code>hostPath</code> must exist, and <code>/var/www/mdbook</code> must not exist for this to work.</p>
-<p>The above container is fairly simple because its <code>ReadOnly</code>, things get more
-complicated when you need HTTPD to have write privileges.</p>
-<p>When you create and run a NixOS container like <code>mdbook-host</code>. NixOS stores the
-container’s root filesystem and related container state data under:</p>
-<pre><code class="language-bash">ls /var/lib/nixos-containers/
-╭────────────╮
-│ empty list │  # It's empty because we set ephemeral to true
-╰────────────╯
-</code></pre>
-<p>This directory holds the container’s own filesystem image, including system
-files, installed packages, configuration, and any data internal to the
-container.</p>
-<h2>Check Container Status</h2>
-<pre><code class="language-bash">nixos-container list
-mdbook-host
-</code></pre>
-<pre><code class="language-bash">sudo systemctl status container@mdbook-host
- Main PID: 32938 (systemd-nspawn)
-     Status: "Container running: Ready."
-</code></pre>
-<p><strong>Test HTTP server inside the container</strong></p>
-<p>We configured Apache (<code>httpd</code>) to serve <code>/var/www/mdbook</code> at <code>localhost</code></p>
-<p>Let’s check if Apache is running:</p>
-<pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
-● httpd.service - Apache HTTPD
-     Loaded: loaded (/etc/systemd/system/httpd.service; enabled; preset: ignored)
-     Active: active (running) since Fri 2025-08-15 10:14:39 EDT; 2min 18s ago
-</code></pre>
-<p>Check the Bind Mount:</p>
-<pre><code class="language-bash">sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
-</code></pre>
-<ul>
-<li>You should see an <code>index.html</code> and any other files from <code>~/nix-book/book</code></li>
-</ul>
-<p>Test the Web Server:</p>
-<pre><code class="language-bash">curl http://localhost
-</code></pre>
-<ul>
-<li>You should see your book in HTTP format as raw HTML.</li>
-</ul>
-<p>Test on the web, in your browser visit:</p>
-<pre><code class="language-text">http://localhost/
-</code></pre>
-<ul>
-<li>You should see your book fully served</li>
-</ul>
-<h3>Troubleshooting</h3>
-<p>Make sure your book has the correct permissions to allow <code>hostPath</code> to read it:</p>
-<pre><code class="language-bash">sudo chmod -R o+rX ~/nix-book/book
-</code></pre>
-<p>If needed restart the container:</p>
-<pre><code class="language-bash">sudo nixos-container stop mdbook-host
-sudo nixos-container start mdbook-host
-</code></pre>
-<p>Ensure that <code>/var/www/mdbook</code> is being populated:</p>
-<pre><code class="language-bash">sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
-</code></pre>
-<p>You should see an <code>index.html</code> and more</p>
-<pre><code class="language-bash">sudo nixos-container run mdbook-host -- systemctl status httpd
-</code></pre>
-<ul>
-<li>You should see <code>enabled</code> &amp; <code>active (running)</code></li>
-</ul>
-<p>Check the containers status:</p>
-<pre><code class="language-bash">sudo nixos-container status mdbook-host
-up
-</code></pre>
-<h2>Why Bother Serving your book to localhost?</h2>
-<ol>
-<li>Real-time updates without rebuilding the container</li>
-</ol>
-<ul>
-<li>Files added, changed, or removed from <code>~/nix-book/book</code> on the host are
-immediately reflected inside the container. This allows for:
-<ul>
-<li>
-<p>Rapid iteration and testing of your books content without rebuilding</p>
-</li>
-<li>
-<p>Easier debugging and fixing content or config issues on the fly.</p>
-</li>
-</ul>
-</li>
-</ul>
-<ol start="2">
-<li>Keeps container images small and immutable</li>
-</ol>
-<ul>
-<li>Instead of baking book files into the container image (which requires
-rebuilding every change), the container image remains clean and generic.</li>
-</ul>
-<ol start="3">
-<li>Separation of concerns</li>
-</ol>
-<ul>
-<li>The container focuses on running the service, while the content is managed
-independently on the host. This separation improves maintainability and more.</li>
-</ul>
-<ol start="4">
-<li>Data persistence</li>
-</ol>
-<ul>
-<li>Since the files live on the host, they persist independently of the containers
-lifecycle: restarting, recreating, or destroying the container won’t lose your
-content.</li>
-</ul>
-<ol start="5">
-<li>Security Control</li>
-</ol>
-<ul>
-<li>You can carefully set permissions on the host directory, control read/write
-access, and isolate the container runtime from sensitive data.</li>
-</ul>
-<h2>Removing the State</h2>
-<p>To remove <code>/var/lib/nixos-containers/mdbook-host</code>, you need to remove the
-container configuration, rebuild, and then run the following commands to remove
-the immutable sticky bits that prevent deletion.</p>
-<pre><code class="language-bash"># Forcibly remove all attributes
-sudo chattr -R -i mdbook-host/
-sudo rm -rf mdbook-host/
-</code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixos_containers.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Debugging_and_Tracing_NixOS_Modules_9.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
 <details>
 <summary>
 ✔️
