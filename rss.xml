@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 11 Jan 2026 23:17:41 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/nixos_containers.html</link><description><![CDATA[<h1>NixOS Containers</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Mon, 12 Jan 2026 00:16:46 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/nixos_containers.html</link><description><![CDATA[<h1>NixOS Containers</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -221,8 +221,21 @@ sudo chattr -R -i mdbook-host/
 sudo rm -rf mdbook-host/
 </code></pre>
 <h2>OCI deployment pipeline building a Rust App</h2>
+<blockquote>
+<p>If you want to use <code>mdbook-nix-repl</code> check out the README, the following shows
+how I tested locally before eventually adding a <code>flake.nix</code> to the repo
+streamlining this for users of the project.</p>
+</blockquote>
+<ul>
+<li><a href="https://github.com/saylesss88/mdbook-nix-repl">mdbook-nix-repl README</a></li>
+</ul>
+<p>This documents how to work with a local Rust crate repository without a
+<code>flake.nix</code> for testing. The README above explains how to generate a token and
+use the project, this is just for educational purposes if you wanted to
+implement something similar:</p>
 <ol>
-<li><code>nix-repl-server.nix</code>:</li>
+<li><code>nix-repl-server.nix</code>, place this in the same dir as your
+<code>configuration.nix</code>:</li>
 </ol>
 <pre><code class="language-nix">{
   config,
@@ -318,7 +331,7 @@ in
 }
 </code></pre>
 <ol start="2">
-<li>server-pkg.nix</li>
+<li><code>server-pkg.nix</code>, place this in the same dir as <code>nix-repl-server.nix</code>:</li>
 </ol>
 <pre><code class="language-nix">{
   lib,
@@ -327,6 +340,7 @@ in
   pkg-config,
   openssl,
   makeWrapper,
+  inputs,
   src,
 }:
 
@@ -371,7 +385,7 @@ rustPlatform.buildRustPackage {
 </ol>
 <pre><code class="language-nix">inputs = {
   mdbook-nix-repl = {
-    url = "github:saylesss88/mdbook-nix-repl?dir=server";
+    url = "path:/home/jr/mdbook-nix-repl";
     flake = false;
   };
 }
@@ -385,7 +399,7 @@ rustPlatform.buildRustPackage {
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./users.nix
-    inputs.mdbook-nix-repl.nixosModules.default
+    ./nix-repl-server.nix
   ];
 
   custom.nix-repl-server = {
