@@ -1,5 +1,421 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-04T19:05:54+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;details&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>NixOS Containers</title><id>https://saylesss88.github.io/nixos_containers.html</id><updated>2026-01-11T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixos_containers.html" rel="alternate"/><content type="html">&lt;h1&gt;NixOS Containers&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;img src=&quot;images/boxes.cleaned.png&quot; alt=&quot;boxes&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;NixOS containers are lightweight &lt;code&gt;systemd-nspawn&lt;/code&gt; containers managed
+declaratively through your NixOS configuration. They allow you to run separate,
+minimal NixOS instances on the same machine, each with its own services,
+packages, and (optionally) network stack.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.freedesktop.org/software/systemd/man/latest/systemd-nspawn.html?__goaway_challenge=meta-refresh&amp;amp;__goaway_id=5497ebb54af7da76c7cff2e5210fe9ab&amp;amp;__goaway_referer=https%3A%2F%2Fsearch.brave.com%2F&quot;&gt;freedesktop systemd-nspawn&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NixOS’ containers do not provide full security out of the box (just like
+docker). They do give you a separate chroot, but a privileged user (root) in a
+container can escape the container and become root on the host system.
+–&lt;a href=&quot;https://blog.beardhatcode.be/2020/12/Declarative-Nixos-Containers.html&quot;&gt;beardhatcode Declarative-Nixos-Containers&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Common Use Cases&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Isolating services&lt;/strong&gt;: Run a web server, database, or any service in its own
+container, so it can’t interfere with the main system or other services&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Testing and development&lt;/strong&gt;: Try out new configurations, packages, or services
+in a sandboxed environment.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Reproducible deployments&lt;/strong&gt;: Because containers are defined declaratively,
+you can reproduce the exact same environment anywhere.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Running multiple versions of a service&lt;/strong&gt;: For example, testing different
+versions of Git or HTTP servers side by side.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Hosting mdBook&lt;/h2&gt;
+&lt;p&gt;Let’s say you want to host your mdBook. You can define a NixOS container that
+runs only the necessary service, isolated from your main system:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  config,
+  lib,
+  ...
+}: {
+  containers.mdbook-host = {
+    autoStart = true;
+    ephemeral = true;
+    privateNetwork = false;  # Use the hosts network
+
+    bindMounts.&quot;/var/www/mdbook&quot; = {
+      hostPath = &quot;/home/jr/nix-book/book&quot;;
+      isReadOnly = true;
+    };
+
+    config = {containerPkgs, ...}: {
+      networking.useDHCP = lib.mkDefault true;
+
+      services.httpd = {
+        enable = true;
+        adminAddr = &quot;yourEmail.com&quot;;
+        virtualHosts.&quot;localhost&quot; = {
+          documentRoot = &quot;/var/www/mdbook&quot;;
+          serverAliases = [];
+        };
+      };
+
+      networking.firewall.allowedTCPPorts = [80];
+      environment.systemPackages = with containerPkgs; [];
+      system.stateVersion = &quot;25.05&quot;;
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;ephemeral&lt;/code&gt;: if true, the container resets on each restart.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;autoStart&lt;/code&gt;: Ensures the container starts automatically at boot.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;config&lt;/code&gt;: Defines the containers NixOS configuration, just like a regular
+NixOS system.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Mounts&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    bindMounts.&quot;/var/www/mdbook&quot; = {
+      hostPath = &quot;/home/jr/nix-book/book&quot;;
+      isReadOnly = true;
+    };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;bindMount&lt;/code&gt; settings above specify that &lt;code&gt;/var/www/mdbook&lt;/code&gt; in the container
+should be linked to &lt;code&gt;/home/jr/nix-book/book&lt;/code&gt; on the host.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;hostPath&lt;/code&gt; must exist, and &lt;code&gt;/var/www/mdbook&lt;/code&gt; must not exist for this to work.&lt;/p&gt;
+&lt;p&gt;The above container is fairly simple because its &lt;code&gt;ReadOnly&lt;/code&gt;, things get more
+complicated when you need HTTPD to have write privileges.&lt;/p&gt;
+&lt;p&gt;When you create and run a NixOS container like &lt;code&gt;mdbook-host&lt;/code&gt;. NixOS stores the
+container’s root filesystem and related container state data under:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls /var/lib/nixos-containers/
+╭────────────╮
+│ empty list │  # It&apos;s empty because we set ephemeral to true
+╰────────────╯
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This directory holds the container’s own filesystem image, including system
+files, installed packages, configuration, and any data internal to the
+container.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Check Container Status&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nixos-container list
+mdbook-host
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo systemctl status container@mdbook-host
+ Main PID: 32938 (systemd-nspawn)
+     Status: &quot;Container running: Ready.&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Test HTTP server inside the container&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;We configured Apache (&lt;code&gt;httpd&lt;/code&gt;) to serve &lt;code&gt;/var/www/mdbook&lt;/code&gt; at &lt;code&gt;localhost&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Let’s check if Apache is running:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- systemctl status httpd
+● httpd.service - Apache HTTPD
+     Loaded: loaded (/etc/systemd/system/httpd.service; enabled; preset: ignored)
+     Active: active (running) since Fri 2025-08-15 10:14:39 EDT; 2min 18s ago
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Check the Bind Mount:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You should see an &lt;code&gt;index.html&lt;/code&gt; and any other files from &lt;code&gt;~/nix-book/book&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Test the Web Server:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;curl http://localhost
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You should see your book in HTTP format as raw HTML.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Test on the web, in your browser visit:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;http://localhost/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You should see your book fully served&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Troubleshooting&lt;/h3&gt;
+&lt;p&gt;Make sure your book has the correct permissions to allow &lt;code&gt;hostPath&lt;/code&gt; to read it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo chmod -R o+rX ~/nix-book/book
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If needed restart the container:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container stop mdbook-host
+sudo nixos-container start mdbook-host
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Ensure that &lt;code&gt;/var/www/mdbook&lt;/code&gt; is being populated:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You should see an &lt;code&gt;index.html&lt;/code&gt; and more&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- systemctl status httpd
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You should see &lt;code&gt;enabled&lt;/code&gt; &amp;amp; &lt;code&gt;active (running)&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Check the containers status:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container status mdbook-host
+up
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Why Bother Serving your book to localhost?&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;Real-time updates without rebuilding the container&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Files added, changed, or removed from &lt;code&gt;~/nix-book/book&lt;/code&gt; on the host are
+immediately reflected inside the container. This allows for:
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Rapid iteration and testing of your books content without rebuilding&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Easier debugging and fixing content or config issues on the fly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Keeps container images small and immutable&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Instead of baking book files into the container image (which requires
+rebuilding every change), the container image remains clean and generic.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Separation of concerns&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;The container focuses on running the service, while the content is managed
+independently on the host. This separation improves maintainability and more.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Data persistence&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Since the files live on the host, they persist independently of the containers
+lifecycle: restarting, recreating, or destroying the container won’t lose your
+content.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Security Control&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;You can carefully set permissions on the host directory, control read/write
+access, and isolate the container runtime from sensitive data.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Removing the State&lt;/h2&gt;
+&lt;p&gt;To remove &lt;code&gt;/var/lib/nixos-containers/mdbook-host&lt;/code&gt;, you need to remove the
+container configuration, rebuild, and then run the following commands to remove
+the immutable sticky bits that prevent deletion.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Forcibly remove all attributes
+sudo chattr -R -i mdbook-host/
+sudo rm -rf mdbook-host/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;OCI deployment pipeline building a Rust App&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;If you want to use &lt;code&gt;mdbook-nix-repl&lt;/code&gt; check out the README, the following shows
+how I tested locally before eventually adding a &lt;code&gt;flake.nix&lt;/code&gt; to the repo
+streamlining this for users of the project.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/saylesss88/mdbook-nix-repl&quot;&gt;mdbook-nix-repl README&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This documents how to work with a local Rust crate repository without a
+&lt;code&gt;flake.nix&lt;/code&gt; for testing. The README above explains how to generate a token and
+use the project, this is just for educational purposes if you wanted to
+implement something similar:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;nix-repl-server.nix&lt;/code&gt;, place this in the same dir as your
+&lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
+
+let
+  cfg = config.custom.nix-repl-server;
+
+  serverSource = inputs.mdbook-nix-repl + &quot;/server&quot;;
+
+  # 1. Build the binary using your package definition
+  # serverPkg = pkgs.callPackage ./server-pkg.nix { };
+  serverPkg = pkgs.callPackage ./server-pkg.nix {
+    src = serverSource;
+  };
+
+  # 2. Build a minimal container image containing just the server + nix + deps
+  nixReplImage = pkgs.dockerTools.buildLayeredImage {
+    name = &quot;nix-repl-server&quot;;
+    tag = &quot;latest&quot;;
+
+    # dependencies needed at runtime inside the container
+    contents = [
+      serverPkg
+      pkgs.nix
+      pkgs.bashInteractive
+      pkgs.cacert
+      pkgs.tini
+      pkgs.coreutils
+    ];
+
+    config = {
+      Entrypoint = [
+        &quot;${pkgs.tini}/bin/tini&quot;
+        &quot;--&quot;
+      ];
+      Cmd = [ &quot;${serverPkg}/bin/nix-repl-server&quot; ];
+      ExposedPorts = {
+        &quot;8080/tcp&quot; = { };
+      };
+      # Important: Container must see 0.0.0.0 to receive traffic from host port mapping
+      Env = [
+        &quot;NIX_REPL_BIND=0.0.0.0&quot;
+        &quot;NIX_CONFIG=experimental-features = nix-command flakes&quot;
+        &quot;SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt&quot;
+      ];
+    };
+  };
+in
+{
+  options.custom.nix-repl-server = {
+    enable = lib.mkEnableOption &quot;nix-repl-server container&quot;;
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8080;
+      description = &quot;Host port to map to the container&quot;;
+    };
+    tokenFile = lib.mkOption {
+      type = lib.types.path;
+      default = &quot;/etc/nix-repl-server.env&quot;;
+      description = &quot;Path to file containing NIX_REPL_TOKEN=...&quot;;
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    # Enable Podman backend
+    virtualisation.podman.enable = true;
+    virtualisation.oci-containers.backend = &quot;podman&quot;;
+
+    # The OCI container definition
+    virtualisation.oci-containers.containers.nix-repl-server = {
+      image = &quot;nix-repl-server:latest&quot;;
+
+      # This effectively &quot;loads&quot; the image into Podman on boot
+      imageFile = nixReplImage;
+
+      ports = [ &quot;127.0.0.1:${toString cfg.port}:8080&quot; ];
+
+      # Inject the token safely at runtime (not in Nix store)
+      environmentFiles = [ cfg.tokenFile ];
+
+      extraOptions = [
+        &quot;--cap-drop=ALL&quot;
+        &quot;--security-opt=no-new-privileges&quot;
+        &quot;--pull=never&quot; # Use the local loaded image
+      ];
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;&lt;code&gt;server-pkg.nix&lt;/code&gt;, place this in the same dir as &lt;code&gt;nix-repl-server.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  lib,
+  rustPlatform,
+  nix,
+  pkg-config,
+  openssl,
+  makeWrapper,
+  inputs,
+  src,
+}:
+
+rustPlatform.buildRustPackage {
+  pname = &quot;nix-repl-server&quot;;
+  version = &quot;0.1.0&quot;;
+
+  # Point this to your actual source root (where Cargo.toml is)
+  # src = ./.;
+  inherit src;
+
+  # You must commit Cargo.lock for this to work
+  # cargoLock.lockFile = ../../../mdbook-nix-repl/server/Cargo.lock;
+  cargoLock.lockFile = &quot;${src}/Cargo.lock&quot;;
+
+  postPatch = &apos;&apos;
+    cp Cargo.toml.inc Cargo.toml
+  &apos;&apos;;
+
+  # Runtime dependencies (nix for evaluation)
+  nativeBuildInputs = [
+    pkg-config
+    makeWrapper
+  ];
+  buildInputs = [ openssl ];
+
+  doCheck = false;
+
+  # Ensure &apos;nix&apos; is available in the path if your binary calls Command::new(&quot;nix&quot;)
+  postInstall = &apos;&apos;
+    wrapProgram $out/bin/nix-repl-server --prefix PATH : ${lib.makeBinPath [ nix ]}
+  &apos;&apos;;
+
+  meta = with lib; {
+    description = &quot;Secure Nix REPL server for mdbook-nix-repl&quot;;
+    platforms = platforms.linux;
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;&lt;code&gt;flake.nix&lt;/code&gt;, this URL leads to a Rust crate repo:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;inputs = {
+  mdbook-nix-repl = {
+    url = &quot;path:/home/jr/mdbook-nix-repl&quot;;
+    flake = false;
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;&lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs, inputs, ... }:
+{
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./users.nix
+    ./nix-repl-server.nix
+  ];
+
+  custom.nix-repl-server = {
+    enable = true;
+    port = 8080; # Optional, defaults to 8080
+    tokenFile = &quot;/etc/nix-repl-server.env&quot;;
+  };
+# --snip--
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Resources&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction#&quot;&gt;RedHat A Practical Intro to Container Technology&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-04T19:05:54+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Packaging a Rust crate for Nixpkgs</title><id>https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html</id><updated>2025-12-31T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixpkgs/rust_crate_to_nixpkgs.html" rel="alternate"/><content type="html">&lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;
 &lt;/details&gt;
@@ -5607,9 +6023,6 @@ systemd.user.services.&quot;xdg-desktop-portal-wlr&quot; = {
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a href=&quot;https://secureblue.dev/articles/flatpak&quot;&gt;Flatpak the good the bad the ugly&lt;/a&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&quot;https://blogs.gentoo.org/mgorny/2021/02/19/the-modern-packagers-security-nightmare/&quot;&gt;packagers security nightmare&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Then you can either find apps through &lt;a href=&quot;https://flathub.org/en&quot;&gt;FlatHub&lt;/a&gt; or on
@@ -13876,220 +14289,6 @@ required. Confirm latest stable: If you’re targeting a stable branch,
 via NixOS status.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-</content></entry><entry><title>NixOS Containers</title><id>https://saylesss88.github.io/nixos_containers.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nixos_containers.html" rel="alternate"/><content type="html">&lt;h1&gt;NixOS Containers&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;p&gt;&lt;img src=&quot;images/boxes.cleaned.png&quot; alt=&quot;boxes&quot; /&gt;&lt;/p&gt;
-&lt;p&gt;NixOS containers are lightweight &lt;code&gt;systemd-nspawn&lt;/code&gt; containers managed
-declaratively through your NixOS configuration. They allow you to run separate,
-minimal NixOS instances on the same machine, each with its own services,
-packages, and (optionally) network stack.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ NixOS’ containers do not provide full security out of the box (just like
-docker). They do give you a separate chroot, but a privileged user (root) in a
-container can escape the container and become root on the host system.
-–&lt;a href=&quot;https://blog.beardhatcode.be/2020/12/Declarative-Nixos-Containers.html&quot;&gt;beardhatcode Declarative-Nixos-Containers&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;strong&gt;Common Use Cases&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Isolating services&lt;/strong&gt;: Run a web server, database, or any service in its own
-container, so it can’t interfere with the main system or other services&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Testing and development&lt;/strong&gt;: Try out new configurations, packages, or services
-in a sandboxed environment.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Reproducible deployments&lt;/strong&gt;: Because containers are defined declaratively,
-you can reproduce the exact same environment anywhere.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Running multiple versions of a service&lt;/strong&gt;: For example, testing different
-versions of Git or HTTP servers side by side.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;Hosting mdbook&lt;/h2&gt;
-&lt;p&gt;Let’s say you want to host your mdBook. You can define a NixOS container that
-runs only the necessary service, isolated from your main system:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  config,
-  lib,
-  ...
-}: {
-  containers.mdbook-host = {
-    autoStart = true;
-    ephemeral = true;
-    privateNetwork = false;  # Use the hosts network
-
-    bindMounts.&quot;/var/www/mdbook&quot; = {
-      hostPath = &quot;/home/jr/nix-book/book&quot;;
-      isReadOnly = true;
-    };
-
-    config = {containerPkgs, ...}: {
-      networking.useDHCP = lib.mkDefault true;
-
-      services.httpd = {
-        enable = true;
-        adminAddr = &quot;yourEmail.com&quot;;
-        virtualHosts.&quot;localhost&quot; = {
-          documentRoot = &quot;/var/www/mdbook&quot;;
-          serverAliases = [];
-        };
-      };
-
-      networking.firewall.allowedTCPPorts = [80];
-      environment.systemPackages = with containerPkgs; [];
-      system.stateVersion = &quot;25.05&quot;;
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;ephemeral&lt;/code&gt;: if true, the container resets on each restart.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;autoStart&lt;/code&gt;: Ensures the container starts automatically at boot.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;config&lt;/code&gt;: Defines the containers NixOS configuration, just like a regular
-NixOS system.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Mounts&lt;/strong&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    bindMounts.&quot;/var/www/mdbook&quot; = {
-      hostPath = &quot;/home/jr/nix-book/book&quot;;
-      isReadOnly = true;
-    };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The &lt;code&gt;bindMount&lt;/code&gt; settings above specify that &lt;code&gt;/var/www/mdbook&lt;/code&gt; in the container
-should be linked to &lt;code&gt;/home/jr/nix-book/book&lt;/code&gt; on the host.&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;hostPath&lt;/code&gt; must exist, and &lt;code&gt;/var/www/mdbook&lt;/code&gt; must not exist for this to work.&lt;/p&gt;
-&lt;p&gt;The above container is fairly simple because its &lt;code&gt;ReadOnly&lt;/code&gt;, things get more
-complicated when you need HTTPD to have write privileges.&lt;/p&gt;
-&lt;p&gt;When you create and run a NixOS container like &lt;code&gt;mdbook-host&lt;/code&gt;. NixOS stores the
-container’s root filesystem and related container state data under:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls /var/lib/nixos-containers/
-╭────────────╮
-│ empty list │  # It&apos;s empty because we set ephemeral to true
-╰────────────╯
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This directory holds the container’s own filesystem image, including system
-files, installed packages, configuration, and any data internal to the
-container.&lt;/p&gt;
-&lt;h2&gt;Check Container Status&lt;/h2&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nixos-container list
-mdbook-host
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo systemctl status container@mdbook-host
- Main PID: 32938 (systemd-nspawn)
-     Status: &quot;Container running: Ready.&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Test HTTP server inside the container&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;We configured Apache (&lt;code&gt;httpd&lt;/code&gt;) to serve &lt;code&gt;/var/www/mdbook&lt;/code&gt; at &lt;code&gt;localhost&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;Let’s check if Apache is running:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- systemctl status httpd
-● httpd.service - Apache HTTPD
-     Loaded: loaded (/etc/systemd/system/httpd.service; enabled; preset: ignored)
-     Active: active (running) since Fri 2025-08-15 10:14:39 EDT; 2min 18s ago
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Check the Bind Mount:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;You should see an &lt;code&gt;index.html&lt;/code&gt; and any other files from &lt;code&gt;~/nix-book/book&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Test the Web Server:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;curl http://localhost
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;You should see your book in HTTP format as raw HTML.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Test on the web, in your browser visit:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;http://localhost/
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;You should see your book fully served&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;Troubleshooting&lt;/h3&gt;
-&lt;p&gt;Make sure your book has the correct permissions to allow &lt;code&gt;hostPath&lt;/code&gt; to read it:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo chmod -R o+rX ~/nix-book/book
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;If needed restart the container:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container stop mdbook-host
-sudo nixos-container start mdbook-host
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Ensure that &lt;code&gt;/var/www/mdbook&lt;/code&gt; is being populated:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- ls -l /var/www/mdbook
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;You should see an &lt;code&gt;index.html&lt;/code&gt; and more&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container run mdbook-host -- systemctl status httpd
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;You should see &lt;code&gt;enabled&lt;/code&gt; &amp;amp; &lt;code&gt;active (running)&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Check the containers status:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-container status mdbook-host
-up
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h2&gt;Why Bother Serving your book to localhost?&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;Real-time updates without rebuilding the container&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;Files added, changed, or removed from &lt;code&gt;~/nix-book/book&lt;/code&gt; on the host are
-immediately reflected inside the container. This allows for:
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Rapid iteration and testing of your books content without rebuilding&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Easier debugging and fixing content or config issues on the fly.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Keeps container images small and immutable&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;Instead of baking book files into the container image (which requires
-rebuilding every change), the container image remains clean and generic.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Separation of concerns&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;The container focuses on running the service, while the content is managed
-independently on the host. This separation improves maintainability and more.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;4&quot;&gt;
-&lt;li&gt;Data persistence&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;Since the files live on the host, they persist independently of the containers
-lifecycle: restarting, recreating, or destroying the container won’t lose your
-content.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;Security Control&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;You can carefully set permissions on the host directory, control read/write
-access, and isolate the container runtime from sensitive data.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;Removing the State&lt;/h2&gt;
-&lt;p&gt;To remove &lt;code&gt;/var/lib/nixos-containers/mdbook-host&lt;/code&gt;, you need to remove the
-container configuration, rebuild, and then run the following commands to remove
-the immutable sticky bits that prevent deletion.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Forcibly remove all attributes
-sudo chattr -R -i mdbook-host/
-sudo rm -rf mdbook-host/
-&lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>Nix Package Manager</title><id>https://saylesss88.github.io/nix/nix_package_manager.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/nix_package_manager.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Package Manager&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
