@@ -3,13 +3,90 @@
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
 </details>
-<p>I only tested this within a VM although with a few small tweaks it should work
-on bare metal. I used the libvirtd stack with KVM for this.</p>
 <p>Yet another blog post inspired by
 <a href="https://grahamc.com/blog/erase-your-darlings/">erase your darlings</a></p>
+<p>I only tested this within a VM although with a few small tweaks it should work
+on bare metal. I used the libvirtd stack with KVM for this.</p>
+<p>I added this file as a README to a
+<a href="https://github.com/saylesss88/flakey">flake</a>:</p>
+<pre><code class="language-bash">git clone https://github.com/saylesss88/flakey.git
+</code></pre>
+<p>If you have another machine, you can follow these steps to SSH in so you can
+copy-paste commands (these are here as much for me as anything else):</p>
+<details>
+<summary> ✔️ SSH Method to enable copy-paste</summary>
+<ol>
+<li>
+<p>Boot the minimal ISO</p>
+</li>
+<li>
+<p>Set a password for the <code>nixos</code> user: <code>sudo passwd nixos</code></p>
+</li>
+<li>
+<p>Find the IP address: <code>ip a</code> (look for <code>eth0</code> or <code>wlan0</code>)</p>
+</li>
+<li>
+<p>SSH in from another machine: <code>ssh nixos@192.168.1.x</code></p>
+</li>
+<li>
+<p>Clone the repo and copy-paste commands from your browser to the terminal.</p>
+</li>
+</ol>
+</details>
+<details>
+<summary> ✔️ Multi-TTY Method (No extra Devices) </summary>
+<ol>
+<li>
+<p>Log in on the default TTY (usually Alt+F1).</p>
+</li>
+<li>
+<p>Switch to a second TTY by pressing Alt+F2.</p>
+</li>
+<li>
+<p>Log in again (user nixos, no password default).</p>
+</li>
+<li>
+<p>Clone your repo in TTY2: git clone https://github.com/your/repo.</p>
+</li>
+<li>
+<p>Open the README with a pager: less repo/README.md.</p>
+</li>
+<li>
+<p>Switch back to TTY1 (Alt+F1) to execute commands.</p>
+</li>
+<li>
+<p>Toggle back and forth (Alt+F2 / Alt+F1) to read and type.</p>
+</li>
+</ol>
+</details>
+<details>
+<summary> ✔️ tmux Method (Split Screen) </summary>
+<p>The minimal ISO includes <code>tmux</code> in the package set, but it’s not installed in
+the environment by default.</p>
+<ol>
+<li>
+<p>Run: <code>nix run nixpkgs#tmux</code></p>
+</li>
+<li>
+<p>Once inside tmux, split the screen vertically: Press <strong>Ctrl+b</strong> then <strong>%</strong></p>
+</li>
+<li>
+<p>In the right pane, open the README: <code>less repo/README.md</code></p>
+</li>
+<li>
+<p>In the left pane, type the commands</p>
+</li>
+<li>
+<p>Switch panes with <strong>Ctrl+b</strong> then <strong>Left/Right Arrow</strong></p>
+</li>
+</ol>
+</details>
 <p>Start with a minimal ISO.</p>
 <p><a href="https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-x86_64-linux.iso">Download Minimal (64-bit Intel-AMD)</a></p>
 <p>Choose the LTS image, it comes with the <code>zfs</code> module enabled.</p>
+<p>I’ve also found that for my system it works best to switch the Video Model to
+Virtio, with 3D accelleration disabled (causes mouse inversion). You can also
+set the Display Spice Listen type to <code>None</code>, and enable <code>OpenGL</code>.</p>
 <p>When creating the VM, before clicking “Finish”, check the “Customize
 configuration before install” box and choose EFI Firmware &gt; BIOS. <strong>You will
 waste a bunch of time if you forget to do this</strong>!</p>
@@ -24,15 +101,15 @@ waste a bunch of time if you forget to do this</strong>!</p>
 </code></pre>
 <p>Create a 1G <strong>EFI System</strong> first, then a <strong>Linux Filesystem</strong> with the remaining
 space. I used (100G)</p>
-<p>For the following guide, you want <code>/dev/vda1</code> to be your EFI System partition,
-and <code>/dev/vda2</code> to be the Linux Filesystem partition.</p>
+<p>For the following guide, you want <code>/dev/vda1</code> to be your <strong>EFI System</strong>
+partition, and <code>/dev/vda2</code> to be the <strong>Linux Filesystem</strong> partition.</p>
 <pre><code class="language-bash">sudo fdisk -l
 </code></pre>
 <pre><code class="language-bash">sudo mkfs.vfat -n EFI /dev/vda1
 </code></pre>
-<h2>Create your ZFS Partitions</h2>
+<h2>Create Your ZFS Partitions</h2>
 <ol>
-<li>Create a zpool</li>
+<li>Create a zpool:</li>
 </ol>
 <pre><code class="language-bash">zpool create \
   -o ashift=12 \
@@ -47,7 +124,7 @@ and <code>/dev/vda2</code> to be the Linux Filesystem partition.</p>
   rpool /dev/vda2
 </code></pre>
 <ol start="2">
-<li>Create all datasets with parents (<code>-p</code>)</li>
+<li>Create all datasets with parents (<code>-p</code>):</li>
 </ol>
 <pre><code class="language-bash"># root (ephemeral – will be rolled back)
 zfs create -p -o canmount=noauto -o mountpoint=legacy rpool/local/root
@@ -88,6 +165,7 @@ underlying storage isn’t being wiped.</p>
 </code></pre>
 <details>
 <summary> ✔️ Quick checklist: </summary>
+<p>Quick checklist to confirm that you’ve taken all of the necessary steps.</p>
 <pre><code class="language-bash"># 1. pool
 zpool create -o ashift=12 -o autotrim=on -O acltype=posixacl -O canmount=off \
   -O dnodesize=auto -O normalization=formD -O relatime=on -O xattr=sa \
@@ -134,8 +212,7 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
 <ul>
 <li>After first reboot, the above files will be placed directly under <code>/persist/</code></li>
 </ul>
-<p>You will read these files into the <code>configuration.nix</code> with <code>:r /tmp/rand.txt</code>,
-etc.</p>
+<p>You will read <code>rand.txt</code> into the <code>configuration.nix</code> with <code>:r /tmp/rand.txt</code>.</p>
 <p>Edit the <code>/mnt/etc/nixos/configuration.nix</code>:</p>
 <pre><code class="language-nix">{ config, lib, pkgs, ... }:
 
@@ -266,7 +343,7 @@ as <code>/home/your-user/flake</code>. Because subsequent reboots will wipe the 
 directory.</p>
 <ul>
 <li><a href="https://github.com/saylesss88/flakey">Example Flake</a>, this is a WIP
-adaptation from another flake I had. Cloning it may save you some time.</li>
+adaptation from another flake I had.</li>
 </ul>
 <pre><code class="language-bash">sudo mkdir /imperm_test
 echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
