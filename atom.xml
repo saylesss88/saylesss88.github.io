@@ -203,6 +203,17 @@ etc.&lt;/p&gt;
   fileSystems.&quot;/persist&quot;.neededForBoot = true;
 }
 &lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: Before my first rebuild, I had:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+   zfs rollback -r rpool/local/root@blank
+&apos;&apos;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;But noticed that on reboot the &lt;code&gt;rpool/local/root@blank&lt;/code&gt; wasn’t available yet,
+I assume due to a race condition or something I did or forgot to do. Adding
+the &lt;code&gt;zpool import&lt;/code&gt; fixed the issue. I mention this in case you get different
+results from your first reboot.&lt;/p&gt;
+&lt;/blockquote&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-install --root /mnt
 &lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;reboot
@@ -211,10 +222,18 @@ etc.&lt;/p&gt;
 &lt;p&gt;After first reboot, I recommend setting up a flake in a persistent location such
 as &lt;code&gt;/home/your-user/flake&lt;/code&gt;. Because subsequent reboots will wipe the &lt;code&gt;/etc&lt;/code&gt;
 directory.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/saylesss88/flakey&quot;&gt;Example Flake&lt;/a&gt;, this is a WIP
+adaptation from another flake I had. Cloning it may save you some time.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
 echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
 ls -l /imperm_test/testfile # Verify the file exists
 cat /imperm_test/testfile # Verify content
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Reboot and check again:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile # Verify the file no longer exists
+cat /imperm_test/testfile # Verify content is missing
 &lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>GnuPG gpg-agent</title><id>https://saylesss88.github.io/nix/gpg-agent.html</id><updated>2026-01-15T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/gpg-agent.html" rel="alternate"/><content type="html">&lt;h1&gt;GnuPG &amp;amp; &lt;code&gt;gpg-agent&lt;/code&gt; on NixOS&lt;/h1&gt;
 &lt;details&gt;

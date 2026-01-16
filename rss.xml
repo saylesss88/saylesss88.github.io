@@ -202,6 +202,17 @@ etc.</p>
   fileSystems."/persist".neededForBoot = true;
 }
 </code></pre>
+<blockquote>
+<p>NOTE: Before my first rebuild, I had:</p>
+<pre><code class="language-nix">boot.initrd.postDeviceCommands = lib.mkAfter ''
+   zfs rollback -r rpool/local/root@blank
+'';
+</code></pre>
+<p>But noticed that on reboot the <code>rpool/local/root@blank</code> wasn’t available yet,
+I assume due to a race condition or something I did or forgot to do. Adding
+the <code>zpool import</code> fixed the issue. I mention this in case you get different
+results from your first reboot.</p>
+</blockquote>
 <pre><code class="language-bash">sudo nixos-install --root /mnt
 </code></pre>
 <pre><code class="language-bash">reboot
@@ -210,10 +221,18 @@ etc.</p>
 <p>After first reboot, I recommend setting up a flake in a persistent location such
 as <code>/home/your-user/flake</code>. Because subsequent reboots will wipe the <code>/etc</code>
 directory.</p>
+<ul>
+<li><a href="https://github.com/saylesss88/flakey">Example Flake</a>, this is a WIP
+adaptation from another flake I had. Cloning it may save you some time.</li>
+</ul>
 <pre><code class="language-bash">mkdir /imperm_test
 echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
 ls -l /imperm_test/testfile # Verify the file exists
 cat /imperm_test/testfile # Verify content
+</code></pre>
+<p>Reboot and check again:</p>
+<pre><code class="language-bash">ls -l /imperm_test/testfile # Verify the file no longer exists
+cat /imperm_test/testfile # Verify content is missing
 </code></pre>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/zfs_impermanence.html</guid><pubDate>Fri, 16 Jan 2026 00:00:00 +0000</pubDate></item><item><title>GnuPG gpg-agent</title><link>https://saylesss88.github.io/nix/gpg-agent.html</link><description><![CDATA[<h1>GnuPG &amp; <code>gpg-agent</code> on NixOS</h1>
 <details>
