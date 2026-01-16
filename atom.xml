@@ -8,6 +8,12 @@
 &lt;a href=&quot;https://grahamc.com/blog/erase-your-darlings/&quot;&gt;erase your darlings&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;I only tested this within a VM although with a few small tweaks it should work
 on bare metal. I used the libvirtd stack with KVM for this.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: This example doesn’t use encryption, it would be easy to add ZFS Native
+Encryption by changing the first &lt;code&gt;zpool&lt;/code&gt; command. It’s good enough for most
+people but does leak some metadata. I’ll add a LUKS example eventually which
+is more involved.&lt;/p&gt;
+&lt;/blockquote&gt;
 &lt;p&gt;I added this file as a README to a
 &lt;a href=&quot;https://github.com/saylesss88/flakey&quot;&gt;flake&lt;/a&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git clone https://github.com/saylesss88/flakey.git
@@ -124,6 +130,22 @@ partition, and &lt;code&gt;/dev/vda2&lt;/code&gt; to be the &lt;strong&gt;Linux 
   -O mountpoint=none \
   rpool /dev/vda2
 &lt;/code&gt;&lt;/pre&gt;
+&lt;details&gt;
+&lt;summary&gt; ZFS Native Encryption (Work in Progress) &lt;/summary&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;zpool create -f \
+  -o ashift=12 \
+  -O encryption=aes-256-gcm \
+  -O keyformat=passphrase \
+  -O keylocation=prompt \
+  -O mountpoint=none \
+  -O acltype=posixacl \
+  -O compression=lz4 \
+  -O xattr=sa \
+  rpool /dev/vda2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I just got impermanence working without encryption, I haven’t been able to test
+and iron out any quirks of this encryption method..&lt;/p&gt;
+&lt;/details&gt;
 &lt;ol start=&quot;2&quot;&gt;
 &lt;li&gt;Create all datasets with parents (&lt;code&gt;-p&lt;/code&gt;):&lt;/li&gt;
 &lt;/ol&gt;

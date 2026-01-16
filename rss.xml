@@ -7,6 +7,12 @@
 <a href="https://grahamc.com/blog/erase-your-darlings/">erase your darlings</a></p>
 <p>I only tested this within a VM although with a few small tweaks it should work
 on bare metal. I used the libvirtd stack with KVM for this.</p>
+<blockquote>
+<p>NOTE: This example doesn’t use encryption, it would be easy to add ZFS Native
+Encryption by changing the first <code>zpool</code> command. It’s good enough for most
+people but does leak some metadata. I’ll add a LUKS example eventually which
+is more involved.</p>
+</blockquote>
 <p>I added this file as a README to a
 <a href="https://github.com/saylesss88/flakey">flake</a>:</p>
 <pre><code class="language-bash">git clone https://github.com/saylesss88/flakey.git
@@ -123,6 +129,22 @@ partition, and <code>/dev/vda2</code> to be the <strong>Linux Filesystem</strong
   -O mountpoint=none \
   rpool /dev/vda2
 </code></pre>
+<details>
+<summary> ZFS Native Encryption (Work in Progress) </summary>
+<pre><code class="language-bash">zpool create -f \
+  -o ashift=12 \
+  -O encryption=aes-256-gcm \
+  -O keyformat=passphrase \
+  -O keylocation=prompt \
+  -O mountpoint=none \
+  -O acltype=posixacl \
+  -O compression=lz4 \
+  -O xattr=sa \
+  rpool /dev/vda2
+</code></pre>
+<p>I just got impermanence working without encryption, I haven’t been able to test
+and iron out any quirks of this encryption method..</p>
+</details>
 <ol start="2">
 <li>Create all datasets with parents (<code>-p</code>):</li>
 </ol>
