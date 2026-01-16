@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>ZFS Impermanence in a VM</title><id>https://saylesss88.github.io/nix/zfs_impermanence.html</id><updated>2026-01-16T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/zfs_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Impermanence in a VM&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
 &lt;p&gt;I only tested this within a VM although with a few small tweaks it should work
 on bare metal. I used the libvirtd stack with KVM for this.&lt;/p&gt;
 &lt;p&gt;Yet another blog post inspired by
@@ -198,7 +202,7 @@ etc.&lt;/p&gt;
   #};
 
   # ------------------------------------------------------------------
-  # 6. Mark /persist as needed for boot (impermanence will use it later)
+  # 6. Mark /persist as needed for boot
   # ------------------------------------------------------------------
   fileSystems.&quot;/persist&quot;.neededForBoot = true;
 }
@@ -209,15 +213,54 @@ etc.&lt;/p&gt;
    zfs rollback -r rpool/local/root@blank
 &apos;&apos;;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;But noticed that on reboot the &lt;code&gt;rpool/local/root@blank&lt;/code&gt; wasn’t available yet,
-I assume due to a race condition or something I did or forgot to do. Adding
-the &lt;code&gt;zpool import&lt;/code&gt; fixed the issue. I mention this in case you get different
-results from your first reboot.&lt;/p&gt;
+&lt;p&gt;But noticed in my logs that on reboot the &lt;code&gt;rpool/local/root@blank&lt;/code&gt; wasn’t
+available yet, I assume due to a race condition or something I did or forgot
+to do. Adding the &lt;code&gt;zpool import&lt;/code&gt; fixed the issue. I mention this in case you
+get different results from your first reboot.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-install --root /mnt
 &lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;reboot
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;What gets Wiped vs. What Stays&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;What gets wiped?&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;Since we roll back &lt;code&gt;/&lt;/code&gt;(&lt;code&gt;rpool/local/root&lt;/code&gt;):&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/etc&lt;/code&gt; (including system configs) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/var&lt;/code&gt; (logs, databases, containers) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/root&lt;/code&gt; (the root users home directory) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/usr&lt;/code&gt; (though in NixOS this is mostly empty) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;What survives?&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/nix&lt;/code&gt; (mounted from &lt;code&gt;rpool/local/nix&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/boot&lt;/code&gt; (mounted from &lt;code&gt;rpool/local/boot&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/home&lt;/code&gt; (mounted from &lt;code&gt;rpool/safe/home&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/persists&lt;/code&gt; (mounted from &lt;code&gt;rpool/safe/persist&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Why this matters for secrets?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;SSH Host keys&lt;/strong&gt; typically live in &lt;code&gt;/etc/ssh&lt;/code&gt;. Since &lt;code&gt;/etc&lt;/code&gt; is wiped, they
+disappear. Store them in &lt;code&gt;/persist/etc/ssh&lt;/code&gt; and tell NixOS to look there. (or
+symlink them)&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;User Secrets&lt;/strong&gt; (&lt;code&gt;~/.config/sops&lt;/code&gt;): They live in &lt;code&gt;/home&lt;/code&gt; so they’re safe.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Integrating into a Flake&lt;/h2&gt;
 &lt;p&gt;After first reboot, I recommend setting up a flake in a persistent location such
 as &lt;code&gt;/home/your-user/flake&lt;/code&gt;. Because subsequent reboots will wipe the &lt;code&gt;/etc&lt;/code&gt;
@@ -226,14 +269,33 @@ directory.&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/saylesss88/flakey&quot;&gt;Example Flake&lt;/a&gt;, this is a WIP
 adaptation from another flake I had. Cloning it may save you some time.&lt;/li&gt;
 &lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir /imperm_test
 echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
-ls -l /imperm_test/testfile # Verify the file exists
-cat /imperm_test/testfile # Verify content
+sudo ls -l /imperm_test/testfile # Verify the file exists
+sudo cat /imperm_test/testfile # Verify content
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Reboot and check again:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile # Verify the file no longer exists
-cat /imperm_test/testfile # Verify content is missing
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo ls -l /imperm_test/testfile # Verify the file no longer exists
+sudo cat /imperm_test/testfile # Verify content is missing
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Persisting SSH Keys&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /persist/etc/ssh
+sudo ssh-keygen -t ed25519 -f /persist/etc/ssh/ssh_host_ed25519_key -N &quot;&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;OR if you still have keys in &lt;code&gt;/etc/ssh&lt;/code&gt; you want to keep just copy them to the
+persistent location:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Tell NixOS where to find them&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;services.openssh = {
+  hostKeys = [
+    {
+      path = &quot;/persist/etc/ssh/ssh_host_ed25519_key&quot;;
+      type = ed25519;
+    }
+  ];
+}
 &lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>GnuPG gpg-agent</title><id>https://saylesss88.github.io/nix/gpg-agent.html</id><updated>2026-01-15T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/gpg-agent.html" rel="alternate"/><content type="html">&lt;h1&gt;GnuPG &amp;amp; &lt;code&gt;gpg-agent&lt;/code&gt; on NixOS&lt;/h1&gt;
 &lt;details&gt;

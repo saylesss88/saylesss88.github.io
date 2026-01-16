@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>ZFS Impermanence in a VM</title><link>https://saylesss88.github.io/nix/zfs_impermanence.html</link><description><![CDATA[<h1>ZFS Impermanence in a VM</h1>
+<details>
+<summary> ✔️ Table of Contents</summary>
+<!-- toc -->
+</details>
 <p>I only tested this within a VM although with a few small tweaks it should work
 on bare metal. I used the libvirtd stack with KVM for this.</p>
 <p>Yet another blog post inspired by
@@ -197,7 +201,7 @@ etc.</p>
   #};
 
   # ------------------------------------------------------------------
-  # 6. Mark /persist as needed for boot (impermanence will use it later)
+  # 6. Mark /persist as needed for boot
   # ------------------------------------------------------------------
   fileSystems."/persist".neededForBoot = true;
 }
@@ -208,15 +212,54 @@ etc.</p>
    zfs rollback -r rpool/local/root@blank
 '';
 </code></pre>
-<p>But noticed that on reboot the <code>rpool/local/root@blank</code> wasn’t available yet,
-I assume due to a race condition or something I did or forgot to do. Adding
-the <code>zpool import</code> fixed the issue. I mention this in case you get different
-results from your first reboot.</p>
+<p>But noticed in my logs that on reboot the <code>rpool/local/root@blank</code> wasn’t
+available yet, I assume due to a race condition or something I did or forgot
+to do. Adding the <code>zpool import</code> fixed the issue. I mention this in case you
+get different results from your first reboot.</p>
 </blockquote>
 <pre><code class="language-bash">sudo nixos-install --root /mnt
 </code></pre>
 <pre><code class="language-bash">reboot
 </code></pre>
+<hr />
+<h2>What gets Wiped vs. What Stays</h2>
+<p><strong>What gets wiped?</strong>:</p>
+<p>Since we roll back <code>/</code>(<code>rpool/local/root</code>):</p>
+<ul>
+<li>
+<p><code>/etc</code> (including system configs) -&gt; WIPED</p>
+</li>
+<li>
+<p><code>/var</code> (logs, databases, containers) -&gt; WIPED</p>
+</li>
+<li>
+<p><code>/root</code> (the root users home directory) -&gt; WIPED</p>
+</li>
+<li>
+<p><code>/usr</code> (though in NixOS this is mostly empty) -&gt; WIPED</p>
+</li>
+</ul>
+<p><strong>What survives?</strong>:</p>
+<ul>
+<li>
+<p><code>/nix</code> (mounted from <code>rpool/local/nix</code>) -&gt; PERSISTS</p>
+</li>
+<li>
+<p><code>/boot</code> (mounted from <code>rpool/local/boot</code>) -&gt; PERSISTS</p>
+</li>
+<li>
+<p><code>/home</code> (mounted from <code>rpool/safe/home</code>) -&gt; PERSISTS</p>
+</li>
+<li>
+<p><code>/persists</code> (mounted from <code>rpool/safe/persist</code>) -&gt; PERSISTS</p>
+</li>
+</ul>
+<p><strong>Why this matters for secrets?</strong></p>
+<p><strong>SSH Host keys</strong> typically live in <code>/etc/ssh</code>. Since <code>/etc</code> is wiped, they
+disappear. Store them in <code>/persist/etc/ssh</code> and tell NixOS to look there. (or
+symlink them)</p>
+<p><strong>User Secrets</strong> (<code>~/.config/sops</code>): They live in <code>/home</code> so they’re safe.</p>
+<hr />
 <h2>Integrating into a Flake</h2>
 <p>After first reboot, I recommend setting up a flake in a persistent location such
 as <code>/home/your-user/flake</code>. Because subsequent reboots will wipe the <code>/etc</code>
@@ -225,14 +268,33 @@ directory.</p>
 <li><a href="https://github.com/saylesss88/flakey">Example Flake</a>, this is a WIP
 adaptation from another flake I had. Cloning it may save you some time.</li>
 </ul>
-<pre><code class="language-bash">mkdir /imperm_test
+<pre><code class="language-bash">sudo mkdir /imperm_test
 echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
-ls -l /imperm_test/testfile # Verify the file exists
-cat /imperm_test/testfile # Verify content
+sudo ls -l /imperm_test/testfile # Verify the file exists
+sudo cat /imperm_test/testfile # Verify content
 </code></pre>
 <p>Reboot and check again:</p>
-<pre><code class="language-bash">ls -l /imperm_test/testfile # Verify the file no longer exists
-cat /imperm_test/testfile # Verify content is missing
+<pre><code class="language-bash">sudo ls -l /imperm_test/testfile # Verify the file no longer exists
+sudo cat /imperm_test/testfile # Verify content is missing
+</code></pre>
+<hr />
+<h2>Persisting SSH Keys</h2>
+<pre><code class="language-bash">sudo mkdir -p /persist/etc/ssh
+sudo ssh-keygen -t ed25519 -f /persist/etc/ssh/ssh_host_ed25519_key -N ""
+</code></pre>
+<p>OR if you still have keys in <code>/etc/ssh</code> you want to keep just copy them to the
+persistent location:</p>
+<pre><code class="language-bash">sudo cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/
+</code></pre>
+<p><strong>Tell NixOS where to find them</strong></p>
+<pre><code class="language-nix">services.openssh = {
+  hostKeys = [
+    {
+      path = "/persist/etc/ssh/ssh_host_ed25519_key";
+      type = ed25519;
+    }
+  ];
+}
 </code></pre>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/zfs_impermanence.html</guid><pubDate>Fri, 16 Jan 2026 00:00:00 +0000</pubDate></item><item><title>GnuPG gpg-agent</title><link>https://saylesss88.github.io/nix/gpg-agent.html</link><description><![CDATA[<h1>GnuPG &amp; <code>gpg-agent</code> on NixOS</h1>
 <details>
