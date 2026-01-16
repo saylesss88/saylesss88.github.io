@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>ZFS Impermanence in a VM</title><link>https://saylesss88.github.io/nix/zfs_impermanence.html</link><description><![CDATA[<h1>ZFS Impermanence in a VM</h1>
 <p>I only tested this within a VM although with a few small tweaks it should work
-on bare metal.</p>
+on bare metal. I used the libvirtd stack with KVM for this.</p>
 <p>Yet another blog post inspired by
 <a href="https://grahamc.com/blog/erase-your-darlings/">erase your darlings</a></p>
 <p>Start with a minimal ISO.</p>
 <p><a href="https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-x86_64-linux.iso">Download Minimal (64-bit Intel-AMD)</a></p>
+<p>Choose the LTS image, it comes with the <code>zfs</code> module enabled.</p>
 <p>When creating the VM, before clicking “Finish”, check the “Customize
 configuration before install” box and choose EFI Firmware &gt; BIOS.</p>
 <ul>
@@ -62,13 +63,18 @@ zfs create -p -o mountpoint=legacy rpool/safe/persist
 </ol>
 <pre><code class="language-bash">mount -t zfs rpool/local/root /mnt
 
-mkdir -p /mnt/{nix,home,persist}
-mkdir -p /mnt/boot/efi
+mkdir -p /mnt/{boot,boot/efi,nix,home,persist}
 mount -t vfat -o umask=0077 /dev/vda1 /mnt/boot/efi
 mount -t zfs rpool/local/nix   /mnt/nix
 mount -t zfs rpool/safe/home  /mnt/home
 mount -t zfs rpool/safe/persist /mnt/persist
 </code></pre>
+<blockquote>
+<p>Note: By placing your Nix flake in <code>/home/user/nixos-config</code> (which lives on
+<code>rpool/safe/home</code>), it persists naturally. You don’t need to add your
+configuration files to the <code>environment.persistence</code> module lists because the
+underlying storage isn’t being wiped.</p>
+</blockquote>
 <ol start="4">
 <li>Continue with the rest of the install</li>
 </ol>
@@ -110,16 +116,19 @@ mount -t zfs rpool/safe/persist /mnt/persist
 <pre><code class="language-bash">head -c4 /dev/urandom | xxd -p &gt; /tmp/rand.txt
 mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 </code></pre>
-<p><strong>Create password file</strong>:</p>
-<pre><code class="language-bash">sudo mkdir -p /persist/etc/nixos-secrets/passwords
+<p><strong>Create password file in a persistent location</strong>:</p>
+<pre><code class="language-bash">sudo mkdir -p /mnt/persist/etc/nixos-secrets/passwords
 
 # 2) Create the password hash FILE
-sudo sh -c 'mkpasswd -m yescrypt "your-password" &gt; /persist/etc/nixos-secrets/passwords/your-user'
+sudo sh -c 'mkpasswd -m yescrypt "your-password" &gt; /mnt/persist/etc/nixos-secrets/passwords/your-user'
 
 # 3) Lock down permissions
-sudo chown root:root /persist/etc/nixos-secrets/passwords/your-user
-sudo chmod 600 /persist/etc/nixos-secrets/passwords/your-user
+sudo chown root:root /mnt/persist/etc/nixos-secrets/passwords/your-user
+sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
 </code></pre>
+<ul>
+<li>After first reboot, the above files will be placed directly under <code>/persist/</code></li>
+</ul>
 <p>You will read these files into the <code>configuration.nix</code> with <code>:r /tmp/rand.txt</code>,
 etc.</p>
 <p>Edit the <code>/mnt/etc/nixos/configuration.nix</code>:</p>
@@ -171,6 +180,7 @@ etc.</p>
     isNormalUser = true;
     extraGroups = [ "wheel" ];
     group = "your-user";
+    # The location of `hashedPasswordFile` after first reboot
     hashedPasswordFile = "/persist/etc/nixos-secrets/passwords/your-user";
   };
 
@@ -193,12 +203,17 @@ etc.</p>
 </code></pre>
 <pre><code class="language-bash">sudo nixos-install --root /mnt
 </code></pre>
+<pre><code class="language-bash">reboot
+</code></pre>
+<h2>Integrating into a Flake</h2>
+<p>After first reboot, I recommend setting up a flake in a persistent location such
+as <code>/home/your-user/flake</code>. Because subsequent reboots will wipe the <code>/etc</code>
+directory.</p>
 <pre><code class="language-bash">mkdir /imperm_test
 echo "This should be Gone after Reboot" | sudo tee /imperm_test/testfile
 ls -l /imperm_test/testfile # Verify the file exists
 cat /imperm_test/testfile # Verify content
 </code></pre>
-<p>Reboot and the file should no longer exist.</p>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/zfs_impermanence.html</guid><pubDate>Fri, 16 Jan 2026 00:00:00 +0000</pubDate></item><item><title>GnuPG gpg-agent</title><link>https://saylesss88.github.io/nix/gpg-agent.html</link><description><![CDATA[<h1>GnuPG &amp; <code>gpg-agent</code> on NixOS</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
