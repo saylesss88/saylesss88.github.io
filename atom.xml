@@ -24,6 +24,12 @@ a few omissions.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;/details&gt;
+&lt;p&gt;When creating the VM, before clicking “Finish”, check the “Customize
+configuration before install” box and choose EFI Firmware &amp;gt; BIOS. &lt;strong&gt;You will
+waste a bunch of time if you forget to do this&lt;/strong&gt;!&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;I used &lt;code&gt;OVMF_CODE.fd&lt;/code&gt; in my testing.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;p&gt;&lt;strong&gt;Format your disk&lt;/strong&gt;&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;Partition &amp;amp; Format&lt;/li&gt;
@@ -220,6 +226,9 @@ sudo reboot
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If the rollback is working, &lt;code&gt;/etc/rollback-canary&lt;/code&gt; should be gone after reboot
 (while things in &lt;code&gt;/persist&lt;/code&gt; remain).&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /persist/etc
+sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
+&lt;/code&gt;&lt;/pre&gt;
 &lt;h2&gt;Adding a disk serial (libvirt XML)&lt;/h2&gt;
 &lt;p&gt;NixOS ZFS boot support is broken for virtio drives without serial numbers.
 Virtio disks without serials don’t appear in /dev/disk/by-id, but ZFS boot logic
@@ -510,11 +519,12 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   # ------------------------------------------------------------------
   # 3. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
-  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
-    zpool import -N -f rpool
-    zfs rollback -r rpool/local/root@blank
-    zpool export rpool
-  &apos;&apos;;
+# Uncomment after first reboot
+#  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+#    zpool import -N -f rpool
+#    zfs rollback -r rpool/local/root@blank
+#    zpool export rpool
+#  &apos;&apos;;
 
   # ------------------------------------------------------------------
   # 4. Basic system (root password, serial console for VM)
@@ -549,21 +559,27 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   fileSystems.&quot;/persist&quot;.neededForBoot = true;
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;NOTE: Before my first rebuild, I had:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
-   zfs rollback -r rpool/local/root@blank
-&apos;&apos;;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;But noticed in my logs that on reboot the &lt;code&gt;rpool/local/root@blank&lt;/code&gt; wasn’t
-available yet, I assume due to a race condition or something I did or forgot
-to do. Adding the &lt;code&gt;zpool import&lt;/code&gt; fixed the issue. I mention this in case you
-get different results from your first reboot.&lt;/p&gt;
-&lt;/blockquote&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-install --root /mnt
 &lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;reboot
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Copy your system files to a persistent location before uncommenting the
+impermanence script.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /persist/etc
+sudo cp /etc/nixos/configuration.nix /etc/nixos/hardware-configuration.nix /persist/etc/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, you can uncomment this block:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+    zpool import -N -f rpool
+    zfs rollback -r rpool/local/root@blank
+    zpool export rpool
+  &apos;&apos;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo touch /etc/rollback-canary
+sudo reboot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If the rollback is working, &lt;code&gt;/etc/rollback-canary&lt;/code&gt; should be gone after reboot
+(while things in &lt;code&gt;/persist&lt;/code&gt; remain).&lt;/p&gt;
 &lt;hr /&gt;
 &lt;h2&gt;What gets Wiped vs. What Stays&lt;/h2&gt;
 &lt;p&gt;&lt;strong&gt;What gets wiped?&lt;/strong&gt;:&lt;/p&gt;

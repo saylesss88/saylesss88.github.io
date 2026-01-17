@@ -23,6 +23,12 @@ a few omissions.</p>
 </li>
 </ol>
 </details>
+<p>When creating the VM, before clicking “Finish”, check the “Customize
+configuration before install” box and choose EFI Firmware &gt; BIOS. <strong>You will
+waste a bunch of time if you forget to do this</strong>!</p>
+<ul>
+<li>I used <code>OVMF_CODE.fd</code> in my testing.</li>
+</ul>
 <p><strong>Format your disk</strong></p>
 <ol>
 <li>Partition &amp; Format</li>
@@ -219,6 +225,9 @@ sudo reboot
 </code></pre>
 <p>If the rollback is working, <code>/etc/rollback-canary</code> should be gone after reboot
 (while things in <code>/persist</code> remain).</p>
+<pre><code class="language-bash">sudo mkdir -p /persist/etc
+sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
+</code></pre>
 <h2>Adding a disk serial (libvirt XML)</h2>
 <p>NixOS ZFS boot support is broken for virtio drives without serial numbers.
 Virtio disks without serials don’t appear in /dev/disk/by-id, but ZFS boot logic
@@ -509,11 +518,12 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   # ------------------------------------------------------------------
   # 3. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
-  boot.initrd.postDeviceCommands = lib.mkAfter ''
-    zpool import -N -f rpool
-    zfs rollback -r rpool/local/root@blank
-    zpool export rpool
-  '';
+# Uncomment after first reboot
+#  boot.initrd.postDeviceCommands = lib.mkAfter ''
+#    zpool import -N -f rpool
+#    zfs rollback -r rpool/local/root@blank
+#    zpool export rpool
+#  '';
 
   # ------------------------------------------------------------------
   # 4. Basic system (root password, serial console for VM)
@@ -548,21 +558,27 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   fileSystems."/persist".neededForBoot = true;
 }
 </code></pre>
-<blockquote>
-<p>NOTE: Before my first rebuild, I had:</p>
-<pre><code class="language-nix">boot.initrd.postDeviceCommands = lib.mkAfter ''
-   zfs rollback -r rpool/local/root@blank
-'';
-</code></pre>
-<p>But noticed in my logs that on reboot the <code>rpool/local/root@blank</code> wasn’t
-available yet, I assume due to a race condition or something I did or forgot
-to do. Adding the <code>zpool import</code> fixed the issue. I mention this in case you
-get different results from your first reboot.</p>
-</blockquote>
 <pre><code class="language-bash">sudo nixos-install --root /mnt
 </code></pre>
 <pre><code class="language-bash">reboot
 </code></pre>
+<p>Copy your system files to a persistent location before uncommenting the
+impermanence script.</p>
+<pre><code class="language-bash">sudo mkdir -p /persist/etc
+sudo cp /etc/nixos/configuration.nix /etc/nixos/hardware-configuration.nix /persist/etc/
+</code></pre>
+<p>Now, you can uncomment this block:</p>
+<pre><code class="language-nix">  boot.initrd.postDeviceCommands = lib.mkAfter ''
+    zpool import -N -f rpool
+    zfs rollback -r rpool/local/root@blank
+    zpool export rpool
+  '';
+</code></pre>
+<pre><code class="language-bash">sudo touch /etc/rollback-canary
+sudo reboot
+</code></pre>
+<p>If the rollback is working, <code>/etc/rollback-canary</code> should be gone after reboot
+(while things in <code>/persist</code> remain).</p>
 <hr />
 <h2>What gets Wiped vs. What Stays</h2>
 <p><strong>What gets wiped?</strong>:</p>
