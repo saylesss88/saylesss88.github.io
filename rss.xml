@@ -71,6 +71,9 @@ sudo zfs create -p -o mountpoint=legacy rpool/local/nix
 sudo zfs create -p -o mountpoint=legacy rpool/safe/home
 sudo zfs create -p -o mountpoint=legacy rpool/safe/persist
 </code></pre>
+<ul>
+<li><code>mountpoint=legacy</code> means that systemd will take care of the mounting</li>
+</ul>
 <ol start="6">
 <li>Mounting</li>
 </ol>
@@ -116,13 +119,9 @@ nix-shell -p helix
 <p><strong>Create password file in a persistent location</strong>:</p>
 <pre><code class="language-bash">sudo mkdir -p /mnt/persist/etc/nixos-secrets/passwords
 
- #2) Create the password hash and write it to the persistent file
- #Replace "your-password" and "your-user"
-sudo sh -c 'mkpasswd -m yescrypt "your-password" &gt; /mnt/persist/etc/nixos-secrets/passwords/your-user'
-
- #3) Lock down permissions
-sudo chown root:root /mnt/persist/etc/nixos-secrets/passwords/your-user
-sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
+ #1) This is for `initialHashedPassword`
+ #   Read this in with `:r /tmp/pass.txt`
+mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 </code></pre>
 <p>After first reboot, the above files will be placed directly under <code>/persist/</code></p>
 <pre><code class="language-nix">{ config, lib, pkgs, ... }:
@@ -134,12 +133,12 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   boot.loader = {
     systemd-boot = {
       enable = true;
-      consoleMode = "max";           # Full 80×25 console in VM
-      editor = false;                # Security – no edit at boot
+      consoleMode = "max";
+      editor = false;
     };
     efi = {
-      canTouchEfiVariables = true;   # libvirt provides /sys/firmware/efi
-      efiSysMountPoint = "/boot";    # Our 1 GiB FAT32 partition
+      canTouchEfiVariables = true;
+      efiSysMountPoint = "/boot";
     };
   };
 
@@ -150,7 +149,12 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   boot.zfs.devNodes = "/dev/";       # Critical for VMs
   # Not needed with LUKS
   boot.zfs.requestEncryptionCredentials = false;
+  # systemd handles mounting
+  systemd.services.zfs-mount.enable = false;
 
+  # ------------------------------------------------------------------
+  # 3. LUKS
+  # ------------------------------------------------------------------
    boot.initrd.luks.devices = {
      cryptroot = {
     # replace uuid# with output of `sudo blkid /dev/vda2`
@@ -160,13 +164,8 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
      };
    };
 
-
-
-  # Unique 8-hex hostId (run once in live ISO: head -c4 /dev/urandom | xxd -p)
-  networking.hostId = "a1b2c3d4";    # &lt;&lt;&lt;--- replace with your own value
-
   # ------------------------------------------------------------------
-  # 3. Roll-back root to blank snapshot on **every** boot
+  # 4. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
  # Uncomment after first reboot
  # boot.initrd.postDeviceCommands = lib.mkAfter ''
@@ -176,11 +175,18 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
  # '';
 
   # ------------------------------------------------------------------
-  # 4. Basic system (root password, serial console for VM)
+  # 5. Basic system (root password, serial console for VM)
   # ------------------------------------------------------------------
+  # Unique 8-hex hostId (run once in live ISO: head -c4 /dev/urandom | xxd -p)
+  networking.hostId = "a1b2c3d4";    # &lt;&lt;&lt;--- replace with your own value
+
   users.users.root.initialPassword = "changeme";   # change after first login
 
   boot.kernelParams = [ "console=tty1" ];
+
+  # ------------------------------------------------------------------
+  #  Users
+  # ------------------------------------------------------------------
 
   users.mutableUsers = false;
 
@@ -189,15 +195,29 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
     isNormalUser = true;
     extraGroups = [ "wheel" ];
     group = "your-user";
-    # The location of `hashedPasswordFile` after first reboot
-    hashedPasswordFile = "/persist/etc/nixos-secrets/passwords/your-user";
+    # :r /tmp/pass.txt:
+    initialHashedPassword = "";
   };
 
   # This enables `chown -R your-user:your-user`
   users.groups.your-user = { };
 
   # ------------------------------------------------------------------
-  # 5. (Optional) Enable SSH for post-install configuration
+  #  (Optional) Helpful for recovery situations
+  # ------------------------------------------------------------------
+  # users.users.admin = {
+  #  isNormalUser = true;
+  #  description = "admin account";
+  #  extraGroups = [ "wheel" ];
+  #  group = "admin";
+    # initialHashedPassword = "Output of `:r /tmp/pass.txt`";
+ # };
+
+ # users.groups.admin = { };
+  # ------------------------------------------------------------------
+
+  # ------------------------------------------------------------------
+  # 6. (Optional) Enable SSH for post-install configuration
   # ------------------------------------------------------------------
   # services.openssh = {
   #  enable = true;
@@ -205,29 +225,31 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   #};
 
   # ------------------------------------------------------------------
-  # 6. Mark /persist as needed for boot
+  # 7. Mark /persist as needed for boot
   # ------------------------------------------------------------------
   fileSystems."/persist".neededForBoot = true;
 }
 </code></pre>
-<p>I ran <code>nixos-install</code> and rebooted once before uncommenting:</p>
-<pre><code class="language-nix"> # boot.initrd.postDeviceCommands = lib.mkAfter ''
- #   zpool import -N -f rpool
- #   zfs rollback -r rpool/local/root@blank
- #   zpool export rpool
- # '';
+<p>After reboot, you can uncomment:</p>
+<pre><code class="language-nix">  boot.initrd.postDeviceCommands = lib.mkAfter ''
+    zpool import -N -f rpool
+    zfs rollback -r rpool/local/root@blank
+    zpool export rpool
+  '';
 </code></pre>
-<p>Rebuilding and testing, Reboot, uncomment the above script and test: (Don’t
-forget that the <code>/etc</code> directory will be wiped, including your
-<code>configuration.nix</code> and <code>hardware-configuration.nix</code>!)</p>
+<p>Uncomment the above script and test: (Don’t forget that the <code>/etc</code> directory
+will be wiped, including your <code>configuration.nix</code> and
+<code>hardware-configuration.nix</code>!)</p>
+<p><strong>Configuration backup</strong></p>
+<pre><code class="language-bash">sudo mkdir -p /persist/etc
+sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
+</code></pre>
+<p><strong>Rollback Test</strong></p>
 <pre><code class="language-bash">sudo touch /etc/rollback-canary
 sudo reboot
 </code></pre>
 <p>If the rollback is working, <code>/etc/rollback-canary</code> should be gone after reboot
 (while things in <code>/persist</code> remain).</p>
-<pre><code class="language-bash">sudo mkdir -p /persist/etc
-sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
-</code></pre>
 <h2>Adding a disk serial (libvirt XML)</h2>
 <p>NixOS ZFS boot support is broken for virtio drives without serial numbers.
 Virtio disks without serials don’t appear in /dev/disk/by-id, but ZFS boot logic
@@ -253,6 +275,28 @@ virsh edit nixos-unstable
   ...
 &lt;/disk&gt;
 </code></pre>
+<h2>Issues I’ve Come Across</h2>
+<p><strong>sops-nix README</strong>: Explicitly warns: “If you are using Impermanence, the key
+used for secret decryption … must be in a persisted directory, loaded early
+enough during boot.” It specifically cites activation timing as the reason this
+fails.</p>
+<p>Typically the solution was to add <code>neededForUsers = true;</code> in your
+“password_hash” block but that isn’t working for this setup. (ZFS/LUKS/Imperm)</p>
+<p>I’ve been using <code>initialHashedPassword</code>, which bypasses the race entirely by
+baking the salted hash into the store. This is all that I’ve found that works so
+far…</p>
+<ul>
+<li>
+<p>Without adding the <code>&lt;serial&gt;disk01&lt;/serial&gt;</code> to the XML when you reboot, your
+system will hang before asking for your LUKS password.</p>
+</li>
+<li>
+<p>Without clicking “Customize configuration before install” box and choosing EFI
+Firmware instead of the default BIOS, <strong>you will not be able to boot at all</strong>.
+This seems to be the case for all custom disk layouts with NixOS on the
+libvirt stack.</p>
+</li>
+</ul>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/encrypted_zfs.html</guid><pubDate>Sat, 17 Jan 2026 00:00:00 +0000</pubDate></item><item><title>ZFS Impermanence in a VM</title><link>https://saylesss88.github.io/nix/zfs_impermanence.html</link><description><![CDATA[<h1>ZFS Impermanence in a VM</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
