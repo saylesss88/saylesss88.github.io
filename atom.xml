@@ -24,6 +24,7 @@ a few omissions.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;/details&gt;
+&lt;h2&gt;Getting Started&lt;/h2&gt;
 &lt;p&gt;When creating the VM, before clicking “Finish”, check the “Customize
 configuration before install” box and choose EFI Firmware &amp;gt; BIOS. &lt;strong&gt;You will
 waste a bunch of time if you forget to do this&lt;/strong&gt;!&lt;/p&gt;
@@ -114,6 +115,7 @@ nix-shell -p helix
 &lt;/code&gt;&lt;/pre&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;boot.initrd.luks.devices.&quot;cryptroot&quot;.device = &quot;/dev/disk/by-uuid/&amp;lt;UUID-OF-PARTITION-2&amp;gt;&quot;;
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Prep &lt;code&gt;configuration.nix&lt;/code&gt;&lt;/h2&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;head -c4 /dev/urandom | xxd -p &amp;gt; /tmp/rand.txt
 &lt;/code&gt;&lt;/pre&gt;
@@ -144,7 +146,7 @@ mkpasswd --method=yescrypt &amp;gt; /tmp/pass.txt
   };
 
   # ------------------------------------------------------------------
-  # 2. ZFS support
+  # 2. ZFS support see: https://openzfs.github.io/openzfs-docs/Getting%20Started/NixOS/index.html
   # ------------------------------------------------------------------
   boot.supportedFilesystems = [ &quot;zfs&quot; ];
   boot.zfs.devNodes = &quot;/dev/&quot;;       # Critical for VMs
@@ -153,12 +155,19 @@ mkpasswd --method=yescrypt &amp;gt; /tmp/pass.txt
   # systemd handles mounting
   systemd.services.zfs-mount.enable = false;
 
+  services.zfs = {
+    autoScrub.enable = true;
+    # periodically runs `zpool trim`
+    trim.enable = true;
+    # autoSnapshot = true;
+  };
+
   # ------------------------------------------------------------------
   # 3. LUKS
   # ------------------------------------------------------------------
    boot.initrd.luks.devices = {
      cryptroot = {
-    # replace uuid# with output of `sudo blkid /dev/vda2`
+    # replace uuid# with output of UUID # from `sudo blkid /dev/vda2`
        device = &quot;/dev/disk/by-uuid/uuid#&quot;;
        allowDiscards = true;
        preLVM = true;
@@ -251,6 +260,7 @@ sudo reboot
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;If the rollback is working, &lt;code&gt;/etc/rollback-canary&lt;/code&gt; should be gone after reboot
 (while things in &lt;code&gt;/persist&lt;/code&gt; remain).&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Adding a disk serial (libvirt XML)&lt;/h2&gt;
 &lt;p&gt;NixOS ZFS boot support is broken for virtio drives without serial numbers.
 Virtio disks without serials don’t appear in /dev/disk/by-id, but ZFS boot logic
@@ -276,6 +286,7 @@ virsh edit nixos-unstable
   ...
 &amp;lt;/disk&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Issues I’ve Come Across&lt;/h2&gt;
 &lt;p&gt;&lt;strong&gt;sops-nix README&lt;/strong&gt;: Explicitly warns: “If you are using Impermanence, the key
 used for secret decryption … must be in a persisted directory, loaded early
@@ -296,6 +307,19 @@ system will hang before asking for your LUKS password.&lt;/p&gt;
 Firmware instead of the default BIOS, &lt;strong&gt;you will not be able to boot at all&lt;/strong&gt;.
 This seems to be the case for all custom disk layouts with NixOS on the
 libvirt stack.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;Resources&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://openzfs.github.io/openzfs-docs/&quot;&gt;openzfs-docs&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://openzfs.github.io/openzfs-docs/Getting%20Started/NixOS/Root%20on%20ZFS.html&quot;&gt;openzfs-docs NixOS Root on ZFS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/ZFS&quot;&gt;NixOS Wiki ZFS&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 </content></entry><entry><title>ZFS Impermanence in a VM</title><id>https://saylesss88.github.io/nix/zfs_impermanence.html</id><updated>2026-01-16T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/zfs_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Impermanence in a VM&lt;/h1&gt;
