@@ -25,18 +25,90 @@ a few omissions.&lt;/p&gt;
 &lt;/ol&gt;
 &lt;/details&gt;
 &lt;h2&gt;What is OpenZFS&lt;/h2&gt;
+&lt;p&gt;ZFS is an advanced filesystem, originally developed by Sun Microsystems in 05.&lt;/p&gt;
 &lt;p&gt;OpenZFS is a fork of the proprietary Oracle ZFS, it was forked over a decade
 ago. Most of the code remains the same so you can check the
 &lt;a href=&quot;https://docs.oracle.com/en/storage/zfs-storage/index.html&quot;&gt;Oracle website&lt;/a&gt; for
 docs and administration guides.&lt;/p&gt;
+&lt;p&gt;ZFS is licensed under the
+&lt;a href=&quot;https://en.wikipedia.org/wiki/CDDL&quot;&gt;Common Development and Distribution License&lt;/a&gt;
+(CDDL). Because the CDDL is incompatible with the GPL,
+&lt;a href=&quot;https://sfconservancy.org/blog/2016/feb/25/zfs-and-linux/&quot;&gt;it is not possible&lt;/a&gt;
+for ZFS to be included in the Linux Kernel. This requirement, however, does not
+prevent a native Linux kernel module from being developed and distributed by a
+third party, as is the case with &lt;a href=&quot;https://openzfs.org/&quot;&gt;OpenZFS&lt;/a&gt; (previously
+named ZFS on Linux). –arch wiki&lt;/p&gt;
 &lt;h2&gt;Comparison: OpenZFS Native Encryption vs. LUKS&lt;/h2&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ OpenZFS Native Encryption vs. LUKS &lt;/summary&gt;
 &lt;blockquote&gt;
 &lt;p&gt;NOTE: This isn’t an attack on ZFS Native Encryption, I’m just presenting the
 information, the choice is yours. Unless you have a high threat model, ZFS
-native has many benefits such improved flexibility and authentication.&lt;/p&gt;
+native encryption has many benefits such improved flexibility and
+authentication.&lt;/p&gt;
 &lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;LUKS (Device Layer)&lt;/strong&gt;: LUKS operates on the block device (like
+&lt;code&gt;/dev/nvme0n1&lt;/code&gt;). It knows nothing about files, folders, or datasets. It just
+sees a stream of bytes and scrambles them.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Everything on the partition is encrypted. The filesystem sits inside the
+encrypted container.&lt;/li&gt;
+&lt;li&gt;With standard LUKS, an adversary can see you are using encryption (the LUKS
+header is visible), but they cannot determine what filesystem (ZFS, ext4,
+etc.) is inside. If you go a step further and use a detached header, the
+entire drive looks like random noise, providing plausible deniability that
+any data exists at all.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;ZFS Native (Filesystem Layer)&lt;/strong&gt;: ZFS encryption operates at the Dataset
+(Filesystem) level. It is aware of the structure of your data.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Only the &lt;strong&gt;file blocks&lt;/strong&gt; (the actual content of your files) and the &lt;strong&gt;file
+attributes&lt;/strong&gt; (ACLs, permissions) within a specific dataset are encrypted.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;No matter how careful you are with ZFS Native encryption, these cannot be
+hidden:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Structure&lt;/strong&gt;: The fact that &lt;code&gt;dataset A&lt;/code&gt; is a child of &lt;code&gt;dataset B&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Volume&lt;/strong&gt;: The exact amount of disk space used by each dataset (in bytes)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Activity&lt;/strong&gt;: The fact that &lt;em&gt;something&lt;/em&gt; changed at a specific time (via
+snapshot creation or &lt;code&gt;used&lt;/code&gt; property changing)&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;By using generic dataset names (e.g., &lt;code&gt;data/vol1&lt;/code&gt; instead of
+&lt;code&gt;data/mistress_photos&lt;/code&gt;) and automated snapshot schedules, you can strip the
+semantic value from the exposed metadata. An attacker will see that you have
+data and how much you have, but they won’t know what it is or which dataset is
+the valuable one.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Sanitizing your ZFS usage (Mitigating risk)&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;By following a few simple best practices you can mitigate most, if not all of
+the risk depending on the situation.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Use generic IDs for dataset names, instead of &lt;code&gt;tank/mistress_photos&lt;/code&gt; use
+&lt;code&gt;tank/vol-A&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Automate your snapshots to prevent traffic analysis&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Use padding to mitigate size analysis, add dummy files to obfuscate the size
+(Can be tedious in ZFS). This is the hardest to mitigate, if this is a real
+threat, use LUKS instead.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 &lt;p&gt;OpenZFS native encryption allows you to transparently encrypt data at rest
 within ZFS itself. OpenZFS Native Encryption was initially released in May 2019,
 giving it much less time to be scrutinized compared to LUKS (initial release in
@@ -50,6 +122,8 @@ operating system. This is a deliberate design choice that allows ZFS to perform
 maintenance tasks (like scrubbing) on locked datasets without requiring the user
 to type in a password. (Depending on your threat model, this can be a deal
 breaker).&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Threat Example&lt;/h2&gt;
 &lt;p&gt;&lt;strong&gt;Example: Threat Model where ZFS Native Encryption falls short compared to
 LUKS&lt;/strong&gt;&lt;/p&gt;
 &lt;ol&gt;
@@ -96,7 +170,9 @@ use.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Use LUKS if:&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;ZFS Native Encryption OR LUKS&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Use LUKS if&lt;/strong&gt;:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;You can’t afford to leak metadata like dataset names or snapshot timestamps.
@@ -107,7 +183,7 @@ LUKS makes the drive look like random noise.&lt;/p&gt;
 “battle-tested”.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Use ZFS Native Encryption if:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Use ZFS Native Encryption if&lt;/strong&gt;:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;You have “Untrusted” Offsite Backups: This is a really nice feature! You can
@@ -464,6 +540,12 @@ libvirt stack.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a href=&quot;https://github.com/openzfs/zfs/issues&quot;&gt;openzfs Issues&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://zfsonlinux.org/&quot;&gt;zfsonlinux.org&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.archlinux.org/title/ZFS&quot;&gt;arch wiki ZFS&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 </content></entry><entry><title>ZFS Impermanence in a VM</title><id>https://saylesss88.github.io/nix/zfs_impermanence.html</id><updated>2026-01-16T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/zfs_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Impermanence in a VM&lt;/h1&gt;
