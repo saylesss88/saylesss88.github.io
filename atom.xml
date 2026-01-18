@@ -24,6 +24,82 @@ a few omissions.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;/details&gt;
+&lt;h2&gt;Comparison: OpenZFS Native Encryption vs. LUKS&lt;/h2&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ OpenZFS Native Encryption vs. LUKS &lt;/summary&gt;
+&lt;p&gt;OpenZFS native encryption allows you to transparently encrypt data at rest
+within ZFS itself.&lt;/p&gt;
+&lt;p&gt;Unlike LUKS, which presents a “black box” of random noise to anyone without the
+key, ZFS Native Encryption must leave certain structural elements visible to the
+operating system. This is a deliberate design choice that allows ZFS to perform
+maintenance tasks (like scrubbing and resilvering) on locked datasets without
+requiring the user to type in a password. (Depending on your threat model, this
+can be a deal breaker).&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Compress &amp;amp; Encrypt&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;It’s actually a common misconception that LUKS prevents compression before
+encryption, both methods are able to do this.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;ZFS Native: &lt;code&gt;Data -&amp;gt; Compress -&amp;gt; Encrypt -&amp;gt; Checksum -&amp;gt; Write to Disk&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ZFS on LUKS: &lt;code&gt;Data -&amp;gt; Compress -&amp;gt; ZFS Write -&amp;gt; LUKS Encrypt -&amp;gt; Write to Disk&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Both methods save disk space.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Integrety and Authentication&lt;/strong&gt;:&lt;/p&gt;
+&lt;p&gt;This is the strongest architectural argument for ZFS Native.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ZFS Native: Uses AES-GCM (default) which is an Authenticated Encryption with
+Associated Data (AEAD) mode. If a single bit is flipped on disk (maliciously
+or accidentally), ZFS refuses to return the bad data and reports a checksum
+error.
+&lt;ul&gt;
+&lt;li&gt;NOTE: You can get integrity with LUKS2 with &lt;code&gt;dm-integrity&lt;/code&gt;, but it incurs a
+massive performance penalty and is considered experimental for production
+use.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Use LUKS if:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;You can’t afford to leak metadata like dataset names or snapshot timestamps.
+LUKS makes the drive look like random noise.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;You require rock-solid stability. The ZFS-on-LUKS stack is very
+“battle-tested”.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Use ZFS Native Encryption if:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;You have “Untrusted” Offsite Backups: This is a really nice feature! You can
+&lt;code&gt;zfs send -w&lt;/code&gt; your data to a friend’s server or a cloud VM. The remote host
+cannot mount or read your data because they never have the key, but they can
+still scrub the pool and verify the data integrity.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;You need granular control: ZFS Native Encryption allows you to for example,
+keep your OS root unencrypted for fast booting/repair, but your &lt;code&gt;/home&lt;/code&gt;
+directory encrypted.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;You run many VMs/Containers: You can create a new encrypted dataset for a
+specific project/client without repartitioning or creating loopback files.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;You want to verify data authenticity.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://arstechnica.com/gadgets/2021/06/a-quick-start-guide-to-openzfs-native-encryption/&quot;&gt;arsTechnica quick start to openzfs-native-encryption&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://discourse.practicalzfs.com/t/is-native-encryption-ready-for-production-use/532&quot;&gt;Practical ZFS is native encryption ready for production use?&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
 &lt;h2&gt;Getting Started&lt;/h2&gt;
 &lt;p&gt;When creating the VM, before clicking “Finish”, check the “Customize
 configuration before install” box and choose EFI Firmware &amp;gt; BIOS. &lt;strong&gt;You will

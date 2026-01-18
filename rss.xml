@@ -23,6 +23,82 @@ a few omissions.</p>
 </li>
 </ol>
 </details>
+<h2>Comparison: OpenZFS Native Encryption vs. LUKS</h2>
+<details>
+<summary> ✔️ OpenZFS Native Encryption vs. LUKS </summary>
+<p>OpenZFS native encryption allows you to transparently encrypt data at rest
+within ZFS itself.</p>
+<p>Unlike LUKS, which presents a “black box” of random noise to anyone without the
+key, ZFS Native Encryption must leave certain structural elements visible to the
+operating system. This is a deliberate design choice that allows ZFS to perform
+maintenance tasks (like scrubbing and resilvering) on locked datasets without
+requiring the user to type in a password. (Depending on your threat model, this
+can be a deal breaker).</p>
+<p><strong>Compress &amp; Encrypt</strong>:</p>
+<p>It’s actually a common misconception that LUKS prevents compression before
+encryption, both methods are able to do this.</p>
+<ul>
+<li>
+<p>ZFS Native: <code>Data -&gt; Compress -&gt; Encrypt -&gt; Checksum -&gt; Write to Disk</code></p>
+</li>
+<li>
+<p>ZFS on LUKS: <code>Data -&gt; Compress -&gt; ZFS Write -&gt; LUKS Encrypt -&gt; Write to Disk</code></p>
+</li>
+</ul>
+<p>Both methods save disk space.</p>
+<p><strong>Integrety and Authentication</strong>:</p>
+<p>This is the strongest architectural argument for ZFS Native.</p>
+<ul>
+<li>ZFS Native: Uses AES-GCM (default) which is an Authenticated Encryption with
+Associated Data (AEAD) mode. If a single bit is flipped on disk (maliciously
+or accidentally), ZFS refuses to return the bad data and reports a checksum
+error.
+<ul>
+<li>NOTE: You can get integrity with LUKS2 with <code>dm-integrity</code>, but it incurs a
+massive performance penalty and is considered experimental for production
+use.</li>
+</ul>
+</li>
+</ul>
+<p>Use LUKS if:</p>
+<ul>
+<li>
+<p>You can’t afford to leak metadata like dataset names or snapshot timestamps.
+LUKS makes the drive look like random noise.</p>
+</li>
+<li>
+<p>You require rock-solid stability. The ZFS-on-LUKS stack is very
+“battle-tested”.</p>
+</li>
+</ul>
+<p>Use ZFS Native Encryption if:</p>
+<ul>
+<li>
+<p>You have “Untrusted” Offsite Backups: This is a really nice feature! You can
+<code>zfs send -w</code> your data to a friend’s server or a cloud VM. The remote host
+cannot mount or read your data because they never have the key, but they can
+still scrub the pool and verify the data integrity.</p>
+</li>
+<li>
+<p>You need granular control: ZFS Native Encryption allows you to for example,
+keep your OS root unencrypted for fast booting/repair, but your <code>/home</code>
+directory encrypted.</p>
+</li>
+<li>
+<p>You run many VMs/Containers: You can create a new encrypted dataset for a
+specific project/client without repartitioning or creating loopback files.</p>
+</li>
+<li>
+<p>You want to verify data authenticity.</p>
+</li>
+<li>
+<p><a href="https://arstechnica.com/gadgets/2021/06/a-quick-start-guide-to-openzfs-native-encryption/">arsTechnica quick start to openzfs-native-encryption</a></p>
+</li>
+<li>
+<p><a href="https://discourse.practicalzfs.com/t/is-native-encryption-ready-for-production-use/532">Practical ZFS is native encryption ready for production use?</a></p>
+</li>
+</ul>
+</details>
 <h2>Getting Started</h2>
 <p>When creating the VM, before clicking “Finish”, check the “Customize
 configuration before install” box and choose EFI Firmware &gt; BIOS. <strong>You will
