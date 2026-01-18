@@ -26,14 +26,44 @@ a few omissions.</p>
 <h2>Comparison: OpenZFS Native Encryption vs. LUKS</h2>
 <details>
 <summary> ✔️ OpenZFS Native Encryption vs. LUKS </summary>
+<blockquote>
+<p>NOTE: This isn’t an attack on ZFS Native Encryption, I’m just presenting the
+information, the choice is yours. Unless you have a high threat model, ZFS
+native has many benefits such improved flexibility and authentication.</p>
+</blockquote>
 <p>OpenZFS native encryption allows you to transparently encrypt data at rest
-within ZFS itself.</p>
+within ZFS itself. OpenZFS Native Encryption was initially released in May 2019,
+giving it much less time to be scrutinized compared to LUKS (initial release in
+2004).</p>
+<p>OpenZFS Native Encryption operates at the dataset layer, not the disk layer,
+which creates several critical security gaps that full-disk encryption (FDE)
+solutions like LUKS completely avoid.</p>
 <p>Unlike LUKS, which presents a “black box” of random noise to anyone without the
 key, ZFS Native Encryption must leave certain structural elements visible to the
 operating system. This is a deliberate design choice that allows ZFS to perform
-maintenance tasks (like scrubbing and resilvering) on locked datasets without
-requiring the user to type in a password. (Depending on your threat model, this
-can be a deal breaker).</p>
+maintenance tasks (like scrubbing) on locked datasets without requiring the user
+to type in a password. (Depending on your threat model, this can be a deal
+breaker).</p>
+<p><strong>Example: Threat Model where ZFS Native Encryption falls short compared to
+LUKS</strong></p>
+<ol>
+<li>The “Pattern of Life” Attack (Timestamp Leaks)</li>
+</ol>
+<p><strong>The Leak</strong>: ZFS snapshot names and creation times are visible in plaintext
+(<code>zfs list -t snapshot</code>)</p>
+<p><strong>The Threat Model</strong>: An adversary monitoring your backups or seizing your drive
+can build a profile of your behavior without decrypting a single byte.</p>
+<ul>
+<li>
+<p>If you claim to be asleep at 3AM, but <code>zfs list</code> shows snapshots being created
+or data changing size at 3:15 AM, your alibi is broken.</p>
+</li>
+<li>
+<p>Or, say a whistleblower contacts a journalist. An adversary seizes the
+journalist’s laptop. They can’t read the files, but they see a new dataset
+grew by exactly 5GB at the exact time the leak occured. Correlation = Guilt.</p>
+</li>
+</ul>
 <p><strong>Compress &amp; Encrypt</strong>:</p>
 <p>It’s actually a common misconception that LUKS prevents compression before
 encryption, both methods are able to do this.</p>
@@ -202,6 +232,7 @@ nix-shell -p helix
 mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 </code></pre>
 <p>After first reboot, the above files will be placed directly under <code>/persist/</code></p>
+<p>(Edited 2026-01-18 use <code>postMountCommands</code> &gt; <code>postResumeCommands</code>)</p>
 <pre><code class="language-nix">{ config, lib, pkgs, ... }:
 
 {
@@ -253,10 +284,8 @@ mkpasswd --method=yescrypt &gt; /tmp/pass.txt
   # 4. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
  # Uncomment after first reboot
- # boot.initrd.postDeviceCommands = lib.mkAfter ''
- #   zpool import -N -f rpool
+ # boot.initrd.postMountCommands = lib.mkAfter ''
  #   zfs rollback -r rpool/local/root@blank
- #   zpool export rpool
  # '';
 
   # ------------------------------------------------------------------
@@ -316,10 +345,8 @@ mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 }
 </code></pre>
 <p>After reboot, you can uncomment:</p>
-<pre><code class="language-nix">  boot.initrd.postDeviceCommands = lib.mkAfter ''
-    zpool import -N -f rpool
+<pre><code class="language-nix">  boot.initrd.postMountCommands = lib.mkAfter ''
     zfs rollback -r rpool/local/root@blank
-    zpool export rpool
   '';
 </code></pre>
 <p>Uncomment the above script and test: (Don’t forget that the <code>/etc</code> directory
@@ -395,6 +422,21 @@ libvirt stack.</p>
 </li>
 <li>
 <p><a href="https://wiki.nixos.org/wiki/ZFS">NixOS Wiki ZFS</a></p>
+</li>
+<li>
+<p><a href="https://klarasystems.com/articles/keeping-data-safe-with-openzfs-security-encryption-delegation/">klarasystems OpenZFS: Security, Encryption, and Delegation Sept 2025</a></p>
+</li>
+<li>
+<p><a href="https://forum.level1techs.com/t/zfs-guide-for-starters-and-advanced-users-concepts-pool-config-tuning-troubleshooting/196035">ZFS Guide for starters &amp; advanced users</a></p>
+</li>
+<li>
+<p><a href="https://openzfs.org/wiki/System_Administration">OpenZFS Sysem Administration</a></p>
+</li>
+<li>
+<p><a href="https://docs.oracle.com/cd/E19253-01/819-5461/">Oracle Solaris ZFS Admin Guide</a></p>
+</li>
+<li>
+<p><a href="https://docs.freebsd.org/en/books/handbook/zfs/">FreeBSD Handbook Chapter 22 The Z File System (ZFS)</a></p>
 </li>
 </ul>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/encrypted_zfs.html</guid><pubDate>Sat, 17 Jan 2026 00:00:00 +0000</pubDate></item><item><title>ZFS Impermanence in a VM</title><link>https://saylesss88.github.io/nix/zfs_impermanence.html</link><description><![CDATA[<h1>ZFS Impermanence in a VM</h1>
@@ -511,7 +553,7 @@ partition, and <code>/dev/vda2</code> to be the <strong>Linux Filesystem</strong
 </code></pre>
 <h2>Create Your ZFS Partitions</h2>
 <ol>
-<li>Create a zpool:</li>
+<li>Create a zpool: (Edited 2026-01-18 formKC &gt; formD)</li>
 </ol>
 <pre><code class="language-bash">zpool create \
   -o ashift=12 \
@@ -519,7 +561,7 @@ partition, and <code>/dev/vda2</code> to be the <strong>Linux Filesystem</strong
   -O acltype=posixacl \
   -O canmount=off \
   -O dnodesize=auto \
-  -O normalization=formD \
+  -O normalization=formKC \
   -O relatime=on \
   -O xattr=sa \
   -O mountpoint=none \
@@ -631,7 +673,8 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
 <li>After first reboot, the above files will be placed directly under <code>/persist/</code></li>
 </ul>
 <p>You will read <code>rand.txt</code> into the <code>configuration.nix</code> with <code>:r /tmp/rand.txt</code>.</p>
-<p>Edit the <code>/mnt/etc/nixos/configuration.nix</code>:</p>
+<p>Edit the <code>/mnt/etc/nixos/configuration.nix</code> (Edited 2026-01-18 use
+<code>postMountCommands</code> instead of <code>postResumeCommands</code>) :</p>
 <pre><code class="language-nix">{ config, lib, pkgs, ... }:
 
 {
@@ -663,10 +706,8 @@ sudo chmod 600 /mnt/persist/etc/nixos-secrets/passwords/your-user
   # 3. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
 # Uncomment after first reboot
-#  boot.initrd.postDeviceCommands = lib.mkAfter ''
-#    zpool import -N -f rpool
+#  boot.initrd.postMountCommands = lib.mkAfter ''
 #    zfs rollback -r rpool/local/root@blank
-#    zpool export rpool
 #  '';
 
   # ------------------------------------------------------------------
@@ -712,10 +753,8 @@ impermanence script.</p>
 sudo cp /etc/nixos/configuration.nix /etc/nixos/hardware-configuration.nix /persist/etc/
 </code></pre>
 <p>Now, you can uncomment this block:</p>
-<pre><code class="language-nix">  boot.initrd.postDeviceCommands = lib.mkAfter ''
-    zpool import -N -f rpool
+<pre><code class="language-nix">  boot.initrd.postMountCommands = lib.mkAfter ''
     zfs rollback -r rpool/local/root@blank
-    zpool export rpool
   '';
 </code></pre>
 <pre><code class="language-bash">sudo touch /etc/rollback-canary
