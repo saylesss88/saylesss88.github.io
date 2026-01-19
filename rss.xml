@@ -1,4 +1,62 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>ZFS with LUKS and Impermanence</title><link>https://saylesss88.github.io/nix/encrypted_zfs.html</link><description><![CDATA[<h1>ZFS with LUKS and Impermanence</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>secureboot_libvirt</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h2>NixOS Installation with ZFS on root with LUKS</h2>
+<ul>
+<li><a href="https://saylesss88.github.io/nix/encrypted_zfs.html">ZFS on root with LUKS &amp; Impermanence</a></li>
+</ul>
+<p>Add the impermanence flake input. I also had to pin nixpkgs to <code>25.05</code> for
+lanzaboote to build successfully:</p>
+<pre><code class="language-nix">inputs = {
+   impermanence.url = "github:nix-community/impermanence";
+   nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+};
+</code></pre>
+<p><code>impermanence.nix</code>:</p>
+<pre><code class="language-nix">{ inputs, lib, ... }: {
+   imports = [
+      inputs.impermanence.nixosModules.impermanence
+   ];
+   boot.initrd.postMountCommands = lib.mkAfter ''
+     zfs rollback -r rpool/local/root@blank
+   '';
+   environment.persistence."/persist" = {
+      directories = [ "/var/lib/sbctl" "/var/lib/nixos" ];
+   };
+   fileSystems."/persist" = {
+      device = "rpool/safe/persist";
+      fsType = "zfs";
+      neededForBoot = true;
+   };
+}
+</code></pre>
+<hr />
+<h2>Lanzaboote Installation</h2>
+<ul>
+<li><a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Secure Boot with Lanzaboote</a></li>
+</ul>
+<hr />
+<h2>Enroll the Secure Boot Keys</h2>
+<p>After the XML changes, boot the VM and enter the firmware setup (press ESC
+during boot).</p>
+<ol>
+<li>
+<p>Navigate to Device Manager → Secure Boot Configuration</p>
+</li>
+<li>
+<p>Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], “Reset Secure Boot
+Keys”, save with F10, and reboot.</p>
+</li>
+<li>
+<p>Enroll the keys: <code>sudo sbctl enroll-keys -m</code></p>
+</li>
+<li>
+<p>Reboot: After enrolling the keys and rebooting, the system will automatically
+be placed in “Standard mode”, and Attempt Secure Boot [x] selected. You do
+not need to re-enter firmware setup mode.</p>
+</li>
+<li>
+<p>Verify Secure Boot Status: <code>bootctl status</code></p>
+</li>
+</ol>
+]]></description><guid>https://saylesss88.github.io/nix/secureboot_libvirt.html</guid><pubDate>Mon, 19 Jan 2026 15:42:28 +0000</pubDate></item><item><title>ZFS with LUKS and Impermanence</title><link>https://saylesss88.github.io/nix/encrypted_zfs.html</link><description><![CDATA[<h1>ZFS with LUKS and Impermanence</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->

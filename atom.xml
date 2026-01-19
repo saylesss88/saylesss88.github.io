@@ -1,5 +1,63 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>ZFS with LUKS and Impermanence</title><id>https://saylesss88.github.io/nix/encrypted_zfs.html</id><updated>2026-01-17T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/encrypted_zfs.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS with LUKS and Impermanence&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>secureboot_libvirt</title><id>https://saylesss88.github.io/nix/secureboot_libvirt.html</id><updated>2026-01-19T15:42:28+00:00</updated><link href="https://saylesss88.github.io/nix/secureboot_libvirt.html" rel="alternate"/><content type="html">&lt;h2&gt;NixOS Installation with ZFS on root with LUKS&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://saylesss88.github.io/nix/encrypted_zfs.html&quot;&gt;ZFS on root with LUKS &amp;amp; Impermanence&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Add the impermanence flake input. I also had to pin nixpkgs to &lt;code&gt;25.05&lt;/code&gt; for
+lanzaboote to build successfully:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;inputs = {
+   impermanence.url = &quot;github:nix-community/impermanence&quot;;
+   nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-25.05&quot;;
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ inputs, lib, ... }: {
+   imports = [
+      inputs.impermanence.nixosModules.impermanence
+   ];
+   boot.initrd.postMountCommands = lib.mkAfter &apos;&apos;
+     zfs rollback -r rpool/local/root@blank
+   &apos;&apos;;
+   environment.persistence.&quot;/persist&quot; = {
+      directories = [ &quot;/var/lib/sbctl&quot; &quot;/var/lib/nixos&quot; ];
+   };
+   fileSystems.&quot;/persist&quot; = {
+      device = &quot;rpool/safe/persist&quot;;
+      fsType = &quot;zfs&quot;;
+      neededForBoot = true;
+   };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Lanzaboote Installation&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://saylesss88.github.io/installation/enc/lanzaboote.html&quot;&gt;Secure Boot with Lanzaboote&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Enroll the Secure Boot Keys&lt;/h2&gt;
+&lt;p&gt;After the XML changes, boot the VM and enter the firmware setup (press ESC
+during boot).&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Navigate to Device Manager → Secure Boot Configuration&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], “Reset Secure Boot
+Keys”, save with F10, and reboot.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Enroll the keys: &lt;code&gt;sudo sbctl enroll-keys -m&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Reboot: After enrolling the keys and rebooting, the system will automatically
+be placed in “Standard mode”, and Attempt Secure Boot [x] selected. You do
+not need to re-enter firmware setup mode.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Verify Secure Boot Status: &lt;code&gt;bootctl status&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+</content></entry><entry><title>ZFS with LUKS and Impermanence</title><id>https://saylesss88.github.io/nix/encrypted_zfs.html</id><updated>2026-01-17T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/encrypted_zfs.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS with LUKS and Impermanence&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Table of Contents&lt;/summary&gt;
 &lt;!-- toc --&gt;

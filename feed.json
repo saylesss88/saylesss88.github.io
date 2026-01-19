@@ -6,6 +6,13 @@
   "description": "An mdBook-generated site",
   "items": [
     {
+      "id": "https://saylesss88.github.io/nix/secureboot_libvirt.html",
+      "url": "https://saylesss88.github.io/nix/secureboot_libvirt.html",
+      "title": "secureboot_libvirt",
+      "content_html": "<h2>NixOS Installation with ZFS on root with LUKS</h2>\n<ul>\n<li><a href=\"https://saylesss88.github.io/nix/encrypted_zfs.html\">ZFS on root with LUKS &amp; Impermanence</a></li>\n</ul>\n<p>Add the impermanence flake input. I also had to pin nixpkgs to <code>25.05</code> for\nlanzaboote to build successfully:</p>\n<pre><code class=\"language-nix\">inputs = {\n   impermanence.url = \"github:nix-community/impermanence\";\n   nixpkgs.url = \"github:nixos/nixpkgs/nixos-25.05\";\n};\n</code></pre>\n<p><code>impermanence.nix</code>:</p>\n<pre><code class=\"language-nix\">{ inputs, lib, ... }: {\n   imports = [\n      inputs.impermanence.nixosModules.impermanence\n   ];\n   boot.initrd.postMountCommands = lib.mkAfter ''\n     zfs rollback -r rpool/local/root@blank\n   '';\n   environment.persistence.\"/persist\" = {\n      directories = [ \"/var/lib/sbctl\" \"/var/lib/nixos\" ];\n   };\n   fileSystems.\"/persist\" = {\n      device = \"rpool/safe/persist\";\n      fsType = \"zfs\";\n      neededForBoot = true;\n   };\n}\n</code></pre>\n<hr />\n<h2>Lanzaboote Installation</h2>\n<ul>\n<li><a href=\"https://saylesss88.github.io/installation/enc/lanzaboote.html\">Secure Boot with Lanzaboote</a></li>\n</ul>\n<hr />\n<h2>Enroll the Secure Boot Keys</h2>\n<p>After the XML changes, boot the VM and enter the firmware setup (press ESC\nduring boot).</p>\n<ol>\n<li>\n<p>Navigate to Device Manager → Secure Boot Configuration</p>\n</li>\n<li>\n<p>Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], “Reset Secure Boot\nKeys”, save with F10, and reboot.</p>\n</li>\n<li>\n<p>Enroll the keys: <code>sudo sbctl enroll-keys -m</code></p>\n</li>\n<li>\n<p>Reboot: After enrolling the keys and rebooting, the system will automatically\nbe placed in “Standard mode”, and Attempt Secure Boot [x] selected. You do\nnot need to re-enter firmware setup mode.</p>\n</li>\n<li>\n<p>Verify Secure Boot Status: <code>bootctl status</code></p>\n</li>\n</ol>\n",
+      "date_published": "2026-01-19T15:42:28+00:00"
+    },
+    {
       "id": "https://saylesss88.github.io/nix/encrypted_zfs.html",
       "url": "https://saylesss88.github.io/nix/encrypted_zfs.html",
       "title": "ZFS with LUKS and Impermanence",
