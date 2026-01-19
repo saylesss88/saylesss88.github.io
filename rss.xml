@@ -12,7 +12,7 @@ box</p>
 </li>
 <li>
 <p>Proceed with the NixOS installation as normal. For lanzaboote to build
-successfully, I had to pin nixpkgs to <code>25.05</code></p>
+successfully, I had to pin it to nixpkgs <code>25.05</code>.</p>
 </li>
 </ol>
 <p><strong>Known Issue</strong>: After running <code>nixos-install</code> and rebooting, the SATA CDROM
@@ -80,14 +80,35 @@ in Setup Mode (no keys enrolled).</p>
 <ul>
 <li><a href="https://saylesss88.github.io/nix/encrypted_zfs.html">ZFS on root with LUKS &amp; Impermanence</a></li>
 </ul>
-<p>Add the impermanence flake input. I also had to pin nixpkgs to <code>25.05</code> for
-lanzaboote to build successfully:</p>
+<p>Add the impermanence flake input. I also had to pin lanzaboote to nixpkgs
+<code>25.05</code> for lanzaboote to build successfully:</p>
 <pre><code class="language-nix">inputs = {
    impermanence.url = "github:nix-community/impermanence";
-   nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+   nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+   nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.05";
 };
 </code></pre>
-<p><code>impermanence.nix</code>:</p>
+<p>Add lanzaboote, if you don’t use <code>unstable</code>, you can obviously avoid the
+overlay:</p>
+<pre><code class="language-nix">{ pkgs, lib, inputs, ... }: {
+# configuration.nix
+nixpkgs.overlays = [
+   (final: prev: {
+      lanzaboote = (inputs.nixpkgs-stable.legacyPackages.${pkgs.system}.lanzaboote or prev.lanzaboote)
+   })
+];
+
+environment.systemPackages = [ pkgs.sbctl ];
+
+boot.loader.systemd-boot.enable = lib.mkForce false;
+
+boot.lanzaboote = {
+  enable = true;
+  pkiBundle = "/var/lib/sbctl";
+};
+}
+</code></pre>
+<p>And <code>impermanence.nix</code>:</p>
 <pre><code class="language-nix">{ inputs, lib, ... }: {
    imports = [
       inputs.impermanence.nixosModules.impermanence
@@ -119,8 +140,8 @@ during boot).</p>
 <p>Navigate to Device Manager → Secure Boot Configuration</p>
 </li>
 <li>
-<p>Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], “Reset Secure Boot
-Keys”, save with F10, and reboot.</p>
+<p>Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], select “Reset
+Secure Boot Keys”, save with F10, and reboot.</p>
 </li>
 <li>
 <p>Enroll the keys: <code>sudo sbctl enroll-keys -m</code></p>

@@ -13,7 +13,7 @@ box&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;Proceed with the NixOS installation as normal. For lanzaboote to build
-successfully, I had to pin nixpkgs to &lt;code&gt;25.05&lt;/code&gt;&lt;/p&gt;
+successfully, I had to pin it to nixpkgs &lt;code&gt;25.05&lt;/code&gt;.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;&lt;strong&gt;Known Issue&lt;/strong&gt;: After running &lt;code&gt;nixos-install&lt;/code&gt; and rebooting, the SATA CDROM
@@ -81,14 +81,35 @@ in Setup Mode (no keys enrolled).&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&quot;https://saylesss88.github.io/nix/encrypted_zfs.html&quot;&gt;ZFS on root with LUKS &amp;amp; Impermanence&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Add the impermanence flake input. I also had to pin nixpkgs to &lt;code&gt;25.05&lt;/code&gt; for
-lanzaboote to build successfully:&lt;/p&gt;
+&lt;p&gt;Add the impermanence flake input. I also had to pin lanzaboote to nixpkgs
+&lt;code&gt;25.05&lt;/code&gt; for lanzaboote to build successfully:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;inputs = {
    impermanence.url = &quot;github:nix-community/impermanence&quot;;
-   nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-25.05&quot;;
+   nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+   nixpkgs-stable.url = &quot;github:nixos/nixpkgs/nixos-25.05&quot;;
 };
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;Add lanzaboote, if you don’t use &lt;code&gt;unstable&lt;/code&gt;, you can obviously avoid the
+overlay:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs, lib, inputs, ... }: {
+# configuration.nix
+nixpkgs.overlays = [
+   (final: prev: {
+      lanzaboote = (inputs.nixpkgs-stable.legacyPackages.${pkgs.system}.lanzaboote or prev.lanzaboote)
+   })
+];
+
+environment.systemPackages = [ pkgs.sbctl ];
+
+boot.loader.systemd-boot.enable = lib.mkForce false;
+
+boot.lanzaboote = {
+  enable = true;
+  pkiBundle = &quot;/var/lib/sbctl&quot;;
+};
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And &lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ inputs, lib, ... }: {
    imports = [
       inputs.impermanence.nixosModules.impermanence
@@ -120,8 +141,8 @@ during boot).&lt;/p&gt;
 &lt;p&gt;Navigate to Device Manager → Secure Boot Configuration&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], “Reset Secure Boot
-Keys”, save with F10, and reboot.&lt;/p&gt;
+&lt;p&gt;Switch to “Custom mode”, uncheck Attempt Secure Boot [ ], select “Reset
+Secure Boot Keys”, save with F10, and reboot.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;Enroll the keys: &lt;code&gt;sudo sbctl enroll-keys -m&lt;/code&gt;&lt;/p&gt;
