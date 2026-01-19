@@ -12,8 +12,7 @@ box&lt;/p&gt;
 &lt;code&gt;/usr/share/edk2/ovmf/OVMF_CODE_4M.secboot.qcow2&lt;/code&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;Proceed with the NixOS installation as normal. For lanzaboote to build
-successfully, I had to pin it to nixpkgs &lt;code&gt;25.05&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Proceed with the NixOS installation as normal.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;&lt;strong&gt;Known Issue&lt;/strong&gt;: After running &lt;code&gt;nixos-install&lt;/code&gt; and rebooting, the SATA CDROM
@@ -87,21 +86,15 @@ in Setup Mode (no keys enrolled).&lt;/p&gt;
    impermanence.url = &quot;github:nix-community/impermanence&quot;;
    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
    nixpkgs-stable.url = &quot;github:nixos/nixpkgs/nixos-25.05&quot;;
-   lanzaboote = {
-      url = &quot;github:nix-community/lanzaboote/v0.4.2&quot;;
-      inputs.nixpkgs.follows = &quot;nixpkgs-stable&quot;;
-   };
+    lanzaboote = {
+      url = &quot;github:nix-community/lanzaboote/v1.0.0&quot;;
+      inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    };
 };
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Add lanzaboote, if you don’t use &lt;code&gt;unstable&lt;/code&gt;, you can obviously avoid the
-overlay:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs, lib, inputs, ... }: {
 # configuration.nix
-nixpkgs.overlays = [
-   (final: prev: {
-      lanzaboote = (inputs.nixpkgs-stable.legacyPackages.${pkgs.system}.lanzaboote or prev.lanzaboote)
-   })
-];
+imports = [ inputs.lanzaboote.nixosModules.lanzaboote ];
 
 environment.systemPackages = [ pkgs.sbctl ];
 

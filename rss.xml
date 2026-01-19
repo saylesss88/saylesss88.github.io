@@ -11,8 +11,7 @@ box</p>
 <code>/usr/share/edk2/ovmf/OVMF_CODE_4M.secboot.qcow2</code></p>
 </li>
 <li>
-<p>Proceed with the NixOS installation as normal. For lanzaboote to build
-successfully, I had to pin it to nixpkgs <code>25.05</code>.</p>
+<p>Proceed with the NixOS installation as normal.</p>
 </li>
 </ol>
 <p><strong>Known Issue</strong>: After running <code>nixos-install</code> and rebooting, the SATA CDROM
@@ -86,21 +85,15 @@ in Setup Mode (no keys enrolled).</p>
    impermanence.url = "github:nix-community/impermanence";
    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.05";
-   lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.2";
-      inputs.nixpkgs.follows = "nixpkgs-stable";
-   };
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v1.0.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 };
 </code></pre>
-<p>Add lanzaboote, if you don’t use <code>unstable</code>, you can obviously avoid the
-overlay:</p>
 <pre><code class="language-nix">{ pkgs, lib, inputs, ... }: {
 # configuration.nix
-nixpkgs.overlays = [
-   (final: prev: {
-      lanzaboote = (inputs.nixpkgs-stable.legacyPackages.${pkgs.system}.lanzaboote or prev.lanzaboote)
-   })
-];
+imports = [ inputs.lanzaboote.nixosModules.lanzaboote ];
 
 environment.systemPackages = [ pkgs.sbctl ];
 
