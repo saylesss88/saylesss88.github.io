@@ -603,6 +603,46 @@ sudo reboot
 &lt;p&gt;If the rollback is working, &lt;code&gt;/etc/rollback-canary&lt;/code&gt; should be gone after reboot
 (while things in &lt;code&gt;/persist&lt;/code&gt; remain).&lt;/p&gt;
 &lt;hr /&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Recovery Example &lt;/summary&gt;
+&lt;p&gt;Say that you’re trying to configure sops-nix, you configure everything, rebuild,
+and everything works. You rebuild again to make sure the password works and it
+does so you reboot. When you go to log in your user password is no longer
+accepted.&lt;/p&gt;
+&lt;p&gt;If you have the admin account setup, you can log in with it but when you do,
+you’ll be greeted with an empty filesystem. Checkout your layout:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Identify your home dir:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;zfs list
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this case it’s &lt;code&gt;rpool/safe/home&lt;/code&gt;&lt;/p&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Mount it&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Create a mount point
+sudo mkdir -p /mnt/rescue
+
+# Mount the dataset
+sudo mount -t zfs rpool/safe/home /mnt/rescue
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Use sudo to make the changes to another users files:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo hx /mnt/rescue/home/your-user/flakey/nixos/users.nix
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Save and rebuild.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# required to rebuild another users config
+sudo git config --global --add safe.directory /mnt/rescue/home/your-user/flakey/nixos/users.nix
+sudo nixos-rebuild switch --flake /mnt/rescue/home/your-user/flakey/nixos/users.nix
+# OR
+sudo chown -R admin:admin /mnt/rescue/home/your-user/flakey
+sudo nixos-rebuild switch --flake /mnt/rescue/home/your-user/flakey #host
+sudo chown -R your-user:your-user /mnt/rescue/home/your-user/flakey
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/details&gt;
 &lt;h2&gt;Adding a disk serial (libvirt XML)&lt;/h2&gt;
 &lt;p&gt;NixOS ZFS boot support is broken for virtio drives without serial numbers.
 Virtio disks without serials don’t appear in /dev/disk/by-id, but ZFS boot logic
