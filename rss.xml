@@ -1,4 +1,82 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>secureboot_libvirt</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h2>NixOS Installation with ZFS on root with LUKS</h2>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>An mdBook-generated site</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Secure Boot on Libvirt stack</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h1>Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence</h1>
+<h2>Initial VM Setup</h2>
+<p>When creating the VM in virt-manager:</p>
+<ol>
+<li>
+<p>Before clicking “Finish”, check the “Customize configuration before install”
+box</p>
+</li>
+<li>
+<p>In the Overview section, change Firmware from BIOS to UEFI x86_64:
+<code>/usr/share/edk2/ovmf/OVMF_CODE_4M.secboot.qcow2</code></p>
+</li>
+<li>
+<p>Proceed with the NixOS installation as normal. For lanzaboote to build
+successfully, I had to pin nixpkgs to <code>25.05</code></p>
+</li>
+</ol>
+<p><strong>Known Issue</strong>: After running <code>nixos-install</code> and rebooting, the SATA CDROM
+source path may be cleared. If the VM fails to boot, manually reselect the NixOS
+ISO in the SATA settings and reboot. ​</p>
+<hr />
+<h2>Configure Firmware for Custom Secure Boot Keys</h2>
+<p>The default configuration uses Microsoft’s pre-enrolled keys, which won’t trust
+your custom-signed kernel. To enable custom key enrollment, you need to modify
+the VM’s XML configuration. ​</p>
+<p>On your host, find your VM name:</p>
+<pre><code class="language-bash">virsh -c qemu:///system list --all
+</code></pre>
+<p>Example Output:</p>
+<pre><code class="language-bash"> Id   Name             State
+---------------------------------
+ -    nixos-unstable   shut off
+ -    nixos            shut off
+</code></pre>
+<p>Edit the VM configuration:</p>
+<pre><code class="language-bash">virsh edit nixos-unstable
+</code></pre>
+<p>Make the following changes to the <code>&lt;os&gt;</code> section:</p>
+<ol>
+<li>Change the <code>enrolled-keys</code> feature from <code>yes</code> to <code>no</code>:</li>
+</ol>
+<pre><code class="language-xml">&lt;feature enabled='no' name='enrolled-keys'/&gt;
+</code></pre>
+<ol start="2">
+<li>Delete the explicit <code>&lt;loader&gt;</code> and <code>&lt;nvram&gt;</code> lines. These conflict with
+libvirt’s firmware autoselection when using <code>enrolled-keys='no'</code>:</li>
+</ol>
+<pre><code class="language-xml">&lt;!-- DELETE THESE TWO LINES --&gt;
+&lt;loader readonly='yes' secure='yes' type='pflash' format='qcow2'&gt;/usr/share/edk2/ovmf/OVMF_CODE_4M.secboot.qcow2&lt;/loader&gt;
+&lt;nvram template='/usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2' templateFormat='qcow2' format='qcow2'&gt;/var/lib/libvirt/qemu/nvram/nixos-unstable_VARS.qcow2&lt;/nvram&gt;
+</code></pre>
+<p>Your final <code>&lt;os&gt;</code> section should look like this:</p>
+<pre><code class="language-xml">&lt;os firmware='efi'&gt;
+  &lt;type arch='x86_64' machine='pc-q35-10.1'&gt;hvm&lt;/type&gt;
+  &lt;firmware&gt;
+    &lt;feature enabled='no' name='enrolled-keys'/&gt;
+    &lt;feature enabled='yes' name='secure-boot'/&gt;
+  &lt;/firmware&gt;
+  &lt;boot dev='hd'/&gt;
+&lt;/os&gt;
+</code></pre>
+<ol start="3">
+<li>Add the <code>&lt;serial&gt;</code> tag as a best practice</li>
+</ol>
+<pre><code class="language-xml">    &lt;disk type='file' device='disk'&gt;
+      &lt;driver name='qemu' type='qcow2' discard='unmap'/&gt;
+      &lt;source file='/var/lib/libvirt/images/nixos-unstable-1.qcow2'/&gt;
+      &lt;serial&gt;disk01&lt;/serial&gt;
+      &lt;target dev='vda' bus='virtio'/&gt;
+      &lt;address type='pci' domain='0x0000' bus='0x04' slot='0x00' function='0x0'/&gt;
+    &lt;/disk&gt;
+</code></pre>
+<ul>
+<li>This enables commands like: <code>zpool import -d /dev/disk/by-id rpool</code></li>
+</ul>
+<p>Save and exit the editor. Libvirt will now automatically create a new NVRAM file
+in Setup Mode (no keys enrolled).</p>
+<hr />
+<h2>NixOS Installation with ZFS on root with LUKS</h2>
 <ul>
 <li><a href="https://saylesss88.github.io/nix/encrypted_zfs.html">ZFS on root with LUKS &amp; Impermanence</a></li>
 </ul>
@@ -56,7 +134,7 @@ not need to re-enter firmware setup mode.</p>
 <p>Verify Secure Boot Status: <code>bootctl status</code></p>
 </li>
 </ol>
-]]></description><guid>https://saylesss88.github.io/nix/secureboot_libvirt.html</guid><pubDate>Mon, 19 Jan 2026 15:42:28 +0000</pubDate></item><item><title>ZFS with LUKS and Impermanence</title><link>https://saylesss88.github.io/nix/encrypted_zfs.html</link><description><![CDATA[<h1>ZFS with LUKS and Impermanence</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/secureboot_libvirt.html</guid><pubDate>Mon, 19 Jan 2026 00:00:00 +0000</pubDate></item><item><title>ZFS with LUKS and Impermanence</title><link>https://saylesss88.github.io/nix/encrypted_zfs.html</link><description><![CDATA[<h1>ZFS with LUKS and Impermanence</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->

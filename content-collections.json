@@ -1,15 +1,20 @@
 {
   "entries": [
     {
-      "author": null,
-      "collection": null,
-      "date": "2026-01-19T15:42:28.526254565+00:00",
-      "description": "\n## NixOS Installation with ZFS on root with LUKS\n\n- [ZFS on root with LUKS & Impermanence](https://saylesss88.github.io/nix/encrypted_zfs.html)\n\nAdd the impermanence flake input. I also had to pin nixpkgs to `25.05` for\nlanzaboote to build successfully:\n\n```nix\ninputs = {\n   impermanence.url = \"github:nix-community/impermanence\";\n   nixpkgs.url = \"github:nixos/nixpkgs/nixos-25.05\";\n};\n```\n\n`impermanence.nix`:\n\n```nix\n{ inputs, lib, ... }: {\n   imports = [\n      inputs.impermanence.nixosModules.impermanence\n   ];\n   boot.initrd.postMountCommands = lib.mkAfter ''\n     zfs rollback -r rpool/local/root@blank\n   '';\n   environment.persistence.\"/persist\" = {\n      directories = [ \"/var/lib/sbctl\" \"/var/lib/nixos\" ];\n   };\n   fileSystems.\"/persist\" = {\n      device = \"rpool/safe/persist\";\n      fsType = \"zfs\";\n      neededForBoot = true;\n   };\n}\n```\n\n---\n\n## Lanzaboote Installation\n\n- [Secure Boot with Lanzaboote](https://saylesss88.github.io/installation/enc/lanzaboote.html)\n\n---\n\n## Enroll the Secure Boot Keys\n\nAfter the XML changes, boot the VM and enter the firmware setup (press ESC\nduring boot).\n\n1. Navigate to Device Manager → Secure Boot Configuration\n\n2. Switch to \"Custom mode\", uncheck Attempt Secure Boot [ ], \"Reset Secure Boot\n   Keys\", save with F10, and reboot.\n\n3. Enroll the keys: `sudo sbctl enroll-keys -m`\n\n4. Reboot: After enrolling the keys and rebooting, the system will automatically\n   be placed in \"Standard mode\", and Attempt Secure Boot [x] selected. You do\n   not need to re-enter firmware setup mode.\n\n5. Verify Secure Boot Status: `bootctl status`\n",
+      "author": "saylesss88",
+      "collection": "blog",
+      "date": "2026-01-19T00:00:00+00:00",
+      "description": null,
       "draft": false,
       "path": "nix/secureboot_libvirt.md",
-      "preview_html": "<p>Add the impermanence flake input. I also had to pin nixpkgs to <code>25.05</code> for\nlanzaboote to build successfully:</p><pre><code class=\"language-nix\">inputs = {\n   impermanence.url = \"github:nix-community/impermanence\";\n   nixpkgs.url = \"github:nixos/nixpkgs/nixos-25.05\";\n};\n</code></pre>\n<p><code>impermanence.nix</code>:</p><pre><code class=\"language-nix\">{ inputs, lib, ... }: {\n   imports = [\n      inputs.impermanence.nixosModules.impermanence\n   ];\n   boot.initrd.postMountCommands = lib.mkAfter ''\n     zfs rollback -r rpool/local/root@blank\n   '';\n   environment.persistence.\"/persist\" = {\n      directories = [ \"/var/lib/sbctl\" \"/var/lib/nixos\" ];\n   };\n   fileSystems.\"/persist\" = {\n      device = \"rpool/safe/persist\";\n      fsType = \"zfs\";\n      neededForBoot = true;\n   };\n}\n</c",
-      "tags": [],
-      "title": "secureboot_libvirt"
+      "preview_html": "<p>When creating the VM in virt-manager:</p><p>Before clicking “Finish”, check the “Customize configuration before install”\nbox</p><p>In the Overview section, change Firmware from BIOS to UEFI x86_64:\n<code>/usr/share/edk2/ovmf/OVMF_CODE_4M.secboot.qcow2</code></p>",
+      "tags": [
+        "Virtual Machines",
+        "KVM",
+        "Impermanence",
+        "Secure Boot"
+      ],
+      "title": "Secure Boot on Libvirt stack"
     },
     {
       "author": "saylesss88",
