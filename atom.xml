@@ -2426,17 +2426,18 @@ issues that arise.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;hr /&gt;
-&lt;p&gt;&lt;strong&gt;Stable (e.g., &lt;code&gt;nixos-24.05&lt;/code&gt;) Security Overview&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Stable (e.g., &lt;code&gt;nixos-25.11&lt;/code&gt;) Security Overview&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;NixOS 25.11 Xantusia will receive bugfixes and security updates for seven months
+(up until 2026-06-30). 25.05 is officially deprecated and reached EOL 2025-12-31&lt;/p&gt;
 &lt;p&gt;Stable Nixpkgs channels correspond to point release (e.g., released every 6
 months) and are supported for a limited period (typically one month past the
 next release).&lt;/p&gt;
+&lt;p&gt;. 25.05 is officially deprecated and reached EOL 2025-12-31. 25.05 is officially
+deprecated and reached EOL 2025-12-31- Stable channels generally only receive
+conservative bug and security fixes. Major version bumps for features are
+typically avoided to maintain “stability against deliberate changes”, which
+means you won’t get the latest upstream features or general bug fixes.&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Stable channels generally only receive conservative bug and security fixes.
-Major version bumps for features are typically avoided to maintain “stability
-against deliberate changes”, which means you won’t get the latest upstream
-features or general bug fixes.&lt;/p&gt;
-&lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;While critical security updates are backported quickly, updates for less
 critical packages may be slower or not happen at all if they require a
@@ -6376,6 +6377,11 @@ into your machine).&lt;/p&gt;
 speak DNS with the outside world, and that all other DNS requests from any other
 process are blocked unless they’re to &lt;code&gt;127.0.0.1&lt;/code&gt; (our local proxy). This is a
 robust policy against both DNS leaks and local compromise.&lt;/p&gt;
+&lt;p&gt;With the release of 25.11 FirewallD support has been added. It can be configured
+both as a standalone service (through &lt;code&gt;services.firewalld&lt;/code&gt;), and as a backend to
+the existing &lt;code&gt;networking.firewall&lt;/code&gt; options.
+–&lt;a href=&quot;https://nixos.org/manual/nixos/stable/release-notes#sec-release-25.11&quot;&gt;25.11 Release Notes&lt;/a&gt;.
+This should be a big upgrade to libvirt security!&lt;/p&gt;
 &lt;h2&gt;Testing&lt;/h2&gt;
 &lt;p&gt;Review listening ports: After each rebuild, use &lt;code&gt;ss -tlpn&lt;/code&gt;, &lt;code&gt;nmap&lt;/code&gt; or &lt;code&gt;netstat&lt;/code&gt;
 to see which services are accepting connections. Close or firewall anything
@@ -10093,6 +10099,51 @@ component for virtual machines (VMs).&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Restart &lt;code&gt;libvirtd&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo systemctl restart libvirtd
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Firewall&lt;/h2&gt;
+&lt;p&gt;With the release of 25.11 came support for firewallD which greatly simplifies
+the dance between the libvirt firewall and the host&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Enabling FirewallD&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ config, pkgs, ... }: {
+  # Disable the classic NixOS firewall to avoid conflicts
+  networking.firewall.enable = false;
+
+  # Enable FirewallD (NixOS 25.11+)
+  networking = {
+  nftables.enable = true;
+  firewalld = {
+    enable = true;
+    # Optional: Enable the GUI for easier visualization
+    # package = pkgs.firewalld-gui; 
+  };
+  };
+  
+  # Ensure libvirt uses the correct firewall backend
+  virtualisation = {
+  libvirtd = {
+    enable = true;
+    # Tell libvirt to use firewalld instead of managing iptables directly
+    # This might be automatic in 25.11, but explicit is safer
+    firewallBackend = &quot;nftables&quot;; 
+    
+    qemu = {
+      package = pkgs.qemu_kvm;
+      swtpm.enable = true;
+    };
+  };
+  spiceUSBRedirection.enable = true;
+  };
+  services.spice-vdagentd.enable = true;
+  services.firewalld.zones = {
+    whonix-external.interfaces = [ &quot;Whonix-External&quot; ];
+    whonix-internal.interfaces = [ &quot;Whonix-Internal&quot; ];
+  };
+  networking.firewall.allowedTCPPorts = [
+    5900
+    5901
+  ];
+  networking.firewall.trustedInterfaces = [ &quot;vibr0&quot;]; 
+}
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Network Start&lt;/h2&gt;
