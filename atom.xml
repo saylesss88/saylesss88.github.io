@@ -8425,8 +8425,18 @@ takes some getting used to but is very stable.&lt;/p&gt;
 &lt;/ul&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Create NixOS VM (via virt-manager)&lt;/h2&gt;
-&lt;p&gt;Easiest way to get a working configuration IMO, I haven’t personally had luck
-with custom NixOS disk layouts within a VM.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;More Advanced Setups&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://saylesss88.github.io/nix/secureboot_libvirt.html&quot;&gt;libvirt Secure Boot&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://saylesss88.github.io/nix/encrypted_zfs.html&quot;&gt;ZFS on LUKS + Impermanence (libvirt)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;p&gt;&lt;strong&gt;OR&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Easiest way to get a working configuration IMO&lt;/strong&gt;:&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
 &lt;p&gt;Download: &lt;a href=&quot;https://nixos.org/download/&quot;&gt;NixOS Graphical ISO&lt;/a&gt;&lt;/p&gt;
@@ -8472,6 +8482,42 @@ system_u:system_r:svirt_t:s0:c383,c416 14793 ?   00:01:37 qemu-system-x86
 &lt;p&gt;Optionally skip desktop -&amp;gt; install your own after first boot.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;&lt;strong&gt;Take a snapshot of the clean install:&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;After the installer finishes and you’ve rebooted into your fresh NixOS system,
+shut down the VM and create a snapshot. This gives you a clean baseline to
+return to if hardening changes break something.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Via virt-manager GUI:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Select the VM → View → Snapshots (or click the snapshot icon)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Click the &lt;strong&gt;+&lt;/strong&gt; button&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Name: “fresh-install” or “pre-hardening”&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Description: “Clean NixOS install before security configuration”&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Click Finish&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;p&gt;&lt;strong&gt;Via virsh CLI:&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;virsh snapshot-create-as --domain VM_NAME \
+  --name &quot;fresh-install&quot; \
+  --description &quot;Clean NixOS install before hardening&quot; \
+  --atomic
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Verify the snapshot&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;virsh snapshot-list VM_NAME
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
 &lt;p&gt;The attack surface is reduced significantly when running NixOS within a hardened
 hosts VM. The VM operates on virtualized hardware, which is a powerful form of
 attack surface reduction.&lt;/p&gt;
@@ -8539,12 +8585,14 @@ minimize what an attacker can do inside the guest, even if they never manage a
 breakout.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Minimize VM device exposure&lt;/strong&gt;&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Use snapshots aggressively&lt;/strong&gt;: Take a snapshot right after a fresh install
-and initial configuration. That snapshot becomes your “known-good” state for
-testing risky software or malware, so you can revert and wipe out any changes
-afterward.&lt;/p&gt;
-&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Use snapshots aggressively&lt;/strong&gt;: Take a snapshot right after fresh install (see
+Step 6 above) and after completing your base hardening configuration. These
+snapshots become your “known-good” states for testing risky software or
+experimenting with configs. Revert with:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;virsh snapshot-revert VM_NAME snapshot_name
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;Avoid unnecessary passthrough&lt;/strong&gt;: Only pass through hardware (USB, GPU,
 network interfaces, etc.) if the VM genuinely needs it. Every extra device is
