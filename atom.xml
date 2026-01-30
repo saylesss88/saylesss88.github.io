@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom.xml</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/atom.xml" rel="self"/><subtitle>An mdBook-generated site</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-23T16:12:43+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Secure Boot on Libvirt stack</title><id>https://saylesss88.github.io/nix/secureboot_libvirt.html</id><updated>2026-01-19T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/secureboot_libvirt.html" rel="alternate"/><content type="html">&lt;h1&gt;Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-23T16:12:43+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Secure Boot on Libvirt stack</title><id>https://saylesss88.github.io/nix/secureboot_libvirt.html</id><updated>2026-01-19T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/secureboot_libvirt.html" rel="alternate"/><content type="html">&lt;h1&gt;Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence&lt;/h1&gt;
 &lt;h2&gt;Initial VM Setup&lt;/h2&gt;
 &lt;p&gt;When creating the VM in virt-manager:&lt;/p&gt;
 &lt;ol&gt;
@@ -2628,18 +2628,18 @@ polkit.enable = true;
 # Disable sudo
 sudo.enable = false;
 wrappers = {
-    su.setuid = lib.mkForce = false;
+    su.setuid = lib.mkForce false;
     # Not needed when sudo is disabled
-    # sudo.setuid = lib.mkForce = false;
-    # sudoedit.setuid = lib.mkForce = false;
-    sg.setuid = lib.mkForce = false;
-    fusermount.setuid = lib.mkForce = false;
-    fusermount3.setuid = lib.mkForce = false;
-    mount.setuid = lib.mkForce = false;
-    pkexec.setuid = lib.mkForce = false;
-    newgrp.setuid = lib.mkForce = false;
-    newgidmap.setuid = lib.mkForce = false;
-    newuidmap.setuid= lib.mkForce = false;
+    # sudo.setuid = lib.mkForce false;
+    # sudoedit.setuid = lib.mkForce false;
+    sg.setuid = lib.mkForce false;
+    fusermount.setuid = lib.mkForce false;
+    fusermount3.setuid = lib.mkForce false;
+    mount.setuid = lib.mkForce false;
+    pkexec.setuid = lib.mkForce false;
+    newgrp.setuid = lib.mkForce false;
+    newgidmap.setuid = lib.mkForce false;
+    newuidmap.setuid = lib.mkForce false;
 };
 # Or hyprlock, required for swaylock to accept your password
 pam.services.swaylock = {
@@ -18025,6 +18025,252 @@ can be deleted or rolled back as needed.&lt;/li&gt;
 &lt;p&gt;&lt;a href=&quot;https://btrfs.readthedocs.io/en/latest/Subvolumes.html&quot;&gt;BTRFS Subvolumes&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;To continue following along and set up impermanence
 &lt;a href=&quot;https://saylesss88.github.io/installation/unencrypted/impermanence.html&quot;&gt;Click Here&lt;/a&gt;&lt;/p&gt;
+</content></entry><entry><title>Encrypted BTRFS Impermanence</title><id>https://saylesss88.github.io/installation/enc/encrypted_impermanence.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;Encrypted Impermanence&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ Important Note: This guide details a setup involving encrypted partitions
+and impermanent NixOS. While powerful, such configurations require careful
+attention to detail. Incorrect steps, especially concerning encryption keys or
+persistent data paths, can lead to &lt;strong&gt;permanent data loss&lt;/strong&gt;. Please read all
+instructions thoroughly before proceeding and consider backing up any critical
+data beforehand. This has only been tested with the disk layout described in
+&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;As a system operates, it gradually accumulates state on its root partition. This
+state is stored in various directories such as &lt;code&gt;/etc&lt;/code&gt; and &lt;code&gt;/var&lt;/code&gt;, capturing all
+the configuration changes, logs, and other modifications—whether they’re
+well-documented or the result of ad-hoc adjustments made while setting up and
+running services.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Impermanence&lt;/strong&gt;,in the context of operating systems, refers to a setup where
+the majority of the system’s root filesystem (&lt;code&gt;/&lt;/code&gt;) is reset to a pristine state
+on every reboot. This means any changes made to the system (e.g., installing new
+packages, modifying system files outside of configuration management, creating
+temporary files) are discarded upon shutdown or reboot.&lt;/p&gt;
+&lt;p&gt;Having an impermanent root and &lt;code&gt;/tmp&lt;/code&gt; has some security benefits as well. By
+reducing your persistent footprint you reduce your chance of leaving behind
+sensitive activity or data. Since Nix can boot with only &lt;code&gt;/nix&lt;/code&gt; and &lt;code&gt;/boot&lt;/code&gt;,
+experienced users familiar with “stateless” systems can take advantage of this
+smaller attack surface.&lt;/p&gt;
+&lt;p&gt;Although this setup does not use &lt;code&gt;/tmp&lt;/code&gt; as the root filesystem, the root itself
+is restored to its original state upon each reboot, as it was at installation.
+However, by configuring &lt;code&gt;/tmp&lt;/code&gt; to reside in RAM, you ensure that temporary files
+including sensitive data like passwords are stored only in volatile memory and
+are automatically cleared on shutdown or reboot. This significantly enhances the
+security of temporary data by preventing it from ever being written to disk.&lt;/p&gt;
+&lt;h3&gt;Getting Started&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;Add impermanence to your &lt;code&gt;flake.nix&lt;/code&gt;. You will change the &lt;code&gt;hostname&lt;/code&gt; in the
+flake to match your &lt;code&gt;networking.hostName&lt;/code&gt;.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  description = &quot;NixOS configuration&quot;;
+
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+    disko.url = &quot;github:nix-community/disko/latest&quot;;
+    disko.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    impermanence.url = &quot;github:nix-community/impermanence&quot;;
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = &quot;x86_64-linux&quot;;
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Discover where your root subvolume is located with &lt;code&gt;findmnt&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;If you followed the
+&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;
+guide, your encrypted subvolume should be located at:
+&lt;code&gt;/dev/mapper/cryptroot /mnt&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Your encrypted Btrfs partition, once unlocked by LUKS, will be available at
+&lt;code&gt;/dev/mapper/cryptroot&lt;/code&gt; as configured here in the &lt;code&gt;disk-config.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# disk-config2.nix
+# ... snip ...
+            luks = {
+              size = &quot;100%&quot;;
+              label = &quot;luks&quot;;
+              content = {
+                type = &quot;luks&quot;;
+                name = &quot;cryptroot&quot;;
+                content = {
+# ... snip ...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Double check that the paths exist:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /dev/mapper/crypt&amp;lt;TAB&amp;gt;  # autocomplete should fill out /dev/mapper/cryptroot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Create an &lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now, create a new file named &lt;code&gt;impermanence.nix&lt;/code&gt; in your configuration directory
+(i.e. your flake directory). This file will contain all the specific settings
+for your impermanent setup, including BTRFS subvolume management and persistent
+data locations. Since this file is right next to your &lt;code&gt;configuration.nix&lt;/code&gt;,
+you’ll just add an &lt;code&gt;imports = [ ./impermanence.nix ]&lt;/code&gt; to your
+&lt;code&gt;configuration.nix&lt;/code&gt; apply it to your configuration.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  config,
+  lib,
+  ...
+}: {
+  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+    echo &quot;Rollback running&quot; &amp;gt; /mnt/rollback.log
+     mkdir -p /mnt
+     mount -t btrfs /dev/mapper/cryptroot /mnt
+
+     # Recursively delete all nested subvolumes inside /mnt/root
+     btrfs subvolume list -o /mnt/root | cut -f9 -d&apos; &apos; | while read subvolume; do
+       echo &quot;Deleting /$subvolume subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
+       btrfs subvolume delete &quot;/mnt/$subvolume&quot;
+     done
+
+     echo &quot;Deleting /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
+     btrfs subvolume delete /mnt/root
+
+     echo &quot;Restoring blank /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
+     btrfs subvolume snapshot /mnt/root-blank /mnt/root
+
+     umount /mnt
+  &apos;&apos;;
+
+  environment.persistence.&quot;/persist&quot; = {
+    directories = [
+      &quot;/etc&quot;
+      &quot;/var/spool&quot;
+      &quot;/srv&quot;
+      &quot;/etc/NetworkManager/system-connections&quot;
+      &quot;/var/lib/bluetooth&quot;
+    ];
+    files = [
+      # &quot;/etc/machine-id&quot;
+      # Add more files you want to persist
+    ];
+  };
+
+# optional quality of life setting
+  security.sudo.extraConfig = &apos;&apos;
+    Defaults lecture = never
+  &apos;&apos;;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;/mnt/rollback.log&lt;/code&gt;: this log will be available during the boot process for
+debugging if the rollback fails, but won’t persist.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;With the above impermanence script, the btrfs subvolumes are deleted recursively
+and replaced with the &lt;code&gt;root-blank&lt;/code&gt; snapshot we took during the install.&lt;/p&gt;
+&lt;p&gt;I have commented out &lt;code&gt;&quot;/etc/machine-id&quot;&lt;/code&gt; because we already copied over all of
+the files to their persistent location and the above setting would work once and
+then cause a conflict.&lt;/p&gt;
+&lt;h2&gt;configuration.nix changes&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
+  boot.initrd.luks.devices = {
+    cryptroot = {
+      device = &quot;/dev/disk/by-partlabel/luks&quot;;
+      allowDiscards = true;
+      preLVM = true;
+    };
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This defines how your system’s initial ramdisk (&lt;code&gt;initrd&lt;/code&gt;) should handle a
+specific encrypted disk during the boot process. It helps with timing and is a
+more robust way of telling Nix that we are using an encrypted disk.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The following is optional to enable &lt;code&gt;autoScrub&lt;/code&gt; for btrfs, the wiki shows
+&lt;code&gt;interval = &quot;monthly&quot;;&lt;/code&gt; FYI.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
+  services.btrfs.autoScrub = {
+    enable = true;
+    interval = &quot;weekly&quot;;
+    fileSystems = [&quot;/&quot;];
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Remember to ensure that your &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;configuration.nix&lt;/code&gt; matches
+the &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;flake.nix&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Applying Your Impermanence Configuration&lt;/h3&gt;
+&lt;p&gt;Once you have completed all the steps and created or modified the necessary
+files (&lt;code&gt;flake.nix&lt;/code&gt;, &lt;code&gt;impermanence.nix&lt;/code&gt;), you need to apply these changes to your
+NixOS system.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Navigate to your NixOS configuration directory (where your &lt;code&gt;flake.nix&lt;/code&gt; is
+located).&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /path/to/your/flake
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Rebuild and Switch: Execute the &lt;code&gt;nixos-rebuild switch&lt;/code&gt; command. This command
+will:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Evaluate your &lt;code&gt;flake.nix&lt;/code&gt; and the modules it imports (including your new
+&lt;code&gt;impermanence.nix&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Build a new NixOS system closure based on your updated configuration.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Activate the new system configuration, making it the current running system.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .#hostname # Replace &apos;hostname&apos; with your actual system hostname
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Perform an Impermanence Test (Before Reboot):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Before you reboot, create a temporary directory and file in a non-persistent
+location. Since you haven’t explicitly added &lt;code&gt;/imperm_test&lt;/code&gt; to your
+&lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; directories, this file should not survive
+a reboot.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
+echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
+ls -l /imperm_test/testfile # Verify the file exists
+cat /imperm_test/testfile # Verify content
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Reboot Your System: For the impermanence setup to take full effect and for
+your root filesystem to be reset for the first time, you must reboot your
+machine.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo reboot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Verify Impermanence (After Reboot):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;After the system has rebooted, check if the test directory and file still
+exist:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You should see an output like &lt;code&gt;ls: cannot access &apos;/imperm_test/testfile&apos;&lt;/code&gt;: No
+such file or directory. This confirms that the &lt;code&gt;/imperm_test&lt;/code&gt; directory and its
+contents were indeed ephemeral and were removed during the reboot process,
+indicating your impermanence setup is working correctly!&lt;/p&gt;
+&lt;p&gt;Your system should now come up with a fresh root filesystem, and only the data
+specified in your &lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; configuration will be
+persistent.&lt;/p&gt;
 </content></entry><entry><title>Encrypted Install (BTRFS)</title><id>https://saylesss88.github.io/installation/enc/enc_install.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/enc_install.html" rel="alternate"/><content type="html">&lt;h1&gt;Encrypted Setups&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
@@ -18674,252 +18920,6 @@ and
 &lt;p&gt;&lt;a href=&quot;https://oddlama.org/blog/bypassing-disk-encryption-with-tpm2-unlock/&quot;&gt;Bypassing FDE with TPM2&lt;/a&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-</content></entry><entry><title>Encrypted BTRFS Impermanence</title><id>https://saylesss88.github.io/installation/enc/encrypted_impermanence.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;Encrypted Impermanence&lt;/h1&gt;
-&lt;details&gt;
-&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
-&lt;!-- toc --&gt;
-&lt;/details&gt;
-&lt;blockquote&gt;
-&lt;p&gt;❗ Important Note: This guide details a setup involving encrypted partitions
-and impermanent NixOS. While powerful, such configurations require careful
-attention to detail. Incorrect steps, especially concerning encryption keys or
-persistent data paths, can lead to &lt;strong&gt;permanent data loss&lt;/strong&gt;. Please read all
-instructions thoroughly before proceeding and consider backing up any critical
-data beforehand. This has only been tested with the disk layout described in
-&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;As a system operates, it gradually accumulates state on its root partition. This
-state is stored in various directories such as &lt;code&gt;/etc&lt;/code&gt; and &lt;code&gt;/var&lt;/code&gt;, capturing all
-the configuration changes, logs, and other modifications—whether they’re
-well-documented or the result of ad-hoc adjustments made while setting up and
-running services.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Impermanence&lt;/strong&gt;,in the context of operating systems, refers to a setup where
-the majority of the system’s root filesystem (&lt;code&gt;/&lt;/code&gt;) is reset to a pristine state
-on every reboot. This means any changes made to the system (e.g., installing new
-packages, modifying system files outside of configuration management, creating
-temporary files) are discarded upon shutdown or reboot.&lt;/p&gt;
-&lt;p&gt;Having an impermanent root and &lt;code&gt;/tmp&lt;/code&gt; has some security benefits as well. By
-reducing your persistent footprint you reduce your chance of leaving behind
-sensitive activity or data. Since Nix can boot with only &lt;code&gt;/nix&lt;/code&gt; and &lt;code&gt;/boot&lt;/code&gt;,
-experienced users familiar with “stateless” systems can take advantage of this
-smaller attack surface.&lt;/p&gt;
-&lt;p&gt;Although this setup does not use &lt;code&gt;/tmp&lt;/code&gt; as the root filesystem, the root itself
-is restored to its original state upon each reboot, as it was at installation.
-However, by configuring &lt;code&gt;/tmp&lt;/code&gt; to reside in RAM, you ensure that temporary files
-including sensitive data like passwords are stored only in volatile memory and
-are automatically cleared on shutdown or reboot. This significantly enhances the
-security of temporary data by preventing it from ever being written to disk.&lt;/p&gt;
-&lt;h3&gt;Getting Started&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;Add impermanence to your &lt;code&gt;flake.nix&lt;/code&gt;. You will change the &lt;code&gt;hostname&lt;/code&gt; in the
-flake to match your &lt;code&gt;networking.hostName&lt;/code&gt;.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
-{
-  description = &quot;NixOS configuration&quot;;
-
-  inputs = {
-    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
-    disko.url = &quot;github:nix-community/disko/latest&quot;;
-    disko.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
-    impermanence.url = &quot;github:nix-community/impermanence&quot;;
-  };
-
-  outputs = inputs@{ nixpkgs, ... }: {
-    nixosConfigurations = {
-      hostname = nixpkgs.lib.nixosSystem {
-        system = &quot;x86_64-linux&quot;;
-        modules = [
-          ./configuration.nix
-          inputs.disko.nixosModules.disko
-          inputs.impermanence.nixosModules.impermanence
-        ];
-      };
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Discover where your root subvolume is located with &lt;code&gt;findmnt&lt;/code&gt;:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;If you followed the
-&lt;a href=&quot;https://saylesss88.github.io/installation/encrypted_manual.html&quot;&gt;Encrypted Setups&lt;/a&gt;
-guide, your encrypted subvolume should be located at:
-&lt;code&gt;/dev/mapper/cryptroot /mnt&lt;/code&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Your encrypted Btrfs partition, once unlocked by LUKS, will be available at
-&lt;code&gt;/dev/mapper/cryptroot&lt;/code&gt; as configured here in the &lt;code&gt;disk-config.nix&lt;/code&gt;:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# disk-config2.nix
-# ... snip ...
-            luks = {
-              size = &quot;100%&quot;;
-              label = &quot;luks&quot;;
-              content = {
-                type = &quot;luks&quot;;
-                name = &quot;cryptroot&quot;;
-                content = {
-# ... snip ...
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Double check that the paths exist:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /dev/mapper/crypt&amp;lt;TAB&amp;gt;  # autocomplete should fill out /dev/mapper/cryptroot
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Create an &lt;code&gt;impermanence.nix&lt;/code&gt;:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Now, create a new file named &lt;code&gt;impermanence.nix&lt;/code&gt; in your configuration directory
-(i.e. your flake directory). This file will contain all the specific settings
-for your impermanent setup, including BTRFS subvolume management and persistent
-data locations. Since this file is right next to your &lt;code&gt;configuration.nix&lt;/code&gt;,
-you’ll just add an &lt;code&gt;imports = [ ./impermanence.nix ]&lt;/code&gt; to your
-&lt;code&gt;configuration.nix&lt;/code&gt; apply it to your configuration.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
-  config,
-  lib,
-  ...
-}: {
-  boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
-    echo &quot;Rollback running&quot; &amp;gt; /mnt/rollback.log
-     mkdir -p /mnt
-     mount -t btrfs /dev/mapper/cryptroot /mnt
-
-     # Recursively delete all nested subvolumes inside /mnt/root
-     btrfs subvolume list -o /mnt/root | cut -f9 -d&apos; &apos; | while read subvolume; do
-       echo &quot;Deleting /$subvolume subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
-       btrfs subvolume delete &quot;/mnt/$subvolume&quot;
-     done
-
-     echo &quot;Deleting /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
-     btrfs subvolume delete /mnt/root
-
-     echo &quot;Restoring blank /root subvolume...&quot; &amp;gt;&amp;gt; /mnt/rollback.log
-     btrfs subvolume snapshot /mnt/root-blank /mnt/root
-
-     umount /mnt
-  &apos;&apos;;
-
-  environment.persistence.&quot;/persist&quot; = {
-    directories = [
-      &quot;/etc&quot;
-      &quot;/var/spool&quot;
-      &quot;/srv&quot;
-      &quot;/etc/NetworkManager/system-connections&quot;
-      &quot;/var/lib/bluetooth&quot;
-    ];
-    files = [
-      # &quot;/etc/machine-id&quot;
-      # Add more files you want to persist
-    ];
-  };
-
-# optional quality of life setting
-  security.sudo.extraConfig = &apos;&apos;
-    Defaults lecture = never
-  &apos;&apos;;
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;/mnt/rollback.log&lt;/code&gt;: this log will be available during the boot process for
-debugging if the rollback fails, but won’t persist.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;With the above impermanence script, the btrfs subvolumes are deleted recursively
-and replaced with the &lt;code&gt;root-blank&lt;/code&gt; snapshot we took during the install.&lt;/p&gt;
-&lt;p&gt;I have commented out &lt;code&gt;&quot;/etc/machine-id&quot;&lt;/code&gt; because we already copied over all of
-the files to their persistent location and the above setting would work once and
-then cause a conflict.&lt;/p&gt;
-&lt;h2&gt;configuration.nix changes&lt;/h2&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
-  boot.initrd.luks.devices = {
-    cryptroot = {
-      device = &quot;/dev/disk/by-partlabel/luks&quot;;
-      allowDiscards = true;
-      preLVM = true;
-    };
-  };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;This defines how your system’s initial ramdisk (&lt;code&gt;initrd&lt;/code&gt;) should handle a
-specific encrypted disk during the boot process. It helps with timing and is a
-more robust way of telling Nix that we are using an encrypted disk.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The following is optional to enable &lt;code&gt;autoScrub&lt;/code&gt; for btrfs, the wiki shows
-&lt;code&gt;interval = &quot;monthly&quot;;&lt;/code&gt; FYI.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# configuration.nix
-  services.btrfs.autoScrub = {
-    enable = true;
-    interval = &quot;weekly&quot;;
-    fileSystems = [&quot;/&quot;];
-  };
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Remember to ensure that your &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;configuration.nix&lt;/code&gt; matches
-the &lt;code&gt;hostname&lt;/code&gt; in your &lt;code&gt;flake.nix&lt;/code&gt;.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;Applying Your Impermanence Configuration&lt;/h3&gt;
-&lt;p&gt;Once you have completed all the steps and created or modified the necessary
-files (&lt;code&gt;flake.nix&lt;/code&gt;, &lt;code&gt;impermanence.nix&lt;/code&gt;), you need to apply these changes to your
-NixOS system.&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Navigate to your NixOS configuration directory (where your &lt;code&gt;flake.nix&lt;/code&gt; is
-located).&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /path/to/your/flake
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Rebuild and Switch: Execute the &lt;code&gt;nixos-rebuild switch&lt;/code&gt; command. This command
-will:&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Evaluate your &lt;code&gt;flake.nix&lt;/code&gt; and the modules it imports (including your new
-&lt;code&gt;impermanence.nix&lt;/code&gt;).&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Build a new NixOS system closure based on your updated configuration.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Activate the new system configuration, making it the current running system.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .#hostname # Replace &apos;hostname&apos; with your actual system hostname
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Perform an Impermanence Test (Before Reboot):&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;Before you reboot, create a temporary directory and file in a non-persistent
-location. Since you haven’t explicitly added &lt;code&gt;/imperm_test&lt;/code&gt; to your
-&lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; directories, this file should not survive
-a reboot.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
-echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
-ls -l /imperm_test/testfile # Verify the file exists
-cat /imperm_test/testfile # Verify content
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;4&quot;&gt;
-&lt;li&gt;Reboot Your System: For the impermanence setup to take full effect and for
-your root filesystem to be reset for the first time, you must reboot your
-machine.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo reboot
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ol start=&quot;5&quot;&gt;
-&lt;li&gt;Verify Impermanence (After Reboot):&lt;/li&gt;
-&lt;/ol&gt;
-&lt;ul&gt;
-&lt;li&gt;After the system has rebooted, check if the test directory and file still
-exist:&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;You should see an output like &lt;code&gt;ls: cannot access &apos;/imperm_test/testfile&apos;&lt;/code&gt;: No
-such file or directory. This confirms that the &lt;code&gt;/imperm_test&lt;/code&gt; directory and its
-contents were indeed ephemeral and were removed during the reboot process,
-indicating your impermanence setup is working correctly!&lt;/p&gt;
-&lt;p&gt;Your system should now come up with a fresh root filesystem, and only the data
-specified in your &lt;code&gt;environment.persistence.&quot;/persist&quot;&lt;/code&gt; configuration will be
-persistent.&lt;/p&gt;
 </content></entry><entry><title>Sops-Nix</title><id>https://saylesss88.github.io/installation/enc/sops-nix.html</id><updated>2025-11-22T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/sops-nix.html" rel="alternate"/><content type="html">&lt;h1&gt;Sops-Nix encrypted secrets&lt;/h1&gt;
 &lt;details&gt;
 &lt;summary&gt; Click to Expand Table of Contents&lt;/summary&gt;
