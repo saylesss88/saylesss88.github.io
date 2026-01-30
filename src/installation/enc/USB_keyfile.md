@@ -1,0 +1,429 @@
+---
+title: USB Keyfile
+date: 2025-11-22
+author: saylesss88
+---
+
+# USB Stick Keyfile
+
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+
+<!-- toc -->
+
+</details>
+
+This allows you to use a USB stick for your keyfile, with a backup in case you
+want or need it. There is a setting `fallbackToPassword` that protects you in
+case something fails with the USB key.
+
+First, I'll show how to set up a dedicated USB stick for a keyfile. (i.e., one
+that is only used for this). After that I will show the process of adding the
+keyfile to a USB stick with existing data on it that you don't want to lose.
+
+**Generate the keyfile**
+
+```bash
+sudo dd if=/dev/urandom of=/root/usb-luks.key bs=4096 count=1
+```
+
+## Keyfile Enrollment Methods
+
+This is for a dedicated USB stick that we will wipe first then add the key.
+
+Disko defaults to LUKS2
+
+```bash
+# cryptsetup works for both LUKS1 and LUKS2 formats but doesn't work for
+# TPM2, FIDO2, and smartcards
+sudo cryptsetup luksAddKey /dev/disk/by-partlabel/luks /root/usb-luks.key
+```
+
+**OR**
+
+<details>
+<summary> ✔️ Click to expand Experimental TPM2 auto-unlock for LUKS </summary>
+
+> ⚠️ WARNING: Security Implications of TPM2 Auto-Unlock
+
+> Enabling TPM2 auto-unlock fundamentally changes your system's security model.
+> While this feature protects against certain forms of malicious software
+> injection by tying the decryption key to the system's boot state, it
+> eliminates the need for a user password at boot. This creates a significant
+> risk if your machine is stolen or seized, do not use this feature if the
+> physical security of your machine is a concern. This is still at a stage where
+> you can expect rough edges and workarounds.
+
+> ⚠️ WARNING: Do NOT use TPM auto-unlock if your CPU is vulnerable to faulTPM!
+> All AMD Zen2 and Zen3 Processors are known to be affected with AMD Zen1 likely
+> also affected and Zen4 unknown! Misconfigurations are also common, do your own
+> research!
+
+- [faulTPM:Exposing AMD fTPMs' Deepest Secrets](https://ieeexplore.ieee.org/document/10190531)
+
+- [AMD faulTPM Exploit Targets Zen 2 and Zen 3 Processors](https://www.techpowerup.com/308124/amd-faultpm-exploit-targets-zen-2-and-zen-3-processors)
+
+You can add an additional layer by encrypting user data, such as individual home
+folders, with a different mechanism, such as `fscrypt-experimental` or
+`systemd-homed`. Or, you can use a TPM pin to benefit from the security
+properties of the TPM, while avoiding completely unattended unlocking.
+--[Arch Wiki](https://wiki.archlinux.org/title/Trusted_Platform_Module)
+
+I am reading that `fscrypt` is no longer experimental.
+
+```nix
+security.pam.enableFscrypt = true;
+```
+
+```bash
+sudo fscrypt setup --all-users
+sudo mv /home/<user> /home/old<user>
+sudo mkdir /home/<user>
+sudo chown <user>:users /home/<user>
+sudo fscrypt encrypt --source pam_passphrase --user <user> --skip-unlock /home/<user>/
+```
+
+--☝️[Discourse](https://discourse.nixos.org/t/experienced-with-systemd-homed-or-other-encrypted-home/63516/2)
+
+It is fairly complex as to how TPM2 auto-unlock can improve security in some
+ways, it has to do with how Linux distributions fail to authenticate the boot
+process past the initrd.Even with encryption and Secure Boot enabled, the initrd
+stage often remains unverified, meaning a tampered initrd could be substituted
+without detection.
+
+- [Brave New Trusted Boot World](https://0pointer.net/blog/brave-new-trusted-boot-world.html)
+
+TPMs protect secrets by releasing them only if the boot process can be
+authenticated through "measurements." During boot, each component involved
+(firmware, bootloader, kernel, etc.) is hashed, and these hashes are extended
+into special TPM registers called Platform Configuration Registers (PCRs). These
+PCRs hold a cumulative, tamper-evident record of the boot process state.
+
+If any part of the boot sequence changes (even slightly), the PCR values will
+differ from the expected, causing the TPM to refuse to release the bound secret
+(such as a disk decryption key). This ensures that the system only boots or
+unlocks secrets when its software stack is known and trusted, providing strong
+protection against tampering or unauthorized modifications. The values aren't
+only protected by these PCRs but encrypted with a "seed key" that's generated on
+the TPM chip itself, and cannot leave the TPM.
+
+Check TPM support:
+
+```bash
+cat /sys/class/tpm/tpm0/device/description
+TPM 2.0 Device
+```
+
+Check for necessary software dependencies:
+
+```bash
+systemd-analyze has-tpm2
+```
+
+Find your encrypted partition with `lsblk`:
+
+```bash
+lsblk
+```
+
+First, you need to use the `systemd-cryptenroll` command to add a TPM2 key to
+your encrypted LUKS partition. This process binds a key slot on your disk to the
+state of your TPM2 chip's PCRs (Platform Configuration Registers).
+
+```bash
+# This command adds a new key to the LUKS volume, using a key generated by the TPM2 chip.
+# It binds the key to PCRs 0,2,7,and 15 ensuring the key is only released if the firmware
+# and Secure Boot state of your system is unchanged.
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+2+7+15 /dev/disk/by-partlabel/luks
+```
+
+There are quite a few options for the above command, some use the following with
+less pcrs and a wipe feature:
+
+```bash
+sudo systemd-cryptenroll --wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=0+7 /dev/disk/by-partlabel/luks
+```
+
+- Using less pcrs could prevent breakage but reduces security. Check out the PCR
+  Definitions below and decide if you require additional PCRs or less.
+
+- `wipe-slot` tells the system to delete any key associated with the TPM2 chip
+  from the LUKS volume's keyslot before adding a new one.
+
+You can choose a more complex `--tpm2-pcrs` for more security but it makes the
+configuration more fragile because any legitimate system update altering any
+measured component tied to these PCRs will prevent the TPM from releasing the
+key and lock you out, unless you re-enroll the key with the updated PCR values.
+
+- [PCR Definitions](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
+
+- [Authenticated Boot and FDE](https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html)
+  This article explains the limitations and remedies very well.
+
+That said, I do often see people mention a firmware update breaking their TPM2
+auto-unlock functionality. Keep this in mind and have a backup plan. This is
+also incompatible with the encrypted impermanence setup shared in this book, the
+`boot.initrd.postDeviceCommands` conflict.
+
+Change `YourUser` to your username and ensure that `cryptroot` is the name of
+yours, if you followed this books encrypted disko install it should be:
+
+```nix
+  # Adds your user to the 'tss' group, allowing you to interact with the TPM
+  users.users.YourUser.extraGroups = [ "tss" ];
+  # Enables TPM2 services and tools on your system
+  security.tpm2.enable = true;
+  # Ensure the necessary kernel modules are in the initrd
+  boot.initrd.kernelModules = ["tpm_tis"];
+  # switches the initrd to a systemd-based environment, required for TPM2
+  boot.initrd.systemd.enable = true;
+  # ❗ Tell the initrd to use the TPM2 key for the encrypted root
+  boot.initrd.luks.devices.cryptroot = {
+    device = "/dev/disk/by-partlabel/luks";
+    # These options tell systemd-cryptsetup to automatically try to unlock the device
+    # using the TPM2 key. 'tpm2-measure=yes' ensures the PCRs are verified but only works if you use one disk
+    crypttabExtraOpts = ["tpm2-device=auto" "tpm2-measure=yes"];
+    fallbackToPassword = true;
+  };
+  environment.systemPackages = [ pkgs.tpm2-tss ];
+```
+
+> ❗ NOTE: `cryptroot` needs to match what your encrypted partition is named, I
+> have seen quite a few different names here.
+
+If you use this, you can't also use the USB Keyfile or the included impermanence
+guide.
+
+</details>
+
+**Description**
+
+- `/dev/disk/by-partlabel/luks` refers to your encrypted partition by its
+  partition label, which is stable and less likely to change than
+  `/dev/nvme0n1p2`
+
+- `/root/usb-luks.key` is the keyfile we generated.
+
+- You'll be prompted to enter your existing LUKS passphrase to authorize adding
+  the new key.
+
+- Now our LUKS volume will accept both our existing passphrase and the new
+  keyfile (from the USB stick) for unlocking.
+
+1.  **Clear Data on USB stick and replace with 0's**
+
+```bash
+lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda           8:0    1   239M  0 disk
+sdb           8:16   1   1.4M  0 disk  /run/media/jr/7CD1-149A # Example USB mount
+zram0       253:0    0   7.5G  0 disk  [SWAP]
+nvme0n1     259:0    0 476.9G  0 disk
+├─nvme0n1p1 259:1    0   512M  0 part  /boot
+└─nvme0n1p2 259:2    0 476.4G  0 part
+  └─cryptroot 254:0  0 476.4G  0 crypt /persist  # Main Btrfs mount
+                                               # (other subvolumes are within /persist and bind-mounted by impermanence)
+# unplug the device and run lsblk again so your sure
+```
+
+2. Before wiping you must unmount any mounted partitions:
+
+```bash
+sudo umount /dev/sda1
+```
+
+```bash
+# Overwrite with Zeros (fast, sufficient for most uses)
+sudo dd if=/dev/zero of=/dev/sda bs=4M status=progress
+# Or overwrite with Random Data (More Secure, Slower)
+sudo dd if=/dev/urandom of=/dev/sda bs=4M status=progress
+# Or for the most secure way run multiple passes of
+sudo shred -v -n 3 /dev/sda
+```
+
+3. Create a New Partition and Format (Optional)
+
+```bash
+sudo fdisk /dev/sda
+```
+
+1.  Press `o` to create a new empty DOS partition table (if you are creating
+    partitions on a fresh disk or want to wipe existing partitions and start
+    over). Be very careful with this step as it will erase all existing
+    partition information on the disk.
+
+2.  Press `n` to create a new partition.
+
+- You will then be prompted for the partition type:
+  - `p` for a primary partition (you can have up to 4 primary partitions)
+
+  - `e` for an extended partition (which can contain logical partitions)
+
+- Next, you'll be asked for the partition number (e.g., 1, 2, 3, 4).
+
+- Then, you'll be asked for the first sector (press Enter to accept the default,
+  which is usually the first available sector after the previous partition or
+  the beginning of the disk).
+
+- Finally, you'll be asked for the last sector or size (you can specify a size
+  like +10G for 10 Gigabytes, +512M for 512 Megabytes, or press Enter to use the
+  rest of the available space).
+
+3. Press `w` to write the changes to the partition table and exit fdisk.
+
+After pressing `w`, the kernel needs to be aware of the new partition table.
+Sometimes this happens automatically, but if you encounter issues, a reboot or a
+command like `partprobe` (if available and needed) can help.
+
+Formats as FAT32:
+
+```bash
+sudo mkfs.vfat /dev/sda1
+# or as ext4
+sudo mkfs.ext4 /dev/sda1
+```
+
+I chose `vfat` so I ran `sudo mkfs.vfat /dev/sda1`. In my case this changed the
+device path to `/run/media/jr/7CD1-149A` so it's important to find your own UUID
+with the following command:
+
+```bash
+sudo blkid /dev/sda1
+/dev/sda1: SEC_TYPE="msdos" UUID="B7B4-863B" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="7d1f9d7f-01"
+```
+
+- As you can see the above UUID is `"B7B4-863B"`
+
+- Remove and re-insert the USB stick, this ensures the system recognizes the new
+  partition and filesystem.
+
+4. Copy the keyfile to your USB Stick
+
+```bash
+sudo cp /root/usb-luks.key /run/media/jr/B7B4-863B/
+sync
+```
+
+5. Update your NixOS Configuration
+
+Note the output of `blkid /dev/sda1` and if you have a backup device list that
+also:
+
+The following is from the wiki edited for my setup, it was created by Tzanko
+Matev:
+
+```nix
+let
+  PRIMARYUSBID = "B7B4-863B";
+  BACKUPUSBID = "Ventoy";
+in {
+
+  boot.initrd.kernelModules = [
+    "uas"
+    "usbcore"
+    "usb_storage"
+    "vfat"
+    "nls_cp437"
+    "nls_iso8859_1"
+  ];
+
+  boot.initrd.postDeviceCommands = lib.mkBefore ''
+    mkdir -p /key
+    sleep 2
+    mount -n -t vfat -o ro $(findfs UUID=${PRIMARYUSBID}) /key || \
+    mount -n -t vfat -o ro $(findfs UUID=${BACKUPUSBID}) /key || echo "No USB key found"
+  '';
+
+  boot.initrd.luks.devices.cryptroot = {
+    device = "/dev/disk/by-partlabel/luks";
+    keyFile = "/key/usb-luks.key";
+    fallbackToPassword = true;
+    allowDiscards = true;
+    preLVM = false; # Crucial!
+  };
+}
+```
+
+If you have issues or just want to remove the key take note of the path used to
+add it so you don't have to enter the whole key:
+
+```bash
+sudo cryptsetup luksRemoveKey /dev/disk/by-partlabel/luks --key-file /root/usb-luks.key
+```
+
+6. Securely Remove the Keyfile from Your System:
+
+```bash
+sudo shred --remove --zero /root/usb-luks.key
+```
+
+## Instructions for Using a USB Stick with Existing Data
+
+1. Generate the Keyfile
+
+```bash
+sudo dd if=/dev/urandom of=/root/usb-luks.key bs=4096 count=1
+```
+
+2. Add the Keyfile to your LUKS Volume
+
+```bash
+sudo cryptsetup luksAddKey /dev/disk/by-partlabel/luks /root/usb-luks.key
+```
+
+(enter your existing passphrase when prompted)
+
+3. Copy the Keyfile to the USB Stick
+
+- Plug in the USB Stick and note its mount point
+  (e.g.,`/run/media/$USER/YourLabel`)
+
+- Copy the keyfile:
+
+```bash
+sudo cp /root/usb-luks.key /run/media/$USER/YourLabel/
+sync
+```
+
+- You run the above as 2 commands, the second being `sync`.
+
+- You can rename it if you wish (e.g., `luks.key`)
+
+4. Securely Delete the Local Keyfile
+
+```bash
+sudo shred --remove --zero /root/usb-luks.key
+```
+
+- You need to ensure the keyfile is accessible in the initrd. Since automounting
+  (like `/run/media/...`) does not happen in `initrd`, you must manually mount
+  the USB in the `initrd` using its `UUID` or label.
+
+Find the USB Partition UUID:
+
+```bash
+lsblk -o NAME,UUID
+# or
+blkid /dev/sda1
+```
+
+Suppose the UUID is `B7B4-863B`
+
+Add to your `configuration.nix`:
+
+```nix
+boot.initrd.kernelModules = [ "usb_storage" "vfat" "nls_cp437" "nls_iso8859_1" ];
+
+boot.initrd.postDeviceCommands = lib.mkBefore ''
+  mkdir -p /key
+  sleep 1
+  mount -n -t vfat -o ro $(findfs UUID=B7B4-863B) /key || echo "USB not found"
+'';
+
+boot.initrd.luks.devices.cryptroot = {
+  device = "/dev/disk/by-partlabel/luks";
+  keyFile = "/key/usb-luks.key"; # or whatever you named it
+  fallbackToPassword = true;
+  allowDiscards = true;
+};
+```
