@@ -1,5 +1,107 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>idiomatic_nix</title><id>https://saylesss88.github.io/idiomatic_nix.html</id><updated>2026-01-30T23:58:03+00:00</updated><link href="https://saylesss88.github.io/idiomatic_nix.html" rel="alternate"/><content type="html"></content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-23T16:12:43+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Secure Boot on Libvirt stack</title><id>https://saylesss88.github.io/nix/secureboot_libvirt.html</id><updated>2026-01-19T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/secureboot_libvirt.html" rel="alternate"/><content type="html">&lt;h1&gt;Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>NixOS Containers</title><id>https://saylesss88.github.io/idiomatic_nix.html</id><updated>2026-01-30T00:00:00+00:00</updated><link href="https://saylesss88.github.io/idiomatic_nix.html" rel="alternate"/><content type="html">&lt;h1&gt;Idiomatic Nix&lt;/h1&gt;
+&lt;p&gt;There are quite a few resources out there that share best practices, but no
+single unified place to find them all. I’m going to try to build on
+&lt;a href=&quot;https://nix.dev/guides/best-practices&quot;&gt;nix.dev’s Best practices&lt;/a&gt;, by doing some
+research as well as examining the code of some of the leaders in the NixOS
+world. (Tweag, numtide, etc.)&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ mdbook-nix-repl for interactive code blocks &lt;/summary&gt;
+&lt;p&gt;I’ve added a &lt;code&gt;flake.nix&lt;/code&gt; to the &lt;code&gt;mdbook-nix-repl&lt;/code&gt; repo, you can add it as a
+flake input:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;flake.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+
+    mdbook-nix-repl.url = &quot;github:saylesss88/mdbook-nix-repl?dir=server&quot;;
+  };
+
+  outputs = { self, nixpkgs, mdbook-nix-repl, ... }: {
+    nixosConfigurations.magic = nixpkgs.lib.nixosSystem {
+      system = &quot;x86_64-linux&quot;;
+      modules = [
+        ./configuration.nix
+
+        mdbook-nix-repl.nixosModules.default
+      ];
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;&lt;code&gt;configuration.nix&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ pkgs, ... }:
+{
+  imports = [
+  ];
+
+  # This option is now provided by the module you imported from the flake
+  custom.nix-repl-server = {
+    enable = true;
+    port = 8080;
+    tokenFile = &quot;/etc/nix-repl-server.env&quot;;
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Copy the value of &lt;code&gt;NIX_REPL_TOKEN&lt;/code&gt; in &lt;code&gt;theme/index.hbs&lt;/code&gt;, and add create file
+&lt;code&gt;/etc/nix-repl-server.env&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Create the file with strict permissions (root read-only)
+sudo touch /etc/nix-repl-server.env
+sudo chmod 600 /etc/nix-repl-server.env
+
+# Edit it to add: NIX_REPL_TOKEN=your_token_from_index_hbs
+sudo vim /etc/nix-repl-server.env
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Expected format:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;NIX_REPL_TOKEN=9deb7efadb74b9e962e7911bb5caf3b3fef275a1b915b526
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Rebuild, and the server will now be running at boot.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/details&gt;
+&lt;p&gt;All the following examples are interactive, press play to see the result.(The
+following examples come directly from &lt;code&gt;nix.dev&lt;/code&gt;)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;rec {
+    a = 1;
+    b = a + 2;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Use this instead:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let
+  a = 1;
+in {
+    a = a;
+    b = a + 2;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;💡 TIP Self-reference can be achieved by explicitly naming the attribute set:&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; let
+   argset = {
+     a = 1;
+     b = argset.a + 2;
+  };
+in
+  argset
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Updating nested attribute sets&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = 1; b = 2; } // { b = 3; c = 4; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Updates are shallow, names on the right take precidence:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ a = { b = 1; }; } // { a = { c = 3; }; }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;let pkgs = import &amp;lt;nixpkgs&amp;gt; {}; in
+pkgs.lib.recursiveUpdate { a = { b = 1; }; } { a = { c = 3;}; }
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-01-23T16:12:43+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>Secure Boot on Libvirt stack</title><id>https://saylesss88.github.io/nix/secureboot_libvirt.html</id><updated>2026-01-19T00:00:00+00:00</updated><link href="https://saylesss88.github.io/nix/secureboot_libvirt.html" rel="alternate"/><content type="html">&lt;h1&gt;Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence&lt;/h1&gt;
 &lt;h2&gt;Initial VM Setup&lt;/h2&gt;
 &lt;p&gt;When creating the VM in virt-manager:&lt;/p&gt;
 &lt;ol&gt;

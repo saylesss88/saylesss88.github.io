@@ -1,4 +1,106 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>idiomatic_nix</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/idiomatic_nix.html</guid><pubDate>Fri, 30 Jan 2026 23:58:03 +0000</pubDate></item><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Fri, 23 Jan 2026 16:12:43 +0000</pubDate></item><item><title>Secure Boot on Libvirt stack</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h1>Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>NixOS Containers</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[<h1>Idiomatic Nix</h1>
+<p>There are quite a few resources out there that share best practices, but no
+single unified place to find them all. I’m going to try to build on
+<a href="https://nix.dev/guides/best-practices">nix.dev’s Best practices</a>, by doing some
+research as well as examining the code of some of the leaders in the NixOS
+world. (Tweag, numtide, etc.)</p>
+<details>
+<summary> ✔️ mdbook-nix-repl for interactive code blocks </summary>
+<p>I’ve added a <code>flake.nix</code> to the <code>mdbook-nix-repl</code> repo, you can add it as a
+flake input:</p>
+<ol>
+<li><code>flake.nix</code>:</li>
+</ol>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
+    mdbook-nix-repl.url = "github:saylesss88/mdbook-nix-repl?dir=server";
+  };
+
+  outputs = { self, nixpkgs, mdbook-nix-repl, ... }: {
+    nixosConfigurations.magic = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+
+        mdbook-nix-repl.nixosModules.default
+      ];
+    };
+  };
+}
+</code></pre>
+<ol start="2">
+<li><code>configuration.nix</code>:</li>
+</ol>
+<pre><code class="language-nix">{ pkgs, ... }:
+{
+  imports = [
+  ];
+
+  # This option is now provided by the module you imported from the flake
+  custom.nix-repl-server = {
+    enable = true;
+    port = 8080;
+    tokenFile = "/etc/nix-repl-server.env";
+  };
+}
+</code></pre>
+<ol start="3">
+<li>Copy the value of <code>NIX_REPL_TOKEN</code> in <code>theme/index.hbs</code>, and add create file
+<code>/etc/nix-repl-server.env</code>:</li>
+</ol>
+<pre><code class="language-bash"># Create the file with strict permissions (root read-only)
+sudo touch /etc/nix-repl-server.env
+sudo chmod 600 /etc/nix-repl-server.env
+
+# Edit it to add: NIX_REPL_TOKEN=your_token_from_index_hbs
+sudo vim /etc/nix-repl-server.env
+</code></pre>
+<p>Expected format:</p>
+<pre><code class="language-text">NIX_REPL_TOKEN=9deb7efadb74b9e962e7911bb5caf3b3fef275a1b915b526
+</code></pre>
+<ol start="4">
+<li>Rebuild, and the server will now be running at boot.</li>
+</ol>
+</details>
+<p>All the following examples are interactive, press play to see the result.(The
+following examples come directly from <code>nix.dev</code>)</p>
+<pre><code class="language-nix">rec {
+    a = 1;
+    b = a + 2;
+}
+</code></pre>
+<p>Use this instead:</p>
+<pre><code class="language-nix">let
+  a = 1;
+in {
+    a = a;
+    b = a + 2;
+}
+</code></pre>
+<blockquote>
+<p>💡 TIP Self-reference can be achieved by explicitly naming the attribute set:</p>
+</blockquote>
+<pre><code class="language-nix"> let
+   argset = {
+     a = 1;
+     b = argset.a + 2;
+  };
+in
+  argset
+</code></pre>
+<h2>Updating nested attribute sets</h2>
+<pre><code class="language-nix">{ a = 1; b = 2; } // { b = 3; c = 4; }
+</code></pre>
+<p>Updates are shallow, names on the right take precidence:</p>
+<pre><code class="language-nix">{ a = { b = 1; }; } // { a = { c = 3; }; }
+</code></pre>
+<pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
+pkgs.lib.recursiveUpdate { a = { b = 1; }; } { a = { c = 3;}; }
+</code></pre>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/idiomatic_nix.html</guid><pubDate>Fri, 30 Jan 2026 00:00:00 +0000</pubDate></item><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Fri, 23 Jan 2026 16:12:43 +0000</pubDate></item><item><title>Secure Boot on Libvirt stack</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h1>Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence</h1>
 <h2>Initial VM Setup</h2>
 <p>When creating the VM in virt-manager:</p>
 <ol>
