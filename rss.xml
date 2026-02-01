@@ -2711,6 +2711,8 @@ the entire system.</p>
 admin tasks for my daily user. That may be a better option for servers, etc.</p>
 <p>Create an admin user for administrative tasks and remove your daily user from
 the <code>wheel</code> group, and disable the <code>sudo</code>, <code>su</code>, and <code>pkexec</code> SUIDs:</p>
+<p>(Edited: 2026-02-01): Changed from disabling the <code>setuid</code> bits to disabling the
+wrapper entirely. Caught by <code>SuperSandro2000</code></p>
 <pre><code class="language-nix">{ config, pkgs, lib }:
 {
 users.users.admin = {
@@ -2746,18 +2748,19 @@ polkit.enable = true;
 # Disable sudo
 sudo.enable = false;
 wrappers = {
-    su.setuid = lib.mkForce false;
-    # Not needed when sudo is disabled
-    # sudo.setuid = lib.mkForce false;
-    # sudoedit.setuid = lib.mkForce false;
-    sg.setuid = lib.mkForce false;
-    fusermount.setuid = lib.mkForce false;
-    fusermount3.setuid = lib.mkForce false;
-    mount.setuid = lib.mkForce false;
+    su.enable = lib.mkForce false;
+    sudoedit.enable = lib.mkForce false;
+    sg.enable = lib.mkForce false;
+    fusermount.enable = lib.mkForce false;
+    fusermount3.enable = lib.mkForce false;
     pkexec.setuid = lib.mkForce false;
     newgrp.setuid = lib.mkForce false;
     newgidmap.setuid = lib.mkForce false;
     newuidmap.setuid = lib.mkForce false;
+    # `mount` Needed for `fileSystems.options`
+    # mount.enable = lib.mkForce false;
+    # Optional: if you disable mount, disable umount as well
+    # umount.enable = lib.mkForce false;
 };
 # Or hyprlock, required for swaylock to accept your password
 pam.services.swaylock = {
@@ -2779,7 +2782,9 @@ SUID wrappers in <code>/run/wrappers/bin/</code>, such as <code>fusermount</code
 <p><code>umount</code>: Allows unprivileged users to unmount devices listed in your fstab.</p>
 </li>
 <li>
-<p><code>mount</code>: Same as above but for mounting.</p>
+<p><code>mount</code>: Same as above but for mounting. It is recommended to set
+<code>fileSystems."/boot".options = [ "fmask=0077" "dmask=0077" ];</code> this won’t work
+without <code>mount</code>s setuid.</p>
 </li>
 <li>
 <p><code>sg</code>: Executes a command as a different group.</p>
@@ -2805,7 +2810,15 @@ against the root-readable <code>/etc/shadow</code>.</li>
 </ul>
 <p>Check again which SUID binaries are active:</p>
 <pre><code class="language-bash">sudo find / -perm -4000 -type f -ls 2&gt;/dev/null
+# Example
+-rwsr-xr-x  root  root  /run/wrappers/bin/fusermount
+   ^-- This 's' means setuid bit is set
 </code></pre>
+<pre><code class="language-bash">ls -la /run/wrappers/bin/
+# Or
+find /run/wrappers -perm -4000 -ls
+</code></pre>
+<p><strong>Only enable the wrappers you actually use!</strong></p>
 <hr />
 <p>You will have to use <code>run0</code> to authenticate your daily user, for example:</p>
 <pre><code class="language-bash">run0 nixos-rebuild switch --flake .
@@ -17672,7 +17685,83 @@ and options for hardening critical areas of your system: from encryption and
 secure boot to managing secrets, tightening kernel security, and leveraging
 platform-specific tools.
 <a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Install</title><link>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</link><description><![CDATA[<h1>Minimal BTRFS-Subvol Install with Disko and Flakes</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>My Chapter</title><link>https://saylesss88.github.io/installation/index.html</link><description><![CDATA[<h1>Installation Guides</h1>
+<p>This section provides detailed guides for installing NixOS. You’ll choose
+between an <strong>unencrypted</strong> or <strong>encrypted</strong> base setup. After your core
+installation, you can explore adding optional features like <code>sops</code> for encrypted
+secrets, <code>lanzaboote</code> for Secure Boot, or <code>impermanence</code> for a stateless system.</p>
+<hr />
+<h2>1. Unencrypted Disko Btrfs Subvol Installation</h2>
+<ul>
+<li>
+<p><strong>Guide:</strong>
+<a href="https://saylesss88.github.io/installation/unenc/unencrypted_setups.html">Minimal Btrfs-Subvol Install with Disko and Flakes</a></p>
+</li>
+<li>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>
+<p>Users who want a straightforward and quick setup.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/unenc/unenc_impermanence.html">Unencrypted Impermanence</a></p>
+</li>
+<li>
+<p>You can still add Lanzaboote and sops secrets after the install for a more
+secure system. To get the full benefits of Lanzaboote it is recommended to
+use full disk encryption.</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>2. Encrypted Disko Btrfs Subvol Installation</h2>
+<ul>
+<li>
+<p><strong>Encrypted Install Guide:</strong>
+<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
+</li>
+<li>
+<p><strong>Important Considerations:</strong></p>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Secure Boot with Lanzaboote</a>
+For the full benefit of Secure Boot (with Lanzaboote), it’s highly
+recommended to have a second stage of protection, such as an encrypted disk.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Adding Sops</a>
+You can easily add <code>sops</code> (for managing encrypted secrets) to your
+configuration <em>after</em> the initial encrypted installation and reboot. This
+can simplify the initial setup process. However, always remember the core
+goal of using encrypted secrets: <strong>never commit unencrypted or even hashed
+sensitive data directly into your Git repository.</strong> With modern equipment
+brute force attacks are a real threat.</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>3. Post-Installation Security &amp; Features</h2>
+<p>Once your base NixOS system is installed, consider these powerful additions:</p>
+<ul>
+<li>
+<p><strong><code>sops-nix</code>:</strong> For managing encrypted secrets directly within your NixOS
+configuration, ensuring sensitive data is never stored in plain text.</p>
+</li>
+<li>
+<p><strong><code>lanzaboote</code>:</strong> For enabling Secure Boot, verifying the integrity of your
+boot chain (requires UEFI and custom keys).</p>
+</li>
+<li>
+<p><strong><code>impermanence</code>:</strong> For setting up a stateless NixOS system, where the root
+filesystem reverts to a clean state on every reboot.</p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Install</title><link>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</link><description><![CDATA[<h1>Minimal BTRFS-Subvol Install with Disko and Flakes</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -19966,83 +20055,7 @@ boot.initrd.luks.devices.cryptroot = {
   allowDiscards = true;
 };
 </code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/USB_keyfile.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>My Chapter</title><link>https://saylesss88.github.io/installation/index.html</link><description><![CDATA[<h1>Installation Guides</h1>
-<p>This section provides detailed guides for installing NixOS. You’ll choose
-between an <strong>unencrypted</strong> or <strong>encrypted</strong> base setup. After your core
-installation, you can explore adding optional features like <code>sops</code> for encrypted
-secrets, <code>lanzaboote</code> for Secure Boot, or <code>impermanence</code> for a stateless system.</p>
-<hr />
-<h2>1. Unencrypted Disko Btrfs Subvol Installation</h2>
-<ul>
-<li>
-<p><strong>Guide:</strong>
-<a href="https://saylesss88.github.io/installation/unenc/unencrypted_setups.html">Minimal Btrfs-Subvol Install with Disko and Flakes</a></p>
-</li>
-<li>
-<p><strong>Best for:</strong></p>
-<ul>
-<li>
-<p>Users who want a straightforward and quick setup.</p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/installation/unenc/unenc_impermanence.html">Unencrypted Impermanence</a></p>
-</li>
-<li>
-<p>You can still add Lanzaboote and sops secrets after the install for a more
-secure system. To get the full benefits of Lanzaboote it is recommended to
-use full disk encryption.</p>
-</li>
-</ul>
-</li>
-</ul>
-<hr />
-<h2>2. Encrypted Disko Btrfs Subvol Installation</h2>
-<ul>
-<li>
-<p><strong>Encrypted Install Guide:</strong>
-<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
-</li>
-<li>
-<p><strong>Important Considerations:</strong></p>
-<ul>
-<li>
-<p><a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Secure Boot with Lanzaboote</a>
-For the full benefit of Secure Boot (with Lanzaboote), it’s highly
-recommended to have a second stage of protection, such as an encrypted disk.</p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Adding Sops</a>
-You can easily add <code>sops</code> (for managing encrypted secrets) to your
-configuration <em>after</em> the initial encrypted installation and reboot. This
-can simplify the initial setup process. However, always remember the core
-goal of using encrypted secrets: <strong>never commit unencrypted or even hashed
-sensitive data directly into your Git repository.</strong> With modern equipment
-brute force attacks are a real threat.</p>
-</li>
-</ul>
-</li>
-</ul>
-<hr />
-<h2>3. Post-Installation Security &amp; Features</h2>
-<p>Once your base NixOS system is installed, consider these powerful additions:</p>
-<ul>
-<li>
-<p><strong><code>sops-nix</code>:</strong> For managing encrypted secrets directly within your NixOS
-configuration, ensuring sensitive data is never stored in plain text.</p>
-</li>
-<li>
-<p><strong><code>lanzaboote</code>:</strong> For enabling Secure Boot, verifying the integrity of your
-boot chain (requires UEFI and custom keys).</p>
-</li>
-<li>
-<p><strong><code>impermanence</code>:</strong> For setting up a stateless NixOS system, where the root
-filesystem reverts to a clean state on every reboot.</p>
-</li>
-</ul>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/USB_keyfile.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
 <details>
 <summary>
 ✔️
