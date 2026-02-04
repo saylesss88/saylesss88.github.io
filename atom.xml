@@ -304,6 +304,8 @@ everything is in order.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo chmod +x test.sh
 sudo ./test.sh
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Before you uncomment the rollback script, ensure that the correct permissions
+and owners are set. This caused a hard to diagnose error for me.&lt;/p&gt;
 &lt;/details&gt;
 &lt;h2&gt;What is OpenZFS&lt;/h2&gt;
 &lt;p&gt;ZFS is an advanced filesystem, originally developed by Sun Microsystems in 05.&lt;/p&gt;
@@ -595,7 +597,7 @@ nix-shell -p helix
 mkpasswd --method=yescrypt &amp;gt; /tmp/pass.txt
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;After first reboot, the above files will be placed directly under &lt;code&gt;/persist/&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;(Edited 2026-01-18 use &lt;code&gt;postMountCommands&lt;/code&gt; &amp;gt; &lt;code&gt;postResumeCommands&lt;/code&gt;)&lt;/p&gt;
+&lt;p&gt;(Edited 2026-02-04 use &lt;code&gt;postDeviceCommands&lt;/code&gt; &amp;gt; &lt;code&gt;postMountCommands&lt;/code&gt;)&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ config, lib, pkgs, ... }:
 
 {
@@ -647,8 +649,10 @@ mkpasswd --method=yescrypt &amp;gt; /tmp/pass.txt
   # 4. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
  # Uncomment after first reboot
- # boot.initrd.postMountCommands = lib.mkAfter &apos;&apos;
- #   zfs rollback -r rpool/local/root@blank
+ # boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+ #   zpool import -N -f rpool
+ #   zfs rollback -r rpool/root@blank
+ #   zpool export rpool
  # &apos;&apos;;
 
   # ------------------------------------------------------------------
@@ -708,16 +712,18 @@ mkpasswd --method=yescrypt &amp;gt; /tmp/pass.txt
 }
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;After reboot, you can uncomment:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;  boot.initrd.postMountCommands = lib.mkAfter &apos;&apos;
-    zfs rollback -r rpool/local/root@blank
-  &apos;&apos;;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;boot.initrd.postDeviceCommands = lib.mkAfter &apos;&apos;
+  zpool import -N -f rpool
+  zfs rollback -r rpool/root@blank
+  zpool export rpool
+&apos;&apos;;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Uncomment the above script and test: (Don’t forget that the &lt;code&gt;/etc&lt;/code&gt; directory
 will be wiped, including your &lt;code&gt;configuration.nix&lt;/code&gt; and
 &lt;code&gt;hardware-configuration.nix&lt;/code&gt;!)&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Configuration backup&lt;/strong&gt;&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /persist/etc
-sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /mnt/persist/etc/nixos
+sudo cp /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/configuration.nix /mnt/persist/etc/nixos/
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;strong&gt;Rollback Test&lt;/strong&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo touch /etc/rollback-canary

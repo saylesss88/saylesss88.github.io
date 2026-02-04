@@ -303,6 +303,8 @@ everything is in order.</p>
 <pre><code class="language-bash">sudo chmod +x test.sh
 sudo ./test.sh
 </code></pre>
+<p>Before you uncomment the rollback script, ensure that the correct permissions
+and owners are set. This caused a hard to diagnose error for me.</p>
 </details>
 <h2>What is OpenZFS</h2>
 <p>ZFS is an advanced filesystem, originally developed by Sun Microsystems in 05.</p>
@@ -594,7 +596,7 @@ nix-shell -p helix
 mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 </code></pre>
 <p>After first reboot, the above files will be placed directly under <code>/persist/</code></p>
-<p>(Edited 2026-01-18 use <code>postMountCommands</code> &gt; <code>postResumeCommands</code>)</p>
+<p>(Edited 2026-02-04 use <code>postDeviceCommands</code> &gt; <code>postMountCommands</code>)</p>
 <pre><code class="language-nix">{ config, lib, pkgs, ... }:
 
 {
@@ -646,8 +648,10 @@ mkpasswd --method=yescrypt &gt; /tmp/pass.txt
   # 4. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
  # Uncomment after first reboot
- # boot.initrd.postMountCommands = lib.mkAfter ''
- #   zfs rollback -r rpool/local/root@blank
+ # boot.initrd.postDeviceCommands = lib.mkAfter ''
+ #   zpool import -N -f rpool
+ #   zfs rollback -r rpool/root@blank
+ #   zpool export rpool
  # '';
 
   # ------------------------------------------------------------------
@@ -707,16 +711,18 @@ mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 }
 </code></pre>
 <p>After reboot, you can uncomment:</p>
-<pre><code class="language-nix">  boot.initrd.postMountCommands = lib.mkAfter ''
-    zfs rollback -r rpool/local/root@blank
-  '';
+<pre><code class="language-nix">boot.initrd.postDeviceCommands = lib.mkAfter ''
+  zpool import -N -f rpool
+  zfs rollback -r rpool/root@blank
+  zpool export rpool
+'';
 </code></pre>
 <p>Uncomment the above script and test: (Don’t forget that the <code>/etc</code> directory
 will be wiped, including your <code>configuration.nix</code> and
 <code>hardware-configuration.nix</code>!)</p>
 <p><strong>Configuration backup</strong></p>
-<pre><code class="language-bash">sudo mkdir -p /persist/etc
-sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
+<pre><code class="language-bash">sudo mkdir -p /mnt/persist/etc/nixos
+sudo cp /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/configuration.nix /mnt/persist/etc/nixos/
 </code></pre>
 <p><strong>Rollback Test</strong></p>
 <pre><code class="language-bash">sudo touch /etc/rollback-canary
