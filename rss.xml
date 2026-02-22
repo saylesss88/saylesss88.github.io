@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>NixOS Containers</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[<h1>Idiomatic Nix</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 22 Feb 2026 13:58:36 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[<h1>Idiomatic Nix</h1>
 <p>There are quite a few resources out there that share best practices, but no
 single unified place to find them all. I’m going to try to build on
 <a href="https://nix.dev/guides/best-practices">nix.dev’s Best practices</a>, by doing some
@@ -100,7 +100,7 @@ in
 <pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
 pkgs.lib.recursiveUpdate { a = { b = 1; }; } { a = { c = 3;}; }
 </code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/idiomatic_nix.html</guid><pubDate>Fri, 30 Jan 2026 00:00:00 +0000</pubDate></item><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Fri, 23 Jan 2026 16:12:43 +0000</pubDate></item><item><title>Secure Boot on Libvirt stack</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h1>Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/idiomatic_nix.html</guid><pubDate>Fri, 30 Jan 2026 00:00:00 +0000</pubDate></item><item><title>Secure Boot on Libvirt stack</title><link>https://saylesss88.github.io/nix/secureboot_libvirt.html</link><description><![CDATA[<h1>Secure Boot in a Libvirt (KVM) VM with ZFS on LUKS Impermanence</h1>
 <h2>Initial VM Setup</h2>
 <p>When creating the VM in virt-manager:</p>
 <ol>
@@ -303,8 +303,6 @@ everything is in order.</p>
 <pre><code class="language-bash">sudo chmod +x test.sh
 sudo ./test.sh
 </code></pre>
-<p>Before you uncomment the rollback script, ensure that the correct permissions
-and owners are set. This caused a hard to diagnose error for me.</p>
 </details>
 <h2>What is OpenZFS</h2>
 <p>ZFS is an advanced filesystem, originally developed by Sun Microsystems in 05.</p>
@@ -596,7 +594,7 @@ nix-shell -p helix
 mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 </code></pre>
 <p>After first reboot, the above files will be placed directly under <code>/persist/</code></p>
-<p>(Edited 2026-02-04 use <code>postDeviceCommands</code> &gt; <code>postMountCommands</code>)</p>
+<p>(Edited 2026-01-18 use <code>postMountCommands</code> &gt; <code>postResumeCommands</code>)</p>
 <pre><code class="language-nix">{ config, lib, pkgs, ... }:
 
 {
@@ -648,10 +646,8 @@ mkpasswd --method=yescrypt &gt; /tmp/pass.txt
   # 4. Roll-back root to blank snapshot on **every** boot
   # ------------------------------------------------------------------
  # Uncomment after first reboot
- # boot.initrd.postDeviceCommands = lib.mkAfter ''
- #   zpool import -N -f rpool
- #   zfs rollback -r rpool/root@blank
- #   zpool export rpool
+ # boot.initrd.postMountCommands = lib.mkAfter ''
+ #   zfs rollback -r rpool/local/root@blank
  # '';
 
   # ------------------------------------------------------------------
@@ -711,18 +707,16 @@ mkpasswd --method=yescrypt &gt; /tmp/pass.txt
 }
 </code></pre>
 <p>After reboot, you can uncomment:</p>
-<pre><code class="language-nix">boot.initrd.postDeviceCommands = lib.mkAfter ''
-  zpool import -N -f rpool
-  zfs rollback -r rpool/root@blank
-  zpool export rpool
-'';
+<pre><code class="language-nix">  boot.initrd.postMountCommands = lib.mkAfter ''
+    zfs rollback -r rpool/local/root@blank
+  '';
 </code></pre>
 <p>Uncomment the above script and test: (Don’t forget that the <code>/etc</code> directory
 will be wiped, including your <code>configuration.nix</code> and
 <code>hardware-configuration.nix</code>!)</p>
 <p><strong>Configuration backup</strong></p>
-<pre><code class="language-bash">sudo mkdir -p /mnt/persist/etc/nixos
-sudo cp /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/configuration.nix /mnt/persist/etc/nixos/
+<pre><code class="language-bash">sudo mkdir -p /persist/etc
+sudo cp /etc/nixos/hardware-configuration.nix /etc/nixos/configuration.nix /persist/etc/
 </code></pre>
 <p><strong>Rollback Test</strong></p>
 <pre><code class="language-bash">sudo touch /etc/rollback-canary
@@ -1277,11 +1271,12 @@ them with extreme care.</p>
 <p><img src="../images/gnupg.png" alt="GnuPG" /></p>
 <h2>⚠️ gpg.fail (practical OpenPGP vulnerabilities) (Added on 2026-01-15)</h2>
 <p>The <a href="https://gpg.fail">gpg.fail</a> is a write-up of real-world weaknesses in
-GPG/OpenPGP implementations and edge cases in the OpenPGP ecosystem—not the
+GPG/OpenPGP implementations and edge cases in the OpenPGP ecosystem, not the
 underlying math of modern cryptography. ​ The core idea is that signature
-verification needs two things: correct cryptography and confidence that the data
-you think was verified is actually the same data the verifier processed, which
-can break down when formats are complex and tooling is permissive or ambiguous.</p>
+verification needs two things: <strong>correct cryptography</strong> and <strong>confidence that
+the data you think was verified is actually the same data the verifier
+processed</strong>, which can break down when formats are complex and tooling is
+permissive or ambiguous.</p>
 <h3>Why this matters even with good key hygiene</h3>
 <p>Most of the hardening in this guide (offline primary key, subkeys, strict
 permissions, agent separation) is still worth doing because it protects your
@@ -1305,7 +1300,7 @@ attacker-controlled OpenPGP inputs that flow through multiple tools (mail
 clients, import pipelines, automation). ​</p>
 </li>
 <li>
-<p>Keep GnuPG and related tooling updated; gpg.fail covers vulnerabilities that
+<p>Keep GnuPG and related tooling updated; <code>gpg.fail</code> covers vulnerabilities that
 include classic implementation issues and not just “protocol design” pitfalls.</p>
 </li>
 </ul>
@@ -1317,18 +1312,19 @@ clearly distinguishes:</p>
 <p>“signature cryptographically valid” from</p>
 </li>
 <li>
-<p>“the extracted/displayed message is exactly what was verified”. Some gpg.fail
-items specifically call out cases where output does not make this distinction
-obvious enough to prevent misuse.</p>
+<p>“the extracted/displayed message is exactly what was verified”. Some
+<code>gpg.fail</code> items specifically call out cases where output does not make this
+distinction obvious enough to prevent misuse.</p>
 </li>
 </ol>
+<hr />
 <h3>NixOS/Home-Manager hardening can break GPG (common failure mode)</h3>
 <p>Some “hardening” choices can cause GPG to fail in ways that look mysterious but
 are just UI/agent integration problems (for example, <strong>No pinentry</strong> / “gpg
 failed to sign the data” when the agent can’t prompt). If GPG signing/encryption
-suddenly stops working, first confirm pinentry is configured correctly (via your
-<code>services.gpg-agent.pinentryPackage</code> or <code>gpg-agent.conf</code>) and restart the agent
-with <code>gpgconf --kill gpg-agent</code> then <code>gpgconf --launch gpg-agent</code>.</p>
+suddenly stops working, first confirm <code>pinentry</code> is configured correctly (via
+your <code>services.gpg-agent.pinentryPackage</code>) and restart the agent with
+<code>gpgconf --kill gpg-agent</code> then <code>gpgconf --launch gpg-agent</code>.</p>
 <h2>🔑 Key Concepts</h2>
 <p><strong>GnuPG</strong> is a complete and free implementation of the OpenPGP standard. It
 allows you to encrypt and sign your data and communications, has a versatile key
@@ -1354,7 +1350,7 @@ rely on other factors such as if it has been signed by a key that you fully
 trust or if it has been signed by three marginally trusted keys to validate
 keys.</p>
 <p><code>gpg-agent</code> is a daemon to manage secret (private) keys independently from any
-protocol. It is used as a backed for <code>gpg</code> and <code>gpgsm</code> as well as for a couple
+protocol. It is used as a backend for <code>gpg</code> and <code>gpgsm</code> as well as for a couple
 of other utilities. –<a href="https://man.cx/gpg-agent">man gpg-agent</a></p>
 <p>There are numerous front-ends for gpg as well, i.e., GUI apps that simplify many
 of the commands and processes. Two that I touch on in this overview are
@@ -2233,6 +2229,15 @@ screen content of the entire desktop. This implicitly includes the content of
 other applications. It’s primarily for this reason that Silverblue, Kinoite, and
 Sericea images are recommended. COSMIC has plans to fix this.
 –<a href="https://secureblue.dev/images">secureblue Images</a></p>
+<ul>
+<li>
+<p>Update: Hyprland took a different approach to securing screencopy:
+<a href="https://wiki.hypr.land/Configuring/Permissions/">Hyprland Permissions</a></p>
+</li>
+<li>
+<p>Cosmic is working on a solution last I heard.</p>
+</li>
+</ul>
 <p>For example, to disable Xwayland for sway on home-manager you would add:</p>
 <pre><code class="language-nix">wayland.windowManager.sway = {
   enable = true;
@@ -2253,6 +2258,14 @@ systemd.user.services."xdg-desktop-portal-wlr" = {
 };
 xdg.portal.wlr.enable = false;
 </code></pre>
+<blockquote>
+<p>⚠️ CAUTION: Disabling wlroots portal only blocks screencopy for sandboxed
+clients. Unsandboxed apps (like <code>grim</code>) can still access
+ext-image-copy-capture directly on Sway without going through the portal. The
+security benefit comes from the security-context protocol support that enables
+sandboxes to restrict Wayland protocol access.</p>
+</blockquote>
+<hr />
 <h2>Common Attack Vectors for Linux</h2>
 <details>
 <summary> ✔️ Common Attack Vectors in Linux </summary>
@@ -2392,7 +2405,7 @@ at rest prevents data leakage, physical theft, unauthorized access, and more as
 long as the key management scheme isn’t compromised.</p>
 <ul>
 <li>
-<p><a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Minimal ISO Download (64-bit Intel/AMD)</a></p>
+<p><a href="https://channels.nixos.org/nixos-25.11/latest-nixos-minimal-x86_64-linux.iso">Minimal ISO Download 25.11 (64-bit Intel/AMD)</a></p>
 </li>
 <li>
 <p><a href="https://nixos.org/manual/nixos/stable/#sec-installation">NixOS Manual Installation</a></p>
@@ -2582,6 +2595,31 @@ and selectively pin specific packages from <code>unstable</code> to ensure they 
 rapid security updates.</p>
 <p>With flakes it’s easy to add both <code>stable</code> and <code>unstable</code> as flake inputs and
 access each with some simple logic.</p>
+<hr />
+<h3>Determinate Nix</h3>
+<p>Using Determinate Nix on NixOS gives you a much tighter security loop. You get
+the best of NixOS combined with signed packages, instant vulnerability patching,
+and better SBOMs. By sourcing your inputs via FlakeHub, you’re ensuring that
+your builds are auditable and your binaries are coming from a trusted, scanned
+source rather than just someone’s laptop. It’s basically NixOS with a
+professional-grade security layer on top.</p>
+<ul>
+<li>
+<p><a href="https://determinate.systems/blog/determinate-secure-packages/">Determinate Secure Packages</a>
+CVE monitoring &amp; patching, security scanning, and more.</p>
+</li>
+<li>
+<p><a href="https://determinate.systems/blog/determinate-nix-30/">Determinate Nix 3.0</a>:
+offers a formal stability guarantee for flakes, making them production ready
+today.</p>
+</li>
+<li>
+<p><a href="https://docs.determinate.systems/guides/advanced-installation/">Install Determinate Nix on NixOS</a></p>
+<ul>
+<li><a href="https://flakehub.com/flake/NixOS/nixpkgs?view=usage">FlakeHub NixOS/nixpkgs</a></li>
+</ul>
+</li>
+</ul>
 <details>
 <summary> ✔️ Click to Expand Flake example using both stable & unstable </summary>
 <pre><code class="language-nix">{
@@ -17691,83 +17729,7 @@ and options for hardening critical areas of your system: from encryption and
 secure boot to managing secrets, tightening kernel security, and leveraging
 platform-specific tools.
 <a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>My Chapter</title><link>https://saylesss88.github.io/installation/index.html</link><description><![CDATA[<h1>Installation Guides</h1>
-<p>This section provides detailed guides for installing NixOS. You’ll choose
-between an <strong>unencrypted</strong> or <strong>encrypted</strong> base setup. After your core
-installation, you can explore adding optional features like <code>sops</code> for encrypted
-secrets, <code>lanzaboote</code> for Secure Boot, or <code>impermanence</code> for a stateless system.</p>
-<hr />
-<h2>1. Unencrypted Disko Btrfs Subvol Installation</h2>
-<ul>
-<li>
-<p><strong>Guide:</strong>
-<a href="https://saylesss88.github.io/installation/unenc/unencrypted_setups.html">Minimal Btrfs-Subvol Install with Disko and Flakes</a></p>
-</li>
-<li>
-<p><strong>Best for:</strong></p>
-<ul>
-<li>
-<p>Users who want a straightforward and quick setup.</p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/installation/unenc/unenc_impermanence.html">Unencrypted Impermanence</a></p>
-</li>
-<li>
-<p>You can still add Lanzaboote and sops secrets after the install for a more
-secure system. To get the full benefits of Lanzaboote it is recommended to
-use full disk encryption.</p>
-</li>
-</ul>
-</li>
-</ul>
-<hr />
-<h2>2. Encrypted Disko Btrfs Subvol Installation</h2>
-<ul>
-<li>
-<p><strong>Encrypted Install Guide:</strong>
-<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
-</li>
-<li>
-<p><strong>Important Considerations:</strong></p>
-<ul>
-<li>
-<p><a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Secure Boot with Lanzaboote</a>
-For the full benefit of Secure Boot (with Lanzaboote), it’s highly
-recommended to have a second stage of protection, such as an encrypted disk.</p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Adding Sops</a>
-You can easily add <code>sops</code> (for managing encrypted secrets) to your
-configuration <em>after</em> the initial encrypted installation and reboot. This
-can simplify the initial setup process. However, always remember the core
-goal of using encrypted secrets: <strong>never commit unencrypted or even hashed
-sensitive data directly into your Git repository.</strong> With modern equipment
-brute force attacks are a real threat.</p>
-</li>
-</ul>
-</li>
-</ul>
-<hr />
-<h2>3. Post-Installation Security &amp; Features</h2>
-<p>Once your base NixOS system is installed, consider these powerful additions:</p>
-<ul>
-<li>
-<p><strong><code>sops-nix</code>:</strong> For managing encrypted secrets directly within your NixOS
-configuration, ensuring sensitive data is never stored in plain text.</p>
-</li>
-<li>
-<p><strong><code>lanzaboote</code>:</strong> For enabling Secure Boot, verifying the integrity of your
-boot chain (requires UEFI and custom keys).</p>
-</li>
-<li>
-<p><strong><code>impermanence</code>:</strong> For setting up a stateless NixOS system, where the root
-filesystem reverts to a clean state on every reboot.</p>
-</li>
-</ul>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Install</title><link>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</link><description><![CDATA[<h1>Minimal BTRFS-Subvol Install with Disko and Flakes</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Install</title><link>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</link><description><![CDATA[<h1>Minimal BTRFS-Subvol Install with Disko and Flakes</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -18238,7 +18200,541 @@ can be deleted or rolled back as needed.</li>
 <p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
 <p>To continue following along and set up impermanence
 <a href="https://saylesss88.github.io/installation/unencrypted/impermanence.html">Click Here</a></p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Encrypted BTRFS Impermanence</title><link>https://saylesss88.github.io/installation/enc/encrypted_impermanence.html</link><description><![CDATA[<h1>Encrypted Impermanence</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Sops-Nix</title><link>https://saylesss88.github.io/installation/enc/sops-nix.html</link><description><![CDATA[<h1>Sops-Nix encrypted secrets</h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><a href="https://github.com/getsops/sops?ref=blog.gitguardian.com">SOPS</a>, short for
+<strong>S</strong>ecrets<strong>OP</strong>eration<strong>S</strong>, is an editor of encrypted files that supports
+quite a few BINARY formats and encrypts with AWS KMS, GCP KMS, Azure Key Vault,
+age, and PGP.</p>
+<p>Managing secrets—like API keys, SSH deploy keys, and password hashes is a
+critical part of system configuration, but it’s also one of the trickiest to do
+securely and reproducibly. Traditionally, secrets might be stored in ad hoc
+locations, referenced by absolute paths, or managed manually outside of version
+control. This approach makes it hard to share, rebuild, or audit your
+configuration, and increases the risk of accidental leaks or inconsistencies
+between systems.</p>
+<p><code>sops-nix</code> solves these problems by integrating Mozilla SOPS directly into your
+NixOS configuration. Instead of relying on hardcoded file paths or copying
+secrets around, you declare your secrets in your Nix code, encrypt them with
+strong keys, and let <code>sops-nix</code> handle decryption and placement at activation
+time.</p>
+<p>Encryption with strong keys, as used by sops-nix, makes brute force attacks
+computationally unfeasible with current technology—the time and resources
+required to try every possible key would be astronomically high. However, this
+protection relies on using strong, secret keys and good security practices;
+advances in technology or poor key management can weaken this defense.</p>
+<blockquote>
+<p>❗ <strong>CRITICAL SECURITY NOTE:</strong> While the encryption itself is robust, this
+protection fundamentally relies on using <strong>strong, secret keys</strong> and
+<strong>diligent security practices</strong>. If your PGP passphrase is weak, your Age
+private key is easily guessable, or the cleartext secret itself is very short
+and has low entropy (e.g., “12345”, “true”, “admin”), an attacker might be
+able to compromise your secrets regardless of the encryption.</p>
+</blockquote>
+<ol>
+<li>Add sops to your <code>flake.nix</code>:</li>
+</ol>
+<pre><code class="language-nix">{
+  inputs.sops-nix.url = "github:Mic92/sops-nix";
+  inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = { self, nixpkgs, sops-nix }: {
+    # change `yourhostname` to your actual hostname
+    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
+      # customize to your system
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+        sops-nix.nixosModules.sops
+      ];
+    };
+  };
+}
+</code></pre>
+<ol start="2">
+<li>Add <code>sops</code> and <code>age</code> to your <code>environment.systemPackages</code>:</li>
+</ol>
+<pre><code class="language-nix">environment.systemPackages = [
+    pkgs.sops
+    pkgs.age
+];
+</code></pre>
+<ol start="3">
+<li>Generate a key (This is your <strong>private key</strong> and <strong>MUST NEVER BE COMMITTED TO
+GIT OR SHARED</strong>):</li>
+</ol>
+<pre><code class="language-bash">mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+</code></pre>
+<p>To get the Public Keys Value, run the following command:</p>
+<pre><code class="language-bash">age-keygen -y ~/.config/sops/age/keys.txt
+age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
+</code></pre>
+<p>Copy the <code>age</code> value it gives you back.</p>
+<ol start="4">
+<li>Create a <code>.sops.yaml</code> in the same directory as your <code>flake.nix</code>:</li>
+</ol>
+<pre><code class="language-yaml"># .sops.yaml
+keys:
+  # Your personal age public key (from age-keygen -y ~/.config/sops/age/keys.txt)
+  - &amp;personal_age_key age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
+
+  # You can also use PGP keys if you prefer, but age is often simpler
+  # - &amp;personal_pgp_key 0xDEADBEEFCAFE0123
+
+creation_rules:
+  # This rule applies to any file named 'secrets.yaml' directly in the 'secrets/' directory
+  # or 'secrets/github-deploy-key.yaml' etc.
+  - path_regex: "secrets/.*\\.yaml$"
+    key_groups:
+      - age:
+          - *personal_age_key
+        # Add host keys for decryption on the target system
+        # sops-nix will automatically pick up the system's SSH host keys
+        # as decryption keys if enabled in your NixOS config.
+        # So you typically don't list them explicitly here unless you
+        # want to restrict it to specific fingerprints, which is rare.
+        # This part ensures your *personal* key can decrypt it.
+</code></pre>
+<p>Save it and move on, this file and <code>sops.nix</code> are safe to version control.</p>
+<ol start="5">
+<li>sops-nix’s automatic decryption feature using system SSH host keys only works
+with ed25519 host keys for deriving Age decryption keys. Therefore, for
+system decryption, ensure your using ed25519 not rsa keys:</li>
+</ol>
+<pre><code class="language-bash">ssh-keygen -t ed25519 -C "your_email@example.com"
+# for multiple keys run something like
+ssh-keygen -t ed25519 -f ~/nix-book-deploy-key -C "deploy-key-nix-book-repo"
+</code></pre>
+<ol start="6">
+<li>Copy the <strong>PRIVATE</strong> key for each and add them to your secrets directory:</li>
+</ol>
+<p>While in your flake directory:</p>
+<pre><code class="language-bash">mkdir secrets
+sops secrets/github-deploy-key.yaml  # For your github ssh key
+</code></pre>
+<p>When you call a <code>sops</code> command, it will handle the encryption/decryption
+transparently and open the cleartext file in an editor.</p>
+<p>Editing will happen in the editor that <code>$SOPS_EDITOR</code> or <code>$EDITOR</code> is set to,
+sops will wait for the editor to exit, and then try to reencrypt the file.</p>
+<p>The above command will open a default sops <code>github-deploy-key.yaml</code> in your
+<code>$EDITOR</code>:</p>
+<p>Erase the default <code>sops</code> filler and type <code>github_deploy_key_ed25519: |</code>, move
+your cursor 1 line down and type <code>:r ~/.ssh/id_ed25519</code> to read the private key
+into the file and repeat as needed.</p>
+<pre><code class="language-yaml">github_deploy_key_ed25519: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  ...
+  -----END OPENSSH PRIVATE KEY-----
+
+github_deploy_key_ed25519_nix-book: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  ...
+  -----END OPENSSH PRIVATE KEY-----
+</code></pre>
+<p>The <code>-----BEGIN</code> and the rest of the private key <strong>must</strong> be indented 2 spaces</p>
+<p>Ensure sops can decrypt it:</p>
+<pre><code class="language-bash">sops -d secrets/github-deploy-key.yaml
+</code></pre>
+<blockquote>
+<p>❗ WARNING: Only ever enter your private keys through the <code>sops</code> command. If
+you forget and paste them in without the <code>sops</code> command then run <code>git add</code> at
+any point, your git history will have contained an unencrypted secret which is
+a nono. Always use the <code>sops</code> command when dealing with files in the <code>secrets</code>
+directory, save the file and inspect that it is encrypted on save. If not
+something went wrong with the <code>sops</code> process, <strong>do not add it to Git</strong>. If you
+do, you will be required to rewrite your entire history which can be bad if
+you’re collaborating with others. <code>git-filter-repo</code> is one such solution that
+rewrites your history. Just keep this in mind. This happens because Git has a
+protection that stops you from doing stupid things.</p>
+</blockquote>
+<p>Generate an encrypted password hash with:</p>
+<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/password-hash.txt
+# Enter your chosen password and copy the encrypted hash it gives you back
+</code></pre>
+<pre><code class="language-bash">sops secrets/password-hash.yaml      # For your `hashedPasswordFile`
+</code></pre>
+<p>The above command will open your <code>$EDITOR</code> with the file <code>password-hash.yaml</code>,
+add the following content to it. Replace <code>PasteEncryptedHashHere</code> with the
+output of the <code>mkpasswd</code> command above:</p>
+<p>Delete the default <code>sops</code> filler, type <code>password_hash:</code> and leave your cursor
+after the <code>:</code> and type <code>:r /tmp/password-hash.txt</code></p>
+<pre><code class="language-yaml">password_hash: PasteEncryptedHashHere
+</code></pre>
+<p>Ensure sops can decrypt it:</p>
+<pre><code class="language-bash">sops -d secrets/password-hash.yaml
+</code></pre>
+<ol start="7">
+<li>Create a <code>sops.nix</code> and import it or add this directly to your
+<code>configuration.nix</code>:</li>
+</ol>
+<p>My <code>sops.nix</code> is located at <code>~/flake/hosts/hostname/sops.nix</code> and the secrets
+directory is located at <code>~/flake/secrets</code> so the path from <code>sops.nix</code> to
+<code>secrets/pasword-hash.yaml</code> would be <code>../../secrets/password-hash.yaml</code></p>
+<p>Another step you can take is to copy your key to a persistent location,
+preparing for impermanence:</p>
+<pre><code class="language-bash">sudo mkdir /persist/sops/age
+sudo cp ~/.config/sops/age/keys.txt /persist/sops/age/keys.txt
+</code></pre>
+<p>Then you would change the <code>age.keyFile = "/persist/sops/age/keys.txt"</code> to match
+this location below.</p>
+<pre><code class="language-nix"># ~/flake/hosts/magic/sops.nix  # magic is my hostname
+# hosts/magic/ is also where my configuration.nix is
+{...}: {
+  sops = {
+    defaultSopsFile = ../../.sops.yaml; # Or the correct path to your .sops.yaml
+    # Don't mix sshKeyPaths and keyFile
+    age.sshKeyPaths = [];
+    age.keyFile = "/persist/sops/age/keys.txt";
+
+    secrets = {
+      "password_hash" = {
+        sopsFile = ../../secrets/password-hash.yaml; # &lt;-- Points to your password hash file
+        owner = "root";
+        group = "root";
+        mode = "0400";
+        neededForUsers = true;
+      };
+      "github_deploy_key_ed25519_nix-book" = {
+        sopsFile = ../../secrets/github-deploy-key.yaml;
+        key = "github_deploy_key_ed25519_nix-book";
+        owner = "root";
+        group = "root";
+        mode = "0400";
+      };
+      "github_deploy_key_ed25519" = {
+        sopsFile = ../../secrets/github-deploy-key.yaml;
+        key = "github_deploy_key_ed25519";
+        owner = "root";
+        group = "root";
+        mode = "0400";
+      };
+    };
+  };
+}
+</code></pre>
+<p>Import <code>sops.nix</code> into your <code>configuration.nix</code> or equivalent:</p>
+<pre><code class="language-nix"># configuration.nix
+imports = [
+  ./sops.nix # Assuming sops.nix is in the same directory as configuration.nix, adjust path as needed
+  # ... other imports
+];
+</code></pre>
+<blockquote>
+<p>❗ NOTE: You may see in the sops quickstart guide that if you’re using
+impermanence, the key used for secret decryption (<code>sops.age.keyFile</code>) must be
+in a persistent directory, loaded early enough during the boot process. If you
+are using the btrfs subvolume layout you don’t need to worry about this
+because your home will be on its own partition when only the root partition is
+wiped on reboot. Adding <code>neededForUsers = true;</code> tells <code>sops-nix</code> to decrypt
+and make that secret available earlier in the boot process specifically,
+before user and group accounts are created.</p>
+</blockquote>
+<p>You typically use <code>age.sshKeyPaths</code> for <strong>system-level secrets</strong> with a
+persistent SSH host key</p>
+<p>For <strong>user-level secrets</strong>, use <code>age.keyFile</code> pointing to your Age private key,
+stored in a safe persistent location.</p>
+<p>For reproducibility, keep your key files in a persistent, predictable path and
+document which keys are used for which secrets in your <code>.sops.yaml</code>.</p>
+<p>If you don’t need both <code>age.keyFile</code> and <code>age.sshKeyPaths</code> it can reduce
+complexity to use one or the other. Although most people may choose one, it’s
+not bad to use both it just adds complexity.</p>
+<p>And finally use the password-hash for your <code>hashedPasswordFile</code> for your user,
+my user is <code>jr</code> so I added this:</p>
+<pre><code class="language-nix"># ... snip ...
+    users.users = {
+      # ${username} = {
+      jr = {
+        homeMode = "755";
+        isNormalUser = true;
+        # description = userVars.gitUsername;
+        hashedPasswordFile = config.sops.secrets.password_hash.path;
+  # ...snip...
+</code></pre>
+<p>By integrating SOPS with NixOS through <code>sops-nix</code>, you gain a modern, secure,
+and reproducible way to manage sensitive secrets. Unlike traditional approaches
+where secrets are often scattered in ad hoc locations, referenced by absolute
+paths, or managed outside version control, <code>sops-nix</code> keeps your secrets
+encrypted, declarative, and version-control friendly.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/sops-nix.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Lanzaboote</title><link>https://saylesss88.github.io/installation/enc/lanzaboote.html</link><description><![CDATA[<h1>Secure Boot with Lanzaboote</h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p>⚠️ <strong>Warning: This can easily brick your system</strong> ⚠️</p>
+<p>We will mainly follow the lanzaboote
+<a href="https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md">Quick Start Guide</a></p>
+<p>For Windows dual-booters and BitLocker users, you should export your BitLocker
+recovery keys and confirm that they are correct. Refer to this
+<a href="https://support.microsoft.com/en-us/windows/find-your-bitlocker-recovery-key-6b71ad27-0b89-ea08-f143-056f5ab347d6">Microsoft support article</a></p>
+<blockquote>
+<p>❗ NOTE: There are some serious limitations to this setup when used without
+encryption, I’d say it could stop the average person. But an experienced
+hacker could easily bypass this without encryption if they had access to your
+computer. For more protection look into TPM2 Hardware Requirements, and full
+disk encryption.</p>
+</blockquote>
+<h2>Important Considerations</h2>
+<p>I found
+<a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">This Article</a>
+fairly enlightening as far as the state of Authenticated Boot and Disk
+Encryption on Linux.</p>
+<ul>
+<li><a href="https://0pointer.net/blog/brave-new-trusted-boot-world.html">Brave New Trusted Boot World</a></li>
+</ul>
+<p>Lanzaboote only secures the boot chain. The userspace remains unverified (i.e.,
+the nix store, etc.), to verify userspace you need to implement additional
+integrity checks. It’s common to rely to disk encryption to prevent tampering
+with and keep the Nix store safe but it’s not always desirable. (i.e.,
+unattended boot)</p>
+<h2>Requirements</h2>
+<p>To be able to setup Secure Boot on your device, NixOS needs to be installed in
+UEFI mode and systemd-boot must be used as a boot loader. This means if you wish
+to install lanzaboote on a new machine, you need to follow the install
+instruction for systemd-boot and then switch to lanzaboote after the first boot.</p>
+<p>Check these prerequisits with <code>bootctl status</code>, this is an example output:</p>
+<pre><code class="language-bash">sudo bootctl status
+System:
+     Firmware: UEFI 2.70 (Lenovo 0.4720)
+  Secure Boot: disabled (disabled)
+ TPM2 Support: yes
+ Boot into FW: supported
+
+Current Boot Loader:
+      Product: systemd-boot 251.7
+...
+</code></pre>
+<p>The firmware <strong>must</strong> be <code>UEFI</code> and the current bootloader needs to be
+<code>systemd-boot</code>. If you check these boxes, you’re good to go.</p>
+<h2>Security Requirements</h2>
+<p>To provide any security your system needs to defend against an attacker turning
+UEFI Secure Boot off or being able to sign binaries with the keys we are going
+to generate.</p>
+<p>The easiest way to achieve this is to:</p>
+<ol>
+<li>
+<p>Enable a BIOS password for your system, this will prevent someone from just
+shutting off secure boot.</p>
+</li>
+<li>
+<p>Use full disk encryption.</p>
+</li>
+</ol>
+<h2>Preparation</h2>
+<p><strong>Finding the UEFI System Partition (ESP)</strong></p>
+<p>The UEFI boot process revolves around the ESP, the (U)EFI System Partition. This
+partition is conventionally mounted at <code>/boot</code> on NixOS.</p>
+<p>Verify this with the command <code>sudo bootctl status</code>. Look for <code>ESP:</code></p>
+<p><strong>Creating Your Keys</strong></p>
+<p>First you’ll need to install <code>sbctl</code> which is available in <code>Nixpkgs</code>:</p>
+<pre><code class="language-nix"># configuration.nix or equivalent
+environment.systemPackages = [ pkgs.sbctl ];
+</code></pre>
+<p>Create the keys:</p>
+<pre><code class="language-bash">$ sudo sbctl create-keys
+[sudo] password for julian:
+Created Owner UUID 8ec4b2c3-dc7f-4362-b9a3-0cc17e5a34cd
+Creating secure boot keys...✓
+Secure boot keys created!
+</code></pre>
+<p>If you already have keys in <code>/etc/secureboot</code> migrate these to <code>/var/lib/sbctl</code>:</p>
+<pre><code class="language-bash">sbctl setup --migrate
+</code></pre>
+<h2>Configuring Lanzaboote With Flakes</h2>
+<p>Shown all in <code>flake.nix</code> for brevity. Can easily be split up into a <code>boot.nix</code>,
+etc:</p>
+<pre><code class="language-nix">{
+  description = "A SecureBoot-enabled NixOS configurations";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v0.4.2";
+
+      # Optional but recommended to limit the size of your system closure.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, lanzaboote, ...}: {
+    nixosConfigurations = {
+      yourHost = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+
+        modules = [
+          # This is not a complete NixOS configuration and you need to reference
+          # your normal configuration here.
+
+          lanzaboote.nixosModules.lanzaboote
+
+          ({ pkgs, lib, ... }: {
+
+            environment.systemPackages = [
+              # For debugging and troubleshooting Secure Boot.
+              pkgs.sbctl
+            ];
+
+            # Lanzaboote currently replaces the systemd-boot module.
+            # This setting is usually set to true in configuration.nix
+            # generated at installation time. So we force it to false
+            # for now.
+            boot.loader.systemd-boot.enable = lib.mkForce false;
+
+            boot.lanzaboote = {
+              enable = true;
+              pkiBundle = "/var/lib/sbctl";
+            };
+          })
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p><strong>Build it</strong></p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake /path/to/flake
+</code></pre>
+<h3>Ensure Your Machine is Ready for Secure Boot enforcement</h3>
+<pre><code class="language-bash">$ sudo sbctl verify
+Verifying file database and EFI images in /boot...
+✓ /boot/EFI/BOOT/BOOTX64.EFI is signed
+✓ /boot/EFI/Linux/nixos-generation-355.efi is signed
+✓ /boot/EFI/Linux/nixos-generation-356.efi is signed
+✗ /boot/EFI/nixos/0n01vj3mq06pc31i2yhxndvhv4kwl2vp-linux-6.1.3-bzImage.efi is not signed
+✓ /boot/EFI/systemd/systemd-bootx64.efi is signed
+</code></pre>
+<h3>Enabling Secure Boot and Entering Setup Mode</h3>
+<p>This is where things can get tricky because UEFI/BIOS are widely different and
+use different conventions.</p>
+<p>You can see your BIOS from the output of <code>bootctl status</code>:</p>
+<pre><code class="language-bash">sudo bootctl status
+doas (jr@magic) password:
+System:
+      Firmware: UEFI 2.70 (American Megatrends)
+</code></pre>
+<p>My UEFI is an American Megatrends, find yours and look up which key you have to
+hit to enter the BIOS on reboot, mine is the delete key. So I reboot and
+repeatedly hit delete until it brings up the BIOS settings.</p>
+<p>The lanzaboote guide shows a few systems and how to enter setup mode for them.</p>
+<p>For a ThinkPad the steps are:</p>
+<ol>
+<li>
+<p>Select the “Security” tab.</p>
+</li>
+<li>
+<p>Select the “Secure Boot” entry.</p>
+</li>
+<li>
+<p>Set “Secure Boot” to enabled.</p>
+</li>
+<li>
+<p>Select “Reset to Setup Mode”.</p>
+</li>
+</ol>
+<hr />
+<p>For my system, it would allow me to do the above steps but when I saved and
+exited I got a red screen then blue screen and it said No Valid Keys or
+something like that and eventually brought me to the MOK Manager where you can
+manually register keys, this is NOT what you want to do.</p>
+<p>Even after this mistake I was able to re-enable secure boot and get back into
+the system.</p>
+<p>After some tinkering, I found that I was able to enter “custom mode” without
+enabling secure boot, which in turn allowed me to select the “Reset to Setup
+Mode”</p>
+<p>It asks if you are sure you want to erase all of the variables to enter setup
+mode? Hit “Yes”. Then it asks if you want to exit without saving, we want to
+save our changes so hit “No” do not exit without saving.</p>
+<p>After this you should see all No Keys entries.</p>
+<p>Finally, Hit the setting to save and exit, some BIOS list an F4 or F9 keybind
+that saves and exits.</p>
+<blockquote>
+<p>❗: For my system, choosing “save and reboot” would not work for some reason,
+I had to choose “save and exit”.</p>
+</blockquote>
+<p>After hitting “save and exit”, the system boots into NixOS like normal but you
+are in setup mode if everything worked correctly.</p>
+<p>Open a terminal and type:</p>
+<pre><code class="language-bash">sudo sbctl enroll-keys --microsoft
+Enrolling keys to EFI variables...
+With vendor keys from microsoft...✓
+Enrolled keys to the EFI variables!
+</code></pre>
+<blockquote>
+<p>⚠️ If you used <code>--microsoft</code> while enrolling the keys, you might want to check
+that the Secure Boot Forbidden Signature Database (dbx) is not empty. A quick
+and dirty way is by checking the file size of
+<code>/sys/firmware/efi/efivars/dbx-\*</code>. Keeping an up to date dbx reduces Secure
+Boot bypasses, see for example:
+<a href="https://uefi.org/sites/default/files/resources/dbx_release_info.pdf">https://uefi.org/sites/default/files/resources/dbx_release_info.pdf</a></p>
+</blockquote>
+<p>I then Rebooted into BIOS and enabled secure boot, saved and exited. This loads
+NixOS as if you just rebooted.</p>
+<p>And finally check the output of <code>sbctl status</code>:</p>
+<pre><code class="language-bash">sudo sbctl status
+System:
+      Firmware: UEFI 2.70 (American Megatrends)
+ Firmware Arch: x64
+   Secure Boot: enabled (user)
+  TPM2 Support: yes
+  Measured UKI: yes
+  Boot into FW: supported
+</code></pre>
+<p>We can see the <code>Secure Boot: enabled (user)</code></p>
+<h2>What Lanzaboote (Secure Boot) Actually Secures on NixOS and Limitations</h2>
+<p>As mentioned earlier, this provides some basic protection that may be good
+enough for your desktop in your bedroom but there are some serious limitations.
+I want to be clear that this may stop an average person but an advanced threat
+actor with resources could still fairly easily get in.</p>
+<p>Secure Boot (with Lanzaboote or any other tool) on NixOS primarily protects the
+boot chain—the bootloader, kernel, and initrd—by ensuring only signed, trusted
+binaries are executed at boot. This is a real and valuable security improvement,
+especially for defending against “evil maid” attacks (where someone with
+physical access tampers with your bootloader or kernel) and for preventing many
+forms of persistent malware.</p>
+<p>Here are some of the caveats:</p>
+<ol>
+<li>
+<p>Userspace Remains Unverified</p>
+<p>Once the kernel and initrd have booted, NixOS (by default) does not
+cryptographically verify the integrity of the rest of userspace (the programs
+and libraries in the Nix store, your configs, etc.).</p>
+<p>This means an attacker who can modify userspace (e.g., by gaining root
+access) can potentially install persistent malware, even if your boot chain
+is protected</p>
+<p>.</p>
+</li>
+<li>
+<p>Kernel Lockdown Is Not Enabled</p>
+<p>The Linux kernel’s [lockdown mode]</p>
+<p>is designed to prevent even root from tampering with the kernel at runtime
+(e.g., by loading unsigned modules, using kexec, or accessing /dev/mem).</p>
+<p>NixOS does not enable kernel lockdown by default, and enabling it is
+non-trivial, especially given how the Nix store works (modules and kernels
+are built dynamically and not always signed at install time).</p>
+<p>Without lockdown, a root user (or malware with root) can still compromise the
+kernel after boot.</p>
+</li>
+<li>
+<p>Stage 2 Verification Is Lacking</p>
+<p>Some distributions (like Fedora Silverblue or systems using dm-verity)
+cryptographically verify the entire userspace at boot, making it immutable
+and much harder to tamper with. This is not the default on NixOS, though
+there are experimental or appliance-focused solutions</p>
+<p>.</p>
+</li>
+<li>
+<p>Disk Encryption Complements Secure Boot</p>
+<p>Full disk encryption (e.g., LUKS) is strongly recommended alongside Secure
+Boot. Encryption protects your data at rest and ensures that even if someone
+bypasses Secure Boot, they cannot read or modify your files without your
+passphrase</p>
+</li>
+</ol>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/lanzaboote.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Encrypted BTRFS Impermanence</title><link>https://saylesss88.github.io/installation/enc/encrypted_impermanence.html</link><description><![CDATA[<h1>Encrypted Impermanence</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -19133,541 +19629,7 @@ and
 <p><a href="https://oddlama.org/blog/bypassing-disk-encryption-with-tpm2-unlock/">Bypassing FDE with TPM2</a></p>
 </li>
 </ul>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/enc_install.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Sops-Nix</title><link>https://saylesss88.github.io/installation/enc/sops-nix.html</link><description><![CDATA[<h1>Sops-Nix encrypted secrets</h1>
-<details>
-<summary> Click to Expand Table of Contents</summary>
-<!-- toc -->
-</details>
-<p><a href="https://github.com/getsops/sops?ref=blog.gitguardian.com">SOPS</a>, short for
-<strong>S</strong>ecrets<strong>OP</strong>eration<strong>S</strong>, is an editor of encrypted files that supports
-quite a few BINARY formats and encrypts with AWS KMS, GCP KMS, Azure Key Vault,
-age, and PGP.</p>
-<p>Managing secrets—like API keys, SSH deploy keys, and password hashes is a
-critical part of system configuration, but it’s also one of the trickiest to do
-securely and reproducibly. Traditionally, secrets might be stored in ad hoc
-locations, referenced by absolute paths, or managed manually outside of version
-control. This approach makes it hard to share, rebuild, or audit your
-configuration, and increases the risk of accidental leaks or inconsistencies
-between systems.</p>
-<p><code>sops-nix</code> solves these problems by integrating Mozilla SOPS directly into your
-NixOS configuration. Instead of relying on hardcoded file paths or copying
-secrets around, you declare your secrets in your Nix code, encrypt them with
-strong keys, and let <code>sops-nix</code> handle decryption and placement at activation
-time.</p>
-<p>Encryption with strong keys, as used by sops-nix, makes brute force attacks
-computationally unfeasible with current technology—the time and resources
-required to try every possible key would be astronomically high. However, this
-protection relies on using strong, secret keys and good security practices;
-advances in technology or poor key management can weaken this defense.</p>
-<blockquote>
-<p>❗ <strong>CRITICAL SECURITY NOTE:</strong> While the encryption itself is robust, this
-protection fundamentally relies on using <strong>strong, secret keys</strong> and
-<strong>diligent security practices</strong>. If your PGP passphrase is weak, your Age
-private key is easily guessable, or the cleartext secret itself is very short
-and has low entropy (e.g., “12345”, “true”, “admin”), an attacker might be
-able to compromise your secrets regardless of the encryption.</p>
-</blockquote>
-<ol>
-<li>Add sops to your <code>flake.nix</code>:</li>
-</ol>
-<pre><code class="language-nix">{
-  inputs.sops-nix.url = "github:Mic92/sops-nix";
-  inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
-
-  outputs = { self, nixpkgs, sops-nix }: {
-    # change `yourhostname` to your actual hostname
-    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
-      # customize to your system
-      system = "x86_64-linux";
-      modules = [
-        ./configuration.nix
-        sops-nix.nixosModules.sops
-      ];
-    };
-  };
-}
-</code></pre>
-<ol start="2">
-<li>Add <code>sops</code> and <code>age</code> to your <code>environment.systemPackages</code>:</li>
-</ol>
-<pre><code class="language-nix">environment.systemPackages = [
-    pkgs.sops
-    pkgs.age
-];
-</code></pre>
-<ol start="3">
-<li>Generate a key (This is your <strong>private key</strong> and <strong>MUST NEVER BE COMMITTED TO
-GIT OR SHARED</strong>):</li>
-</ol>
-<pre><code class="language-bash">mkdir -p ~/.config/sops/age
-age-keygen -o ~/.config/sops/age/keys.txt
-</code></pre>
-<p>To get the Public Keys Value, run the following command:</p>
-<pre><code class="language-bash">age-keygen -y ~/.config/sops/age/keys.txt
-age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
-</code></pre>
-<p>Copy the <code>age</code> value it gives you back.</p>
-<ol start="4">
-<li>Create a <code>.sops.yaml</code> in the same directory as your <code>flake.nix</code>:</li>
-</ol>
-<pre><code class="language-yaml"># .sops.yaml
-keys:
-  # Your personal age public key (from age-keygen -y ~/.config/sops/age/keys.txt)
-  - &amp;personal_age_key age12zlz6lvcdk6eqaewfylg35w0syh58sm7gh53q5vvn7hd7c6nngyseftjxl
-
-  # You can also use PGP keys if you prefer, but age is often simpler
-  # - &amp;personal_pgp_key 0xDEADBEEFCAFE0123
-
-creation_rules:
-  # This rule applies to any file named 'secrets.yaml' directly in the 'secrets/' directory
-  # or 'secrets/github-deploy-key.yaml' etc.
-  - path_regex: "secrets/.*\\.yaml$"
-    key_groups:
-      - age:
-          - *personal_age_key
-        # Add host keys for decryption on the target system
-        # sops-nix will automatically pick up the system's SSH host keys
-        # as decryption keys if enabled in your NixOS config.
-        # So you typically don't list them explicitly here unless you
-        # want to restrict it to specific fingerprints, which is rare.
-        # This part ensures your *personal* key can decrypt it.
-</code></pre>
-<p>Save it and move on, this file and <code>sops.nix</code> are safe to version control.</p>
-<ol start="5">
-<li>sops-nix’s automatic decryption feature using system SSH host keys only works
-with ed25519 host keys for deriving Age decryption keys. Therefore, for
-system decryption, ensure your using ed25519 not rsa keys:</li>
-</ol>
-<pre><code class="language-bash">ssh-keygen -t ed25519 -C "your_email@example.com"
-# for multiple keys run something like
-ssh-keygen -t ed25519 -f ~/nix-book-deploy-key -C "deploy-key-nix-book-repo"
-</code></pre>
-<ol start="6">
-<li>Copy the <strong>PRIVATE</strong> key for each and add them to your secrets directory:</li>
-</ol>
-<p>While in your flake directory:</p>
-<pre><code class="language-bash">mkdir secrets
-sops secrets/github-deploy-key.yaml  # For your github ssh key
-</code></pre>
-<p>When you call a <code>sops</code> command, it will handle the encryption/decryption
-transparently and open the cleartext file in an editor.</p>
-<p>Editing will happen in the editor that <code>$SOPS_EDITOR</code> or <code>$EDITOR</code> is set to,
-sops will wait for the editor to exit, and then try to reencrypt the file.</p>
-<p>The above command will open a default sops <code>github-deploy-key.yaml</code> in your
-<code>$EDITOR</code>:</p>
-<p>Erase the default <code>sops</code> filler and type <code>github_deploy_key_ed25519: |</code>, move
-your cursor 1 line down and type <code>:r ~/.ssh/id_ed25519</code> to read the private key
-into the file and repeat as needed.</p>
-<pre><code class="language-yaml">github_deploy_key_ed25519: |
-  -----BEGIN OPENSSH PRIVATE KEY-----
-  ...
-  -----END OPENSSH PRIVATE KEY-----
-
-github_deploy_key_ed25519_nix-book: |
-  -----BEGIN OPENSSH PRIVATE KEY-----
-  ...
-  -----END OPENSSH PRIVATE KEY-----
-</code></pre>
-<p>The <code>-----BEGIN</code> and the rest of the private key <strong>must</strong> be indented 2 spaces</p>
-<p>Ensure sops can decrypt it:</p>
-<pre><code class="language-bash">sops -d secrets/github-deploy-key.yaml
-</code></pre>
-<blockquote>
-<p>❗ WARNING: Only ever enter your private keys through the <code>sops</code> command. If
-you forget and paste them in without the <code>sops</code> command then run <code>git add</code> at
-any point, your git history will have contained an unencrypted secret which is
-a nono. Always use the <code>sops</code> command when dealing with files in the <code>secrets</code>
-directory, save the file and inspect that it is encrypted on save. If not
-something went wrong with the <code>sops</code> process, <strong>do not add it to Git</strong>. If you
-do, you will be required to rewrite your entire history which can be bad if
-you’re collaborating with others. <code>git-filter-repo</code> is one such solution that
-rewrites your history. Just keep this in mind. This happens because Git has a
-protection that stops you from doing stupid things.</p>
-</blockquote>
-<p>Generate an encrypted password hash with:</p>
-<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/password-hash.txt
-# Enter your chosen password and copy the encrypted hash it gives you back
-</code></pre>
-<pre><code class="language-bash">sops secrets/password-hash.yaml      # For your `hashedPasswordFile`
-</code></pre>
-<p>The above command will open your <code>$EDITOR</code> with the file <code>password-hash.yaml</code>,
-add the following content to it. Replace <code>PasteEncryptedHashHere</code> with the
-output of the <code>mkpasswd</code> command above:</p>
-<p>Delete the default <code>sops</code> filler, type <code>password_hash:</code> and leave your cursor
-after the <code>:</code> and type <code>:r /tmp/password-hash.txt</code></p>
-<pre><code class="language-yaml">password_hash: PasteEncryptedHashHere
-</code></pre>
-<p>Ensure sops can decrypt it:</p>
-<pre><code class="language-bash">sops -d secrets/password-hash.yaml
-</code></pre>
-<ol start="7">
-<li>Create a <code>sops.nix</code> and import it or add this directly to your
-<code>configuration.nix</code>:</li>
-</ol>
-<p>My <code>sops.nix</code> is located at <code>~/flake/hosts/hostname/sops.nix</code> and the secrets
-directory is located at <code>~/flake/secrets</code> so the path from <code>sops.nix</code> to
-<code>secrets/pasword-hash.yaml</code> would be <code>../../secrets/password-hash.yaml</code></p>
-<p>Another step you can take is to copy your key to a persistent location,
-preparing for impermanence:</p>
-<pre><code class="language-bash">sudo mkdir /persist/sops/age
-sudo cp ~/.config/sops/age/keys.txt /persist/sops/age/keys.txt
-</code></pre>
-<p>Then you would change the <code>age.keyFile = "/persist/sops/age/keys.txt"</code> to match
-this location below.</p>
-<pre><code class="language-nix"># ~/flake/hosts/magic/sops.nix  # magic is my hostname
-# hosts/magic/ is also where my configuration.nix is
-{...}: {
-  sops = {
-    defaultSopsFile = ../../.sops.yaml; # Or the correct path to your .sops.yaml
-    # Don't mix sshKeyPaths and keyFile
-    age.sshKeyPaths = [];
-    age.keyFile = "/persist/sops/age/keys.txt";
-
-    secrets = {
-      "password_hash" = {
-        sopsFile = ../../secrets/password-hash.yaml; # &lt;-- Points to your password hash file
-        owner = "root";
-        group = "root";
-        mode = "0400";
-        neededForUsers = true;
-      };
-      "github_deploy_key_ed25519_nix-book" = {
-        sopsFile = ../../secrets/github-deploy-key.yaml;
-        key = "github_deploy_key_ed25519_nix-book";
-        owner = "root";
-        group = "root";
-        mode = "0400";
-      };
-      "github_deploy_key_ed25519" = {
-        sopsFile = ../../secrets/github-deploy-key.yaml;
-        key = "github_deploy_key_ed25519";
-        owner = "root";
-        group = "root";
-        mode = "0400";
-      };
-    };
-  };
-}
-</code></pre>
-<p>Import <code>sops.nix</code> into your <code>configuration.nix</code> or equivalent:</p>
-<pre><code class="language-nix"># configuration.nix
-imports = [
-  ./sops.nix # Assuming sops.nix is in the same directory as configuration.nix, adjust path as needed
-  # ... other imports
-];
-</code></pre>
-<blockquote>
-<p>❗ NOTE: You may see in the sops quickstart guide that if you’re using
-impermanence, the key used for secret decryption (<code>sops.age.keyFile</code>) must be
-in a persistent directory, loaded early enough during the boot process. If you
-are using the btrfs subvolume layout you don’t need to worry about this
-because your home will be on its own partition when only the root partition is
-wiped on reboot. Adding <code>neededForUsers = true;</code> tells <code>sops-nix</code> to decrypt
-and make that secret available earlier in the boot process specifically,
-before user and group accounts are created.</p>
-</blockquote>
-<p>You typically use <code>age.sshKeyPaths</code> for <strong>system-level secrets</strong> with a
-persistent SSH host key</p>
-<p>For <strong>user-level secrets</strong>, use <code>age.keyFile</code> pointing to your Age private key,
-stored in a safe persistent location.</p>
-<p>For reproducibility, keep your key files in a persistent, predictable path and
-document which keys are used for which secrets in your <code>.sops.yaml</code>.</p>
-<p>If you don’t need both <code>age.keyFile</code> and <code>age.sshKeyPaths</code> it can reduce
-complexity to use one or the other. Although most people may choose one, it’s
-not bad to use both it just adds complexity.</p>
-<p>And finally use the password-hash for your <code>hashedPasswordFile</code> for your user,
-my user is <code>jr</code> so I added this:</p>
-<pre><code class="language-nix"># ... snip ...
-    users.users = {
-      # ${username} = {
-      jr = {
-        homeMode = "755";
-        isNormalUser = true;
-        # description = userVars.gitUsername;
-        hashedPasswordFile = config.sops.secrets.password_hash.path;
-  # ...snip...
-</code></pre>
-<p>By integrating SOPS with NixOS through <code>sops-nix</code>, you gain a modern, secure,
-and reproducible way to manage sensitive secrets. Unlike traditional approaches
-where secrets are often scattered in ad hoc locations, referenced by absolute
-paths, or managed outside version control, <code>sops-nix</code> keeps your secrets
-encrypted, declarative, and version-control friendly.</p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/sops-nix.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Lanzaboote</title><link>https://saylesss88.github.io/installation/enc/lanzaboote.html</link><description><![CDATA[<h1>Secure Boot with Lanzaboote</h1>
-<details>
-<summary> Click to Expand Table of Contents</summary>
-<!-- toc -->
-</details>
-<p>⚠️ <strong>Warning: This can easily brick your system</strong> ⚠️</p>
-<p>We will mainly follow the lanzaboote
-<a href="https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md">Quick Start Guide</a></p>
-<p>For Windows dual-booters and BitLocker users, you should export your BitLocker
-recovery keys and confirm that they are correct. Refer to this
-<a href="https://support.microsoft.com/en-us/windows/find-your-bitlocker-recovery-key-6b71ad27-0b89-ea08-f143-056f5ab347d6">Microsoft support article</a></p>
-<blockquote>
-<p>❗ NOTE: There are some serious limitations to this setup when used without
-encryption, I’d say it could stop the average person. But an experienced
-hacker could easily bypass this without encryption if they had access to your
-computer. For more protection look into TPM2 Hardware Requirements, and full
-disk encryption.</p>
-</blockquote>
-<h2>Important Considerations</h2>
-<p>I found
-<a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">This Article</a>
-fairly enlightening as far as the state of Authenticated Boot and Disk
-Encryption on Linux.</p>
-<ul>
-<li><a href="https://0pointer.net/blog/brave-new-trusted-boot-world.html">Brave New Trusted Boot World</a></li>
-</ul>
-<p>Lanzaboote only secures the boot chain. The userspace remains unverified (i.e.,
-the nix store, etc.), to verify userspace you need to implement additional
-integrity checks. It’s common to rely to disk encryption to prevent tampering
-with and keep the Nix store safe but it’s not always desirable. (i.e.,
-unattended boot)</p>
-<h2>Requirements</h2>
-<p>To be able to setup Secure Boot on your device, NixOS needs to be installed in
-UEFI mode and systemd-boot must be used as a boot loader. This means if you wish
-to install lanzaboote on a new machine, you need to follow the install
-instruction for systemd-boot and then switch to lanzaboote after the first boot.</p>
-<p>Check these prerequisits with <code>bootctl status</code>, this is an example output:</p>
-<pre><code class="language-bash">sudo bootctl status
-System:
-     Firmware: UEFI 2.70 (Lenovo 0.4720)
-  Secure Boot: disabled (disabled)
- TPM2 Support: yes
- Boot into FW: supported
-
-Current Boot Loader:
-      Product: systemd-boot 251.7
-...
-</code></pre>
-<p>The firmware <strong>must</strong> be <code>UEFI</code> and the current bootloader needs to be
-<code>systemd-boot</code>. If you check these boxes, you’re good to go.</p>
-<h2>Security Requirements</h2>
-<p>To provide any security your system needs to defend against an attacker turning
-UEFI Secure Boot off or being able to sign binaries with the keys we are going
-to generate.</p>
-<p>The easiest way to achieve this is to:</p>
-<ol>
-<li>
-<p>Enable a BIOS password for your system, this will prevent someone from just
-shutting off secure boot.</p>
-</li>
-<li>
-<p>Use full disk encryption.</p>
-</li>
-</ol>
-<h2>Preparation</h2>
-<p><strong>Finding the UEFI System Partition (ESP)</strong></p>
-<p>The UEFI boot process revolves around the ESP, the (U)EFI System Partition. This
-partition is conventionally mounted at <code>/boot</code> on NixOS.</p>
-<p>Verify this with the command <code>sudo bootctl status</code>. Look for <code>ESP:</code></p>
-<p><strong>Creating Your Keys</strong></p>
-<p>First you’ll need to install <code>sbctl</code> which is available in <code>Nixpkgs</code>:</p>
-<pre><code class="language-nix"># configuration.nix or equivalent
-environment.systemPackages = [ pkgs.sbctl ];
-</code></pre>
-<p>Create the keys:</p>
-<pre><code class="language-bash">$ sudo sbctl create-keys
-[sudo] password for julian:
-Created Owner UUID 8ec4b2c3-dc7f-4362-b9a3-0cc17e5a34cd
-Creating secure boot keys...✓
-Secure boot keys created!
-</code></pre>
-<p>If you already have keys in <code>/etc/secureboot</code> migrate these to <code>/var/lib/sbctl</code>:</p>
-<pre><code class="language-bash">sbctl setup --migrate
-</code></pre>
-<h2>Configuring Lanzaboote With Flakes</h2>
-<p>Shown all in <code>flake.nix</code> for brevity. Can easily be split up into a <code>boot.nix</code>,
-etc:</p>
-<pre><code class="language-nix">{
-  description = "A SecureBoot-enabled NixOS configurations";
-
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
-    lanzaboote = {
-      url = "github:nix-community/lanzaboote/v0.4.2";
-
-      # Optional but recommended to limit the size of your system closure.
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
-
-  outputs = { self, nixpkgs, lanzaboote, ...}: {
-    nixosConfigurations = {
-      yourHost = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-
-        modules = [
-          # This is not a complete NixOS configuration and you need to reference
-          # your normal configuration here.
-
-          lanzaboote.nixosModules.lanzaboote
-
-          ({ pkgs, lib, ... }: {
-
-            environment.systemPackages = [
-              # For debugging and troubleshooting Secure Boot.
-              pkgs.sbctl
-            ];
-
-            # Lanzaboote currently replaces the systemd-boot module.
-            # This setting is usually set to true in configuration.nix
-            # generated at installation time. So we force it to false
-            # for now.
-            boot.loader.systemd-boot.enable = lib.mkForce false;
-
-            boot.lanzaboote = {
-              enable = true;
-              pkiBundle = "/var/lib/sbctl";
-            };
-          })
-        ];
-      };
-    };
-  };
-}
-</code></pre>
-<p><strong>Build it</strong></p>
-<pre><code class="language-bash">sudo nixos-rebuild switch --flake /path/to/flake
-</code></pre>
-<h3>Ensure Your Machine is Ready for Secure Boot enforcement</h3>
-<pre><code class="language-bash">$ sudo sbctl verify
-Verifying file database and EFI images in /boot...
-✓ /boot/EFI/BOOT/BOOTX64.EFI is signed
-✓ /boot/EFI/Linux/nixos-generation-355.efi is signed
-✓ /boot/EFI/Linux/nixos-generation-356.efi is signed
-✗ /boot/EFI/nixos/0n01vj3mq06pc31i2yhxndvhv4kwl2vp-linux-6.1.3-bzImage.efi is not signed
-✓ /boot/EFI/systemd/systemd-bootx64.efi is signed
-</code></pre>
-<h3>Enabling Secure Boot and Entering Setup Mode</h3>
-<p>This is where things can get tricky because UEFI/BIOS are widely different and
-use different conventions.</p>
-<p>You can see your BIOS from the output of <code>bootctl status</code>:</p>
-<pre><code class="language-bash">sudo bootctl status
-doas (jr@magic) password:
-System:
-      Firmware: UEFI 2.70 (American Megatrends)
-</code></pre>
-<p>My UEFI is an American Megatrends, find yours and look up which key you have to
-hit to enter the BIOS on reboot, mine is the delete key. So I reboot and
-repeatedly hit delete until it brings up the BIOS settings.</p>
-<p>The lanzaboote guide shows a few systems and how to enter setup mode for them.</p>
-<p>For a ThinkPad the steps are:</p>
-<ol>
-<li>
-<p>Select the “Security” tab.</p>
-</li>
-<li>
-<p>Select the “Secure Boot” entry.</p>
-</li>
-<li>
-<p>Set “Secure Boot” to enabled.</p>
-</li>
-<li>
-<p>Select “Reset to Setup Mode”.</p>
-</li>
-</ol>
-<hr />
-<p>For my system, it would allow me to do the above steps but when I saved and
-exited I got a red screen then blue screen and it said No Valid Keys or
-something like that and eventually brought me to the MOK Manager where you can
-manually register keys, this is NOT what you want to do.</p>
-<p>Even after this mistake I was able to re-enable secure boot and get back into
-the system.</p>
-<p>After some tinkering, I found that I was able to enter “custom mode” without
-enabling secure boot, which in turn allowed me to select the “Reset to Setup
-Mode”</p>
-<p>It asks if you are sure you want to erase all of the variables to enter setup
-mode? Hit “Yes”. Then it asks if you want to exit without saving, we want to
-save our changes so hit “No” do not exit without saving.</p>
-<p>After this you should see all No Keys entries.</p>
-<p>Finally, Hit the setting to save and exit, some BIOS list an F4 or F9 keybind
-that saves and exits.</p>
-<blockquote>
-<p>❗: For my system, choosing “save and reboot” would not work for some reason,
-I had to choose “save and exit”.</p>
-</blockquote>
-<p>After hitting “save and exit”, the system boots into NixOS like normal but you
-are in setup mode if everything worked correctly.</p>
-<p>Open a terminal and type:</p>
-<pre><code class="language-bash">sudo sbctl enroll-keys --microsoft
-Enrolling keys to EFI variables...
-With vendor keys from microsoft...✓
-Enrolled keys to the EFI variables!
-</code></pre>
-<blockquote>
-<p>⚠️ If you used <code>--microsoft</code> while enrolling the keys, you might want to check
-that the Secure Boot Forbidden Signature Database (dbx) is not empty. A quick
-and dirty way is by checking the file size of
-<code>/sys/firmware/efi/efivars/dbx-\*</code>. Keeping an up to date dbx reduces Secure
-Boot bypasses, see for example:
-<a href="https://uefi.org/sites/default/files/resources/dbx_release_info.pdf">https://uefi.org/sites/default/files/resources/dbx_release_info.pdf</a></p>
-</blockquote>
-<p>I then Rebooted into BIOS and enabled secure boot, saved and exited. This loads
-NixOS as if you just rebooted.</p>
-<p>And finally check the output of <code>sbctl status</code>:</p>
-<pre><code class="language-bash">sudo sbctl status
-System:
-      Firmware: UEFI 2.70 (American Megatrends)
- Firmware Arch: x64
-   Secure Boot: enabled (user)
-  TPM2 Support: yes
-  Measured UKI: yes
-  Boot into FW: supported
-</code></pre>
-<p>We can see the <code>Secure Boot: enabled (user)</code></p>
-<h2>What Lanzaboote (Secure Boot) Actually Secures on NixOS and Limitations</h2>
-<p>As mentioned earlier, this provides some basic protection that may be good
-enough for your desktop in your bedroom but there are some serious limitations.
-I want to be clear that this may stop an average person but an advanced threat
-actor with resources could still fairly easily get in.</p>
-<p>Secure Boot (with Lanzaboote or any other tool) on NixOS primarily protects the
-boot chain—the bootloader, kernel, and initrd—by ensuring only signed, trusted
-binaries are executed at boot. This is a real and valuable security improvement,
-especially for defending against “evil maid” attacks (where someone with
-physical access tampers with your bootloader or kernel) and for preventing many
-forms of persistent malware.</p>
-<p>Here are some of the caveats:</p>
-<ol>
-<li>
-<p>Userspace Remains Unverified</p>
-<p>Once the kernel and initrd have booted, NixOS (by default) does not
-cryptographically verify the integrity of the rest of userspace (the programs
-and libraries in the Nix store, your configs, etc.).</p>
-<p>This means an attacker who can modify userspace (e.g., by gaining root
-access) can potentially install persistent malware, even if your boot chain
-is protected</p>
-<p>.</p>
-</li>
-<li>
-<p>Kernel Lockdown Is Not Enabled</p>
-<p>The Linux kernel’s [lockdown mode]</p>
-<p>is designed to prevent even root from tampering with the kernel at runtime
-(e.g., by loading unsigned modules, using kexec, or accessing /dev/mem).</p>
-<p>NixOS does not enable kernel lockdown by default, and enabling it is
-non-trivial, especially given how the Nix store works (modules and kernels
-are built dynamically and not always signed at install time).</p>
-<p>Without lockdown, a root user (or malware with root) can still compromise the
-kernel after boot.</p>
-</li>
-<li>
-<p>Stage 2 Verification Is Lacking</p>
-<p>Some distributions (like Fedora Silverblue or systems using dm-verity)
-cryptographically verify the entire userspace at boot, making it immutable
-and much harder to tamper with. This is not the default on NixOS, though
-there are experimental or appliance-focused solutions</p>
-<p>.</p>
-</li>
-<li>
-<p>Disk Encryption Complements Secure Boot</p>
-<p>Full disk encryption (e.g., LUKS) is strongly recommended alongside Secure
-Boot. Encryption protects your data at rest and ensures that even if someone
-bypasses Secure Boot, they cannot read or modify your files without your
-passphrase</p>
-</li>
-</ol>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/lanzaboote.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>USB Keyfile</title><link>https://saylesss88.github.io/installation/enc/USB_keyfile.html</link><description><![CDATA[<h1>USB Stick Keyfile</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/enc_install.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>USB Keyfile</title><link>https://saylesss88.github.io/installation/enc/USB_keyfile.html</link><description><![CDATA[<h1>USB Stick Keyfile</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -20061,7 +20023,83 @@ boot.initrd.luks.devices.cryptroot = {
   allowDiscards = true;
 };
 </code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/USB_keyfile.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/USB_keyfile.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>My Chapter</title><link>https://saylesss88.github.io/installation/index.html</link><description><![CDATA[<h1>Installation Guides</h1>
+<p>This section provides detailed guides for installing NixOS. You’ll choose
+between an <strong>unencrypted</strong> or <strong>encrypted</strong> base setup. After your core
+installation, you can explore adding optional features like <code>sops</code> for encrypted
+secrets, <code>lanzaboote</code> for Secure Boot, or <code>impermanence</code> for a stateless system.</p>
+<hr />
+<h2>1. Unencrypted Disko Btrfs Subvol Installation</h2>
+<ul>
+<li>
+<p><strong>Guide:</strong>
+<a href="https://saylesss88.github.io/installation/unenc/unencrypted_setups.html">Minimal Btrfs-Subvol Install with Disko and Flakes</a></p>
+</li>
+<li>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>
+<p>Users who want a straightforward and quick setup.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/unenc/unenc_impermanence.html">Unencrypted Impermanence</a></p>
+</li>
+<li>
+<p>You can still add Lanzaboote and sops secrets after the install for a more
+secure system. To get the full benefits of Lanzaboote it is recommended to
+use full disk encryption.</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>2. Encrypted Disko Btrfs Subvol Installation</h2>
+<ul>
+<li>
+<p><strong>Encrypted Install Guide:</strong>
+<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
+</li>
+<li>
+<p><strong>Important Considerations:</strong></p>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Secure Boot with Lanzaboote</a>
+For the full benefit of Secure Boot (with Lanzaboote), it’s highly
+recommended to have a second stage of protection, such as an encrypted disk.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Adding Sops</a>
+You can easily add <code>sops</code> (for managing encrypted secrets) to your
+configuration <em>after</em> the initial encrypted installation and reboot. This
+can simplify the initial setup process. However, always remember the core
+goal of using encrypted secrets: <strong>never commit unencrypted or even hashed
+sensitive data directly into your Git repository.</strong> With modern equipment
+brute force attacks are a real threat.</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>3. Post-Installation Security &amp; Features</h2>
+<p>Once your base NixOS system is installed, consider these powerful additions:</p>
+<ul>
+<li>
+<p><strong><code>sops-nix</code>:</strong> For managing encrypted secrets directly within your NixOS
+configuration, ensuring sensitive data is never stored in plain text.</p>
+</li>
+<li>
+<p><strong><code>lanzaboote</code>:</strong> For enabling Secure Boot, verifying the integrity of your
+boot chain (requires UEFI and custom keys).</p>
+</li>
+<li>
+<p><strong><code>impermanence</code>:</strong> For setting up a stateless NixOS system, where the root
+filesystem reverts to a clean state on every reboot.</p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
 <details>
 <summary>
 ✔️
