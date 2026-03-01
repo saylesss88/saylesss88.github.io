@@ -1,4 +1,102 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>zfs_bare-metal</title><link>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</guid><pubDate>Sun, 1 Mar 2026 23:29:10 +0000</pubDate></item><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 1 Mar 2026 15:36:51 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[<h1>Idiomatic Nix</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 1 Mar 2026 15:36:51 +0000</pubDate></item><item><title>ZFS Bare Metal Impermanence</title><link>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</link><description><![CDATA[<h1>ZFS Imperm Bare-Metal</h1>
+<h2>The Storage Architecture</h2>
+<p>The script below automates the “Erase Your Darlings” setup. It organizes your
+data into three distinct “levels” of persistence:</p>
+<ul>
+<li>
+<p><strong>The Volatile (<code>/</code>)</strong>: A ZFS dataset that is blank at boot. We take a
+snapshot called @blank immediately after creation. In your NixOS
+configuration, you will set up a boot-time script to roll back to this @blank
+snapshot, effectively “formatting” your root in milliseconds.</p>
+</li>
+<li>
+<p><strong>The Store (<code>/nix</code>)</strong>: A separate dataset for the Nix store. This doesn’t
+need to be wiped because Nix already manages its own integrity.</p>
+</li>
+<li>
+<p><strong>The Safe (<code>/persist</code> and <code>/home</code>)</strong>: These datasets hold the things you
+actually care about—your SSH keys, browser profiles, and project files.</p>
+</li>
+</ul>
+<p><strong>What this script automates</strong></p>
+<p>This bash script handles the “Stage 0” heavy lifting. It will:</p>
+<ol>
+<li>
+<p><strong>Partition</strong> your disk with an EFI boot partition and a LUKS2 encrypted
+container.</p>
+</li>
+<li>
+<p><strong>Initialize</strong> a ZFS pool (<code>rpool</code>) with performance-optimized settings (like
+<code>ashift=12</code> and <code>zstd</code> compression).</p>
+</li>
+<li>
+<p><strong>Carve</strong> out the datasets required for an Impermanence setup.</p>
+</li>
+<li>
+<p><strong>Encrypt</strong>: The script will ask you to enter your chosen password, and again
+so the script can finish.</p>
+</li>
+<li>
+<p><strong>Mount</strong> the hierarchy into <code>/mnt</code> so <code>nixos-generate-config</code> can detect the
+specialized ZFS layout.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>WARNING</strong>: This is a destructive operation. Running this script will wipe
+the target drive completely. Ensure you have backed up any existing data
+before proceeding.</p>
+</blockquote>
+<ul>
+<li><a href="https://github.com/saylesss88/my-flake2/blob/main/install.sh">The Setup Script</a></li>
+</ul>
+<p>Clone the starter Repo:</p>
+<pre><code class="language-bash">git clone https://github.com/saylesss88/my-flake2.git
+cd my-flake2 &amp;&amp; chmod +x install.sh
+sudo bash ./install.sh
+</code></pre>
+<pre><code class="language-bash">sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake2/
+</code></pre>
+<p>Add <code>neededForBoot = true;</code> for both the <code>home</code> and <code>persist</code> partitions in
+<code>hardware-configuration.nix</code>:</p>
+<pre><code class="language-nix">  fileSystems."/home" = {
+    device = "rpool/safe/home";
+    fsType = "zfs";
+    neededForBoot = true;
+  };
+
+  fileSystems."/persist" = {
+    device = "rpool/safe/persist";
+    fsType = "zfs";
+    neededForBoot = true;
+  };
+</code></pre>
+<p>Edit the files in <code>~/my-flake2</code> (Change <code>your-user</code> to your username, etc.), and
+move the flake to <code>/mnt/etc/nixos</code>:</p>
+<pre><code class="language-bash">sudo mv ~/my-flake2 /mnt/etc/nixos/
+</code></pre>
+<p>Double check that you have everything you need, then install.</p>
+<pre><code class="language-bash">sudo nixos-install --flake .#hostname
+reboot
+</code></pre>
+<blockquote>
+<p>IMPORTANT: After reboot, you have to adjust some permissions before enabling
+the rollback script. Since the script runs in the live iso environment your
+user didn’t exist yet at that point.</p>
+</blockquote>
+<pre><code class="language-bash">sudo mkdir -p /persist/home/$USER
+# Set ownership for the persistent home directory
+sudo chown -R 1000:100 /persist/home/$USER
+
+# Ensure the home dataset itself is accessible
+sudo chmod 755 /home
+sudo chmod 755 /persist/home
+# Test file, should be gone after reboot
+sudo touch /etc/rollback-canary
+</code></pre>
+<p>Now you can safely uncomment the <code>boot.initrd.postDeviceCommands</code> block in the
+<code>configuration.nix</code>, rebuild, and reboot.</p>
+<p>After reboot, <code>/etc/rollback-canary</code> should no longer exist.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</guid><pubDate>Sun, 1 Mar 2026 00:00:00 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[<h1>Idiomatic Nix</h1>
 <p>There are quite a few resources out there that share best practices, but no
 single unified place to find them all. I’m going to try to build on
 <a href="https://nix.dev/guides/best-practices">nix.dev’s Best practices</a>, by doing some

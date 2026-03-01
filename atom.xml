@@ -1,5 +1,103 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>zfs_bare-metal</title><id>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</id><updated>2026-03-01T23:29:10+00:00</updated><link href="https://saylesss88.github.io/installation/enc/zfs_bare-metal.html" rel="alternate"/><content type="html"></content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-03-01T15:36:51+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>NixOS Containers</title><id>https://saylesss88.github.io/idiomatic_nix.html</id><updated>2026-01-30T00:00:00+00:00</updated><link href="https://saylesss88.github.io/idiomatic_nix.html" rel="alternate"/><content type="html">&lt;h1&gt;Idiomatic Nix&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-03-01T15:36:51+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>ZFS Bare Metal Impermanence</title><id>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</id><updated>2026-03-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/zfs_bare-metal.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Imperm Bare-Metal&lt;/h1&gt;
+&lt;h2&gt;The Storage Architecture&lt;/h2&gt;
+&lt;p&gt;The script below automates the “Erase Your Darlings” setup. It organizes your
+data into three distinct “levels” of persistence:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Volatile (&lt;code&gt;/&lt;/code&gt;)&lt;/strong&gt;: A ZFS dataset that is blank at boot. We take a
+snapshot called @blank immediately after creation. In your NixOS
+configuration, you will set up a boot-time script to roll back to this @blank
+snapshot, effectively “formatting” your root in milliseconds.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Store (&lt;code&gt;/nix&lt;/code&gt;)&lt;/strong&gt;: A separate dataset for the Nix store. This doesn’t
+need to be wiped because Nix already manages its own integrity.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;The Safe (&lt;code&gt;/persist&lt;/code&gt; and &lt;code&gt;/home&lt;/code&gt;)&lt;/strong&gt;: These datasets hold the things you
+actually care about—your SSH keys, browser profiles, and project files.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;What this script automates&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;This bash script handles the “Stage 0” heavy lifting. It will:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Partition&lt;/strong&gt; your disk with an EFI boot partition and a LUKS2 encrypted
+container.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Initialize&lt;/strong&gt; a ZFS pool (&lt;code&gt;rpool&lt;/code&gt;) with performance-optimized settings (like
+&lt;code&gt;ashift=12&lt;/code&gt; and &lt;code&gt;zstd&lt;/code&gt; compression).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Carve&lt;/strong&gt; out the datasets required for an Impermanence setup.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Encrypt&lt;/strong&gt;: The script will ask you to enter your chosen password, and again
+so the script can finish.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Mount&lt;/strong&gt; the hierarchy into &lt;code&gt;/mnt&lt;/code&gt; so &lt;code&gt;nixos-generate-config&lt;/code&gt; can detect the
+specialized ZFS layout.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;WARNING&lt;/strong&gt;: This is a destructive operation. Running this script will wipe
+the target drive completely. Ensure you have backed up any existing data
+before proceeding.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/saylesss88/my-flake2/blob/main/install.sh&quot;&gt;The Setup Script&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Clone the starter Repo:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git clone https://github.com/saylesss88/my-flake2.git
+cd my-flake2 &amp;amp;&amp;amp; chmod +x install.sh
+sudo bash ./install.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake2/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Add &lt;code&gt;neededForBoot = true;&lt;/code&gt; for both the &lt;code&gt;home&lt;/code&gt; and &lt;code&gt;persist&lt;/code&gt; partitions in
+&lt;code&gt;hardware-configuration.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;  fileSystems.&quot;/home&quot; = {
+    device = &quot;rpool/safe/home&quot;;
+    fsType = &quot;zfs&quot;;
+    neededForBoot = true;
+  };
+
+  fileSystems.&quot;/persist&quot; = {
+    device = &quot;rpool/safe/persist&quot;;
+    fsType = &quot;zfs&quot;;
+    neededForBoot = true;
+  };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Edit the files in &lt;code&gt;~/my-flake2&lt;/code&gt; (Change &lt;code&gt;your-user&lt;/code&gt; to your username, etc.), and
+move the flake to &lt;code&gt;/mnt/etc/nixos&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mv ~/my-flake2 /mnt/etc/nixos/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Double check that you have everything you need, then install.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-install --flake .#hostname
+reboot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;IMPORTANT: After reboot, you have to adjust some permissions before enabling
+the rollback script. Since the script runs in the live iso environment your
+user didn’t exist yet at that point.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /persist/home/$USER
+# Set ownership for the persistent home directory
+sudo chown -R 1000:100 /persist/home/$USER
+
+# Ensure the home dataset itself is accessible
+sudo chmod 755 /home
+sudo chmod 755 /persist/home
+# Test file, should be gone after reboot
+sudo touch /etc/rollback-canary
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now you can safely uncomment the &lt;code&gt;boot.initrd.postDeviceCommands&lt;/code&gt; block in the
+&lt;code&gt;configuration.nix&lt;/code&gt;, rebuild, and reboot.&lt;/p&gt;
+&lt;p&gt;After reboot, &lt;code&gt;/etc/rollback-canary&lt;/code&gt; should no longer exist.&lt;/p&gt;
+</content></entry><entry><title>NixOS Containers</title><id>https://saylesss88.github.io/idiomatic_nix.html</id><updated>2026-01-30T00:00:00+00:00</updated><link href="https://saylesss88.github.io/idiomatic_nix.html" rel="alternate"/><content type="html">&lt;h1&gt;Idiomatic Nix&lt;/h1&gt;
 &lt;p&gt;There are quite a few resources out there that share best practices, but no
 single unified place to find them all. I’m going to try to build on
 &lt;a href=&quot;https://nix.dev/guides/best-practices&quot;&gt;nix.dev’s Best practices&lt;/a&gt;, by doing some
