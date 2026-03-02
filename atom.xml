@@ -55,10 +55,25 @@ before proceeding.&lt;/p&gt;
 cd my-flake2 &amp;amp;&amp;amp; chmod +x install.sh
 sudo bash ./install.sh
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The script is interactive, it will ask for your target disk, your chosen
+password, and echo advice.&lt;/p&gt;
+&lt;p&gt;The script automatically runs &lt;code&gt;nixos-generate-config --root /mnt&lt;/code&gt; for you. All
+that remains after running the script are &lt;code&gt;.nix&lt;/code&gt; config changes.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake2/
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You’ll need to run the following commands as prep:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Get your UUID#
+sudo blkid /dev/YOUR_DISK &amp;gt; /tmp/blk.txt
+# Generate a hashed password
+mkpasswd -m yescrypt &amp;gt; /tmp/pass.txt
+# Generate a rand # for `networking.hostId`
+head -c4 /dev/urandom | xxd -p &amp;gt; /tmp/rand.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can now read these values into the &lt;code&gt;configuration.nix&lt;/code&gt; with vim or helix.&lt;/p&gt;
+&lt;p&gt;For example, while in the file press escape, then type &lt;code&gt;:r /tmp/rand.txt&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Add &lt;code&gt;neededForBoot = true;&lt;/code&gt; for both the &lt;code&gt;home&lt;/code&gt; and &lt;code&gt;persist&lt;/code&gt; partitions in
-&lt;code&gt;hardware-configuration.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;code&gt;hardware-configuration.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Example:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;  fileSystems.&quot;/home&quot; = {
     device = &quot;rpool/safe/home&quot;;
     fsType = &quot;zfs&quot;;
@@ -71,18 +86,22 @@ sudo bash ./install.sh
     neededForBoot = true;
   };
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Read the comments, they tell you what you need to do.&lt;/p&gt;
 &lt;p&gt;Edit the files in &lt;code&gt;~/my-flake2&lt;/code&gt; (Change &lt;code&gt;your-user&lt;/code&gt; to your username, etc.), and
 move the flake to &lt;code&gt;/mnt/etc/nixos&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mv ~/my-flake2 /mnt/etc/nixos/
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Double check that you have everything you need, then install.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-install --flake .#hostname
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /mnt/etc/nixos/my-flake2
+sudo nixos-install --flake .#hostname
 reboot
 &lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;After Reboot&lt;/h2&gt;
 &lt;blockquote&gt;
-&lt;p&gt;IMPORTANT: After reboot, you have to adjust some permissions before enabling
-the rollback script. Since the script runs in the live iso environment your
-user didn’t exist yet at that point.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;IMPORTANT&lt;/strong&gt;: After reboot, you have to adjust some permissions before
+enabling the rollback script. Since the script runs in the live iso
+environment your user didn’t exist yet at that point, leading to incorrect
+permissions.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /persist/home/$USER
 # Set ownership for the persistent home directory
@@ -94,9 +113,41 @@ sudo chmod 755 /persist/home
 # Test file, should be gone after reboot
 sudo touch /etc/rollback-canary
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now you can safely uncomment the &lt;code&gt;boot.initrd.postDeviceCommands&lt;/code&gt; block in the
-&lt;code&gt;configuration.nix&lt;/code&gt;, rebuild, and reboot.&lt;/p&gt;
+&lt;p&gt;Now you can safely uncomment the import &lt;code&gt;./impermanence.nix&lt;/code&gt; line in the
+&lt;code&gt;configuration.nix&lt;/code&gt;&lt;/p&gt;
 &lt;p&gt;After reboot, &lt;code&gt;/etc/rollback-canary&lt;/code&gt; should no longer exist.&lt;/p&gt;
+&lt;h2&gt;What gets Wiped vs. What Stays&lt;/h2&gt;
+&lt;p&gt;What gets wiped?:&lt;/p&gt;
+&lt;p&gt;Since we roll back (&lt;code&gt;rpool/local/root&lt;/code&gt;):&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/etc&lt;/code&gt; (including system configs) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/var&lt;/code&gt; (logs, databases, containers) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/root&lt;/code&gt; (the root users home directory) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/usr&lt;/code&gt; (though in NixOS this is mostly empty) -&amp;gt; WIPED&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;What survives?:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/nix&lt;/code&gt; (mounted from &lt;code&gt;rpool/local/nix&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/boot&lt;/code&gt; (mounted from &lt;code&gt;rpool/local/boot&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/home&lt;/code&gt; (mounted from &lt;code&gt;rpool/safe/home&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;/persists&lt;/code&gt; (mounted from &lt;code&gt;rpool/safe/persist&lt;/code&gt;) -&amp;gt; PERSISTS&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 </content></entry><entry><title>NixOS Containers</title><id>https://saylesss88.github.io/idiomatic_nix.html</id><updated>2026-01-30T00:00:00+00:00</updated><link href="https://saylesss88.github.io/idiomatic_nix.html" rel="alternate"/><content type="html">&lt;h1&gt;Idiomatic Nix&lt;/h1&gt;
 &lt;p&gt;There are quite a few resources out there that share best practices, but no
 single unified place to find them all. I’m going to try to build on

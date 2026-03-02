@@ -54,10 +54,25 @@ before proceeding.</p>
 cd my-flake2 &amp;&amp; chmod +x install.sh
 sudo bash ./install.sh
 </code></pre>
+<p>The script is interactive, it will ask for your target disk, your chosen
+password, and echo advice.</p>
+<p>The script automatically runs <code>nixos-generate-config --root /mnt</code> for you. All
+that remains after running the script are <code>.nix</code> config changes.</p>
 <pre><code class="language-bash">sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake2/
 </code></pre>
+<p>You’ll need to run the following commands as prep:</p>
+<pre><code class="language-bash"># Get your UUID#
+sudo blkid /dev/YOUR_DISK &gt; /tmp/blk.txt
+# Generate a hashed password
+mkpasswd -m yescrypt &gt; /tmp/pass.txt
+# Generate a rand # for `networking.hostId`
+head -c4 /dev/urandom | xxd -p &gt; /tmp/rand.txt
+</code></pre>
+<p>You can now read these values into the <code>configuration.nix</code> with vim or helix.</p>
+<p>For example, while in the file press escape, then type <code>:r /tmp/rand.txt</code>.</p>
 <p>Add <code>neededForBoot = true;</code> for both the <code>home</code> and <code>persist</code> partitions in
-<code>hardware-configuration.nix</code>:</p>
+<code>hardware-configuration.nix</code>.</p>
+<p>Example:</p>
 <pre><code class="language-nix">  fileSystems."/home" = {
     device = "rpool/safe/home";
     fsType = "zfs";
@@ -70,18 +85,22 @@ sudo bash ./install.sh
     neededForBoot = true;
   };
 </code></pre>
+<p>Read the comments, they tell you what you need to do.</p>
 <p>Edit the files in <code>~/my-flake2</code> (Change <code>your-user</code> to your username, etc.), and
 move the flake to <code>/mnt/etc/nixos</code>:</p>
 <pre><code class="language-bash">sudo mv ~/my-flake2 /mnt/etc/nixos/
 </code></pre>
 <p>Double check that you have everything you need, then install.</p>
-<pre><code class="language-bash">sudo nixos-install --flake .#hostname
+<pre><code class="language-bash">cd /mnt/etc/nixos/my-flake2
+sudo nixos-install --flake .#hostname
 reboot
 </code></pre>
+<h2>After Reboot</h2>
 <blockquote>
-<p>IMPORTANT: After reboot, you have to adjust some permissions before enabling
-the rollback script. Since the script runs in the live iso environment your
-user didn’t exist yet at that point.</p>
+<p><strong>IMPORTANT</strong>: After reboot, you have to adjust some permissions before
+enabling the rollback script. Since the script runs in the live iso
+environment your user didn’t exist yet at that point, leading to incorrect
+permissions.</p>
 </blockquote>
 <pre><code class="language-bash">sudo mkdir -p /persist/home/$USER
 # Set ownership for the persistent home directory
@@ -93,9 +112,41 @@ sudo chmod 755 /persist/home
 # Test file, should be gone after reboot
 sudo touch /etc/rollback-canary
 </code></pre>
-<p>Now you can safely uncomment the <code>boot.initrd.postDeviceCommands</code> block in the
-<code>configuration.nix</code>, rebuild, and reboot.</p>
+<p>Now you can safely uncomment the import <code>./impermanence.nix</code> line in the
+<code>configuration.nix</code></p>
 <p>After reboot, <code>/etc/rollback-canary</code> should no longer exist.</p>
+<h2>What gets Wiped vs. What Stays</h2>
+<p>What gets wiped?:</p>
+<p>Since we roll back (<code>rpool/local/root</code>):</p>
+<ul>
+<li>
+<p><code>/etc</code> (including system configs) -&gt; WIPED</p>
+</li>
+<li>
+<p><code>/var</code> (logs, databases, containers) -&gt; WIPED</p>
+</li>
+<li>
+<p><code>/root</code> (the root users home directory) -&gt; WIPED</p>
+</li>
+<li>
+<p><code>/usr</code> (though in NixOS this is mostly empty) -&gt; WIPED</p>
+</li>
+</ul>
+<p>What survives?:</p>
+<ul>
+<li>
+<p><code>/nix</code> (mounted from <code>rpool/local/nix</code>) -&gt; PERSISTS</p>
+</li>
+<li>
+<p><code>/boot</code> (mounted from <code>rpool/local/boot</code>) -&gt; PERSISTS</p>
+</li>
+<li>
+<p><code>/home</code> (mounted from <code>rpool/safe/home</code>) -&gt; PERSISTS</p>
+</li>
+<li>
+<p><code>/persists</code> (mounted from <code>rpool/safe/persist</code>) -&gt; PERSISTS</p>
+</li>
+</ul>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</guid><pubDate>Sun, 1 Mar 2026 00:00:00 +0000</pubDate></item><item><title>NixOS Containers</title><link>https://saylesss88.github.io/idiomatic_nix.html</link><description><![CDATA[<h1>Idiomatic Nix</h1>
 <p>There are quite a few resources out there that share best practices, but no
 single unified place to find them all. I’m going to try to build on
