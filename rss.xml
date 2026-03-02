@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 1 Mar 2026 15:36:51 +0000</pubDate></item><item><title>ZFS Bare Metal Impermanence</title><link>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</link><description><![CDATA[<h1>ZFS Imperm Bare-Metal</h1>
+<p>I couldn’t get disko to bend to my will so I wrote the following bash script.
+The script automates the steps in Graham Christensen’s
+<a href="https://grahamc.com/blog/erase-your-darlings/">Erase your darlings</a></p>
 <h2>The Storage Architecture</h2>
 <p>The script below automates the “Erase Your Darlings” setup. It organizes your
 data into three distinct “levels” of persistence:</p>
@@ -33,10 +36,6 @@ container.</p>
 <p><strong>Carve</strong> out the datasets required for an Impermanence setup.</p>
 </li>
 <li>
-<p><strong>Encrypt</strong>: The script will ask you to enter your chosen password, and again
-so the script can finish.</p>
-</li>
-<li>
 <p><strong>Mount</strong> the hierarchy into <code>/mnt</code> so <code>nixos-generate-config</code> can detect the
 specialized ZFS layout.</p>
 </li>
@@ -49,18 +48,48 @@ before proceeding.</p>
 <ul>
 <li><a href="https://github.com/saylesss88/my-flake2/blob/main/install.sh">The Setup Script</a></li>
 </ul>
-<p>Clone the starter Repo:</p>
+<h2>Quick Start</h2>
+<ol>
+<li>Start with the minimal ISO:</li>
+</ol>
+<ul>
+<li>
+<p><a href="https://nixos.org/download/">NixOS Downloads</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/manual/nixos/stable/index.html#sec-installation-manual">NixOS Manual Installation</a></p>
+</li>
+<li>
+<p>The script handles the partitioning, formatting, mounting, and lastly, runs
+<code>nixos-generate-config --root /mnt</code>. After running the script, edit the files
+in the repo matching your user and device. Finally, after you’re sure you
+haven’t missed anything, run <code>nixos-install</code>.</p>
+</li>
+</ul>
+<pre><code class="language-bash">export NIX_CONFIG='experimental-features = nix-command flakes'
+</code></pre>
+<ol start="2">
+<li>Clone the <a href="https://github.com/saylesss88/my-flake2#">starter repo</a>:</li>
+</ol>
 <pre><code class="language-bash">git clone https://github.com/saylesss88/my-flake2.git
-cd my-flake2 &amp;&amp; chmod +x install.sh
+</code></pre>
+<ol start="3">
+<li>Inspect &amp; Run the script provided with the repo &amp; follow prompts.:</li>
+</ol>
+<blockquote>
+<p><strong>WARNING</strong>: This is a destructive operation. Running this script will wipe
+the target drive completely. Ensure you have backed up any existing data
+before proceeding.</p>
+</blockquote>
+<pre><code class="language-bash">sudo chmod +x ./install.sh
 sudo bash ./install.sh
 </code></pre>
-<p>The script is interactive, it will ask for your target disk, your chosen
-password, and echo advice.</p>
-<p>The script automatically runs <code>nixos-generate-config --root /mnt</code> for you. All
-that remains after running the script are <code>.nix</code> config changes.</p>
-<pre><code class="language-bash">sudo mv /mnt/etc/nixos/hardware-configuration.nix ~/my-flake2/
-</code></pre>
-<p>You’ll need to run the following commands as prep:</p>
+<ul>
+<li>I tested the script on an <code>nvme0n1</code> drive with no issues.</li>
+</ul>
+<ol start="4">
+<li>Run the following commands:</li>
+</ol>
 <pre><code class="language-bash"># Get your UUID#
 sudo blkid /dev/YOUR_DISK &gt; /tmp/blk.txt
 # Generate a hashed password
@@ -68,10 +97,16 @@ mkpasswd -m yescrypt &gt; /tmp/pass.txt
 # Generate a rand # for `networking.hostId`
 head -c4 /dev/urandom | xxd -p &gt; /tmp/rand.txt
 </code></pre>
-<p>You can now read these values into the <code>configuration.nix</code> with vim or helix.</p>
-<p>For example, while in the file press escape, then type <code>:r /tmp/rand.txt</code>.</p>
-<p>Add <code>neededForBoot = true;</code> for both the <code>home</code> and <code>persist</code> partitions in
+<ol start="5">
+<li>
+<p>Edit <code>flake.nix</code>, <code>configuration.nix</code>, and replace the repos
+<code>hardware-configuration.nix</code> with your own.</p>
+</li>
+<li>
+<p>Add <code>neededForBoot</code> to the <code>home</code> and <code>persist</code> datasets in the generated
 <code>hardware-configuration.nix</code>.</p>
+</li>
+</ol>
 <p>Example:</p>
 <pre><code class="language-nix">  fileSystems."/home" = {
     device = "rpool/safe/home";
@@ -85,23 +120,28 @@ head -c4 /dev/urandom | xxd -p &gt; /tmp/rand.txt
     neededForBoot = true;
   };
 </code></pre>
-<p>Read the comments, they tell you what you need to do.</p>
-<p>Edit the files in <code>~/my-flake2</code> (Change <code>your-user</code> to your username, etc.), and
-move the flake to <code>/mnt/etc/nixos</code>:</p>
+<ol start="7">
+<li>Move the flake to <code>/mnt/etc/nixos/</code></li>
+</ol>
 <pre><code class="language-bash">sudo mv ~/my-flake2 /mnt/etc/nixos/
 </code></pre>
-<p>Double check that you have everything you need, then install.</p>
-<pre><code class="language-bash">cd /mnt/etc/nixos/my-flake2
-sudo nixos-install --flake .#hostname
-reboot
+<ol start="8">
+<li>Do a final check and install (change <code>host</code> to your host name)</li>
+</ol>
+<pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/myflake2#host
 </code></pre>
-<h2>After Reboot</h2>
-<blockquote>
-<p><strong>IMPORTANT</strong>: After reboot, you have to adjust some permissions before
-enabling the rollback script. Since the script runs in the live iso
-environment your user didn’t exist yet at that point, leading to incorrect
-permissions.</p>
-</blockquote>
+<ul>
+<li>Read the comments, they let you know of requirements.</li>
+</ul>
+<ol start="9">
+<li>
+<p>Reboot. I typically run <code>nixos-install</code> with the minimal requirements,
+reboot, and then configure my window manager/DE.</p>
+</li>
+<li>
+<p>After reboot, adjust permissions for your <code>$USER</code>:</p>
+</li>
+</ol>
 <pre><code class="language-bash">sudo mkdir -p /persist/home/$USER
 # Set ownership for the persistent home directory
 sudo chown -R 1000:100 /persist/home/$USER
@@ -112,9 +152,21 @@ sudo chmod 755 /persist/home
 # Test file, should be gone after reboot
 sudo touch /etc/rollback-canary
 </code></pre>
-<p>Now you can safely uncomment the import <code>./impermanence.nix</code> line in the
-<code>configuration.nix</code></p>
-<p>After reboot, <code>/etc/rollback-canary</code> should no longer exist.</p>
+<ol start="10">
+<li>
+<p>Uncomment the import of the impermanence module in the <code>configuration.nix</code>.</p>
+</li>
+<li>
+<p>Reboot, then check:</p>
+</li>
+</ol>
+<pre><code class="language-bash">sudo ls /etc/rollback-canary
+</code></pre>
+<ul>
+<li>You should get an error:
+<code>"/etc/rollback-canary": No such file or directory (os error 2)</code></li>
+</ul>
+<hr />
 <h2>What gets Wiped vs. What Stays</h2>
 <p>What gets wiped?:</p>
 <p>Since we roll back (<code>rpool/local/root</code>):</p>
