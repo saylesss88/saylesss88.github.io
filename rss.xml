@@ -86,7 +86,7 @@ digest.</p>
 <p>Note, this example has more code than for example the dendritic nix repo has
 because it enables you to automatically import <code>flake-parts</code> modules as well as
 standard NixOS and home-manager modules as you move to the new system/pattern.</p>
-<p>And <code>nixos.nix</code>:</p>
+<p>And <code>~/flake/nixos.nix</code>:</p>
 <pre><code class="language-nix">/**
   System Configuration Factory Module
 
@@ -221,7 +221,7 @@ will be automatically imported with <code>import-tree</code>. The key here is th
 to be a <code>flake-parts</code> module, i.e. wrapped in <code>flake</code> or <code>perSystem</code>, etc.</p>
 <p>You can place both NixOS modules and home-manager modules in the <code>~/flake/parts</code>
 directory. Just import it to the correct location and you’re good.</p>
-<p>Example NixOS module for amd drivers:</p>
+<p>Example NixOS module for amd drivers <code>~/flake/parts/amd-drivers.nix</code>:</p>
 <pre><code class="language-nix">{
   flake.nixosModules.amd-drivers =
     {
@@ -291,7 +291,7 @@ equivalent:</p>
 # ---snip---
 </code></pre>
 <hr />
-<p>Example home-manager module:</p>
+<p>Example home-manager module <code>~/flake/parts/fzf.nix</code>:</p>
 <pre><code class="language-nix">{
   flake.homeModules.fzf =
     { lib, config, ... }:
@@ -327,6 +327,7 @@ line, after that, the <code>import</code> statements become necessary.</p>
 <hr />
 <details>
 <summary>Example of a module thats both NixOS and home-manager zsh.nix </summary>
+<p><code>~/flake/parts/shells/zsh.nix</code>:</p>
 <pre><code class="language-nix">{
   flake.nixosModules.zsh =
     {
@@ -380,10 +381,23 @@ line, after that, the <code>import</code> statements become necessary.</p>
 <p>NOTE: Passing <code>username</code> through <code>specialArgs</code> is what makes this bridge work,
 you can also just use your username.</p>
 </blockquote>
+<p>This is what <code>~/flake/parts/shells/default.nix</code> looks like, I had to explicitly
+add <code>myLib</code> in a <code>let</code> statement to prevent infinite recursion:</p>
+<pre><code class="language-nix">{ lib, ... }:
+let
+  # prevents infinite recursion error
+  myLib = import ../../lib { inherit lib; };
+in
+{
+  # Now we can use it safely
+  imports = myLib.scanPaths ./.;
+}
+</code></pre>
 <p>Enable it in <code>configuration.nix</code> or equivalent:</p>
 <pre><code class="language-nix">custom.zsh.enable = true;
 </code></pre>
-<p><code>lib/default.nix</code> is just a function that automatically imports any <code>.nix</code> file.</p>
+<p><code>lib/default.nix</code> is just a function that automatically imports any <code>.nix</code> file,
+skipping <code>default.nix</code>:</p>
 <details>
 <summary> `lib/default.nix` </summary>
 <pre><code class="language-nix">{ lib, ... }:
@@ -468,6 +482,44 @@ for every architecture you support (x86, ARM, etc.), allowing you to run
 </blockquote>
 <p><code>import-tree</code> automatically imports this because it’s a <code>flake-parts</code> module &amp;
 flake output.</p>
+<hr />
+<h1>flake-parts devShell</h1>
+<p><code>~/flake/parts/dev-shell.nix</code>:</p>
+<pre><code class="language-nix">{
+  perSystem =
+    { pkgs, system, ... }:
+    {
+      devShells.default = pkgs.mkShell {
+        name = "nixos-dev";
+
+        packages = with pkgs; [
+          nixfmt
+          deadnix
+          nixd
+          nil
+          nh
+          nix-diff
+          nix-tree
+          helix
+          git
+          ripgrep
+          jq
+          tree
+        ];
+
+        shellHook = ''
+          echo "── NixOS Dev Shell ──────────────────────────────────────────"
+          echo "  System: ${system}"
+          echo "──────────────────────────────────────────────────────────────"
+        '';
+      };
+    };
+}
+</code></pre>
+<p>Enter devShell:</p>
+<pre><code class="language-bash">cd ~/flake
+nix develop
+</code></pre>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</guid><pubDate>Sat, 7 Mar 2026 00:00:00 +0000</pubDate></item><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Sun, 1 Mar 2026 15:36:51 +0000</pubDate></item><item><title>ZFS Bare Metal Impermanence</title><link>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</link><description><![CDATA[<h1>ZFS Imperm Bare-Metal</h1>
 <p>I couldn’t get disko to bend to my will so I wrote the following bash script.
 The script automates the steps in Graham Christensen’s

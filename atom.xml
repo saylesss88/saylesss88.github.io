@@ -87,7 +87,7 @@ digest.&lt;/p&gt;
 &lt;p&gt;Note, this example has more code than for example the dendritic nix repo has
 because it enables you to automatically import &lt;code&gt;flake-parts&lt;/code&gt; modules as well as
 standard NixOS and home-manager modules as you move to the new system/pattern.&lt;/p&gt;
-&lt;p&gt;And &lt;code&gt;nixos.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;And &lt;code&gt;~/flake/nixos.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;/**
   System Configuration Factory Module
 
@@ -222,7 +222,7 @@ will be automatically imported with &lt;code&gt;import-tree&lt;/code&gt;. The ke
 to be a &lt;code&gt;flake-parts&lt;/code&gt; module, i.e. wrapped in &lt;code&gt;flake&lt;/code&gt; or &lt;code&gt;perSystem&lt;/code&gt;, etc.&lt;/p&gt;
 &lt;p&gt;You can place both NixOS modules and home-manager modules in the &lt;code&gt;~/flake/parts&lt;/code&gt;
 directory. Just import it to the correct location and you’re good.&lt;/p&gt;
-&lt;p&gt;Example NixOS module for amd drivers:&lt;/p&gt;
+&lt;p&gt;Example NixOS module for amd drivers &lt;code&gt;~/flake/parts/amd-drivers.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
   flake.nixosModules.amd-drivers =
     {
@@ -292,7 +292,7 @@ equivalent:&lt;/p&gt;
 # ---snip---
 &lt;/code&gt;&lt;/pre&gt;
 &lt;hr /&gt;
-&lt;p&gt;Example home-manager module:&lt;/p&gt;
+&lt;p&gt;Example home-manager module &lt;code&gt;~/flake/parts/fzf.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
   flake.homeModules.fzf =
     { lib, config, ... }:
@@ -328,6 +328,7 @@ line, after that, the &lt;code&gt;import&lt;/code&gt; statements become necessar
 &lt;hr /&gt;
 &lt;details&gt;
 &lt;summary&gt;Example of a module thats both NixOS and home-manager zsh.nix &lt;/summary&gt;
+&lt;p&gt;&lt;code&gt;~/flake/parts/shells/zsh.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
   flake.nixosModules.zsh =
     {
@@ -381,10 +382,23 @@ line, after that, the &lt;code&gt;import&lt;/code&gt; statements become necessar
 &lt;p&gt;NOTE: Passing &lt;code&gt;username&lt;/code&gt; through &lt;code&gt;specialArgs&lt;/code&gt; is what makes this bridge work,
 you can also just use your username.&lt;/p&gt;
 &lt;/blockquote&gt;
+&lt;p&gt;This is what &lt;code&gt;~/flake/parts/shells/default.nix&lt;/code&gt; looks like, I had to explicitly
+add &lt;code&gt;myLib&lt;/code&gt; in a &lt;code&gt;let&lt;/code&gt; statement to prevent infinite recursion:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ lib, ... }:
+let
+  # prevents infinite recursion error
+  myLib = import ../../lib { inherit lib; };
+in
+{
+  # Now we can use it safely
+  imports = myLib.scanPaths ./.;
+}
+&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Enable it in &lt;code&gt;configuration.nix&lt;/code&gt; or equivalent:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;custom.zsh.enable = true;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;code&gt;lib/default.nix&lt;/code&gt; is just a function that automatically imports any &lt;code&gt;.nix&lt;/code&gt; file.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;lib/default.nix&lt;/code&gt; is just a function that automatically imports any &lt;code&gt;.nix&lt;/code&gt; file,
+skipping &lt;code&gt;default.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;details&gt;
 &lt;summary&gt; `lib/default.nix` &lt;/summary&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ lib, ... }:
@@ -469,6 +483,44 @@ for every architecture you support (x86, ARM, etc.), allowing you to run
 &lt;/blockquote&gt;
 &lt;p&gt;&lt;code&gt;import-tree&lt;/code&gt; automatically imports this because it’s a &lt;code&gt;flake-parts&lt;/code&gt; module &amp;amp;
 flake output.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h1&gt;flake-parts devShell&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;~/flake/parts/dev-shell.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  perSystem =
+    { pkgs, system, ... }:
+    {
+      devShells.default = pkgs.mkShell {
+        name = &quot;nixos-dev&quot;;
+
+        packages = with pkgs; [
+          nixfmt
+          deadnix
+          nixd
+          nil
+          nh
+          nix-diff
+          nix-tree
+          helix
+          git
+          ripgrep
+          jq
+          tree
+        ];
+
+        shellHook = &apos;&apos;
+          echo &quot;── NixOS Dev Shell ──────────────────────────────────────────&quot;
+          echo &quot;  System: ${system}&quot;
+          echo &quot;──────────────────────────────────────────────────────────────&quot;
+        &apos;&apos;;
+      };
+    };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Enter devShell:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd ~/flake
+nix develop
+&lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-03-01T15:36:51+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>ZFS Bare Metal Impermanence</title><id>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</id><updated>2026-03-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/zfs_bare-metal.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Imperm Bare-Metal&lt;/h1&gt;
 &lt;p&gt;I couldn’t get disko to bend to my will so I wrote the following bash script.
 The script automates the steps in Graham Christensen’s
