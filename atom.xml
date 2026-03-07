@@ -1,5 +1,475 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-03-01T15:36:51+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>ZFS Bare Metal Impermanence</title><id>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</id><updated>2026-03-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/zfs_bare-metal.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Imperm Bare-Metal&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>The Dendritic Pattern with flake-parts</title><id>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</id><updated>2026-03-07T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/dendritic_flake_parts.html" rel="alternate"/><content type="html">&lt;h1&gt;The Dendritic Pattern with flake-parts&lt;/h1&gt;
+&lt;p&gt;In the early days of Flakes, users often ended up with a massive, monolithic
+&lt;code&gt;flake.nix&lt;/code&gt; or a spaghetti-like web of manual imports. The Dendritic (Tree-like)
+Pattern solves this by treating your filesystem as the source of truth, using
+&lt;code&gt;flake-parts&lt;/code&gt; as the nervous system that routes code to the correct outputs.&lt;/p&gt;
+&lt;p&gt;IMO the &lt;code&gt;flake-parts&lt;/code&gt; docs could do a lot better at explaining how to use it to
+configure your system. I’ll attempt to explain how to use it and why you might
+want to.&lt;/p&gt;
+&lt;p&gt;One of the things that got me interested in this patterns is the fact that you
+can place &lt;strong&gt;both&lt;/strong&gt; your NixOS configuration as well as your home-manager
+configuration in the same file without the file getting huge.&lt;/p&gt;
+&lt;h2&gt;Getting Started&lt;/h2&gt;
+&lt;p&gt;This is the flake that I’m currently using to slowly adopt the dendritic
+pattern, or not if I choose not to. Maybe making every single thing a flake
+output isn’t necessary or the best idea, we’ll see. With this, you can use both
+regular NixOS/home-manager modules and NixOS/home-manager flake-parts modules.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://nix-community.github.io/home-manager/index.xhtml#sec-flakes-flake-parts-module&quot;&gt;home-manager flake-parts module&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Example: Let’s call this &lt;code&gt;~/flake/flake.nix&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# In this example the top-level configuration is a [`flake-parts`](https://flake.parts) one.
+# Therefore, every Nix file (other than this) is a flake-parts module.
+# https://github.com/mightyiam/dendritic/blob/master/example/flake.nix
+{
+  # Declares flake inputs
+  inputs = {
+    flake-parts = {
+      url = &quot;github:hercules-ci/flake-parts&quot;;
+      inputs.nixpkgs-lib.follows = &quot;nixpkgs&quot;;
+    };
+
+    import-tree.url = &quot;github:vic/import-tree&quot;;
+
+    nixpkgs.url = &quot;github:nixos/nixpkgs/25.11&quot;;
+  };
+
+  outputs =
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      # This tells flake-parts which systems to generate outputs for
+      systems = import inputs.systems;
+
+      imports = [
+        # Optional: use external flake logic, e.g.
+        inputs.treefmt-nix.flakeModule
+        # Import home-manager&apos;s flake module
+        # The flake module defines flake.homeModules and flake.homeConfigurations options,
+        # allowing them to be properly merged if they are defined in multiple modules
+        inputs.home-manager.flakeModules.default
+        ./nixos.nix
+      ]
+      ++ (inputs.import-tree ./parts).imports;
+
+      hosts = {
+        magic = {
+          username = &quot;jr&quot;;
+          system = &quot;x86_64-linux&quot;;
+        };
+        # Adding a second machine is now 4 lines of code:
+        # secondary = { username = &quot;jr&quot;; system = &quot;aarch64-linux&quot;; };
+      };
+
+      perSystem =
+        {
+          system,
+          ...
+        }:
+        {
+
+          # Access pkgs with your specific config
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            config.allowUnfree = false;
+          };
+        };
+
+    };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;import-tree&lt;/code&gt; is essentially a “smarter” version of the &lt;code&gt;scanPaths&lt;/code&gt; function
+that we’ll see later specifically designed for &lt;code&gt;flake-parts&lt;/code&gt;. It ensures that
+every file in &lt;code&gt;./parts&lt;/code&gt; is treated as a module that the &lt;code&gt;mkFlake&lt;/code&gt; engine can
+digest.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Note, this example has more code than for example the dendritic nix repo has
+because it enables you to automatically import &lt;code&gt;flake-parts&lt;/code&gt; modules as well as
+standard NixOS and home-manager modules as you move to the new system/pattern.&lt;/p&gt;
+&lt;p&gt;And &lt;code&gt;nixos.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;/**
+  System Configuration Factory Module
+
+  This module defines a custom schema for describing multiple NixOS hosts
+  and automatically generates the corresponding `nixosConfigurations` flakes output.
+*/
+{
+  inputs,
+  self,
+  lib,
+  config,
+  ...
+}:
+let
+  # Internal Library &amp;amp; Module Imports
+
+  # Initialize a custom library using the project&apos;s internal lib and nixpkgs
+  myLib = import &quot;${self}/lib/default.nix&quot; { inherit (inputs.nixpkgs) lib; };
+
+  # Import entry points for global NixOS and Home Manager shared modules
+  # `self` points to the root of the flake (requires passing `self` throuth specialArgs)
+  nixosModules = import &quot;${self}/nixos&quot;;
+  homeManagerModules = import &quot;${self}/home&quot;;
+
+  # Shared Binary Cache Configuration
+  caches = {
+    nix.settings = {
+      builders-use-substitutes = true;
+      substituters = [ &quot;https://cache.nixos.org&quot; ];
+      trusted-public-keys = [ &quot;cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=&quot; ];
+    };
+  };
+in
+{
+  /**
+    SCHEMA DEFINITION
+    Defines the &apos;hosts&apos; option, allowing us to declare system metadata
+    (e.g., username, architecture) in a structured attribute set.
+  */
+  options.hosts = lib.mkOption {
+    description = &quot;An attribute set of host definitions to be generated.&quot;;
+    type = lib.types.attrsOf (
+      lib.types.submodule {
+        options = {
+          username = lib.mkOption {
+            type = lib.types.str;
+            default = &quot;jr&quot;;
+            description = &quot;Primary user account name for this host.&quot;;
+          };
+          system = lib.mkOption {
+            type = lib.types.str;
+            default = &quot;x86_64-linux&quot;;
+            description = &quot;The target system architecture.&quot;;
+          };
+        };
+      }
+    );
+  };
+  /**
+    CONFIGURATION GENERATION
+    Iterates through the &apos;config.hosts&apos; defined above and maps them to
+    actual &apos;nixosSystem&apos; instances for the Flake output.
+  */
+  config.flake.nixosConfigurations = lib.mapAttrs (
+    host: cfg:
+    inputs.nixpkgs.lib.nixosSystem {
+      # Pass global context and metadata into the module system
+      specialArgs = {
+        inherit
+          inputs
+          self
+          host
+          myLib
+          ;
+        inherit (cfg) username;
+      };
+
+      modules = [
+        # 1. Project-wide NixOS logic
+        nixosModules
+
+        # 2. Host-specific hardware/system configuration file
+        &quot;${self}/hosts/${host}/configuration.nix&quot;
+
+        # 3. Home Manager NixOS module (allows configuring HM within NixOS)
+        inputs.home-manager.nixosModules.home-manager
+
+        # 4. Standardized cache settings defined in &apos;let&apos; block
+        caches
+
+        # 5. Inline configuration for system-specific and user-specific settings
+        {
+          nixpkgs.hostPlatform = cfg.system;
+          home-manager = {
+            # By default, Home Manager uses a private pkgs instance that is configured
+            #  via the home-manager.users.&amp;lt;name&amp;gt;.nixpkgs options. To instead use the
+            #  global pkgs that is configured via the system level nixpkgs options, set
+            useGlobalPkgs = true;
+            # Install packages to /etc/profiles rather than $HOME/.nix-profile
+            useUserPackages = true;
+            # Dynamically import the user&apos;s home configuration based on host/username
+            users.${cfg.username} = {
+              imports = [
+                (import &quot;${self}/hosts/${host}/home.nix&quot;)
+              ]
+              # Automatically import `homeModules` in `./parts`
+              # Comment out if you want to be explicit and add
+              # e.g., inputs.self.homeModules.helix
+              ++ (builtins.attrValues config.flake.homeModules);
+            };
+
+            extraSpecialArgs = {
+              inherit
+                inputs
+                homeManagerModules
+                myLib
+                host
+                ;
+              inherit (cfg) username;
+            };
+          };
+        }
+      ]
+      # Automatically import `nixosModules` in `./parts`
+      ++ (builtins.attrValues config.flake.nixosModules);
+    }
+  ) config.hosts;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, any &lt;code&gt;flake-parts&lt;/code&gt; module that we place in the &lt;code&gt;~/flake/parts/&lt;/code&gt; directory
+will be automatically imported with &lt;code&gt;import-tree&lt;/code&gt;. The key here is that it has
+to be a &lt;code&gt;flake-parts&lt;/code&gt; module, i.e. wrapped in &lt;code&gt;flake&lt;/code&gt; or &lt;code&gt;perSystem&lt;/code&gt;, etc.&lt;/p&gt;
+&lt;p&gt;You can place both NixOS modules and home-manager modules in the &lt;code&gt;~/flake/parts&lt;/code&gt;
+directory. Just import it to the correct location and you’re good.&lt;/p&gt;
+&lt;p&gt;Example NixOS module for amd drivers:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  flake.nixosModules.amd-drivers =
+    {
+      lib,
+      pkgs,
+      config,
+      ...
+    }:
+    with lib;
+    let
+      cfg = config.custom.amd-drivers;
+    in
+    {
+      options.custom.amd-drivers.enable = mkEnableOption &quot;AMD GPU/CPU optimized for AM06 Pro&quot;;
+
+      config = mkIf cfg.enable {
+        # Modern ROCm/HIP support
+        systemd.tmpfiles.rules = [ &quot;L+ /opt/rocm/hip - - - - ${pkgs.rocmPackages.clr}&quot; ];
+        services.xserver.videoDrivers = [ &quot;amdgpu&quot; ];
+
+        hardware = {
+          amdgpu.initrd.enable = true;
+
+          graphics = {
+            enable = true;
+            enable32Bit = true;
+            extraPackages = with pkgs; [
+              rocmPackages.clr.icd # For OpenCL/Compute
+              # Hardware Acceleration (Video Encoding/Decoding)
+              libva
+              libva-utils
+              libva-vdpau-driver
+              libvdpau-va-gl
+            ];
+          };
+
+          cpu.amd.updateMicrocode = true;
+        };
+
+        boot = {
+          kernelModules = [
+            &quot;kvm-amd&quot;
+            &quot;amdgpu&quot;
+          ];
+          kernelParams = [
+            &quot;amd_pstate=active&quot; # Best for Ryzen 5000+ power management
+          ];
+        };
+
+        boot.kernelPackages = pkgs.linuxPackages_latest;
+      };
+    };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, to enable this module, I’ll add this to my &lt;code&gt;configuration.nix&lt;/code&gt; or
+equivalent:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt; {...}: {
+  imports = [
+        # Not necessary because of the `++ (builtins.attrValues config.flake.nixosModules)` in nixos.nix
+        # inputs.self.nixosModules.amd-drivers
+  ];
+
+  custom = {
+    amd-drivers.enable = true;
+  };
+}
+# ---snip---
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;p&gt;Example home-manager module:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  flake.homeModules.fzf =
+    { lib, config, ... }:
+    let
+      cfg = config.custom.fzf;
+    in
+    {
+      options.custom.fzf.enable = lib.mkEnableOption &quot;Enable fzf module&quot;;
+
+      config = lib.mkIf cfg.enable {
+        programs.fzf = {
+          enable = true;
+          # colors = lib.mkForce { };
+
+          defaultOptions = [
+            &quot;--height 40%&quot;
+            &quot;--reverse&quot;
+            &quot;--border&quot;
+            &quot;--color=16&quot;
+          ];
+
+          defaultCommand = &quot;rg --files --hidden --glob=!.git/&quot;;
+        };
+      };
+    };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And enable with &lt;code&gt;custom.fzf.enable = true;&lt;/code&gt; in your &lt;code&gt;home.nix&lt;/code&gt; or equivalent.&lt;/p&gt;
+&lt;p&gt;And this will be automatically imported, same as above but because of the added
+&lt;code&gt;++ (builtins.attrValues config.flake.homeModules);&lt;/code&gt; in &lt;code&gt;nixos.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;If you don’t like the auto-import behavior, just delete or comment out that
+line, after that, the &lt;code&gt;import&lt;/code&gt; statements become necessary.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;details&gt;
+&lt;summary&gt;Example of a module thats both NixOS and home-manager zsh.nix &lt;/summary&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  flake.nixosModules.zsh =
+    {
+      pkgs,
+      lib,
+      config,
+      username,
+      ...
+    }:
+    let
+      cfg = config.custom.zsh;
+    in
+    {
+      options.custom.zsh = {
+        enable = lib.mkEnableOption &quot;User zsh configuration&quot;;
+      };
+
+      config = lib.mkIf cfg.enable {
+
+        # 1. NixOS System-Level (The &quot;Foundation&quot;)
+        programs.zsh.enable = true;
+        users.defaultUserShell = pkgs.zsh;
+        environment.pathsToLink = [ &quot;/share/zsh&quot; ]; # Fixes completion for system packages
+
+        # 2. Home Manager (User Configuration)
+        home-manager.users.${username} = {
+          programs.zsh = {
+            enable = true;
+            enableCompletion = true;
+            completionInit = &quot;autoload -U compinit &amp;amp;&amp;amp; compinit&quot;;
+            autosuggestion.enable = true;
+            syntaxHighlighting.enable = true;
+            oh-my-zsh = {
+              package = pkgs.oh-my-zsh;
+              enable = true;
+              plugins = [
+                &quot;git&quot;
+                &quot;sudo&quot;
+                &quot;rust&quot;
+                &quot;fzf&quot;
+              ];
+            };
+            profileExtra = &apos;&apos;
+              if [ -z &quot;$DISPLAY&quot; ] &amp;amp;&amp;amp; [ &quot;$XDG_VTNR&quot; = 1 ]; then
+               exec mango
+              fi
+              # ---snip----
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: Passing &lt;code&gt;username&lt;/code&gt; through &lt;code&gt;specialArgs&lt;/code&gt; is what makes this bridge work,
+you can also just use your username.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Enable it in &lt;code&gt;configuration.nix&lt;/code&gt; or equivalent:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;custom.zsh.enable = true;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;lib/default.nix&lt;/code&gt; is just a function that automatically imports any &lt;code&gt;.nix&lt;/code&gt; file.&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; `lib/default.nix` &lt;/summary&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ lib, ... }:
+{
+  # Returns a list of all .nix files and directories in a path,
+  # skipping default.nix. Perfect for the &apos;imports&apos; list.
+  scanPaths =
+    path:
+    let
+      content = builtins.readDir path;
+    in
+    map (name: path + &quot;/${name}&quot;) (
+      builtins.attrNames (
+        lib.filterAttrs (
+          name: type: (type == &quot;directory&quot;) || (name != &quot;default.nix&quot; &amp;amp;&amp;amp; lib.hasSuffix &quot;.nix&quot; name)
+        ) content
+      )
+    );
+
+  relativeToRoot = lib.path.append ../.;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/details&gt;
+&lt;p&gt;The key here is wrapping the home-manager logic in
+&lt;code&gt;home-manager.users.${username} = {}&lt;/code&gt;, this effectively creates a home-manager
+sandbox enabling configuration of both in the same file.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: You can do this without &lt;code&gt;flake-parts&lt;/code&gt; also but often wasn’t recommended
+because the files become a mess that’s hard to understand.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/details&gt;
+&lt;hr /&gt;
+&lt;h1&gt;Example using perSystem&lt;/h1&gt;
+&lt;p&gt;In the &lt;code&gt;flake.nix&lt;/code&gt;, notice the &lt;code&gt;inputs.treefmt-nix.flakeModule&lt;/code&gt;. Since a
+formatter is something that you would want to run on every system, you use the
+&lt;code&gt;perSystem&lt;/code&gt; attribute.&lt;/p&gt;
+&lt;p&gt;Adding the &lt;code&gt;inputs.treefmt-nix.flakeModule&lt;/code&gt; makes the &lt;code&gt;treefmt&lt;/code&gt; options
+available&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;~/flake/parts/treefmt.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  perSystem = _: {
+    treefmt = {
+      projectRootFile = &quot;flake.nix&quot;;
+
+      programs = {
+        deadnix.enable = true;
+        statix.enable = true;
+        keep-sorted.enable = true;
+        nixfmt = {
+          enable = true;
+          # package = pkgs.nixfmt;
+        };
+      };
+
+      settings = {
+        global.excludes = [
+          &quot;LICENSE&quot;
+          &quot;README.md&quot;
+          &quot;.adr-dir&quot;
+          &quot;nu_scripts&quot;
+          &quot;*.{gif,png,svg,tape,mts,lock,mod,sum,toml,env,envrc,gitignore,sql,conf,pem,key,pub,py,narHash}&quot;
+          &quot;Cargo.lock&quot;
+          &quot;flake.lock&quot;
+          &quot;justfile&quot;
+          &quot;.jj/*&quot;
+        ];
+
+        formatter = {
+          nixfmt.priority = 1;
+          statix.priority = 2;
+          deadnix.priority = 3;
+        };
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;By using &lt;code&gt;perSystem&lt;/code&gt;, your &lt;code&gt;treefmt&lt;/code&gt; configuration is automatically available
+for every architecture you support (x86, ARM, etc.), allowing you to run
+&lt;code&gt;nix fmt&lt;/code&gt; on any machine without rewriting the logic.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;code&gt;import-tree&lt;/code&gt; automatically imports this because it’s a &lt;code&gt;flake-parts&lt;/code&gt; module &amp;amp;
+flake output.&lt;/p&gt;
+</content></entry><entry><title>index</title><id>https://saylesss88.github.io/index.html</id><updated>2026-03-01T15:36:51+00:00</updated><link href="https://saylesss88.github.io/index.html" rel="alternate"/><content type="html"></content></entry><entry><title>ZFS Bare Metal Impermanence</title><id>https://saylesss88.github.io/installation/enc/zfs_bare-metal.html</id><updated>2026-03-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/installation/enc/zfs_bare-metal.html" rel="alternate"/><content type="html">&lt;h1&gt;ZFS Imperm Bare-Metal&lt;/h1&gt;
 &lt;p&gt;I couldn’t get disko to bend to my will so I wrote the following bash script.
 The script automates the steps in Graham Christensen’s
 &lt;a href=&quot;https://grahamc.com/blog/erase-your-darlings/&quot;&gt;Erase your darlings&lt;/a&gt;&lt;/p&gt;
