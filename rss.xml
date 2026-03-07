@@ -4,19 +4,91 @@
 <code>flake.nix</code> or a spaghetti-like web of manual imports. The Dendritic (Tree-like)
 Pattern solves this by treating your filesystem as the source of truth, using
 <code>flake-parts</code> as the nervous system that routes code to the correct outputs.</p>
+<h2>Flake-Parts</h2>
 <p>IMO the <code>flake-parts</code> docs could do a lot better at explaining how to use it to
 configure your system. I’ll attempt to explain how to use it and why you might
 want to.</p>
-<p>One of the things that got me interested in this patterns is the fact that you
-can place <strong>both</strong> your NixOS configuration as well as your home-manager
-configuration in the same file without the file getting huge.</p>
+<p>While <code>flake-parts</code> provides the core structure for standard flake outputs, its
+real power lies in its modular ecosystem. You can plug in opinionated modules to
+instantly add specialized features to your system’s nervous system.</p>
+<ul>
+<li>When people say “top-level flake attribute”, they mean putting your
+configuration inside the <code>flake = { ... };</code> block.</li>
+</ul>
+<h3>The “Top-Level” (<code>flake</code>):</h3>
+<p>This is for things that are <strong>global</strong> and don’t change regardless of whether
+you’re on a Mac, PC or ARM server.</p>
+<ul>
+<li>
+<p>Example: Your <code>nixosConfigurations</code> or <code>homeConfigurations</code>.</p>
+</li>
+<li>
+<p>A NixOS configuration for a specific laptop is a single, static definition. It
+doesn’t need to be “multiplied” by system types.</p>
+</li>
+</ul>
+<h2>The “Per-System” (<code>perSystem</code>)</h2>
+<ul>
+<li>
+<p><code>perSystem</code> is for things that must be built for a specific architecture.
+(e.g., <code>devShells</code>, <code>packages</code>, <code>formatter</code>)</p>
+<ul>
+<li>You can’t run an <code>x86_64</code> version of <code>helix</code> on an <code>aarch64</code> (ARM) MacBook.</li>
+</ul>
+</li>
+<li>
+<p>Our <code>nixosConfigurations</code> don’t live in a system specific attribute so it goes
+under <code>flake</code> instead of <code>perSystem</code>.</p>
+</li>
+</ul>
+<p>You can place everything in the same file:</p>
+<pre><code class="language-nix">outputs = inputs@{ flake-parts, ... }:
+  # https://flake.parts/module-arguments.html
+  flake-parts.lib.mkFlake { inherit inputs; } (top@{ config, withSystem, moduleWithSystem, ... }: {
+    imports = [
+      # Optional: use external flake logic, e.g.
+      # inputs.foo.flakeModules.default
+    ];
+    flake = {
+      # Put your original flake attributes here.
+    };
+    systems = [
+      # systems for which you want to build the `perSystem` attributes
+      "x86_64-linux"
+      # ...
+    ];
+    perSystem = { config, pkgs, ... }: {
+      # Recommended: move all package definitions here.
+      # e.g. (assuming you have a nixpkgs input)
+      # packages.foo = pkgs.callPackage ./foo/package.nix { };
+      # packages.bar = pkgs.callPackage ./bar/package.nix {
+      #   foo = config.packages.foo;
+      # };
+    };
+  });
+</code></pre>
 <h2>Getting Started</h2>
 <p>This is the flake that I’m currently using to slowly adopt the dendritic
 pattern, or not if I choose not to. Maybe making every single thing a flake
 output isn’t necessary or the best idea, we’ll see. With this, you can use both
 regular NixOS/home-manager modules and NixOS/home-manager flake-parts modules.</p>
+<p><strong>Scalability Toggle</strong>:</p>
 <ul>
-<li><a href="https://nix-community.github.io/home-manager/index.xhtml#sec-flakes-flake-parts-module">home-manager flake-parts module</a></li>
+<li>
+<p>I have <code>++ (builtins.attrValues ...)</code> set for both home-manager and NixOS
+where it automatically adds the inputs for files in the <code>~/flake/parts</code>
+directory. This is fine for personal use where you want the custom modules
+available everywhere instantly.</p>
+</li>
+<li>
+<p>If the flake gets too big and you want more control just comment out those 2
+lines in the <code>nixos.nix</code> and start explicitly adding the <code>inputs</code> to your
+<code>imports</code> list. Now the <code>parts/</code> directory will act like a library rather than
+a Registry, you manually pick what you want for each host.</p>
+</li>
+<li>
+<p><a href="https://nix-community.github.io/home-manager/index.xhtml#sec-flakes-flake-parts-module">home-manager flake-parts module</a></p>
+</li>
 </ul>
 <p>Example: Let’s call this <code>~/flake/flake.nix</code></p>
 <pre><code class="language-nix"># In this example the top-level configuration is a [`flake-parts`](https://flake.parts) one.
@@ -484,13 +556,17 @@ for every architecture you support (x86, ARM, etc.), allowing you to run
 <p><code>import-tree</code> automatically imports this because it’s a <code>flake-parts</code> module &amp;
 flake output.</p>
 <hr />
-<h1>flake-parts devShell</h1>
+<h1>flake-parts &amp; numtide devshells</h1>
+<p>Adding this flake input and <code>flakeModule</code> make the options available, they’re
+similar to NixOS’s <code>devShell</code> but not the same:</p>
+<pre><code class="language-nix">devshell.url = "github:numtide/devshell";
+</code></pre>
 <p><code>~/flake/parts/dev-shell.nix</code>:</p>
 <pre><code class="language-nix">{
   perSystem =
     { pkgs, system, ... }:
     {
-      devShells.default = pkgs.mkShell {
+      devshells.default = {
         name = "nixos-dev";
 
         packages = with pkgs; [
@@ -508,11 +584,27 @@ flake output.</p>
           tree
         ];
 
-        shellHook = ''
-          echo "── NixOS Dev Shell ──────────────────────────────────────────"
-          echo "  System: ${system}"
-          echo "──────────────────────────────────────────────────────────────"
+        # Message of the Day
+        motd = ''
+          {2}── NixOS Dev Shell ──────────────────────────────────────────{reset}
+          {9}  System: {reset} ${system}
+          {2}──────────────────────────────────────────────────────────────{reset}
         '';
+
+        commands = [
+          {
+            name = "rebuild";
+            package = "nh";
+            help = "Run nh os switch on the current flake";
+            command = "nh os switch .";
+          }
+          {
+            name = "fmt";
+            package = "nixfmt";
+            help = "Format all nix files in the project";
+            command = "nix fmt";
+          }
+        ];
       };
     };
 }

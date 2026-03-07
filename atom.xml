@@ -5,19 +5,91 @@
 &lt;code&gt;flake.nix&lt;/code&gt; or a spaghetti-like web of manual imports. The Dendritic (Tree-like)
 Pattern solves this by treating your filesystem as the source of truth, using
 &lt;code&gt;flake-parts&lt;/code&gt; as the nervous system that routes code to the correct outputs.&lt;/p&gt;
+&lt;h2&gt;Flake-Parts&lt;/h2&gt;
 &lt;p&gt;IMO the &lt;code&gt;flake-parts&lt;/code&gt; docs could do a lot better at explaining how to use it to
 configure your system. I’ll attempt to explain how to use it and why you might
 want to.&lt;/p&gt;
-&lt;p&gt;One of the things that got me interested in this patterns is the fact that you
-can place &lt;strong&gt;both&lt;/strong&gt; your NixOS configuration as well as your home-manager
-configuration in the same file without the file getting huge.&lt;/p&gt;
+&lt;p&gt;While &lt;code&gt;flake-parts&lt;/code&gt; provides the core structure for standard flake outputs, its
+real power lies in its modular ecosystem. You can plug in opinionated modules to
+instantly add specialized features to your system’s nervous system.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;When people say “top-level flake attribute”, they mean putting your
+configuration inside the &lt;code&gt;flake = { ... };&lt;/code&gt; block.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;The “Top-Level” (&lt;code&gt;flake&lt;/code&gt;):&lt;/h3&gt;
+&lt;p&gt;This is for things that are &lt;strong&gt;global&lt;/strong&gt; and don’t change regardless of whether
+you’re on a Mac, PC or ARM server.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Example: Your &lt;code&gt;nixosConfigurations&lt;/code&gt; or &lt;code&gt;homeConfigurations&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;A NixOS configuration for a specific laptop is a single, static definition. It
+doesn’t need to be “multiplied” by system types.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;The “Per-System” (&lt;code&gt;perSystem&lt;/code&gt;)&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;perSystem&lt;/code&gt; is for things that must be built for a specific architecture.
+(e.g., &lt;code&gt;devShells&lt;/code&gt;, &lt;code&gt;packages&lt;/code&gt;, &lt;code&gt;formatter&lt;/code&gt;)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;You can’t run an &lt;code&gt;x86_64&lt;/code&gt; version of &lt;code&gt;helix&lt;/code&gt; on an &lt;code&gt;aarch64&lt;/code&gt; (ARM) MacBook.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Our &lt;code&gt;nixosConfigurations&lt;/code&gt; don’t live in a system specific attribute so it goes
+under &lt;code&gt;flake&lt;/code&gt; instead of &lt;code&gt;perSystem&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You can place everything in the same file:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;outputs = inputs@{ flake-parts, ... }:
+  # https://flake.parts/module-arguments.html
+  flake-parts.lib.mkFlake { inherit inputs; } (top@{ config, withSystem, moduleWithSystem, ... }: {
+    imports = [
+      # Optional: use external flake logic, e.g.
+      # inputs.foo.flakeModules.default
+    ];
+    flake = {
+      # Put your original flake attributes here.
+    };
+    systems = [
+      # systems for which you want to build the `perSystem` attributes
+      &quot;x86_64-linux&quot;
+      # ...
+    ];
+    perSystem = { config, pkgs, ... }: {
+      # Recommended: move all package definitions here.
+      # e.g. (assuming you have a nixpkgs input)
+      # packages.foo = pkgs.callPackage ./foo/package.nix { };
+      # packages.bar = pkgs.callPackage ./bar/package.nix {
+      #   foo = config.packages.foo;
+      # };
+    };
+  });
+&lt;/code&gt;&lt;/pre&gt;
 &lt;h2&gt;Getting Started&lt;/h2&gt;
 &lt;p&gt;This is the flake that I’m currently using to slowly adopt the dendritic
 pattern, or not if I choose not to. Maybe making every single thing a flake
 output isn’t necessary or the best idea, we’ll see. With this, you can use both
 regular NixOS/home-manager modules and NixOS/home-manager flake-parts modules.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Scalability Toggle&lt;/strong&gt;:&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://nix-community.github.io/home-manager/index.xhtml#sec-flakes-flake-parts-module&quot;&gt;home-manager flake-parts module&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;I have &lt;code&gt;++ (builtins.attrValues ...)&lt;/code&gt; set for both home-manager and NixOS
+where it automatically adds the inputs for files in the &lt;code&gt;~/flake/parts&lt;/code&gt;
+directory. This is fine for personal use where you want the custom modules
+available everywhere instantly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If the flake gets too big and you want more control just comment out those 2
+lines in the &lt;code&gt;nixos.nix&lt;/code&gt; and start explicitly adding the &lt;code&gt;inputs&lt;/code&gt; to your
+&lt;code&gt;imports&lt;/code&gt; list. Now the &lt;code&gt;parts/&lt;/code&gt; directory will act like a library rather than
+a Registry, you manually pick what you want for each host.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://nix-community.github.io/home-manager/index.xhtml#sec-flakes-flake-parts-module&quot;&gt;home-manager flake-parts module&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Example: Let’s call this &lt;code&gt;~/flake/flake.nix&lt;/code&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# In this example the top-level configuration is a [`flake-parts`](https://flake.parts) one.
@@ -485,13 +557,17 @@ for every architecture you support (x86, ARM, etc.), allowing you to run
 &lt;p&gt;&lt;code&gt;import-tree&lt;/code&gt; automatically imports this because it’s a &lt;code&gt;flake-parts&lt;/code&gt; module &amp;amp;
 flake output.&lt;/p&gt;
 &lt;hr /&gt;
-&lt;h1&gt;flake-parts devShell&lt;/h1&gt;
+&lt;h1&gt;flake-parts &amp;amp; numtide devshells&lt;/h1&gt;
+&lt;p&gt;Adding this flake input and &lt;code&gt;flakeModule&lt;/code&gt; make the options available, they’re
+similar to NixOS’s &lt;code&gt;devShell&lt;/code&gt; but not the same:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;devshell.url = &quot;github:numtide/devshell&quot;;
+&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;&lt;code&gt;~/flake/parts/dev-shell.nix&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
   perSystem =
     { pkgs, system, ... }:
     {
-      devShells.default = pkgs.mkShell {
+      devshells.default = {
         name = &quot;nixos-dev&quot;;
 
         packages = with pkgs; [
@@ -509,11 +585,27 @@ flake output.&lt;/p&gt;
           tree
         ];
 
-        shellHook = &apos;&apos;
-          echo &quot;── NixOS Dev Shell ──────────────────────────────────────────&quot;
-          echo &quot;  System: ${system}&quot;
-          echo &quot;──────────────────────────────────────────────────────────────&quot;
+        # Message of the Day
+        motd = &apos;&apos;
+          {2}── NixOS Dev Shell ──────────────────────────────────────────{reset}
+          {9}  System: {reset} ${system}
+          {2}──────────────────────────────────────────────────────────────{reset}
         &apos;&apos;;
+
+        commands = [
+          {
+            name = &quot;rebuild&quot;;
+            package = &quot;nh&quot;;
+            help = &quot;Run nh os switch on the current flake&quot;;
+            command = &quot;nh os switch .&quot;;
+          }
+          {
+            name = &quot;fmt&quot;;
+            package = &quot;nixfmt&quot;;
+            help = &quot;Format all nix files in the project&quot;;
+            command = &quot;nix fmt&quot;;
+          }
+        ];
       };
     };
 }
