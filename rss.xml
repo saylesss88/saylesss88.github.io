@@ -67,6 +67,39 @@ under <code>flake</code> instead of <code>perSystem</code>.</p>
     };
   });
 </code></pre>
+<p>Or you can break it down into modules:</p>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+  };
+
+  outputs = inputs @ { flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; }
+    {
+      # Supported Systems
+      systems = [ "x86_64-linux" "x86_64-darwin"];
+      imports = [ ./devShell.nix ./package.nix ./nixos.nix ]
+    };
+
+}
+</code></pre>
+<p><code>devShell.nix</code>:</p>
+<pre><code class="language-nix">{
+  perSystem = { pkgs, ...}: {
+  devShells.default = pkgs.mkShell {
+    packages = [ pkgs.ripgrep pkgs.fd ];
+  };
+};
+}
+</code></pre>
+<p><code>package.nix</code>:</p>
+<pre><code class="language-nix">{
+  perSystem = { pkgs, ...}: {
+    packages.myPackage = pkgs.myPackage;
+  };
+}
+</code></pre>
 <h2>Getting Started</h2>
 <p>This is the flake that I’m currently using to slowly adopt the dendritic
 pattern, or not if I choose not to. Maybe making every single thing a flake
@@ -354,6 +387,7 @@ equivalent:</p>
 <pre><code class="language-nix"> {...}: {
   imports = [
         # Not necessary because of the `++ (builtins.attrValues config.flake.nixosModules)` in nixos.nix
+        # for more control remove those lines and explicitly add:
         # inputs.self.nixosModules.amd-drivers
   ];
 
@@ -394,7 +428,9 @@ equivalent:</p>
 </code></pre>
 <p>And enable with <code>custom.fzf.enable = true;</code> in your <code>home.nix</code> or equivalent.</p>
 <p>And this will be automatically imported, same as above but because of the added
-<code>++ (builtins.attrValues config.flake.homeModules);</code> in <code>nixos.nix</code>.</p>
+<code>++ (builtins.attrValues config.flake.homeModules);</code> in <code>nixos.nix</code>. Without
+the automatic import, add <code>inputs.self.homeModules.fzf</code> to your <code>imports</code> list
+in your <code>home.nix</code> or equivalent.</p>
 <p>If you don’t like the auto-import behavior, just delete or comment out that
 line, after that, the <code>import</code> statements become necessary.</p>
 <hr />
