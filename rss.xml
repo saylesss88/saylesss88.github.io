@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>The Dendritic Pattern with flake-parts</title><link>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</link><description><![CDATA[<h1>The Dendritic Pattern with flake-parts</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>practical_jj</title><link>https://saylesss88.github.io/vcs/practical_jj.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/vcs/practical_jj.html</guid><pubDate>Sun, 15 Mar 2026 20:47:06 +0000</pubDate></item><item><title>The Dendritic Pattern with flake-parts</title><link>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</link><description><![CDATA[<h1>The Dendritic Pattern with flake-parts</h1>
 <p><img src="../images/dendritic_nix.png" alt="Dendritic Logo" />–<a href="https://github.com/mightyiam/dendritic">dendretic repo</a></p>
 <p>In the early days of Flakes, users often ended up with a massive, monolithic
 <code>flake.nix</code> or a spaghetti-like web of manual imports. The Dendritic (Tree-like)
@@ -8530,9 +8530,65 @@ Warning: The working-copy commit in workspace 'default' became immutable, so a n
 Working copy  (@) now at: ktlywzlx 8e88ddbe (empty) (no description set)
 Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
 </code></pre>
+<ul>
+<li>Above we can see that the Working copy <code>@</code> is no longer empty, and now has the
+description “My feature”.</li>
+</ul>
+<p>With jujutsu, most commands allow you to pass <code>-r</code>/<code>--revision</code></p>
 <h2>What is the Jujutsu Working Copy</h2>
 <details>
 <summary> ✔️ Click To Expand Working Copy Description </summary>
+<p><code>@</code> is a revset for “whichever commit the working copy reflects”. Think of <code>@</code>
+as where you are currently making changes.</p>
+<p>Every time you run a <code>jj</code> command, it examines the working copy (the files on
+disk) and takes a snapshot. –Steves JJ Tutorial</p>
+<p>Let’s version control an existing nix development environment.</p>
+<pre><code class="language-bash">cd projects/rust
+
+❯  ls
+ flake.lock   flake.nix
+
+jj git init --colocate
+Initialized repo in "."
+Hint: Running `git clean -xdf` will remove `.jj/`!
+</code></pre>
+<pre><code class="language-bash">❯  jj log
+@  t sayls8@proton.me 2026-03-15 08:49:21 e8fd7ee0
+│  (no description set)
+◆  z root() 00000000
+</code></pre>
+<p>Let’s give this change a description:</p>
+<pre><code class="language-bash"> jj desc -m "Initial commit of dev environment"
+Working copy  (@) now at: t d671f27c Initial commit of dev environment
+Parent commit (@-)      : z 00000000 (empty) (no description set)
+
+❯  jj log
+# The change ID stays the same, but the commit ID changes
+@  t sayls8@proton.me 2026-03-15 09:04:17 d671f27c
+│  Initial commit of dev environment
+◆  z root() 00000000
+</code></pre>
+<p>Ok, I’m done with that change. Let’s start a new one, based off of <code>t</code>:</p>
+<pre><code class="language-bash">jj new
+Working copy  (@) now at: q a3f5afe8 (empty) (no description set)
+Parent commit (@-)      : t d671f27c Initial commit of dev environment
+
+jj log
+@  q saylesss87@proton.me 2026-03-15 09:10:46 a3f5afe8
+│  (empty) (no description set)
+○  t saylesss87@proton.me 2026-03-15 09:04:17 d671f27c
+│  Initial commit of dev environment
+◆  z root() 00000000
+</code></pre>
+<p>Since the repo wasn’t an existing git repo there are no existing branches (bookmarks).
+To share our work we’ll want to create a branch:</p>
+<p>Above is a repo that was just created with <code>jj git init --colocate</code>. Notice that
+there is already 2 changes with change IDs <code>t</code> &amp; <code>z</code> and 2 commits with
+identifiers <code>e8fd7ee0</code> &amp; <code>00000000</code>.</p>
+<p>Every <code>jj</code> repo has a root commit with <code>zzzzzzzz</code> <code>00000000 </code> identifiers.
+<code>The diamond </code>◆` represents an immutable, protected revision. This is the
+foundation of the repo. Jujutsu created a second change based on top of the
+empty root commit.</p>
 <p>The <strong>working copy</strong> in Jujutsu is an actual <strong>commit</strong> that represents the
 current state of the files you’re working on. Unlike Git, where the working copy
 is separate from commits and changes must be explicitly staged and committed, in

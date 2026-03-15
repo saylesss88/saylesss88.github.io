@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>The Dendritic Pattern with flake-parts</title><id>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</id><updated>2026-03-07T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/dendritic_flake_parts.html" rel="alternate"/><content type="html">&lt;h1&gt;The Dendritic Pattern with flake-parts&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>practical_jj</title><id>https://saylesss88.github.io/vcs/practical_jj.html</id><updated>2026-03-15T20:47:06+00:00</updated><link href="https://saylesss88.github.io/vcs/practical_jj.html" rel="alternate"/><content type="html"></content></entry><entry><title>The Dendritic Pattern with flake-parts</title><id>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</id><updated>2026-03-07T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/dendritic_flake_parts.html" rel="alternate"/><content type="html">&lt;h1&gt;The Dendritic Pattern with flake-parts&lt;/h1&gt;
 &lt;p&gt;&lt;img src=&quot;../images/dendritic_nix.png&quot; alt=&quot;Dendritic Logo&quot; /&gt;–&lt;a href=&quot;https://github.com/mightyiam/dendritic&quot;&gt;dendretic repo&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;In the early days of Flakes, users often ended up with a massive, monolithic
 &lt;code&gt;flake.nix&lt;/code&gt; or a spaghetti-like web of manual imports. The Dendritic (Tree-like)
@@ -8531,9 +8531,65 @@ Warning: The working-copy commit in workspace &apos;default&apos; became immutab
 Working copy  (@) now at: ktlywzlx 8e88ddbe (empty) (no description set)
 Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
 &lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Above we can see that the Working copy &lt;code&gt;@&lt;/code&gt; is no longer empty, and now has the
+description “My feature”.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;With jujutsu, most commands allow you to pass &lt;code&gt;-r&lt;/code&gt;/&lt;code&gt;--revision&lt;/code&gt;&lt;/p&gt;
 &lt;h2&gt;What is the Jujutsu Working Copy&lt;/h2&gt;
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click To Expand Working Copy Description &lt;/summary&gt;
+&lt;p&gt;&lt;code&gt;@&lt;/code&gt; is a revset for “whichever commit the working copy reflects”. Think of &lt;code&gt;@&lt;/code&gt;
+as where you are currently making changes.&lt;/p&gt;
+&lt;p&gt;Every time you run a &lt;code&gt;jj&lt;/code&gt; command, it examines the working copy (the files on
+disk) and takes a snapshot. –Steves JJ Tutorial&lt;/p&gt;
+&lt;p&gt;Let’s version control an existing nix development environment.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd projects/rust
+
+❯  ls
+ flake.lock   flake.nix
+
+jj git init --colocate
+Initialized repo in &quot;.&quot;
+Hint: Running `git clean -xdf` will remove `.jj/`!
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
+@  t sayls8@proton.me 2026-03-15 08:49:21 e8fd7ee0
+│  (no description set)
+◆  z root() 00000000
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Let’s give this change a description:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt; jj desc -m &quot;Initial commit of dev environment&quot;
+Working copy  (@) now at: t d671f27c Initial commit of dev environment
+Parent commit (@-)      : z 00000000 (empty) (no description set)
+
+❯  jj log
+# The change ID stays the same, but the commit ID changes
+@  t sayls8@proton.me 2026-03-15 09:04:17 d671f27c
+│  Initial commit of dev environment
+◆  z root() 00000000
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Ok, I’m done with that change. Let’s start a new one, based off of &lt;code&gt;t&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new
+Working copy  (@) now at: q a3f5afe8 (empty) (no description set)
+Parent commit (@-)      : t d671f27c Initial commit of dev environment
+
+jj log
+@  q saylesss87@proton.me 2026-03-15 09:10:46 a3f5afe8
+│  (empty) (no description set)
+○  t saylesss87@proton.me 2026-03-15 09:04:17 d671f27c
+│  Initial commit of dev environment
+◆  z root() 00000000
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Since the repo wasn’t an existing git repo there are no existing branches (bookmarks).
+To share our work we’ll want to create a branch:&lt;/p&gt;
+&lt;p&gt;Above is a repo that was just created with &lt;code&gt;jj git init --colocate&lt;/code&gt;. Notice that
+there is already 2 changes with change IDs &lt;code&gt;t&lt;/code&gt; &amp;amp; &lt;code&gt;z&lt;/code&gt; and 2 commits with
+identifiers &lt;code&gt;e8fd7ee0&lt;/code&gt; &amp;amp; &lt;code&gt;00000000&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Every &lt;code&gt;jj&lt;/code&gt; repo has a root commit with &lt;code&gt;zzzzzzzz&lt;/code&gt; &lt;code&gt;00000000 &lt;/code&gt; identifiers.
+&lt;code&gt;The diamond &lt;/code&gt;◆` represents an immutable, protected revision. This is the
+foundation of the repo. Jujutsu created a second change based on top of the
+empty root commit.&lt;/p&gt;
 &lt;p&gt;The &lt;strong&gt;working copy&lt;/strong&gt; in Jujutsu is an actual &lt;strong&gt;commit&lt;/strong&gt; that represents the
 current state of the files you’re working on. Unlike Git, where the working copy
 is separate from commits and changes must be explicitly staged and committed, in
