@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>JJ VCS</title><id>https://saylesss88.github.io/vcs/practical_jj.html</id><updated>2026-03-15T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/practical_jj.html" rel="alternate"/><content type="html">&lt;h1&gt;Practical Jujutsu&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>Practical Jujutsu</title><id>https://saylesss88.github.io/vcs/practical_jj.html</id><updated>2026-03-16T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/practical_jj.html" rel="alternate"/><content type="html">&lt;h1&gt;Practical Jujutsu&lt;/h1&gt;
 &lt;p&gt;JJ simplifies keeping a linear history and makes it easy to break down big
 changes into smaller atomic changes.&lt;/p&gt;
 &lt;details&gt;
@@ -47,6 +47,40 @@ latest work, keeping that line perfectly straight.&lt;/p&gt;
 &lt;/ul&gt;
 &lt;/details&gt;
 &lt;p&gt;Let’s learn about &lt;code&gt;jj&lt;/code&gt; by using it to version control a system Nix Flake.&lt;/p&gt;
+&lt;h2&gt;Quick Overview&lt;/h2&gt;
+&lt;p&gt;Example:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;The working copy has no changes.
+Working copy  (@) : k 41deb985 (empty) (no description set)
+Parent commit (@-): y 2bee669a main | refactor: restructure flake to multi-host layout in hosts/magic
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;strong&gt;Working Copy&lt;/strong&gt; &lt;code&gt;@&lt;/code&gt; is your current change that is auto-amended. As you
+save a file in your Editor, &lt;code&gt;jj&lt;/code&gt; detects the change and updates the current
+revision’s hash (the Commit ID) immediately.&lt;/p&gt;
+&lt;p&gt;In Git, the “Working Copy” is a messy, untracked space where files live until
+you decide to &lt;code&gt;git add&lt;/code&gt; them. In Jujutsu, the Working Copy is the current
+revision, there is no in-between state.&lt;/p&gt;
+&lt;p&gt;When you’re ready to push to GitHub, make sure you know where your changes are.
+In the example above, the working copy is empty, so to push I’d run
+&lt;code&gt;jj bookmark set main -r @-&lt;/code&gt; to point the &lt;code&gt;main&lt;/code&gt; bookmark at the latest changes,
+then &lt;code&gt;jj git push&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;If the working copy isn’t empty and those changes are what I want to push, I’d
+instead run &lt;code&gt;jj bookmark set main -r @&lt;/code&gt;, followed by &lt;code&gt;jj git push&lt;/code&gt;. Once you
+understand this distinction, the rest of the workflow feels fairly intuitive.&lt;/p&gt;
+&lt;p&gt;In the above example, if I remove the &lt;code&gt;config&lt;/code&gt; argument to the
+&lt;code&gt;configuration.nix&lt;/code&gt; and remove a few comments, then run &lt;code&gt;jj diff&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;../images/jj-diff.png&quot; alt=&quot;jj diff&quot; /&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The &lt;code&gt;squash&lt;/code&gt; workflow would benefit especially from &lt;code&gt;jj diff&lt;/code&gt;. It’s like
+saying “take the diff I’m looking at right now and bake it directly into the
+parent”.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;A &lt;strong&gt;change&lt;/strong&gt; is a commit that can evolve while keeping a stable identifier,
+the &lt;strong&gt;change ID&lt;/strong&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
 &lt;h3&gt;The edit workflow&lt;/h3&gt;
 &lt;p&gt;Initialize and colocate the repository:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  mkdir learn-jj
@@ -84,7 +118,7 @@ Parent commit (@-)      : z 00000000 (empty) (no description set)
 &lt;li&gt;With this workflow, your working copy is typically at your current change.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;If we wanted to push right now we could with &lt;code&gt;jj git push&lt;/code&gt;, but let’s first
-learn a bit more about how jj works.&lt;/p&gt;
+learn a bit more about how &lt;code&gt;jj&lt;/code&gt; works.&lt;/p&gt;
 &lt;p&gt;Let’s say we’re done with the current change and we’re ready to make it
 immutable and start a new change:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯ jj new -m &quot;chore: change username &amp;amp; hostname in flake.nix&quot;
