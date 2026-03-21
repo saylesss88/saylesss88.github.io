@@ -55,6 +55,11 @@ Parent commit (@-): y 2bee669a main | refactor: restructure flake to multi-host 
 <p>The <strong>Working Copy</strong> <code>@</code> is your current change that is auto-amended. As you
 save a file in your Editor, <code>jj</code> detects the change and updates the current
 revision’s hash (the Commit ID) immediately.</p>
+<p><code>jj</code> commands default to operating on the working copy, <code>@</code>.</p>
+<p>In JJ, you are never “on” a branch. You are always “on” a specific change,
+building a stack of changes. You don’t have to merge Change A into Change B,
+because Change B is already built on top of Change A. It inherits every line of
+code from the floors below it.</p>
 <p>In Git, the “Working Copy” is a messy, untracked space where files live until
 you decide to <code>git add</code> them. In Jujutsu, the Working Copy is the current
 revision, there is no in-between state.</p>
@@ -65,6 +70,16 @@ then <code>jj git push</code>.</p>
 <p>If the working copy isn’t empty and those changes are what I want to push, I’d
 instead run <code>jj bookmark set main -r @</code>, followed by <code>jj git push</code>. Once you
 understand this distinction, the rest of the workflow feels fairly intuitive.</p>
+<ul>
+<li>
+<p><code>jj</code> is smart enough to where: If <code>main</code> is on your Working Copy (<code>@</code>) and you
+have uncommitted changes, it pushes those.</p>
+</li>
+<li>
+<p>If your Working Copy (<code>@</code>) is empty , and <code>main</code> is on the Parent (<code>@-</code>), it
+pushes the parent.</p>
+</li>
+</ul>
 <p>In the above example, if I remove the <code>config</code> argument to the
 <code>configuration.nix</code> and remove a few comments, then run <code>jj diff</code>:</p>
 <p><img src="../images/jj-diff.png" alt="jj diff" /></p>
@@ -125,6 +140,19 @@ Working copy  (@) now at: p 6524f35a (empty) chore: change username &amp; hostna
 Parent commit (@-)      : l 743b170d main* | chore: Initialize system flake
 </code></pre>
 <ul>
+<li>
+<p>As stated above, <code>jj</code> commands default to the working copy. So <code>jj new</code> is the
+same as <code>jj new @</code>. By running <code>jj new</code> repeatedly, we build a linear stack
+where each change is a child of the previous one. When we’re ready to ‘check
+in’ our work, we don’t merge; we simply move the <code>main</code> bookmark to our
+current position and push.</p>
+<ul>
+<li>If we want to start a separate task without including our current work, we
+can run <code>jj new main</code> (or any other Change ID). This creates a sibling
+change. Our previous stack isn’t “lost”; it stays exactly where it was in
+the graph, waiting to be described, rebased, or merged later.</li>
+</ul>
+</li>
 <li>
 <p>Now our Working copy <code>@</code> is at an <code>(empty)</code> change with the description
 “chore: change username &amp; hostname in flake.nix”.</p>
@@ -214,6 +242,11 @@ and <code>origin@main</code> are in sync!</p>
 <li>
 <p>Also notice the <code>◆</code> next to the <code>m</code> change, this indicates that this change is
 now immutable. This is mentioned in the output of <code>jj git push</code> above.</p>
+<ul>
+<li><code>jj</code> does this so you don’t accidentally rewrite history that others might
+have pulled. You can still force-edit if you need to but it’s <code>jj</code>s way of
+saying, “This is now part of the public record”.</li>
+</ul>
 </li>
 </ul>
 <p>I now need to add a minimal <code>home.nix</code>, then run <code>nix flake check</code> to see if I
@@ -371,6 +404,16 @@ permanent record (pushed to the remote).</p>
 <p>In Git, achieving this usually requires <code>git add</code>, <code>git commit --amend</code>, or an
 interactive rebase. In jj, you just worked in the working copy and pushed, the
 tool handled the “shaping” of the history for you.</p>
+<h2>Bookmarks</h2>
+<p>List all available bookmarks</p>
+<pre><code class="language-bash">❯  jj bookmark list --all
+feat1 (deleted)
+  @origin: xo 9067e7b7 mangowc flake-parts module
+main: s b250e6ed testing the push-on-new non working bs
+  @git: s b250e6ed testing the push-on-new non working bs
+  @origin (behind by 2 commits): o 65e79e4b jj bookmarks push-on-new
+Hint: Bookmarks marked as deleted can be *deleted permanently* on the remote by running `jj git push --deleted`. Use `jj bookmark forget` if you don't want that.
+</code></pre>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/vcs/practical_jj.html</guid><pubDate>Mon, 16 Mar 2026 00:00:00 +0000</pubDate></item><item><title>The Dendritic Pattern with flake-parts</title><link>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</link><description><![CDATA[<h1>The Dendritic Pattern with flake-parts</h1>
 <p><img src="../images/dendritic_nix.png" alt="Dendritic Logo" />–<a href="https://github.com/mightyiam/dendritic">dendretic repo</a></p>
 <p>In the early days of Flakes, users often ended up with a massive, monolithic

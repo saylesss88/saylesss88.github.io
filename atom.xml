@@ -56,6 +56,11 @@ Parent commit (@-): y 2bee669a main | refactor: restructure flake to multi-host 
 &lt;p&gt;The &lt;strong&gt;Working Copy&lt;/strong&gt; &lt;code&gt;@&lt;/code&gt; is your current change that is auto-amended. As you
 save a file in your Editor, &lt;code&gt;jj&lt;/code&gt; detects the change and updates the current
 revision’s hash (the Commit ID) immediately.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;jj&lt;/code&gt; commands default to operating on the working copy, &lt;code&gt;@&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;In JJ, you are never “on” a branch. You are always “on” a specific change,
+building a stack of changes. You don’t have to merge Change A into Change B,
+because Change B is already built on top of Change A. It inherits every line of
+code from the floors below it.&lt;/p&gt;
 &lt;p&gt;In Git, the “Working Copy” is a messy, untracked space where files live until
 you decide to &lt;code&gt;git add&lt;/code&gt; them. In Jujutsu, the Working Copy is the current
 revision, there is no in-between state.&lt;/p&gt;
@@ -66,6 +71,16 @@ then &lt;code&gt;jj git push&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;If the working copy isn’t empty and those changes are what I want to push, I’d
 instead run &lt;code&gt;jj bookmark set main -r @&lt;/code&gt;, followed by &lt;code&gt;jj git push&lt;/code&gt;. Once you
 understand this distinction, the rest of the workflow feels fairly intuitive.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj&lt;/code&gt; is smart enough to where: If &lt;code&gt;main&lt;/code&gt; is on your Working Copy (&lt;code&gt;@&lt;/code&gt;) and you
+have uncommitted changes, it pushes those.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If your Working Copy (&lt;code&gt;@&lt;/code&gt;) is empty , and &lt;code&gt;main&lt;/code&gt; is on the Parent (&lt;code&gt;@-&lt;/code&gt;), it
+pushes the parent.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 &lt;p&gt;In the above example, if I remove the &lt;code&gt;config&lt;/code&gt; argument to the
 &lt;code&gt;configuration.nix&lt;/code&gt; and remove a few comments, then run &lt;code&gt;jj diff&lt;/code&gt;:&lt;/p&gt;
 &lt;p&gt;&lt;img src=&quot;../images/jj-diff.png&quot; alt=&quot;jj diff&quot; /&gt;&lt;/p&gt;
@@ -126,6 +141,19 @@ Working copy  (@) now at: p 6524f35a (empty) chore: change username &amp;amp; ho
 Parent commit (@-)      : l 743b170d main* | chore: Initialize system flake
 &lt;/code&gt;&lt;/pre&gt;
 &lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;As stated above, &lt;code&gt;jj&lt;/code&gt; commands default to the working copy. So &lt;code&gt;jj new&lt;/code&gt; is the
+same as &lt;code&gt;jj new @&lt;/code&gt;. By running &lt;code&gt;jj new&lt;/code&gt; repeatedly, we build a linear stack
+where each change is a child of the previous one. When we’re ready to ‘check
+in’ our work, we don’t merge; we simply move the &lt;code&gt;main&lt;/code&gt; bookmark to our
+current position and push.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;If we want to start a separate task without including our current work, we
+can run &lt;code&gt;jj new main&lt;/code&gt; (or any other Change ID). This creates a sibling
+change. Our previous stack isn’t “lost”; it stays exactly where it was in
+the graph, waiting to be described, rebased, or merged later.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;Now our Working copy &lt;code&gt;@&lt;/code&gt; is at an &lt;code&gt;(empty)&lt;/code&gt; change with the description
 “chore: change username &amp;amp; hostname in flake.nix”.&lt;/p&gt;
@@ -215,6 +243,11 @@ and &lt;code&gt;origin@main&lt;/code&gt; are in sync!&lt;/p&gt;
 &lt;li&gt;
 &lt;p&gt;Also notice the &lt;code&gt;◆&lt;/code&gt; next to the &lt;code&gt;m&lt;/code&gt; change, this indicates that this change is
 now immutable. This is mentioned in the output of &lt;code&gt;jj git push&lt;/code&gt; above.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;jj&lt;/code&gt; does this so you don’t accidentally rewrite history that others might
+have pulled. You can still force-edit if you need to but it’s &lt;code&gt;jj&lt;/code&gt;s way of
+saying, “This is now part of the public record”.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;I now need to add a minimal &lt;code&gt;home.nix&lt;/code&gt;, then run &lt;code&gt;nix flake check&lt;/code&gt; to see if I
@@ -372,6 +405,16 @@ permanent record (pushed to the remote).&lt;/p&gt;
 &lt;p&gt;In Git, achieving this usually requires &lt;code&gt;git add&lt;/code&gt;, &lt;code&gt;git commit --amend&lt;/code&gt;, or an
 interactive rebase. In jj, you just worked in the working copy and pushed, the
 tool handled the “shaping” of the history for you.&lt;/p&gt;
+&lt;h2&gt;Bookmarks&lt;/h2&gt;
+&lt;p&gt;List all available bookmarks&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj bookmark list --all
+feat1 (deleted)
+  @origin: xo 9067e7b7 mangowc flake-parts module
+main: s b250e6ed testing the push-on-new non working bs
+  @git: s b250e6ed testing the push-on-new non working bs
+  @origin (behind by 2 commits): o 65e79e4b jj bookmarks push-on-new
+Hint: Bookmarks marked as deleted can be *deleted permanently* on the remote by running `jj git push --deleted`. Use `jj bookmark forget` if you don&apos;t want that.
+&lt;/code&gt;&lt;/pre&gt;
 </content></entry><entry><title>The Dendritic Pattern with flake-parts</title><id>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</id><updated>2026-03-07T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/dendritic_flake_parts.html" rel="alternate"/><content type="html">&lt;h1&gt;The Dendritic Pattern with flake-parts&lt;/h1&gt;
 &lt;p&gt;&lt;img src=&quot;../images/dendritic_nix.png&quot; alt=&quot;Dendritic Logo&quot; /&gt;–&lt;a href=&quot;https://github.com/mightyiam/dendritic&quot;&gt;dendretic repo&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;In the early days of Flakes, users often ended up with a massive, monolithic
