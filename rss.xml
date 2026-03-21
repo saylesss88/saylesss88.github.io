@@ -20,8 +20,8 @@ without losing its meaning.</p>
 </li>
 </ul>
 <p>If you find a bug, you can pinpoint the exact 10 lines of code that caused it.
-In <code>jj</code>, the <code>split</code> command is the ultimate tool for “atomizing” a messy
-afternoon of coding.</p>
+In <code>jj</code>, the <code>split -i</code> and <code>commit -i</code> commands are the ultimate tools for
+“atomizing” a messy afternoon of coding.</p>
 <ol start="2">
 <li>Linear History</li>
 </ol>
@@ -40,13 +40,28 @@ to top without getting lost in a maze of branches.</p>
 creating a mess, you are constantly “sliding” your changes on top of the
 latest work, keeping that line perfectly straight.</p>
 </li>
-<li>
-<p><code>❯</code> will indicate a command that I ran, the rest is output.</p>
-</li>
 </ul>
 </details>
 <p>Let’s learn about <code>jj</code> by using it to version control a system Nix Flake.</p>
 <h2>Quick Overview</h2>
+<details>
+<summary>Key Terms</summary>
+<table><thead><tr><th>Term</th><th>What it is</th><th>Git Equivalent</th><th>JJ Behavior</th></tr></thead><tbody>
+<tr><td><strong>Working Copy (<code>@</code>)</strong></td><td>Your current editable commit. <strong>Everything you do affects <code>@</code> by default.</strong> Auto‑amends as you save files.</td><td>Untracked files + staging area + HEAD</td><td>Always a full commit. No staging. <code>jj st</code> shows changes relative to <code>@-</code>.</td></tr>
+<tr><td><strong>Change ID</strong></td><td>Stable ID for a logical unit of work (the <code>k</code>, <code>y</code> labels in logs). Survives edits/rebases.</td><td>N/A</td><td>Prefix like <code>k</code> or <code>y</code>. Use <code>jj edit k1234</code> to jump to any change.</td></tr>
+<tr><td><strong>Commit ID</strong></td><td>Unique ID for a specific snapshot (the long hex like <code>41deb985</code>). Changes when you amend.</td><td>Commit hash</td><td>Full ID for exact snapshots. Rarely used directly.</td></tr>
+<tr><td><strong>Bookmarks</strong></td><td>Named pointers to commits (like <code>main</code>, <code>feature-x</code>). <strong>Don’t auto‑move</strong> like Git branches.</td><td>Branches</td><td><code>jj bookmark set main -r @</code> moves it. <code>*</code> shows if local/remote match.</td></tr>
+<tr><td><strong>Parent (<code>@-</code>)</strong></td><td>The commit <code>@</code> is built on top of.</td><td>Previous commit</td><td>Use <code>-r @-</code> to target it. Key for squash workflow.</td></tr>
+<tr><td><strong>Immutable (<code>◆</code>)</strong></td><td>Commits that shouldn’t be rewritten (pushed changes, trunk).</td><td>Protected branches</td><td><code>jj log</code> shows <code>◆</code>. Still editable with force flags.</td></tr>
+<tr><td><strong>Revset</strong></td><td>Query language for commits (<code>main..@</code>, <code>mine()</code>).</td><td><code>git log --grep</code></td><td>Super powerful. <code>jj log -r "main..@"</code> = changes since main.</td></tr>
+</tbody></table>
+<p><strong>Pro tip</strong>: <code>@</code> is <strong>always</strong> your current position. <code>jj new</code>, <code>jj desc</code>,
+<code>jj squash</code> all default to it. <strong>Bookmarks like <code>main</code> are just labels</strong> - move
+them explicitly with <code>jj bookmark set</code>.</p>
+</details>
+<ul>
+<li><code>❯</code> will indicate a command that I ran, the rest is output.</li>
+</ul>
 <p>Example:</p>
 <pre><code class="language-bash">The working copy has no changes.
 Working copy  (@) : k 41deb985 (empty) (no description set)
@@ -57,9 +72,12 @@ save a file in your Editor, <code>jj</code> detects the change and updates the c
 revision’s hash (the Commit ID) immediately.</p>
 <p><code>jj</code> commands default to operating on the working copy, <code>@</code>.</p>
 <p>In JJ, you are never “on” a branch. You are always “on” a specific change,
-building a stack of changes. You don’t have to merge Change A into Change B,
-because Change B is already built on top of Change A. It inherits every line of
-code from the floors below it.</p>
+building a stack of changes. Until you push those changes, you can continue to
+jump around and edit them with <code>jj edit</code>. Once you push those changes to a
+remote, they then become immutable.</p>
+<p>You don’t have to merge Change A into Change B, because Change B is already
+built on top of Change A. It inherits every line of code from the floors below
+it.</p>
 <p>In Git, the “Working Copy” is a messy, untracked space where files live until
 you decide to <code>git add</code> them. In Jujutsu, the Working Copy is the current
 revision, there is no in-between state.</p>
@@ -72,8 +90,8 @@ instead run <code>jj bookmark set main -r @</code>, followed by <code>jj git pus
 understand this distinction, the rest of the workflow feels fairly intuitive.</p>
 <ul>
 <li>
-<p><code>jj</code> is smart enough to where: If <code>main</code> is on your Working Copy (<code>@</code>) and you
-have uncommitted changes, it pushes those.</p>
+<p><code>jj</code> is smart enough to know that: If <code>main</code> is on your Working Copy (<code>@</code>) and
+you have uncommitted changes, it pushes those.</p>
 </li>
 <li>
 <p>If your Working Copy (<code>@</code>) is empty , and <code>main</code> is on the Parent (<code>@-</code>), it
@@ -101,6 +119,7 @@ the <strong>change ID</strong>.</p>
 
   ~/projects
 ❯  cd learn-jj
+
 
   ~/projects/learn-jj
 ❯  nix flake new . -t github:nix-community/home-manager#nixos
@@ -404,7 +423,10 @@ permanent record (pushed to the remote).</p>
 <p>In Git, achieving this usually requires <code>git add</code>, <code>git commit --amend</code>, or an
 interactive rebase. In jj, you just worked in the working copy and pushed, the
 tool handled the “shaping” of the history for you.</p>
-<h2>Bookmarks</h2>
+<hr />
+<h2>Bookmarks and Branches</h2>
+<p>Bookmarks are named pointers to revisions (just like branches are in Git). You
+can move them without affecting the target revision’s identity. – Jujutsu docs</p>
 <p>List all available bookmarks</p>
 <pre><code class="language-bash">❯  jj bookmark list --all
 feat1 (deleted)
@@ -414,6 +436,245 @@ main: s b250e6ed testing the push-on-new non working bs
   @origin (behind by 2 commits): o 65e79e4b jj bookmarks push-on-new
 Hint: Bookmarks marked as deleted can be *deleted permanently* on the remote by running `jj git push --deleted`. Use `jj bookmark forget` if you don't want that.
 </code></pre>
+<p>Every time you run <code>jj git push</code>, <code>jj</code> automatically runs <code>jj new main</code> for you
+because the working copy becomes immutable after the push.</p>
+<pre><code class="language-bash">  flake   HEAD
+❯  jj st
+The working copy has no changes.
+Working copy  (@) : z 6f7550bc (empty) (no description set)
+Parent commit (@-): k a8212254 main | chore(home): remove comments
+
+  flake   HEAD
+❯  jj log
+@  z saylesss87@proton.me 2026-03-21 09:35:33 6f7550bc
+│  (empty) (no description set)
+◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
+│  chore(home): remove comments
+</code></pre>
+<p>I then described the current change with <code>jj desc</code> and to create another
+“branch”, I ran <code>jj new main</code>.</p>
+<pre><code class="language-bash">❯  jj desc -m "branch 1: learning about jj branches"
+Working copy  (@) now at: z bc0884d2 (empty) branch 1: learning about jj branches
+Parent commit (@-)      : k a8212254 main | chore(home): remove comments
+
+❯  jj new main -m "branch 2: more flake-parts modules"
+Working copy  (@) now at: u 131dc0d9 (empty) branch 2: more flake-parts modules
+Parent commit (@-)      : k a8212254 main | chore(home): remove comments
+</code></pre>
+<p>Let’s check out what that left us with:</p>
+<pre><code class="language-bash">❯  jj log
+@  z saylesss87@proton.me 2026-03-21 10:47:46 bc0884d2
+│  (empty) branch 1: learning about jj branches
+│ ○  u saylesss87@proton.me 2026-03-21 10:48:22 131dc0d9
+├─╯  (empty) branch 2: more flake-parts modules
+◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
+│  chore(home): remove comments
+~
+</code></pre>
+<p>To work on this branch, I would just continue working and run <code>jj new</code> to
+continue stacking changes on this branch. When I want to work on the other
+“branch” I can just run <code>jj edit u</code> in this case, and my working copy will now
+be on the other branch “branch 2”, and <code>jj new</code> will stack changes on that
+branch if that makes sense.</p>
+<p>In Git, you <code>checkout</code> a branch name; in <code>jj</code>, you just move your working copy
+(<code>@</code>) to whichever commit you want to build on.</p>
+<pre><code class="language-bash">❯  jj log
+@  z sayls8@proton.me 2026-03-21 11:00:42 4c81f562
+│  branch 1: learning about jj branches
+│ ○  x sayls8@proton.me 2026-03-21 10:54:03 d76256ac
+│ │  branch 2: adding more changes to this branch
+│ ○  u sayls8@proton.me 2026-03-21 10:51:35 2a628569
+├─╯  branch 2: more flake-parts modules
+◆  k sayls8@proton.me 2026-03-21 09:35:21 main a8212254
+│  chore(home): remove comments
+</code></pre>
+<ul>
+<li>Now “branch 2” has 2 changes on it.</li>
+</ul>
+<p>Rebase is your tool for changing the ‘parent’ of a commit. If you have two
+parallel features (siblings) and you decide one should follow the other (linear
+stack), you rebase the second feature onto the first.</p>
+<p>To move a stack of changes, use <code>jj rebase -s [Source] -d [Destination]</code>. If you
+want to move a feature to the very tip of your main line, destination is <code>main</code>.
+If you want to chain features together, destination is the previous feature’s
+head.</p>
+<p>To take “branch 2” and stack it on top of “branch 1”:</p>
+<pre><code class="language-bash">Rebased 2 commits to destination
+jj rebase -s u -d z
+</code></pre>
+<p>Rebased 2 commits to destination</p>
+<ul>
+<li>
+<p><code>-s u</code>: “Take the commit <code>u</code> and all of its decendants (which includes <code>x</code>).”</p>
+</li>
+<li>
+<p><code>-d z</code>: “Set their new parent to be <code>z</code> (Branch 1).”</p>
+</li>
+</ul>
+<p>Pay attention to the log! Since we just put branch 2 on top of branch 1, we
+probably want to move our working copy to the top of the line, <code>x</code> in this case.</p>
+<pre><code class="language-bash">❯  jj log
+○  x saylesss87@proton.me 2026-03-21 11:38:41 7045d924
+│  branch 2: adding more changes to this branch
+○  u saylesss87@proton.me 2026-03-21 11:38:41 5ba96acd
+│  branch 2: more flake-parts modules
+@  z saylesss87@proton.me 2026-03-21 11:00:42 4c81f562
+│  branch 1: learning about jj branches
+◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
+│  chore(home): remove comments
+</code></pre>
+<p>notice that the working copy (<code>@</code>) is all the way back at change <code>z</code>. Let’s go
+to the end of the line to keep working:</p>
+<pre><code class="language-bash">jj edit x
+</code></pre>
+<hr />
+<h2>Collaborating and opening PRs</h2>
+<p>So far all the examples assumed you are the only person touching this repo. For
+collaboration (GitHub / GitLab PRs, code review, etc.), the mental model is:</p>
+<ul>
+<li>
+<p>GitHub only understands <em>branches</em> and <em>commits</em>.</p>
+</li>
+<li>
+<p>Jujutsu gives you <em>changes</em> and <em>bookmarks</em>.</p>
+</li>
+<li>
+<p>You use <code>jj git push</code> to translate your clean JJ history into a Git branch
+that others can review.</p>
+</li>
+</ul>
+<p>A simple pattern that works well for feature branches and PRs:</p>
+<ol>
+<li>Start from <code>main</code></li>
+</ol>
+<p>Make sure main is up to date and your working copy is clean:</p>
+<pre><code class="language-bash">jj git fetch
+jj edit main
+jj st
+</code></pre>
+<p>You should see an <code>(empty)</code> working copy with <code>main</code> as the parent.</p>
+<ol start="2">
+<li>Create a named feature branch as a bookmark</li>
+</ol>
+<p>In JJ, you don’t “checkout” a branch, you create a new change and (optionally)
+give it a bookmark name:</p>
+<pre><code class="language-bash"># Create a new change on top of main and start working there
+jj new main -m "feat: add magic host"
+
+# Optionally create a bookmark that GitHub will see as a branch
+jj bookmark create feature/magic-host -r @
+</code></pre>
+<ul>
+<li>
+<p><code>jj new main</code> makes a sibling of any in‑progress work and starts a fresh
+change on top of <code>main</code>.</p>
+</li>
+<li>
+<p>The bookmark <code>feature/magic-host</code> is what will become the Git branch name when
+you push.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Hack, split, squash as usual</li>
+</ol>
+<p>Work in your normal JJ style:</p>
+<pre><code class="language-bash"># edit files
+jj st
+jj split -i
+jj desc -m "feat: add magic host"
+jj new
+# more changes, more desc/split/squash, etc.
+</code></pre>
+<p>All of this is still local, fully mutable history.</p>
+<ol start="4">
+<li>Point your feature bookmark at the top of the stack</li>
+</ol>
+<p>When you’re happy with the stack you want to send for review, move the bookmark
+to the tip:</p>
+<pre><code class="language-bash"># If your working copy @ is the commit you want reviewed:
+jj bookmark set feature/magic-host -r @
+
+# If you used the squash workflow and @ is empty:
+jj bookmark set feature/magic-host -r @-
+</code></pre>
+<p>Rule of thumb:</p>
+<ul>
+<li>
+<p>If <code>jj st</code> shows actual changes or a non‑empty description at <code>@</code>, use <code>@</code>.</p>
+</li>
+<li>
+<p>If <code>@</code> is (empty) because you squashed into the parent, use <code>@-</code>.</p>
+</li>
+</ul>
+<ol start="5">
+<li>Push to Git and open the PR</li>
+</ol>
+<p>Now push just like before, but your feature bookmark will become a branch on the
+remote:</p>
+<pre><code class="language-bash">jj git push
+</code></pre>
+<p>This will:</p>
+<ul>
+<li>
+<p>Update <code>origin/feature/magic-host</code> to point at the same commit as your local
+<code>feature/magic-host</code>.</p>
+</li>
+<li>
+<p>Leave <code>main</code> alone until you explicitly move and push it.</p>
+</li>
+</ul>
+<p>On GitHub/GitLab:</p>
+<ul>
+<li>
+<p>You’ll see a branch named <code>feature/magic-host</code>.</p>
+</li>
+<li>
+<p>Open a PR from <code>feature/magic-host</code> into <code>main</code> as usual.</p>
+</li>
+</ul>
+<ol start="6">
+<li>Iterate on review feedback</li>
+</ol>
+<p>If a reviewer asks for changes:</p>
+<ol>
+<li>Come back to your feature branch stack:</li>
+</ol>
+<pre><code class="language-bash">jj edit feature/magic-host
+</code></pre>
+<ol start="2">
+<li>
+<p>Make your edits, split/squash/reword history freely.</p>
+</li>
+<li>
+<p>Move the bookmark to the new tip and push again:</p>
+</li>
+</ol>
+<pre><code class="language-bash">jj bookmark set feature/magic-host -r @
+jj git push
+</code></pre>
+<p>GitHub will show the PR updating in place, but you got to reshuffle history
+locally without <code>git rebase -i</code> pain.</p>
+<p>“I just want a one‑off PR, no named bookmark”</p>
+<p>If you don’t care about a persistent bookmark and just want a quick “one‑shot”
+PR from whatever you’re currently working on:</p>
+<ol>
+<li>
+<p>Make sure your stack is in the shape you want.</p>
+</li>
+<li>
+<p>Put main on the top of that stack:</p>
+</li>
+</ol>
+<pre><code class="language-bash"># Working copy @ is the tip you want:
+jj bookmark set main -r @
+jj git push
+</code></pre>
+<ol start="3">
+<li>On GitHub, create the PR from your fork’s main to upstream main.</li>
+</ol>
+<p>This is essentially the same pattern we already use in the “squash workflow,”
+but applied with the mental model: “move the bookmark people care about (<code>main</code>
+or a feature name) to the commit I want them to review, then push.”</p>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/vcs/practical_jj.html</guid><pubDate>Mon, 16 Mar 2026 00:00:00 +0000</pubDate></item><item><title>The Dendritic Pattern with flake-parts</title><link>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</link><description><![CDATA[<h1>The Dendritic Pattern with flake-parts</h1>
 <p><img src="../images/dendritic_nix.png" alt="Dendritic Logo" />–<a href="https://github.com/mightyiam/dendritic">dendretic repo</a></p>
 <p>In the early days of Flakes, users often ended up with a massive, monolithic
