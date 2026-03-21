@@ -44,6 +44,9 @@ latest work, keeping that line perfectly straight.</p>
 </details>
 <p>Let’s learn about <code>jj</code> by using it to version control a system Nix Flake.</p>
 <h2>Quick Overview</h2>
+<ul>
+<li><a href="https://docs.jj-vcs.dev/latest/glossary/">Jujutsu docs Glossary</a></li>
+</ul>
 <details>
 <summary>Key Terms</summary>
 <table><thead><tr><th>Term</th><th>What it is</th><th>Git Equivalent</th><th>JJ Behavior</th></tr></thead><tbody>
@@ -54,23 +57,101 @@ latest work, keeping that line perfectly straight.</p>
 <tr><td><strong>Parent (<code>@-</code>)</strong></td><td>The commit <code>@</code> is built on top of.</td><td>Previous commit</td><td>Use <code>-r @-</code> to target it. Key for squash workflow.</td></tr>
 <tr><td><strong>Immutable (<code>◆</code>)</strong></td><td>Commits that shouldn’t be rewritten (pushed changes, trunk).</td><td>Protected branches</td><td><code>jj log</code> shows <code>◆</code>. Still editable with force flags.</td></tr>
 <tr><td><strong>Revset</strong></td><td>Query language for commits (<code>main..@</code>, <code>mine()</code>).</td><td><code>git log --grep</code></td><td>Super powerful. <code>jj log -r "main..@"</code> = changes since main.</td></tr>
+<tr><td><strong>Revision</strong></td><td>“revision” is synonymous with “commit”</td><td>Commit</td><td>A synonym for Commit</td></tr>
 </tbody></table>
 <p><strong>Pro tip</strong>: <code>@</code> is <strong>always</strong> your current position. <code>jj new</code>, <code>jj desc</code>,
 <code>jj squash</code> all default to it. <strong>Bookmarks like <code>main</code> are just labels</strong> - move
 them explicitly with <code>jj bookmark set</code>.</p>
 </details>
+<details>
+<summary> Quality of life Hack for --interactive commands </summary>
+<p>This tip comes from the
+<a href="https://zerowidth.com/2025/jj-tips-and-tricks/">zerowidth jj-tips-and-tricks post</a>.
+It’s a good article, worth a read!</p>
+<p>This makes running <code>jj commit -i</code>, <code>jj squash -i</code>, <code>jj split -i</code> much more
+intuitive IMO. You get a hunk-wise <code>yes/no/edit/skip</code> output similar to what
+<code>git add -p</code> gave you.</p>
+<pre><code class="language-bash">[ui]
+diff-editor = "gitpatch"
+
+[merge-tools.gitpatch]
+program = "sh"
+edit-args = ["-c", '''
+  set -eu
+  rm -f "$right/JJ-INSTRUCTIONS"
+  git -C "$left" init -q
+  git -C "$left" add -A
+  git -C "$left" commit -q -m baseline --allow-empty
+  mv "$left/.git" "$right"
+  git -C "$right" add --intent-to-add --ignore-removal .
+  git -C "$right" add -p
+  git -C "$right" diff-index --quiet --cached HEAD &amp;&amp; { echo "No changes done, aborting split."; exit 1; }
+  git -C "$right" commit -q -m split
+  git -C "$right" reset -q --hard
+''',
+]
+</code></pre>
+<p>And for NixOS:</p>
+<pre><code class="language-nix">programs.jujutsu = {
+  settings = {
+    merge-tools.gitpatch = {
+      program = "sh";
+      edit-args = [
+        "-c"
+        ''
+          set -eu
+          rm -f "$right/JJ-INSTRUCTIONS"
+          git -C "$left" init -q
+          git -C "$left" add -A
+          git -C "$left" commit -q -m baseline --allow-empty
+          mv "$left/.git" "$right"
+          git -C "$right" add --intent-to-add -A
+          git -C "$right" add -p
+          git -C "$right" diff-index --quiet --cached HEAD &amp;&amp; { echo "No changes done, aborting split."; exit 1;}
+          git -C "$right" commit -q -m split
+          git -C "$right" restore .  # undo changes in modified files
+          git -C "$right" reset .    # undo --intent-to-add
+          git -C "$right" clean -q -df  # remove untracked files
+        ''
+      ];
+    };
+  };
+}
+</code></pre>
+</details>
 <ul>
 <li><code>❯</code> will indicate a command that I ran, the rest is output.</li>
 </ul>
-<p>Example:</p>
-<pre><code class="language-bash">The working copy has no changes.
-Working copy  (@) : k 41deb985 (empty) (no description set)
-Parent commit (@-): y 2bee669a main | refactor: restructure flake to multi-host layout in hosts/magic
+<p>Let’s start by cloning a project of mine to see how <code>jj</code> works:</p>
+<pre><code class="language-bash"> jj git clone git@github.com:sayls8/nix-snake.git
+Fetching into new repo in "/home/jr/projects/nix-snake"
+remote: Enumerating objects: 88, done.
+remote: Total 88 (delta 38), reused 78 (delta 30), pack-reused 0 (from 0)
+bookmark: main@origin [new] tracked
+Setting the revset alias `trunk()` to `main@origin`
+Working copy  (@) now at: s f143a1da (empty) (no description set)
+Parent commit (@-)      : l 3b759dfe main | feat: fix clippy lints &amp; optimize
+Added 12 files, modified 0 files, removed 0 files
+Hint: Running `git clean -xdf` will remove `.jj/`!
 </code></pre>
-<p>The <strong>Working Copy</strong> <code>@</code> is your current change that is auto-amended. As you
-save a file in your Editor, <code>jj</code> detects the change and updates the current
-revision’s hash (the Commit ID) immediately.</p>
-<p><code>jj</code> commands default to operating on the working copy, <code>@</code>.</p>
+<p>Running <code>jj st</code> &amp; <code>jj log</code>:</p>
+<pre><code class="language-bash">❯  jj st
+The working copy has no changes.
+Working copy  (@) : s f143a1da (empty) (no description set)
+Parent commit (@-): l 3b759dfe main | feat: fix clippy lints &amp; optimize
+
+❯  jj log
+@  s sayls8@proton.me 2026-03-21 16:31:59 f143a1da
+│  (empty) (no description set)
+◆  l sayls8@proton.me 2026-01-29 16:50:51 main 3b759dfe
+│  feat: fix clippy lints &amp; optimize
+~
+</code></pre>
+<p>The <code>@</code> indicates the working-copy commit. The first ID on a line (e.g. “s”
+above) is the change ID. The second ID is the commit ID (“f143a1da”). You can
+give either ID to commands that take revisions as arguments.</p>
+<p><code>jj</code> commands default to operating on the working copy, <code>@</code>. <code>jj undo</code>, undoes
+your previous <code>jj</code> command. List all previous <code>jj</code> commands with <code>jj op log</code>.</p>
 <p>In JJ, you are never “on” a branch. You are always “on” a specific change,
 building a stack of changes. Until you push those changes, you can continue to
 jump around and edit them with <code>jj edit</code>. Once you push those changes to a
@@ -147,6 +228,10 @@ Started tracking 1 remote bookmarks.
 Working copy  (@) now at: l 743b170d main* | chore: Initialize system flake
 Parent commit (@-)      : z 00000000 (empty) (no description set)
 </code></pre>
+<p>In this example, the Parent commit is the <em>root commit</em>. The root commit is a
+virtual commit at the root of every repository. It has a commit ID consisting of
+all ’0’s (<code>00000000...</code>) and a change ID consisting of all ’z’s (<code>zzzzzzzz...</code>).
+It can be referred to in revsets by the function <code>root()</code>.</p>
 <ul>
 <li>With this workflow, your working copy is typically at your current change.</li>
 </ul>
@@ -394,6 +479,11 @@ the Working copy into <code>@-</code>, that is where we need <code>main</code> t
     "all()"
   ];
 </code></pre>
+<p>You can also list all commits with:</p>
+<pre><code class="language-bash">jj log -r ::
+# or
+jj log r 'all()'
+</code></pre>
 <p>Let’s check out our full history so far:</p>
 <pre><code class="language-bash">❯  jj la
 @  k sayls8@proton.me 2026-03-15 14:30:43 41deb985
@@ -427,6 +517,7 @@ tool handled the “shaping” of the history for you.</p>
 <h2>Bookmarks and Branches</h2>
 <p>Bookmarks are named pointers to revisions (just like branches are in Git). You
 can move them without affecting the target revision’s identity. – Jujutsu docs</p>
+<p>Branches are just multiple “changes” with the same parent.</p>
 <p>List all available bookmarks</p>
 <pre><code class="language-bash">❯  jj bookmark list --all
 feat1 (deleted)
@@ -438,6 +529,9 @@ Hint: Bookmarks marked as deleted can be *deleted permanently* on the remote by 
 </code></pre>
 <p>Every time you run <code>jj git push</code>, <code>jj</code> automatically runs <code>jj new main</code> for you
 because the working copy becomes immutable after the push.</p>
+<p>List all anonymous branch heads:</p>
+<pre><code class="language-bash">jj log -r 'heads(all())'
+</code></pre>
 <pre><code class="language-bash">  flake   HEAD
 ❯  jj st
 The working copy has no changes.
@@ -675,6 +769,48 @@ jj git push
 <p>This is essentially the same pattern we already use in the “squash workflow,”
 but applied with the mental model: “move the bookmark people care about (<code>main</code>
 or a feature name) to the commit I want them to review, then push.”</p>
+<h3>Workflow Considerations</h3>
+<p>You may want to change up how you work depending on your requirements…</p>
+<ol>
+<li>The Tower Workflow (The “Dependent Stack”)</li>
+</ol>
+<p>You use a tower when your changes build on top of each other.</p>
+<ul>
+<li>
+<p><code>main</code> → <code>Feature A</code> → <code>Feature B</code> → <code>Feature C</code></p>
+</li>
+<li>
+<p>Use it when you are refactoring a Nix module (Feature A), and then you need to
+use that new module to configure your desktop (Feature B). You literally
+cannot do B without A.</p>
+</li>
+</ul>
+<p>The Collaborative Benefit: You can push the entire stack. Your teammates see the
+logical progression of your thought process. They can review “Feature A” while
+you are already working on “Feature C.”</p>
+<ol start="2">
+<li>The Sibling Workflow (<code>jj new main</code>) You use <code>jj new main</code> when you are
+working on independent ideas that have nothing to do with each other.</li>
+</ol>
+<ul>
+<li>How it looks: * <code>main</code> → <code>Fix-Helix-Keys</code>
+<ul>
+<li>
+<p><code>main</code> → <code>Update-Nix-Channel</code></p>
+</li>
+<li>
+<p><code>main</code> → <code>New-Wallpaper-Script</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<p>When to use it: You’re in the middle of a massive system refactor, but you
+suddenly notice your Helix C-p bind is broken. You don’t want the Helix fix to
+be “trapped” behind the refactor.</p>
+<p>The Collaborative Benefit: Isolation. If your “System Refactor” is buggy and
+takes three days to fix, you can still <code>jj git push</code> the “Helix Fix” to <code>main</code>
+immediately because it’s a direct child of <code>main</code>. It isn’t “waiting” for the
+other commits.</p>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/vcs/practical_jj.html</guid><pubDate>Mon, 16 Mar 2026 00:00:00 +0000</pubDate></item><item><title>The Dendritic Pattern with flake-parts</title><link>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</link><description><![CDATA[<h1>The Dendritic Pattern with flake-parts</h1>
 <p><img src="../images/dendritic_nix.png" alt="Dendritic Logo" />–<a href="https://github.com/mightyiam/dendritic">dendretic repo</a></p>
 <p>In the early days of Flakes, users often ended up with a massive, monolithic
