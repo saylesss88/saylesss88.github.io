@@ -1,5 +1,11 @@
 <?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/</id><updated>1970-01-01T00:00:00+00:00</updated><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>Practical Jujutsu</title><id>https://saylesss88.github.io/vcs/practical_jj.html</id><updated>2026-03-16T00:00:00+00:00</updated><link href="https://saylesss88.github.io/vcs/practical_jj.html" rel="alternate"/><content type="html">&lt;h1&gt;Practical Jujutsu&lt;/h1&gt;
+&lt;p&gt;This post assumes basic understanding of Git and GitHub.&lt;/p&gt;
+&lt;p&gt;I’ve spent enough time hovering between the familiarity of Git and the potential
+of Jujutsu. It’s time to move past a ‘primitive’ workflow. By truly mastering
+one of these tools, I want to turn version control from a chore into a way to
+precisely navigate my development stages and build a history that future
+contributors can actually follow.&lt;/p&gt;
 &lt;p&gt;JJ simplifies keeping a linear history and makes it easy to break down big
 changes into smaller atomic changes.&lt;/p&gt;
 &lt;details&gt;
@@ -42,6 +48,11 @@ creating a mess, you are constantly “sliding” your changes on top of the
 latest work, keeping that line perfectly straight.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
+&lt;p&gt;You can even insert a commit anywhere in your history with &lt;code&gt;jj new -A&lt;/code&gt;
+(&lt;code&gt;--insert-after&lt;/code&gt;), and &lt;code&gt;jj new -B&lt;/code&gt; (&lt;code&gt;--insert-before&lt;/code&gt;) and JJ will rebase every
+child in the history.&lt;/p&gt;
+&lt;p&gt;Use &lt;code&gt;jj show -r &amp;lt;revision&amp;gt;&lt;/code&gt; to see a diff of the changes made at that Change ID,
+and trivially craft it with &lt;code&gt;jj edit -r &amp;lt;revision&amp;gt;&lt;/code&gt;.&lt;/p&gt;
 &lt;/details&gt;
 &lt;p&gt;Let’s learn about &lt;code&gt;jj&lt;/code&gt; by using it to version control a system Nix Flake.&lt;/p&gt;
 &lt;h2&gt;Quick Overview&lt;/h2&gt;
@@ -50,6 +61,14 @@ latest work, keeping that line perfectly straight.&lt;/p&gt;
 &lt;/ul&gt;
 &lt;details&gt;
 &lt;summary&gt;Key Terms&lt;/summary&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“One of the first things to wrap your head around when first coming to Jujutsu
+is its approach to its revisions and revsets, i.e. “sets of revision”.
+Revisions are the fundamental elements of changes in Jujutsu, not “commits” as
+in Git. Revsets are then expressions in a functional language for selecting a
+set of revisions.”
+–&lt;a href=&quot;https://v5.chriskrycho.com/essays/jj-init/&quot;&gt;Chris Krycho jj init&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
 &lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Term&lt;/th&gt;&lt;th&gt;What it is&lt;/th&gt;&lt;th&gt;Git Equivalent&lt;/th&gt;&lt;th&gt;JJ Behavior&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
 &lt;tr&gt;&lt;td&gt;&lt;strong&gt;Working Copy (&lt;code&gt;@&lt;/code&gt;)&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;Your current editable commit. &lt;strong&gt;Everything you do affects &lt;code&gt;@&lt;/code&gt; by default.&lt;/strong&gt; Auto‑amends as you save files.&lt;/td&gt;&lt;td&gt;Untracked files + staging area + HEAD&lt;/td&gt;&lt;td&gt;Always a full commit. No staging. &lt;code&gt;jj st&lt;/code&gt; shows changes relative to &lt;code&gt;@-&lt;/code&gt;.&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;strong&gt;Change ID&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;Stable ID for a logical unit of work (the &lt;code&gt;k&lt;/code&gt;, &lt;code&gt;y&lt;/code&gt; labels in logs). Survives edits/rebases.&lt;/td&gt;&lt;td&gt;N/A&lt;/td&gt;&lt;td&gt;Prefix like &lt;code&gt;k&lt;/code&gt; or &lt;code&gt;y&lt;/code&gt;. Use &lt;code&gt;jj edit k1234&lt;/code&gt; to jump to any change.&lt;/td&gt;&lt;/tr&gt;
@@ -64,62 +83,10 @@ latest work, keeping that line perfectly straight.&lt;/p&gt;
 &lt;code&gt;jj squash&lt;/code&gt; all default to it. &lt;strong&gt;Bookmarks like &lt;code&gt;main&lt;/code&gt; are just labels&lt;/strong&gt; - move
 them explicitly with &lt;code&gt;jj bookmark set&lt;/code&gt;.&lt;/p&gt;
 &lt;/details&gt;
-&lt;details&gt;
-&lt;summary&gt; Quality of life Hack for --interactive commands &lt;/summary&gt;
-&lt;p&gt;This tip comes from the
-&lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidth jj-tips-and-tricks post&lt;/a&gt;.
-It’s a good article, worth a read!&lt;/p&gt;
-&lt;p&gt;This makes running &lt;code&gt;jj commit -i&lt;/code&gt;, &lt;code&gt;jj squash -i&lt;/code&gt;, &lt;code&gt;jj split -i&lt;/code&gt; much more
-intuitive IMO. You get a hunk-wise &lt;code&gt;yes/no/edit/skip&lt;/code&gt; output similar to what
-&lt;code&gt;git add -p&lt;/code&gt; gave you.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;[ui]
-diff-editor = &quot;gitpatch&quot;
-
-[merge-tools.gitpatch]
-program = &quot;sh&quot;
-edit-args = [&quot;-c&quot;, &apos;&apos;&apos;
-  set -eu
-  rm -f &quot;$right/JJ-INSTRUCTIONS&quot;
-  git -C &quot;$left&quot; init -q
-  git -C &quot;$left&quot; add -A
-  git -C &quot;$left&quot; commit -q -m baseline --allow-empty
-  mv &quot;$left/.git&quot; &quot;$right&quot;
-  git -C &quot;$right&quot; add --intent-to-add --ignore-removal .
-  git -C &quot;$right&quot; add -p
-  git -C &quot;$right&quot; diff-index --quiet --cached HEAD &amp;amp;&amp;amp; { echo &quot;No changes done, aborting split.&quot;; exit 1; }
-  git -C &quot;$right&quot; commit -q -m split
-  git -C &quot;$right&quot; reset -q --hard
-&apos;&apos;&apos;,
-]
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;And for NixOS:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;programs.jujutsu = {
-  settings = {
-    merge-tools.gitpatch = {
-      program = &quot;sh&quot;;
-      edit-args = [
-        &quot;-c&quot;
-        &apos;&apos;
-          set -eu
-          rm -f &quot;$right/JJ-INSTRUCTIONS&quot;
-          git -C &quot;$left&quot; init -q
-          git -C &quot;$left&quot; add -A
-          git -C &quot;$left&quot; commit -q -m baseline --allow-empty
-          mv &quot;$left/.git&quot; &quot;$right&quot;
-          git -C &quot;$right&quot; add --intent-to-add -A
-          git -C &quot;$right&quot; add -p
-          git -C &quot;$right&quot; diff-index --quiet --cached HEAD &amp;amp;&amp;amp; { echo &quot;No changes done, aborting split.&quot;; exit 1;}
-          git -C &quot;$right&quot; commit -q -m split
-          git -C &quot;$right&quot; restore .  # undo changes in modified files
-          git -C &quot;$right&quot; reset .    # undo --intent-to-add
-          git -C &quot;$right&quot; clean -q -df  # remove untracked files
-        &apos;&apos;
-      ];
-    };
-  };
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/details&gt;
+&lt;p&gt;See
+&lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidths jj-tips-and-tricks&lt;/a&gt;,
+for a more intuitive &lt;code&gt;--interactive&lt;/code&gt; workflow (The &lt;code&gt;git add -p&lt;/code&gt; Hunk-wise
+style).&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;❯&lt;/code&gt; will indicate a command that I ran, the rest is output.&lt;/li&gt;
 &lt;/ul&gt;
@@ -135,6 +102,19 @@ Parent commit (@-)      : l 3b759dfe main | feat: fix clippy lints &amp;amp; opt
 Added 12 files, modified 0 files, removed 0 files
 Hint: Running `git clean -xdf` will remove `.jj/`!
 &lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;We can see above that the &lt;code&gt;main@origin&lt;/code&gt; bookmark is automatically tracked with
+a revset alias of &lt;code&gt;trunk()&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: My jj commands show the shortest possible IDs because of the setting:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;programs.jujutsu.settings = {
+   template-aliases = {
+       &quot;format_short_change_id(id)&quot; = &quot;id.shortest()&quot;;
+   };
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/blockquote&gt;
 &lt;p&gt;Running &lt;code&gt;jj st&lt;/code&gt; &amp;amp; &lt;code&gt;jj log&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj st
 The working copy has no changes.
@@ -148,11 +128,25 @@ Parent commit (@-): l 3b759dfe main | feat: fix clippy lints &amp;amp; optimize
 │  feat: fix clippy lints &amp;amp; optimize
 ~
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To show all ancestors of the most recent commit, &lt;code&gt;s&lt;/code&gt; in this case:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log -r ::s
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
 &lt;p&gt;The &lt;code&gt;@&lt;/code&gt; indicates the working-copy commit. The first ID on a line (e.g. “s”
 above) is the change ID. The second ID is the commit ID (“f143a1da”). You can
 give either ID to commands that take revisions as arguments.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj log&lt;/code&gt; defaults to the &lt;code&gt;ui.default-revset&lt;/code&gt; setting, or
+&lt;code&gt;@ | ancestors(immutable_heads().., 2) | heads(immutable_heads())&lt;/code&gt; if it’s not
+set. (A revset)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
 &lt;p&gt;&lt;code&gt;jj&lt;/code&gt; commands default to operating on the working copy, &lt;code&gt;@&lt;/code&gt;. &lt;code&gt;jj undo&lt;/code&gt;, undoes
 your previous &lt;code&gt;jj&lt;/code&gt; command. List all previous &lt;code&gt;jj&lt;/code&gt; commands with &lt;code&gt;jj op log&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 &lt;p&gt;In JJ, you are never “on” a branch. You are always “on” a specific change,
 building a stack of changes. Until you push those changes, you can continue to
 jump around and edit them with &lt;code&gt;jj edit&lt;/code&gt;. Once you push those changes to a
@@ -199,28 +193,28 @@ the &lt;strong&gt;change ID&lt;/strong&gt;.&lt;/p&gt;
 &lt;p&gt;Initialize and colocate the repository:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  mkdir learn-jj
 
-  ~/projects
+  ~/projects
 ❯  cd learn-jj
 
 
-  ~/projects/learn-jj
+  ~/projects/learn-jj
 ❯  nix flake new . -t github:nix-community/home-manager#nixos
 wrote: &quot;/home/jr/projects/learn-jj/flake.nix&quot;
 
-  ~/projects/learn-jj  ✗
+  ~/projects/learn-jj  ✗
 ❯  jj git init --colocate
 Initialized repo in &quot;.&quot;
 Hint: Running `git clean -xdf` will remove `.jj/`!
 
-  learn-jj   main [?]
+  learn-jj   main [?]
 ❯  git remote add origin git@github.com:sayls8/learn-jj.git
 
-  learn-jj   main [?]
+  learn-j   main [?]
 ❯  jj bookmark create main -r @
 Done importing changes from the underlying Git repo.
 Created 1 bookmarks pointing to l bd3847c0 main | (no description set)
 
-  learn-jj   refs/jj/root [!]
+  learn-jj   refs/jj/root [!]
 ❯  jj bookmark track main --remote=origin
 Started tracking 1 remote bookmarks.
 &lt;/code&gt;&lt;/pre&gt;
@@ -234,7 +228,12 @@ virtual commit at the root of every repository. It has a commit ID consisting of
 all ’0’s (&lt;code&gt;00000000...&lt;/code&gt;) and a change ID consisting of all ’z’s (&lt;code&gt;zzzzzzzz...&lt;/code&gt;).
 It can be referred to in revsets by the function &lt;code&gt;root()&lt;/code&gt;.&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;With this workflow, your working copy is typically at your current change.&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;With this workflow, your working copy is typically at your current change.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;JJ treats the working copy as a commit rather than having an index like Git.&lt;/p&gt;
+&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;If we wanted to push right now we could with &lt;code&gt;jj git push&lt;/code&gt;, but let’s first
 learn a bit more about how &lt;code&gt;jj&lt;/code&gt; works.&lt;/p&gt;
@@ -287,13 +286,19 @@ you’re all set.&lt;/li&gt;
 &lt;p&gt;Another cool thing about &lt;code&gt;jj&lt;/code&gt; is that you can add a description whenever you
 want. Running &lt;code&gt;jj desc -m &quot;add configuration.nix&quot;&lt;/code&gt; doesn’t finalize your commit
 like it does with Git. So, you can put the description first, last, or in the
-middle of a current change with no issue.&lt;/p&gt;
+middle of a current change with no issue. The equivalent command to
+&lt;code&gt;git commit -m &quot;message&quot;&lt;/code&gt; is &lt;code&gt;jj commit -m &quot;message&quot; &amp;amp;&amp;amp; jj new&lt;/code&gt;&lt;/p&gt;
 &lt;p&gt;Let’s see what the &lt;code&gt;jj split -i&lt;/code&gt; command left us with:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj
 Working copy changes:
 A configuration.nix
 Working copy  (@) : m b3cc09db feat: create minimal configuration.nix
 Parent commit (@-): p cddde3b4 chore: change username &amp;amp; hostname in flake.nix
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;To see a diff of the changes in the parent commit:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj show -r @-
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;And our &lt;code&gt;log&lt;/code&gt;:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
@@ -379,7 +384,7 @@ Parent commit (@-): m b3cc09db main | feat: create minimal configuration.nix
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj bookmark set main -r @
 Moved 1 bookmarks to u e57a7a39 main* | feat: add minimal home.nix
 
-  learn-jj   HEAD [!]
+  learn-jj   HEAD [!]
 ❯  jj git push
 Changes to push to origin:
   Move forward bookmark main from b3cc09dba32c to e57a7a39957a
@@ -812,6 +817,74 @@ be “trapped” behind the refactor.&lt;/p&gt;
 takes three days to fix, you can still &lt;code&gt;jj git push&lt;/code&gt; the “Helix Fix” to &lt;code&gt;main&lt;/code&gt;
 immediately because it’s a direct child of &lt;code&gt;main&lt;/code&gt;. It isn’t “waiting” for the
 other commits.&lt;/p&gt;
+&lt;h2&gt;Tips &amp;amp; Tricks&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;The Ghost Refactor&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;The Scenario&lt;/strong&gt;: You’re in the middle of a complex Rust feature (Change C), and
+you realize a function in the base (Change A) needs to be public or renamed for
+this to work.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj new A -m &quot;quick fix&quot;&lt;/code&gt; → Creates a new “slice” right after A.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Make your change.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj squash&lt;/code&gt; → This “melts” the fix directly into A.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;p&gt;&lt;strong&gt;Use &lt;code&gt;jj describe&lt;/code&gt; as a Task List&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Because &lt;code&gt;jj&lt;/code&gt; doesn’t require a “commit” to save work, you can use descriptions
+to manage your focus.&lt;/p&gt;
+&lt;p&gt;When you start a session, create a few empty changes:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj new main -m &quot;Update Cargo.toml&quot;&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj new -m &quot;Add pixel conversion logic&quot;&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj new -m &quot;Fix CLI output formatting&quot;&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now we have a roadmap. Use &lt;code&gt;jj edit&lt;/code&gt; to jump into whichever task you feel like
+doing. &lt;code&gt;jj&lt;/code&gt; tracks the progress of each. No need to &lt;code&gt;stash&lt;/code&gt; when jumping between
+tasks because of the working copy commit.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;&lt;strong&gt;Breaking up your Current set of Changes into Atomic Commits: “The Atomic
+Shredder” &lt;code&gt;jj split&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Often I’ll just keep working on a bug or feature until it works, not
+particularly concerned about my VCS history. Let’s say I spent 3 hours hacking
+on a project of mine to get a feature working and I touched 10 files. It works,
+but the commit is a mess.&lt;/p&gt;
+&lt;p&gt;With the &lt;code&gt;gitpatch&lt;/code&gt; tool, &lt;code&gt;jj split -i&lt;/code&gt; makes it simple to break down many
+changes into logical “atomic commits” using a simple &lt;code&gt;y&lt;/code&gt;/ &lt;code&gt;n&lt;/code&gt; interface.&lt;/p&gt;
+&lt;p&gt;You can actually use both &lt;code&gt;jj commit -i&lt;/code&gt; &amp;amp; &lt;code&gt;jj split -i&lt;/code&gt; to break down changes
+in &lt;code&gt;@&lt;/code&gt; into smaller changes. &lt;code&gt;jj commit -i&lt;/code&gt; is ergonomically tuned for “push
+some current work down, leave the rest in @”.&lt;/p&gt;
+&lt;p&gt;If your changes are already in &lt;code&gt;@-&lt;/code&gt; (or any earlier commit):&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj commit -i&lt;/code&gt; can’t help, because it only ever operates on &lt;code&gt;@&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj split -i -r @-&lt;/code&gt; (or equivalent) can be used to modify an existing commit
+in history.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;As a rule of thumb&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Changes in &lt;code&gt;@&lt;/code&gt; → use &lt;code&gt;jj commit -i&lt;/code&gt; to peel off a clean piece, and also
+&lt;code&gt;jj squash -i&lt;/code&gt; to squash a subset of changes from the working copy into the
+parent commit.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Changes in &lt;code&gt;@-&lt;/code&gt; (or earlier) → use &lt;code&gt;jj split -i&lt;/code&gt; to rewrite that commit&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 </content></entry><entry><title>The Dendritic Pattern with flake-parts</title><id>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</id><updated>2026-03-07T00:00:00+00:00</updated><link href="https://saylesss88.github.io/flakes/dendritic_flake_parts.html" rel="alternate"/><content type="html">&lt;h1&gt;The Dendritic Pattern with flake-parts&lt;/h1&gt;
 &lt;p&gt;&lt;img src=&quot;../images/dendritic_nix.png&quot; alt=&quot;Dendritic Logo&quot; /&gt;–&lt;a href=&quot;https://github.com/mightyiam/dendritic&quot;&gt;dendretic repo&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;In the early days of Flakes, users often ended up with a massive, monolithic

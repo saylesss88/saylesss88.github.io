@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.0.0</generator><item><title>Practical Jujutsu</title><link>https://saylesss88.github.io/vcs/practical_jj.html</link><description><![CDATA[<h1>Practical Jujutsu</h1>
+<p>This post assumes basic understanding of Git and GitHub.</p>
+<p>I’ve spent enough time hovering between the familiarity of Git and the potential
+of Jujutsu. It’s time to move past a ‘primitive’ workflow. By truly mastering
+one of these tools, I want to turn version control from a chore into a way to
+precisely navigate my development stages and build a history that future
+contributors can actually follow.</p>
 <p>JJ simplifies keeping a linear history and makes it easy to break down big
 changes into smaller atomic changes.</p>
 <details>
@@ -41,6 +47,11 @@ creating a mess, you are constantly “sliding” your changes on top of the
 latest work, keeping that line perfectly straight.</p>
 </li>
 </ul>
+<p>You can even insert a commit anywhere in your history with <code>jj new -A</code>
+(<code>--insert-after</code>), and <code>jj new -B</code> (<code>--insert-before</code>) and JJ will rebase every
+child in the history.</p>
+<p>Use <code>jj show -r &lt;revision&gt;</code> to see a diff of the changes made at that Change ID,
+and trivially craft it with <code>jj edit -r &lt;revision&gt;</code>.</p>
 </details>
 <p>Let’s learn about <code>jj</code> by using it to version control a system Nix Flake.</p>
 <h2>Quick Overview</h2>
@@ -49,6 +60,14 @@ latest work, keeping that line perfectly straight.</p>
 </ul>
 <details>
 <summary>Key Terms</summary>
+<blockquote>
+<p>“One of the first things to wrap your head around when first coming to Jujutsu
+is its approach to its revisions and revsets, i.e. “sets of revision”.
+Revisions are the fundamental elements of changes in Jujutsu, not “commits” as
+in Git. Revsets are then expressions in a functional language for selecting a
+set of revisions.”
+–<a href="https://v5.chriskrycho.com/essays/jj-init/">Chris Krycho jj init</a></p>
+</blockquote>
 <table><thead><tr><th>Term</th><th>What it is</th><th>Git Equivalent</th><th>JJ Behavior</th></tr></thead><tbody>
 <tr><td><strong>Working Copy (<code>@</code>)</strong></td><td>Your current editable commit. <strong>Everything you do affects <code>@</code> by default.</strong> Auto‑amends as you save files.</td><td>Untracked files + staging area + HEAD</td><td>Always a full commit. No staging. <code>jj st</code> shows changes relative to <code>@-</code>.</td></tr>
 <tr><td><strong>Change ID</strong></td><td>Stable ID for a logical unit of work (the <code>k</code>, <code>y</code> labels in logs). Survives edits/rebases.</td><td>N/A</td><td>Prefix like <code>k</code> or <code>y</code>. Use <code>jj edit k1234</code> to jump to any change.</td></tr>
@@ -63,62 +82,10 @@ latest work, keeping that line perfectly straight.</p>
 <code>jj squash</code> all default to it. <strong>Bookmarks like <code>main</code> are just labels</strong> - move
 them explicitly with <code>jj bookmark set</code>.</p>
 </details>
-<details>
-<summary> Quality of life Hack for --interactive commands </summary>
-<p>This tip comes from the
-<a href="https://zerowidth.com/2025/jj-tips-and-tricks/">zerowidth jj-tips-and-tricks post</a>.
-It’s a good article, worth a read!</p>
-<p>This makes running <code>jj commit -i</code>, <code>jj squash -i</code>, <code>jj split -i</code> much more
-intuitive IMO. You get a hunk-wise <code>yes/no/edit/skip</code> output similar to what
-<code>git add -p</code> gave you.</p>
-<pre><code class="language-bash">[ui]
-diff-editor = "gitpatch"
-
-[merge-tools.gitpatch]
-program = "sh"
-edit-args = ["-c", '''
-  set -eu
-  rm -f "$right/JJ-INSTRUCTIONS"
-  git -C "$left" init -q
-  git -C "$left" add -A
-  git -C "$left" commit -q -m baseline --allow-empty
-  mv "$left/.git" "$right"
-  git -C "$right" add --intent-to-add --ignore-removal .
-  git -C "$right" add -p
-  git -C "$right" diff-index --quiet --cached HEAD &amp;&amp; { echo "No changes done, aborting split."; exit 1; }
-  git -C "$right" commit -q -m split
-  git -C "$right" reset -q --hard
-''',
-]
-</code></pre>
-<p>And for NixOS:</p>
-<pre><code class="language-nix">programs.jujutsu = {
-  settings = {
-    merge-tools.gitpatch = {
-      program = "sh";
-      edit-args = [
-        "-c"
-        ''
-          set -eu
-          rm -f "$right/JJ-INSTRUCTIONS"
-          git -C "$left" init -q
-          git -C "$left" add -A
-          git -C "$left" commit -q -m baseline --allow-empty
-          mv "$left/.git" "$right"
-          git -C "$right" add --intent-to-add -A
-          git -C "$right" add -p
-          git -C "$right" diff-index --quiet --cached HEAD &amp;&amp; { echo "No changes done, aborting split."; exit 1;}
-          git -C "$right" commit -q -m split
-          git -C "$right" restore .  # undo changes in modified files
-          git -C "$right" reset .    # undo --intent-to-add
-          git -C "$right" clean -q -df  # remove untracked files
-        ''
-      ];
-    };
-  };
-}
-</code></pre>
-</details>
+<p>See
+<a href="https://zerowidth.com/2025/jj-tips-and-tricks/">zerowidths jj-tips-and-tricks</a>,
+for a more intuitive <code>--interactive</code> workflow (The <code>git add -p</code> Hunk-wise
+style).</p>
 <ul>
 <li><code>❯</code> will indicate a command that I ran, the rest is output.</li>
 </ul>
@@ -134,6 +101,19 @@ Parent commit (@-)      : l 3b759dfe main | feat: fix clippy lints &amp; optimiz
 Added 12 files, modified 0 files, removed 0 files
 Hint: Running `git clean -xdf` will remove `.jj/`!
 </code></pre>
+<ul>
+<li>We can see above that the <code>main@origin</code> bookmark is automatically tracked with
+a revset alias of <code>trunk()</code>.</li>
+</ul>
+<blockquote>
+<p>NOTE: My jj commands show the shortest possible IDs because of the setting:</p>
+<pre><code class="language-nix">programs.jujutsu.settings = {
+   template-aliases = {
+       "format_short_change_id(id)" = "id.shortest()";
+   };
+};
+</code></pre>
+</blockquote>
 <p>Running <code>jj st</code> &amp; <code>jj log</code>:</p>
 <pre><code class="language-bash">❯  jj st
 The working copy has no changes.
@@ -147,11 +127,25 @@ Parent commit (@-): l 3b759dfe main | feat: fix clippy lints &amp; optimize
 │  feat: fix clippy lints &amp; optimize
 ~
 </code></pre>
+<p>To show all ancestors of the most recent commit, <code>s</code> in this case:</p>
+<pre><code class="language-bash">jj log -r ::s
+</code></pre>
+<ul>
+<li>
 <p>The <code>@</code> indicates the working-copy commit. The first ID on a line (e.g. “s”
 above) is the change ID. The second ID is the commit ID (“f143a1da”). You can
 give either ID to commands that take revisions as arguments.</p>
+</li>
+<li>
+<p><code>jj log</code> defaults to the <code>ui.default-revset</code> setting, or
+<code>@ | ancestors(immutable_heads().., 2) | heads(immutable_heads())</code> if it’s not
+set. (A revset)</p>
+</li>
+<li>
 <p><code>jj</code> commands default to operating on the working copy, <code>@</code>. <code>jj undo</code>, undoes
 your previous <code>jj</code> command. List all previous <code>jj</code> commands with <code>jj op log</code>.</p>
+</li>
+</ul>
 <p>In JJ, you are never “on” a branch. You are always “on” a specific change,
 building a stack of changes. Until you push those changes, you can continue to
 jump around and edit them with <code>jj edit</code>. Once you push those changes to a
@@ -198,28 +192,28 @@ the <strong>change ID</strong>.</p>
 <p>Initialize and colocate the repository:</p>
 <pre><code class="language-bash">❯  mkdir learn-jj
 
-  ~/projects
+  ~/projects
 ❯  cd learn-jj
 
 
-  ~/projects/learn-jj
+  ~/projects/learn-jj
 ❯  nix flake new . -t github:nix-community/home-manager#nixos
 wrote: "/home/jr/projects/learn-jj/flake.nix"
 
-  ~/projects/learn-jj  ✗
+  ~/projects/learn-jj  ✗
 ❯  jj git init --colocate
 Initialized repo in "."
 Hint: Running `git clean -xdf` will remove `.jj/`!
 
-  learn-jj   main [?]
+  learn-jj   main [?]
 ❯  git remote add origin git@github.com:sayls8/learn-jj.git
 
-  learn-jj   main [?]
+  learn-j   main [?]
 ❯  jj bookmark create main -r @
 Done importing changes from the underlying Git repo.
 Created 1 bookmarks pointing to l bd3847c0 main | (no description set)
 
-  learn-jj   refs/jj/root [!]
+  learn-jj   refs/jj/root [!]
 ❯  jj bookmark track main --remote=origin
 Started tracking 1 remote bookmarks.
 </code></pre>
@@ -233,7 +227,12 @@ virtual commit at the root of every repository. It has a commit ID consisting of
 all ’0’s (<code>00000000...</code>) and a change ID consisting of all ’z’s (<code>zzzzzzzz...</code>).
 It can be referred to in revsets by the function <code>root()</code>.</p>
 <ul>
-<li>With this workflow, your working copy is typically at your current change.</li>
+<li>
+<p>With this workflow, your working copy is typically at your current change.</p>
+</li>
+<li>
+<p>JJ treats the working copy as a commit rather than having an index like Git.</p>
+</li>
 </ul>
 <p>If we wanted to push right now we could with <code>jj git push</code>, but let’s first
 learn a bit more about how <code>jj</code> works.</p>
@@ -286,13 +285,19 @@ you’re all set.</li>
 <p>Another cool thing about <code>jj</code> is that you can add a description whenever you
 want. Running <code>jj desc -m "add configuration.nix"</code> doesn’t finalize your commit
 like it does with Git. So, you can put the description first, last, or in the
-middle of a current change with no issue.</p>
+middle of a current change with no issue. The equivalent command to
+<code>git commit -m "message"</code> is <code>jj commit -m "message" &amp;&amp; jj new</code></p>
 <p>Let’s see what the <code>jj split -i</code> command left us with:</p>
 <pre><code class="language-bash">❯  jj
 Working copy changes:
 A configuration.nix
 Working copy  (@) : m b3cc09db feat: create minimal configuration.nix
 Parent commit (@-): p cddde3b4 chore: change username &amp; hostname in flake.nix
+</code></pre>
+<ul>
+<li>To see a diff of the changes in the parent commit:</li>
+</ul>
+<pre><code class="language-bash">jj show -r @-
 </code></pre>
 <p>And our <code>log</code>:</p>
 <pre><code class="language-bash">❯  jj log
@@ -378,7 +383,7 @@ Parent commit (@-): m b3cc09db main | feat: create minimal configuration.nix
 <pre><code class="language-bash">❯  jj bookmark set main -r @
 Moved 1 bookmarks to u e57a7a39 main* | feat: add minimal home.nix
 
-  learn-jj   HEAD [!]
+  learn-jj   HEAD [!]
 ❯  jj git push
 Changes to push to origin:
   Move forward bookmark main from b3cc09dba32c to e57a7a39957a
@@ -811,6 +816,74 @@ be “trapped” behind the refactor.</p>
 takes three days to fix, you can still <code>jj git push</code> the “Helix Fix” to <code>main</code>
 immediately because it’s a direct child of <code>main</code>. It isn’t “waiting” for the
 other commits.</p>
+<h2>Tips &amp; Tricks</h2>
+<p><strong>The Ghost Refactor</strong></p>
+<p><strong>The Scenario</strong>: You’re in the middle of a complex Rust feature (Change C), and
+you realize a function in the base (Change A) needs to be public or renamed for
+this to work.</p>
+<ol>
+<li>
+<p><code>jj new A -m "quick fix"</code> → Creates a new “slice” right after A.</p>
+</li>
+<li>
+<p>Make your change.</p>
+</li>
+<li>
+<p><code>jj squash</code> → This “melts” the fix directly into A.</p>
+</li>
+</ol>
+<hr />
+<p><strong>Use <code>jj describe</code> as a Task List</strong></p>
+<p>Because <code>jj</code> doesn’t require a “commit” to save work, you can use descriptions
+to manage your focus.</p>
+<p>When you start a session, create a few empty changes:</p>
+<ol>
+<li>
+<p><code>jj new main -m "Update Cargo.toml"</code></p>
+</li>
+<li>
+<p><code>jj new -m "Add pixel conversion logic"</code></p>
+</li>
+<li>
+<p><code>jj new -m "Fix CLI output formatting"</code></p>
+</li>
+</ol>
+<p>Now we have a roadmap. Use <code>jj edit</code> to jump into whichever task you feel like
+doing. <code>jj</code> tracks the progress of each. No need to <code>stash</code> when jumping between
+tasks because of the working copy commit.</p>
+<hr />
+<p><strong>Breaking up your Current set of Changes into Atomic Commits: “The Atomic
+Shredder” <code>jj split</code></strong></p>
+<p>Often I’ll just keep working on a bug or feature until it works, not
+particularly concerned about my VCS history. Let’s say I spent 3 hours hacking
+on a project of mine to get a feature working and I touched 10 files. It works,
+but the commit is a mess.</p>
+<p>With the <code>gitpatch</code> tool, <code>jj split -i</code> makes it simple to break down many
+changes into logical “atomic commits” using a simple <code>y</code>/ <code>n</code> interface.</p>
+<p>You can actually use both <code>jj commit -i</code> &amp; <code>jj split -i</code> to break down changes
+in <code>@</code> into smaller changes. <code>jj commit -i</code> is ergonomically tuned for “push
+some current work down, leave the rest in @”.</p>
+<p>If your changes are already in <code>@-</code> (or any earlier commit):</p>
+<ul>
+<li>
+<p><code>jj commit -i</code> can’t help, because it only ever operates on <code>@</code>.</p>
+</li>
+<li>
+<p><code>jj split -i -r @-</code> (or equivalent) can be used to modify an existing commit
+in history.</p>
+</li>
+</ul>
+<p><strong>As a rule of thumb</strong>:</p>
+<ul>
+<li>
+<p>Changes in <code>@</code> → use <code>jj commit -i</code> to peel off a clean piece, and also
+<code>jj squash -i</code> to squash a subset of changes from the working copy into the
+parent commit.</p>
+</li>
+<li>
+<p>Changes in <code>@-</code> (or earlier) → use <code>jj split -i</code> to rewrite that commit</p>
+</li>
+</ul>
 ]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/vcs/practical_jj.html</guid><pubDate>Mon, 16 Mar 2026 00:00:00 +0000</pubDate></item><item><title>The Dendritic Pattern with flake-parts</title><link>https://saylesss88.github.io/flakes/dendritic_flake_parts.html</link><description><![CDATA[<h1>The Dendritic Pattern with flake-parts</h1>
 <p><img src="../images/dendritic_nix.png" alt="Dendritic Logo" />–<a href="https://github.com/mightyiam/dendritic">dendretic repo</a></p>
 <p>In the early days of Flakes, users often ended up with a massive, monolithic
