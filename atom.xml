@@ -161,6 +161,12 @@ revision, there is no in-between state.&lt;/p&gt;
 In the example above, the working copy is empty, so to push I’d run
 &lt;code&gt;jj bookmark set main -r @-&lt;/code&gt; to point the &lt;code&gt;main&lt;/code&gt; bookmark at the latest changes,
 then &lt;code&gt;jj git push&lt;/code&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;jj git push&lt;/code&gt;: By default, pushes tracking bookmarks pointing to
+&lt;code&gt;remote_bookmarks(remote=&amp;lt;remote&amp;gt;)..@&lt;/code&gt;. Use &lt;code&gt;--bookmark&lt;/code&gt; to push specific
+bookmarks. Use &lt;code&gt;--all&lt;/code&gt; to push all bookmarks. Use &lt;code&gt;--change&lt;/code&gt; to generate
+bookmark names based on the change IDs of specific commits.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;p&gt;If the working copy isn’t empty and those changes are what I want to push, I’d
 instead run &lt;code&gt;jj bookmark set main -r @&lt;/code&gt;, followed by &lt;code&gt;jj git push&lt;/code&gt;. Once you
 understand this distinction, the rest of the workflow feels fairly intuitive.&lt;/p&gt;
@@ -235,8 +241,9 @@ It can be referred to in revsets by the function &lt;code&gt;root()&lt;/code&gt;
 &lt;p&gt;JJ treats the working copy as a commit rather than having an index like Git.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;If we wanted to push right now we could with &lt;code&gt;jj git push&lt;/code&gt;, but let’s first
-learn a bit more about how &lt;code&gt;jj&lt;/code&gt; works.&lt;/p&gt;
+&lt;p&gt;If we wanted to push right now we could with &lt;code&gt;jj git push&lt;/code&gt; (or equivalently
+&lt;code&gt;jj git push --bookmark main&lt;/code&gt;), but let’s first learn a bit more about how &lt;code&gt;jj&lt;/code&gt;
+works.&lt;/p&gt;
 &lt;p&gt;Let’s say we’re done with the current change and we’re ready to make it
 immutable and start a new change:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯ jj new -m &quot;chore: change username &amp;amp; hostname in flake.nix&quot;
@@ -538,21 +545,23 @@ because the working copy becomes immutable after the push.&lt;/p&gt;
 &lt;p&gt;List all anonymous branch heads:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log -r &apos;heads(all())&apos;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  flake   HEAD
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  flake   HEAD
 ❯  jj st
 The working copy has no changes.
 Working copy  (@) : z 6f7550bc (empty) (no description set)
 Parent commit (@-): k a8212254 main | chore(home): remove comments
 
-  flake   HEAD
+  flake   HEAD
 ❯  jj log
 @  z saylesss87@proton.me 2026-03-21 09:35:33 6f7550bc
 │  (empty) (no description set)
 ◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
 │  chore(home): remove comments
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I then described the current change with &lt;code&gt;jj desc&lt;/code&gt; and to create another
-“branch”, I ran &lt;code&gt;jj new main&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;In order to branch off, you need 2 changes with the same parent. Below we see
+that after running &lt;code&gt;jj desc&lt;/code&gt; the first time that the Parent commit has Change ID
+&lt;code&gt;k&lt;/code&gt;, so to branch off we could run &lt;code&gt;jj new k&lt;/code&gt;, which is the same as
+&lt;code&gt;jj new main&lt;/code&gt; in this case.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj desc -m &quot;branch 1: learning about jj branches&quot;
 Working copy  (@) now at: z bc0884d2 (empty) branch 1: learning about jj branches
 Parent commit (@-)      : k a8212254 main | chore(home): remove comments
@@ -572,10 +581,11 @@ Parent commit (@-)      : k a8212254 main | chore(home): remove comments
 ~
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;To work on this branch, I would just continue working and run &lt;code&gt;jj new&lt;/code&gt; to
-continue stacking changes on this branch. When I want to work on the other
-“branch” I can just run &lt;code&gt;jj edit u&lt;/code&gt; in this case, and my working copy will now
-be on the other branch “branch 2”, and &lt;code&gt;jj new&lt;/code&gt; will stack changes on that
-branch if that makes sense.&lt;/p&gt;
+continue stacking changes on this branch.&lt;/p&gt;
+&lt;p&gt;When I want to work on the other “branch” I can just run &lt;code&gt;jj edit u&lt;/code&gt; in this
+case, and my working copy will now be on the other branch “branch 2”, and once
+my working copy is pointed at Change ID &lt;code&gt;u&lt;/code&gt;, &lt;code&gt;jj new&lt;/code&gt; will stack changes on that
+branch.&lt;/p&gt;
 &lt;p&gt;In Git, you &lt;code&gt;checkout&lt;/code&gt; a branch name; in &lt;code&gt;jj&lt;/code&gt;, you just move your working copy
 (&lt;code&gt;@&lt;/code&gt;) to whichever commit you want to build on.&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
@@ -767,6 +777,7 @@ PR from whatever you’re currently working on:&lt;/p&gt;
 &lt;/ol&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Working copy @ is the tip you want:
 jj bookmark set main -r @
+# Or equivalently `jj bookmark set main` since commands default to the working copy
 jj git push
 &lt;/code&gt;&lt;/pre&gt;
 &lt;ol start=&quot;3&quot;&gt;
@@ -817,7 +828,50 @@ be “trapped” behind the refactor.&lt;/p&gt;
 takes three days to fix, you can still &lt;code&gt;jj git push&lt;/code&gt; the “Helix Fix” to &lt;code&gt;main&lt;/code&gt;
 immediately because it’s a direct child of &lt;code&gt;main&lt;/code&gt;. It isn’t “waiting” for the
 other commits.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Fixing Divergent Branches&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;jj&lt;/code&gt; makes it easy to fix divergent branches with &lt;code&gt;jj forget&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;As an example imagine this scenario:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;On your Laptop: You finish a feature and jj git push. Local main and
+origin/main are now at Revision B.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;On your Desktop: You forgot to pull. Local main is still at Revision A. You
+start hacking and create Revision C.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The Mess: You run &lt;code&gt;jj git fetch&lt;/code&gt;. Now your Desktop sees:&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;main&lt;/code&gt; (local) at C&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;main@origin&lt;/code&gt; at B&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj&lt;/code&gt; freaks out and marks the bookmark as diverged (main*).&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;jj bookmark forget main&lt;/code&gt; is the “I don’t want to think about it” button. It
+deletes the &lt;code&gt;main*&lt;/code&gt; label on your Desktop so you can just fetch the “real” one
+from the Laptop/GitHub and rebase your new work (C) on top of it.&lt;/p&gt;
+&lt;hr /&gt;
 &lt;h2&gt;Tips &amp;amp; Tricks&lt;/h2&gt;
+&lt;p&gt;Your History is just a stack of diffs:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj commit -i&lt;/code&gt;: Slices a diff off your current work.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj split -i&lt;/code&gt;: Slices an existing diff into two.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;jj bookmark forget&lt;/code&gt;: Deletes a label that got messy.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
 &lt;p&gt;&lt;strong&gt;The Ghost Refactor&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;The Scenario&lt;/strong&gt;: You’re in the middle of a complex Rust feature (Change C), and
 you realize a function in the base (Change A) needs to be public or renamed for
@@ -9269,7 +9323,7 @@ jj git push --help
 &lt;details&gt;
 &lt;summary&gt; ✔️ Click to Expand Key Concepts &lt;/summary&gt;
 &lt;ol&gt;
-&lt;li&gt;Working Copy as Commit&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Working Copy as Commit&lt;/strong&gt;&lt;/li&gt;
 &lt;/ol&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -9284,7 +9338,7 @@ in the current commit.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;ol start=&quot;2&quot;&gt;
-&lt;li&gt;Branchless Workflow and Bookmarks&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Branchless Workflow and Bookmarks&lt;/strong&gt;&lt;/li&gt;
 &lt;/ol&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -9304,18 +9358,14 @@ accidental sharing of unfinished work.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;ol start=&quot;3&quot;&gt;
-&lt;li&gt;Automatic Tracking and Simpler Workflow&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Automatic Tracking and Simpler Workflow&lt;/strong&gt;&lt;/li&gt;
 &lt;/ol&gt;
+&lt;p&gt;To stop tracking a specific file, first add it to your &lt;code&gt;.gitignore&lt;/code&gt;, then run
+&lt;code&gt;jj untrack &amp;lt;file&amp;gt;&lt;/code&gt;&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;Adding or removing files is automatically tracked, no need for explicit &lt;code&gt;add&lt;/code&gt;
-or &lt;code&gt;rm&lt;/code&gt; commands.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;The working copy acts as a live snapshot of your workspace. Commands first
+&lt;li&gt;The working copy acts as a live snapshot of your workspace. Commands first
 sync filesystem changes into this commit, then perform the requested
-operation, and finally update the working copy if needed.&lt;/p&gt;
-&lt;/li&gt;
+operation, and finally update the working copy if needed.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;ol start=&quot;4&quot;&gt;
 &lt;li&gt;Operation Log and Undo&lt;/li&gt;
@@ -9391,36 +9441,118 @@ state.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Simplified Workflow&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Check where you’re at, JJ doesn’t care about commits without descriptions but
 Git and GitHub do:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj st
-Working copy  (@) now at: zuknrzrx 8a20bfa7 (empty) (no description set)
-Parent commit (@-)      : yzppulzo bdd64e8d main | (empty) &quot;Enable Rofi and update nu func for jj&quot;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj st
+The working copy has no changes.
+Working copy  (@) : n a8b19ca2 (empty) (no description set)
+Parent commit (@-): k 8c487558 edit(jj): ui.color = always diff.format color-words
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;We can see that the Working copy is &lt;code&gt;(empty)&lt;/code&gt; and has &lt;code&gt;(no description set)&lt;/code&gt;,
 lets give it a description:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;My feature&quot;
-# ...edit files...
-# Check where we&apos;re at again
-jj st
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj desc -m &quot;chore: nix flake update&quot;
+Working copy  (@) now at: n 5c36a33d (empty) chore: nix flake update
+Parent commit (@-)      : k 8c487558 edit(jj): ui.color = always diff.format color-words
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I ran &lt;code&gt;nix flake update&lt;/code&gt;, let’s check our status:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj st
 Working copy changes:
-M home/jj.nix
-Working copy  (@) : zuknrzrx bcd3d965 My feature
-Parent commit (@-): yzppulzo bdd64e8d main | (empty) &quot;Enable Rofi and update nu func for jj&quot;
-
-# Tell JJ which branch we&apos;re interested in
-jj bookmark set main
-# Push this change to main
-jj git push
-Changes to push to origin:
-  Move forward bookmark main from bdd64e8d6ea5 to bcd3d96567f8
-remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
-Warning: The working-copy commit in workspace &apos;default&apos; became immutable, so a new commit has been created on top of it.
-Working copy  (@) now at: ktlywzlx 8e88ddbe (empty) (no description set)
-Parent commit (@-)      : zuknrzrx bcd3d965 main | My feature
+M flake.lock
+Working copy  (@) : n d54ab019 chore: nix flake update
+Parent commit (@-): k 8c487558 edit(jj): ui.color = always diff.format color-words
 &lt;/code&gt;&lt;/pre&gt;
 &lt;ul&gt;
-&lt;li&gt;Above we can see that the Working copy &lt;code&gt;@&lt;/code&gt; is no longer empty, and now has the
-description “My feature”.&lt;/li&gt;
+&lt;li&gt;We can see that running &lt;code&gt;nix flake update&lt;/code&gt; modified &lt;code&gt;M&lt;/code&gt; our &lt;code&gt;flake.lock&lt;/code&gt;. To
+finalize this change we can run &lt;code&gt;jj new&lt;/code&gt;.&lt;/li&gt;
 &lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj new
+Working copy  (@) now at: v cad9d50b (empty) (no description set)
+Parent commit (@-)      : n d54ab019 chore: nix flake update
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, looking at the output of &lt;code&gt;jj new&lt;/code&gt; above, we can see that the Working copy
+is empty and has no description set. If we want to push these changes to GitHub,
+we have to point the &lt;code&gt;main&lt;/code&gt; bookmark where the changes exist, the Parent commit
+in this case:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj bookmark set main -r @-
+Moved 1 bookmarks to n d54ab019 main* | chore: nix flake update
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Notice the &lt;code&gt;main*&lt;/code&gt;, the &lt;code&gt;*&lt;/code&gt; indicates that our local &lt;code&gt;main&lt;/code&gt; has changes that
+&lt;code&gt;main@origin&lt;/code&gt; does not have.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Ok, our &lt;code&gt;main&lt;/code&gt; bookmark is now pointing at our latest changes. We can now run
+&lt;code&gt;jj git push&lt;/code&gt; to push them to the remote and make them a part of the permanent
+record:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj git push
+Changes to push to origin:
+  Move forward bookmark main from 3956b1386d0a to d54ab0197bef
+git: Enumerating objects: 14, done.
+git: Counting objects: 100% (14/14), done.
+git: Delta compression using up to 16 threads
+git: Compressing objects: 100% (10/10), done.
+git: Writing objects: 100% (10/10), 1.52 KiB | 520.00 KiB/s, done.
+git: Total 10 (delta 7), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7/7), completed with 4 local objects.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Success! Let’s check out our status again:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj st
+The working copy has no changes.
+Working copy  (@) : v cad9d50b (empty) (no description set)
+Parent commit (@-): n d54ab019 main | chore: nix flake update
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Notice that &lt;code&gt;main*&lt;/code&gt; is now just &lt;code&gt;main&lt;/code&gt;, indicating our local and remotes are
+in sync!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let’s check out the log:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
+@  v sayls8@proton.me 2026-03-22 12:35:34 5835b760
+│  (no description set)
+◆  n sayls8@proton.me 2026-03-22 12:26:20 main d54ab019
+│  chore: nix flake update
+~
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;◆&lt;/code&gt; indicates that change &lt;code&gt;n&lt;/code&gt; is now immutable after the push. Since it is
+now immutable, &lt;code&gt;jj&lt;/code&gt; automatically creates a new change on top of &lt;code&gt;main&lt;/code&gt; and
+moves the working copy to it.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This is the hardest part for most people to grasp so let’s try another example
+where this time we push changes from the working copy.&lt;/p&gt;
+&lt;p&gt;I’ll add a simple &lt;code&gt;README.md&lt;/code&gt; to our flake root:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯ touch README.md
+
+
+❯  jj st
+Working copy changes:
+A README.md
+Working copy  (@) : v 5835b760 (no description set)
+Parent commit (@-): n d54ab019 main | chore: nix flake update
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Let’s give the change a description. Remember that &lt;code&gt;jj&lt;/code&gt; commands default to the
+working copy, so &lt;code&gt;jj desc&lt;/code&gt; is the same is &lt;code&gt;jj desc -r @&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj desc -m &quot;chore: add README&quot;
+Working copy  (@) now at: v cdbb489f chore: add README
+Parent commit (@-)      : n d54ab019 main | chore: nix flake update
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now rather than finalizing the current change with &lt;code&gt;jj new&lt;/code&gt;, we will just point
+the &lt;code&gt;main&lt;/code&gt; bookmark at the working copy &lt;code&gt;@&lt;/code&gt; and then push.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj bookmark set main -r @
+Moved 1 bookmarks to v cdbb489f main* | chore: add README
+
+  flake   HEAD [!]
+❯  jj git push
+Changes to push to origin:
+  Move forward bookmark main from d54ab0197bef to cdbb489fecc0
+  git: Enumerating objects: 4, done.
+  git: Counting objects: 100% (4/4), done.
+  git: Delta compression using up to 16 threads
+  git: Compressing objects: 100% (2/2), done.
+  git: Writing objects: 100% (3/3), 332 bytes | 332.00 KiB/s, done.
+  git: Total 3 (delta 1), reused 0 (delta 0), pack-reused 0 (from 0)
+  remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+  Warning: The working-copy commit in workspace &apos;default&apos; became immutable, so a new commit has been created on top of it.
+  Working copy  (@) now at: s 51306e16 (empty) (no description set)
+  Parent commit (@-)      : v cdbb489f main | chore: add README
+&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;With jujutsu, most commands allow you to pass &lt;code&gt;-r&lt;/code&gt;/&lt;code&gt;--revision&lt;/code&gt;&lt;/p&gt;
 &lt;h2&gt;What is the Jujutsu Working Copy&lt;/h2&gt;
 &lt;details&gt;
@@ -9461,14 +9593,14 @@ Working copy  (@) now at: q a3f5afe8 (empty) (no description set)
 Parent commit (@-)      : t d671f27c Initial commit of dev environment
 
 jj log
-@  q saylesss87@proton.me 2026-03-15 09:10:46 a3f5afe8
+@  q sayls8@proton.me 2026-03-15 09:10:46 a3f5afe8
 │  (empty) (no description set)
-○  t saylesss87@proton.me 2026-03-15 09:04:17 d671f27c
+○  t sayls8@proton.me 2026-03-15 09:04:17 d671f27c
 │  Initial commit of dev environment
 ◆  z root() 00000000
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Since the repo wasn’t an existing git repo there are no existing branches (bookmarks).
-To share our work we’ll want to create a branch:&lt;/p&gt;
+&lt;p&gt;Since the repo wasn’t an existing git repo there are no existing branches
+(bookmarks). To share our work we’ll want to create a branch:&lt;/p&gt;
 &lt;p&gt;Above is a repo that was just created with &lt;code&gt;jj git init --colocate&lt;/code&gt;. Notice that
 there is already 2 changes with change IDs &lt;code&gt;t&lt;/code&gt; &amp;amp; &lt;code&gt;z&lt;/code&gt; and 2 commits with
 identifiers &lt;code&gt;e8fd7ee0&lt;/code&gt; &amp;amp; &lt;code&gt;00000000&lt;/code&gt;.&lt;/p&gt;
@@ -9749,18 +9881,7 @@ M README.md
 Working copy  (@) : mnkrokmt 7f0558f8 say hello and goodbye
 Parent commit (@-): ywyvxrts 986d16f5 main | test3
 &lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;We can see that &lt;code&gt;ywy&lt;/code&gt; is the &lt;code&gt;main&lt;/code&gt; branch so lets create our change on top of
-that. We can also see that it’s (&lt;code&gt;@-&lt;/code&gt;), and this is actually what &lt;code&gt;main&lt;/code&gt; will
-always be. Once I understood this everything came together.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj new @-
-Working copy  (@) now at: kxwrsmmu bc7e8144 (empty) (no description set)
-Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
-Added 0 files, modified 1 files, removed 0 files
-jj desc @ -m &quot;Add a devShell&quot;
-Working copy  (@) now at: kxwrsmmu eacafd73 (empty) Add a devShell
-Parent commit (@-)      : ywyvxrts 986d16f5 main | test3
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Being more explicit about your commands ensures both you and jj know where
 everything should go. (i.e. &lt;code&gt;jj desc @ -m&lt;/code&gt; explicitly describes &lt;code&gt;@&lt;/code&gt;, the working
