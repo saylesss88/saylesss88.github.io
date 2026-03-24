@@ -238,7 +238,7 @@ Hint: Running `git clean -xdf` will remove `.jj/`!
   learn-jj   main [?]
 ❯  git remote add origin git@github.com:sayls8/learn-jj.git
 
-  learn-j   main [?]
+  learn-j   main [?]
 ❯  jj bookmark create main -r @
 Done importing changes from the underlying Git repo.
 Created 1 bookmarks pointing to l bd3847c0 main | (no description set)
@@ -565,9 +565,44 @@ Hint: Bookmarks marked as deleted can be *deleted permanently* on the remote by 
 </code></pre>
 <p>Every time you run <code>jj git push</code>, <code>jj</code> automatically runs <code>jj new main</code> for you
 because the working copy becomes immutable after the push.</p>
-<p>List all anonymous branch heads:</p>
+<p>Show heads of all anonymous branches:</p>
 <pre><code class="language-bash">jj log -r 'heads(all())'
 </code></pre>
+<p>To visualize an anonymous branch, Steve’s Jujutsu tutorial does a great job of
+displaying this:</p>
+<pre><code class="language-text">
+                     ┌───┐ ┌───┐
+                 ┌───┤ F ◄─┤ G │
+                 │   └───┘ └───┘
+                 │
+ ┌───┐  ┌───┐  ┌─▼─┐ ┌───┐ ┌───┐
+ │ A ◄──┤ B ◄──┤ C ◄─┤ D ◄─┤ E │
+ └───┘  └───┘  └───┘ └───┘ └───┘
+
+</code></pre>
+<p>Here, we’d say that <code>F</code> and <code>G</code> are two changes that are “on a branch,” because
+it looks like they’re branching off from <code>D</code> and <code>E</code>.
+<a href="https://steveklabnik.github.io/jujutsu-tutorial/branching-merging-and-conflicts/anonymous-branches.html#what-is-a-branch-conceptually">Steves Jujutsu tutorial What is a branch conceptually?</a></p>
+<p>The above sentence confused me a bit. <code>F</code> and <code>G</code> are described as branching
+“off” of the line containing <code>D</code> and <code>E</code>. However, in the literal graph
+structure, they diverge from <code>C</code>.</p>
+<p>Since <code>F</code> and <code>D</code> both point to <code>C</code>, they are “siblings”. Because no other
+commits point back to <code>E</code> and <code>G</code>, they are the only two heads.</p>
+<p>In Jujutsu, a branch is just any path of commits that hasn’t been merged yet.
+Since E and G are both visible and unmerged, we have two “anonymous branches”
+currently active.</p>
+<p>The output of <code>jj log -r 'heads(all())'</code> with the above example, would yield:</p>
+<pre><code class="language-text">○  G
+│
+~
+│
+○  E
+│
+~
+</code></pre>
+<ul>
+<li><code>G</code> and <code>E</code> are the heads of the anonymous branches.</li>
+</ul>
 <pre><code class="language-bash">  flake   HEAD
 ❯  jj st
 The working copy has no changes.

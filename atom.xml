@@ -239,7 +239,7 @@ Hint: Running `git clean -xdf` will remove `.jj/`!
   learn-jj   main [?]
 ❯  git remote add origin git@github.com:sayls8/learn-jj.git
 
-  learn-j   main [?]
+  learn-j   main [?]
 ❯  jj bookmark create main -r @
 Done importing changes from the underlying Git repo.
 Created 1 bookmarks pointing to l bd3847c0 main | (no description set)
@@ -566,9 +566,44 @@ Hint: Bookmarks marked as deleted can be *deleted permanently* on the remote by 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Every time you run &lt;code&gt;jj git push&lt;/code&gt;, &lt;code&gt;jj&lt;/code&gt; automatically runs &lt;code&gt;jj new main&lt;/code&gt; for you
 because the working copy becomes immutable after the push.&lt;/p&gt;
-&lt;p&gt;List all anonymous branch heads:&lt;/p&gt;
+&lt;p&gt;Show heads of all anonymous branches:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj log -r &apos;heads(all())&apos;
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To visualize an anonymous branch, Steve’s Jujutsu tutorial does a great job of
+displaying this:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;
+                     ┌───┐ ┌───┐
+                 ┌───┤ F ◄─┤ G │
+                 │   └───┘ └───┘
+                 │
+ ┌───┐  ┌───┐  ┌─▼─┐ ┌───┐ ┌───┐
+ │ A ◄──┤ B ◄──┤ C ◄─┤ D ◄─┤ E │
+ └───┘  └───┘  └───┘ └───┘ └───┘
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, we’d say that &lt;code&gt;F&lt;/code&gt; and &lt;code&gt;G&lt;/code&gt; are two changes that are “on a branch,” because
+it looks like they’re branching off from &lt;code&gt;D&lt;/code&gt; and &lt;code&gt;E&lt;/code&gt;.
+&lt;a href=&quot;https://steveklabnik.github.io/jujutsu-tutorial/branching-merging-and-conflicts/anonymous-branches.html#what-is-a-branch-conceptually&quot;&gt;Steves Jujutsu tutorial What is a branch conceptually?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The above sentence confused me a bit. &lt;code&gt;F&lt;/code&gt; and &lt;code&gt;G&lt;/code&gt; are described as branching
+“off” of the line containing &lt;code&gt;D&lt;/code&gt; and &lt;code&gt;E&lt;/code&gt;. However, in the literal graph
+structure, they diverge from &lt;code&gt;C&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Since &lt;code&gt;F&lt;/code&gt; and &lt;code&gt;D&lt;/code&gt; both point to &lt;code&gt;C&lt;/code&gt;, they are “siblings”. Because no other
+commits point back to &lt;code&gt;E&lt;/code&gt; and &lt;code&gt;G&lt;/code&gt;, they are the only two heads.&lt;/p&gt;
+&lt;p&gt;In Jujutsu, a branch is just any path of commits that hasn’t been merged yet.
+Since E and G are both visible and unmerged, we have two “anonymous branches”
+currently active.&lt;/p&gt;
+&lt;p&gt;The output of &lt;code&gt;jj log -r &apos;heads(all())&apos;&lt;/code&gt; with the above example, would yield:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-text&quot;&gt;○  G
+│
+~
+│
+○  E
+│
+~
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;G&lt;/code&gt; and &lt;code&gt;E&lt;/code&gt; are the heads of the anonymous branches.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  flake   HEAD
 ❯  jj st
 The working copy has no changes.
