@@ -604,98 +604,143 @@ currently active.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;G&lt;/code&gt; and &lt;code&gt;E&lt;/code&gt; are the heads of the anonymous branches.&lt;/li&gt;
 &lt;/ul&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  flake   HEAD
-❯  jj st
-The working copy has no changes.
-Working copy  (@) : z 6f7550bc (empty) (no description set)
-Parent commit (@-): k a8212254 main | chore(home): remove comments
-
-  flake   HEAD
-❯  jj log
-@  z saylesss87@proton.me 2026-03-21 09:35:33 6f7550bc
-│  (empty) (no description set)
-◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
-│  chore(home): remove comments
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;In order to branch off, you need 2 changes with the same parent. Below we see
-that after running &lt;code&gt;jj desc&lt;/code&gt; the first time that the Parent commit has Change ID
-&lt;code&gt;k&lt;/code&gt;, so to branch off we could run &lt;code&gt;jj new k&lt;/code&gt;, which is the same as
-&lt;code&gt;jj new main&lt;/code&gt; in this case.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj desc -m &quot;branch 1: learning about jj branches&quot;
-Working copy  (@) now at: z bc0884d2 (empty) branch 1: learning about jj branches
-Parent commit (@-)      : k a8212254 main | chore(home): remove comments
-
-❯  jj new main -m &quot;branch 2: more flake-parts modules&quot;
-Working copy  (@) now at: u 131dc0d9 (empty) branch 2: more flake-parts modules
-Parent commit (@-)      : k a8212254 main | chore(home): remove comments
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Let’s check out what that left us with:&lt;/p&gt;
+&lt;h2&gt;Examples&lt;/h2&gt;
+&lt;p&gt;Start at an empty change:&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
-@  z saylesss87@proton.me 2026-03-21 10:47:46 bc0884d2
-│  (empty) branch 1: learning about jj branches
-│ ○  u saylesss87@proton.me 2026-03-21 10:48:22 131dc0d9
-├─╯  (empty) branch 2: more flake-parts modules
-◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
-│  chore(home): remove comments
-~
+@  p saylesss87@proton.me 2026-03-24 18:05:54 6469af06
+│  (no description set)
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;To work on this branch, I would just continue working and run &lt;code&gt;jj new&lt;/code&gt; to
-continue stacking changes on this branch.&lt;/p&gt;
-&lt;p&gt;When I want to work on the other “branch” I can just run &lt;code&gt;jj edit u&lt;/code&gt; in this
-case, and my working copy will now be on the other branch “branch 2”, and once
-my working copy is pointed at Change ID &lt;code&gt;u&lt;/code&gt;, &lt;code&gt;jj new&lt;/code&gt; will stack changes on that
-branch.&lt;/p&gt;
+&lt;p&gt;Give the current change a description:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj desc -m &quot;refactor(waybar): waybar flake-parts module&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
+@  p saylesss87@proton.me 2026-03-24 18:06:31 627d846c
+│  refactor(waybar): waybar flake-parts module
+○  yl saylesss87@proton.me 2026-03-24 17:55:00 56d13161
+│  refactor(foot): foot flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To create a branch we need 2 changes with the same parent, our current changes
+parent is &lt;code&gt;yl&lt;/code&gt; so let’s make our new change off of that:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj new yl -m &quot;chore: add better documentation to README&quot;
+Working copy  (@) now at: v 4697897a (empty) chore: add better documentation to README
+Parent commit (@-)      : yl 56d13161 refactor(foot): foot flake-parts module
+Added 1 files, modified 1 files, removed 1 files
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Let’s check out our log to see our anonymous branches:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj
+@  v saylesss87@proton.me 2026-03-24 18:12:04 4697897a
+│  (empty) chore: add better documentation to README
+│ ○  p saylesss87@proton.me 2026-03-24 18:06:31 627d846c
+├─╯  refactor(waybar): waybar flake-parts module
+○  yl saylesss87@proton.me 2026-03-24 17:55:00 56d13161
+│  refactor(foot): foot flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can see that &lt;code&gt;p&lt;/code&gt; branches off from &lt;code&gt;yl&lt;/code&gt;, let’s make this change before
+switching to the other branch.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj st
+Working copy changes:
+M README.md
+Working copy  (@) : v 23d94e56 chore: add better documentation to README
+Parent commit (@-): yl 56d13161 refactor(foot): foot flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# This effectively moves the working copy to the other &quot;branch&quot;
+❯  jj edit p
+Working copy  (@) now at: p 627d846c refactor(waybar): waybar flake-parts module
+Parent commit (@-)      : yl 56d13161 refactor(foot): foot flake-parts module
+Added 1 files, modified 2 files, removed 1 files
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
 &lt;p&gt;In Git, you &lt;code&gt;checkout&lt;/code&gt; a branch name; in &lt;code&gt;jj&lt;/code&gt;, you just move your working copy
 (&lt;code&gt;@&lt;/code&gt;) to whichever commit you want to build on.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
-@  z sayls8@proton.me 2026-03-21 11:00:42 4c81f562
-│  branch 1: learning about jj branches
-│ ○  x sayls8@proton.me 2026-03-21 10:54:03 d76256ac
-│ │  branch 2: adding more changes to this branch
-│ ○  u sayls8@proton.me 2026-03-21 10:51:35 2a628569
-├─╯  branch 2: more flake-parts modules
-◆  k sayls8@proton.me 2026-03-21 09:35:21 main a8212254
-│  chore(home): remove comments
+&lt;/blockquote&gt;
+&lt;p&gt;I’ve added the new flake-parts module and deleted the old home-manager style
+module:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj st
+Working copy changes:
+D home/waybar.nix
+M hosts/magic/home.nix
+A parts/waybar.nix
+Working copy  (@) : p 627d846c refactor(waybar): waybar flake-parts module
+Parent commit (@-): yl 56d13161 refactor(foot): foot flake-parts module
 &lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;Now “branch 2” has 2 changes on it.&lt;/li&gt;
-&lt;/ul&gt;
+&lt;p&gt;Let’s add another change on this branch to solidify these concepts:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj new -m &quot;refactor(nh): nh flake-parts module&quot;
+Working copy  (@) now at: n ac086b55 (empty) refactor(nh): nh flake-parts module
+Parent commit (@-)      : p 627d846c refactor(waybar): waybar flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And our log to show that this branch has grown:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
+@  n saylesss87@proton.me 2026-03-24 18:22:12 ac086b55
+│  (empty) refactor(nh): nh flake-parts module
+○  p saylesss87@proton.me 2026-03-24 18:06:31 627d846c
+│  refactor(waybar): waybar flake-parts module
+│ ○  v saylesss87@proton.me 2026-03-24 18:17:51 23d94e56
+├─╯  chore: add better documentation to README
+○  yl saylesss87@proton.me 2026-03-24 17:55:00 56d13161
+│  refactor(foot): foot flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, let’s first merge the README branch into this one. We are worried about the
+heads of the anonymous branches right now:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log -r &apos;heads(all())&apos;
+@  n saylesss87@proton.me 2026-03-24 18:22:12 ac086b55
+│  (empty) refactor(nh): nh flake-parts module
+~
+
+○  v saylesss87@proton.me 2026-03-24 18:17:51 23d94e56
+│  chore: add better documentation to README
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A merge is a new change that has more than one parent. With JJ, you make a
+change with &lt;code&gt;jj new&lt;/code&gt;. We can see that we need to make a change with both &lt;code&gt;n&lt;/code&gt; and
+&lt;code&gt;v&lt;/code&gt; as parents from the log output above:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj new n v -m &quot;feat: merge in README docs&quot;
+Working copy  (@) now at: yn a923db65 (empty) feat: merge in README docs
+Parent commit (@-)      : n ac086b55 (empty) refactor(nh): nh flake-parts module
+Parent commit (@-)      : v 23d94e56 chore: add better documentation to README
+Added 0 files, modified 1 files, removed 0 files
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
+@    yn saylesss87@proton.me 2026-03-24 18:28:47 a923db65
+├─╮  (empty) feat: merge in README docs
+│ ○  v saylesss87@proton.me 2026-03-24 18:17:51 23d94e56
+│ │  chore: add better documentation to README
+○ │  n saylesss87@proton.me 2026-03-24 18:22:12 ac086b55
+│ │  (empty) refactor(nh): nh flake-parts module
+○ │  p saylesss87@proton.me 2026-03-24 18:06:31 627d846c
+├─╯  refactor(waybar): waybar flake-parts module
+○  yl saylesss87@proton.me 2026-03-24 17:55:00 56d13161
+│  refactor(foot): foot flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That messes up our perfectly linear history, let’s rebase instead.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj undo
+Undid operation: a74a45f02043 (2026-03-24 18:28:47) new empty commit
+Restored to operation: 848c180f2a04 (2026-03-24 18:22:12) new empty commit
+Working copy  (@) now at: n ac086b55 (empty) refactor(nh): nh flake-parts module
+Parent commit (@-)      : p 627d846c refactor(waybar): waybar flake-parts module
+Added 0 files, modified 1 files, removed 0 files
+&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Rebase is your tool for changing the ‘parent’ of a commit. If you have two
 parallel features (siblings) and you decide one should follow the other (linear
 stack), you rebase the second feature onto the first.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj rebase -r v -o n
+Rebased 1 commits to destination
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now our history is back to being completely linear:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
+○  v saylesss87@proton.me 2026-03-24 18:30:36 8101b0dd
+│  chore: add better documentation to README
+@  n saylesss87@proton.me 2026-03-24 18:22:12 ac086b55
+│  (empty) refactor(nh): nh flake-parts module
+○  p saylesss87@proton.me 2026-03-24 18:06:31 627d846c
+│  refactor(waybar): waybar flake-parts module
+○  yl saylesss87@proton.me 2026-03-24 17:55:00 56d13161
+│  refactor(foot): foot flake-parts module
+&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;To move a stack of changes, use &lt;code&gt;jj rebase -s [Source] -d [Destination]&lt;/code&gt;. If you
 want to move a feature to the very tip of your main line, destination is &lt;code&gt;main&lt;/code&gt;.
 If you want to chain features together, destination is the previous feature’s
 head.&lt;/p&gt;
-&lt;p&gt;To take “branch 2” and stack it on top of “branch 1”:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;Rebased 2 commits to destination
-jj rebase -s u -d z
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Rebased 2 commits to destination&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;-s u&lt;/code&gt;: “Take the commit &lt;code&gt;u&lt;/code&gt; and all of its decendants (which includes &lt;code&gt;x&lt;/code&gt;).”&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;-d z&lt;/code&gt;: “Set their new parent to be &lt;code&gt;z&lt;/code&gt; (Branch 1).”&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Pay attention to the log! Since we just put branch 2 on top of branch 1, we
-probably want to move our working copy to the top of the line, &lt;code&gt;x&lt;/code&gt; in this case.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯  jj log
-○  x saylesss87@proton.me 2026-03-21 11:38:41 7045d924
-│  branch 2: adding more changes to this branch
-○  u saylesss87@proton.me 2026-03-21 11:38:41 5ba96acd
-│  branch 2: more flake-parts modules
-@  z saylesss87@proton.me 2026-03-21 11:00:42 4c81f562
-│  branch 1: learning about jj branches
-◆  k saylesss87@proton.me 2026-03-21 09:35:21 main a8212254
-│  chore(home): remove comments
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;notice that the working copy (&lt;code&gt;@&lt;/code&gt;) is all the way back at change &lt;code&gt;z&lt;/code&gt;. Let’s go
-to the end of the line to keep working:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;jj edit x
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Pay attention to where &lt;code&gt;@&lt;/code&gt; is while rebasing, to continue on this linear stack
+I’ll have to first run &lt;code&gt;jj edit v&lt;/code&gt;, then &lt;code&gt;jj new&lt;/code&gt;.&lt;/p&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Collaborating and opening PRs&lt;/h2&gt;
 &lt;p&gt;So far all the examples assumed you are the only person touching this repo. For
