@@ -87,11 +87,32 @@ them explicitly with &lt;code&gt;jj bookmark set&lt;/code&gt;.&lt;/p&gt;
 &lt;a href=&quot;https://zerowidth.com/2025/jj-tips-and-tricks/&quot;&gt;zerowidths jj-tips-and-tricks&lt;/a&gt;,
 for a more intuitive &lt;code&gt;--interactive&lt;/code&gt; workflow (The &lt;code&gt;git add -p&lt;/code&gt; Hunk-wise
 style).&lt;/p&gt;
+&lt;h2&gt;Getting Started&lt;/h2&gt;
+&lt;p&gt;It’s helpful to grasp a few Git concepts to fully understand some of the
+benefits and strengths of jujutsu. I highly suggest reading
+&lt;a href=&quot;https://www.w3tutorials.net/blog/how-to-compare-the-working-copy-staging-copy-and-committed-copy-of-a-file-using-git/&quot;&gt;W3Tutorials.net How to Compare Working Copy, Staging Copy, and Committed Copy of a File in Git&lt;/a&gt;,
+it covers most of the concepts that make understanding &lt;code&gt;jj&lt;/code&gt; easier.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The &lt;strong&gt;Working Copy&lt;/strong&gt; is the version of the file you’re actively editing in
+your filesystem. It’s the “live” version you see in your text editor or IDE.
+–W3Tutorials.net&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://docs.jj-vcs.dev/latest/working-copy/&quot;&gt;Jujutsu’s Working copy commit&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“Unlike most other VCSs, Jujutsu will automatically create commits from the
+working-copy contents when they have changed. Most &lt;code&gt;jj&lt;/code&gt; commands you run will
+commit the working-copy changes if they have changed. The resulting revision
+will replace the previous working-copy revision.”&lt;/p&gt;
+&lt;/blockquote&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;❯&lt;/code&gt; will indicate a command that I ran, the rest is output.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Let’s start by cloning a project of mine to see how &lt;code&gt;jj&lt;/code&gt; works:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt; jj git clone git@github.com:sayls8/nix-snake.git
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;❯ jj git clone git@github.com:sayls8/nix-snake.git
 Fetching into new repo in &quot;/home/jr/projects/nix-snake&quot;
 remote: Enumerating objects: 88, done.
 remote: Total 88 (delta 38), reused 78 (delta 30), pack-reused 0 (from 0)
@@ -207,8 +228,9 @@ rules for creating an explicit commit history.&lt;/p&gt;
 [optional footer(s)]
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Example:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;feat: start using jj vcs
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;feat: implement dendretic pattern for boot module
 &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Useful Utils&lt;/strong&gt;&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;There is a new project that helps you create conventional commits for jj,
@@ -217,6 +239,10 @@ rules for creating an explicit commit history.&lt;/p&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;a href=&quot;https://crates.io/crates/commitlint-rs&quot;&gt;commitlint-rs&lt;/a&gt; can be used as a Git
 hook on push to enforce conventional commits.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/semantic-release/semantic-release&quot;&gt;semantic-release&lt;/a&gt;
+automates the whole package release workflow.&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h3&gt;The edit workflow&lt;/h3&gt;
@@ -237,7 +263,7 @@ Initialized repo in &quot;.&quot;
 Hint: Running `git clean -xdf` will remove `.jj/`!
 
   learn-jj   main [?]
-❯  git remote add origin git@github.com:sayls8/learn-jj.git
+❯  jj git remote add origin git@github.com:sayls8/learn-jj.git
 
   learn-j   main [?]
 ❯  jj bookmark create main -r @
@@ -277,7 +303,7 @@ Parent commit (@-)      : l 743b170d main* | chore: Initialize system flake
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;As stated above, &lt;code&gt;jj&lt;/code&gt; commands default to the working copy. So &lt;code&gt;jj new&lt;/code&gt; is the
-same as &lt;code&gt;jj new @&lt;/code&gt;. By running &lt;code&gt;jj new&lt;/code&gt; repeatedly, we build a linear stack
+same as &lt;code&gt;jj new -r @&lt;/code&gt;. By running &lt;code&gt;jj new&lt;/code&gt; repeatedly, we build a linear stack
 where each change is a child of the previous one. When we’re ready to ‘check
 in’ our work, we don’t merge; we simply move the &lt;code&gt;main&lt;/code&gt; bookmark to our
 current position and push.&lt;/p&gt;
@@ -740,7 +766,7 @@ want to move a feature to the very tip of your main line, destination is &lt;cod
 If you want to chain features together, destination is the previous feature’s
 head.&lt;/p&gt;
 &lt;p&gt;Pay attention to where &lt;code&gt;@&lt;/code&gt; is while rebasing, to continue on this linear stack
-I’ll have to first run &lt;code&gt;jj edit v&lt;/code&gt;, then &lt;code&gt;jj new&lt;/code&gt;.&lt;/p&gt;
+I’ll have to run &lt;code&gt;jj new v&lt;/code&gt;.&lt;/p&gt;
 &lt;hr /&gt;
 &lt;h2&gt;Collaborating and opening PRs&lt;/h2&gt;
 &lt;p&gt;So far all the examples assumed you are the only person touching this repo. For

@@ -86,11 +86,32 @@ them explicitly with <code>jj bookmark set</code>.</p>
 <a href="https://zerowidth.com/2025/jj-tips-and-tricks/">zerowidths jj-tips-and-tricks</a>,
 for a more intuitive <code>--interactive</code> workflow (The <code>git add -p</code> Hunk-wise
 style).</p>
+<h2>Getting Started</h2>
+<p>It’s helpful to grasp a few Git concepts to fully understand some of the
+benefits and strengths of jujutsu. I highly suggest reading
+<a href="https://www.w3tutorials.net/blog/how-to-compare-the-working-copy-staging-copy-and-committed-copy-of-a-file-using-git/">W3Tutorials.net How to Compare Working Copy, Staging Copy, and Committed Copy of a File in Git</a>,
+it covers most of the concepts that make understanding <code>jj</code> easier.</p>
+<ul>
+<li>
+<p>The <strong>Working Copy</strong> is the version of the file you’re actively editing in
+your filesystem. It’s the “live” version you see in your text editor or IDE.
+–W3Tutorials.net</p>
+</li>
+<li>
+<p><a href="https://docs.jj-vcs.dev/latest/working-copy/">Jujutsu’s Working copy commit</a></p>
+</li>
+</ul>
+<blockquote>
+<p>“Unlike most other VCSs, Jujutsu will automatically create commits from the
+working-copy contents when they have changed. Most <code>jj</code> commands you run will
+commit the working-copy changes if they have changed. The resulting revision
+will replace the previous working-copy revision.”</p>
+</blockquote>
 <ul>
 <li><code>❯</code> will indicate a command that I ran, the rest is output.</li>
 </ul>
 <p>Let’s start by cloning a project of mine to see how <code>jj</code> works:</p>
-<pre><code class="language-bash"> jj git clone git@github.com:sayls8/nix-snake.git
+<pre><code class="language-bash">❯ jj git clone git@github.com:sayls8/nix-snake.git
 Fetching into new repo in "/home/jr/projects/nix-snake"
 remote: Enumerating objects: 88, done.
 remote: Total 88 (delta 38), reused 78 (delta 30), pack-reused 0 (from 0)
@@ -206,8 +227,9 @@ rules for creating an explicit commit history.</p>
 [optional footer(s)]
 </code></pre>
 <p>Example:</p>
-<pre><code class="language-bash">feat: start using jj vcs
+<pre><code class="language-bash">feat: implement dendretic pattern for boot module
 </code></pre>
+<p><strong>Useful Utils</strong></p>
 <ul>
 <li>
 <p>There is a new project that helps you create conventional commits for jj,
@@ -216,6 +238,10 @@ rules for creating an explicit commit history.</p>
 <li>
 <p><a href="https://crates.io/crates/commitlint-rs">commitlint-rs</a> can be used as a Git
 hook on push to enforce conventional commits.</p>
+</li>
+<li>
+<p><a href="https://github.com/semantic-release/semantic-release">semantic-release</a>
+automates the whole package release workflow.</p>
 </li>
 </ul>
 <h3>The edit workflow</h3>
@@ -236,7 +262,7 @@ Initialized repo in "."
 Hint: Running `git clean -xdf` will remove `.jj/`!
 
   learn-jj   main [?]
-❯  git remote add origin git@github.com:sayls8/learn-jj.git
+❯  jj git remote add origin git@github.com:sayls8/learn-jj.git
 
   learn-j   main [?]
 ❯  jj bookmark create main -r @
@@ -276,7 +302,7 @@ Parent commit (@-)      : l 743b170d main* | chore: Initialize system flake
 <ul>
 <li>
 <p>As stated above, <code>jj</code> commands default to the working copy. So <code>jj new</code> is the
-same as <code>jj new @</code>. By running <code>jj new</code> repeatedly, we build a linear stack
+same as <code>jj new -r @</code>. By running <code>jj new</code> repeatedly, we build a linear stack
 where each change is a child of the previous one. When we’re ready to ‘check
 in’ our work, we don’t merge; we simply move the <code>main</code> bookmark to our
 current position and push.</p>
@@ -739,7 +765,7 @@ want to move a feature to the very tip of your main line, destination is <code>m
 If you want to chain features together, destination is the previous feature’s
 head.</p>
 <p>Pay attention to where <code>@</code> is while rebasing, to continue on this linear stack
-I’ll have to first run <code>jj edit v</code>, then <code>jj new</code>.</p>
+I’ll have to run <code>jj new v</code>.</p>
 <hr />
 <h2>Collaborating and opening PRs</h2>
 <p>So far all the examples assumed you are the only person touching this repo. For
