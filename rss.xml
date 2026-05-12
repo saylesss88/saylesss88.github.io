@@ -9,6 +9,22 @@ contributors can actually follow.</p>
 changes into smaller atomic changes.</p>
 <details>
 <summary> Atomic commits & Linear History explained </summary>
+<blockquote>
+<ul>
+<li><a href="https://github.com/angular/angular/blob/main/contributing-docs/commit-message-guidelines.md">Angular Commit Message Format</a></li>
+</ul>
+<pre><code class="language-text">&lt;header&gt;
+&lt;BLANK LINE&gt;
+&lt;body&gt;
+&lt;BLANK LINE&gt;
+&lt;footer&gt;
+</code></pre>
+<ul>
+<li>The <code>header</code> is mandatory.</li>
+<li>The <code>body</code> is mandatory for all commits except “doc” type commits.</li>
+<li>The <code>footer</code> is optional</li>
+</ul>
+</blockquote>
 <ol>
 <li>Atomic Commits</li>
 </ol>
@@ -251,6 +267,43 @@ hook on push to enforce conventional commits.</p>
 automates the whole package release workflow.</p>
 </li>
 </ul>
+<p><strong>Using Tags</strong></p>
+<p>Tags are just named pointers to commits. Create one pointing to your latest
+change:</p>
+<pre><code class="language-bash">jj st
+The working copy has no changes.
+Working copy  (@) : ysrlmzlt 7d093162 (empty) (no description set)
+Parent commit (@-): wmuwoply ea03805e chore: add 'release version' to justfile
+</code></pre>
+<pre><code class="language-bash">jj tag set v0.1.5 --revision @-
+jj git push --tags
+cargo publish
+</code></pre>
+<p>When you publish next, create a new tag <code>v0.1.6</code>.</p>
+<p>The simple order:</p>
+<ol>
+<li>
+<p>Write code, commit, <code>jj git push</code> as normal (many times)</p>
+</li>
+<li>
+<p>When ready to release:</p>
+</li>
+</ol>
+<ul>
+<li>bump version in <code>Cargo.toml</code> to <code>0.1.6</code></li>
+<li>update CHANGELOG</li>
+<li>commit</li>
+<li><code>jj git push</code></li>
+<li><code>jj tag set v0.1.6 --revision @-</code></li>
+<li><code>jj git push --tag v0.1.6</code> # This only pushes the tag, not the commit again</li>
+<li><code>cargo publish</code></li>
+</ul>
+<p>That’s it. Tags only appear at step 2, once per release.</p>
+<p><strong>One tag per release, on the commit you publish. Everything in between is just
+normal commits with no tags involved.</strong></p>
+<p>You can also use <code>-dev</code> tags between releases. Right after the release, set your
+version in your <code>Cargo.toml</code> to <code>0.1.7-dev</code> and that will make clear which
+commit’s haven’t been published yet.</p>
 <h3>The edit workflow</h3>
 <p>Initialize and colocate the repository:</p>
 <pre><code class="language-bash">❯  mkdir learn-jj
@@ -10601,8 +10654,7 @@ takes some getting used to but is very stable.</p>
 </ul>
 <hr />
 <h2>Create NixOS VM (via virt-manager)</h2>
-<p>Easiest way to get a working configuration IMO, I haven’t personally had luck
-with custom NixOS disk layouts within a VM.</p>
+<p>Easiest way to get a working configuration IMO:</p>
 <ol>
 <li>
 <p>Download: <a href="https://nixos.org/download/">NixOS Graphical ISO</a></p>
