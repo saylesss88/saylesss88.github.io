@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.5.0</generator><item><title>Hardening NixOS</title><link>https://saylesss88.github.io/nix/hardening_NixOS.html</link><description><![CDATA[<h1>Hardening NixOS</h1>
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.5.0</generator><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Mon, 20 Jul 2026 17:50:30 +0000</pubDate></item><item><title>Hardening NixOS</title><link>https://saylesss88.github.io/nix/hardening_NixOS.html</link><description><![CDATA[<h1>Hardening NixOS</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
@@ -3072,7 +3072,7 @@ checked it out yet though.</p>
 </li>
 </ul>
 </details>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/hardening_NixOS.html</guid><pubDate>Wed, 17 Jun 2026 00:00:00 +0000</pubDate></item><item><title>index</title><link>https://saylesss88.github.io/index.html</link><description><![CDATA[]]></description><guid>https://saylesss88.github.io/index.html</guid><pubDate>Tue, 16 Jun 2026 14:41:04 +0000</pubDate></item><item><title>Top-Level Attributes</title><link>https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html</link><description><![CDATA[<h1>Chapter 5</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/hardening_NixOS.html</guid><pubDate>Wed, 17 Jun 2026 00:00:00 +0000</pubDate></item><item><title>Top-Level Attributes</title><link>https://saylesss88.github.io/Understanding_Top-Level_Attributes_5.html</link><description><![CDATA[<h1>Chapter 5</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -18091,295 +18091,7 @@ required. Confirm latest stable: If you’re targeting a stable branch,
 via NixOS status.</p>
 </li>
 </ul>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixpkgs/fork_clone_contribute.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Package Manager</title><link>https://saylesss88.github.io/nix/nix_package_manager.html</link><description><![CDATA[<h1>Nix Package Manager</h1>
-<details>
-<summary> Click to Expand Table of Contents</summary>
-<!-- toc -->
-</details>
-<!-- ![nix99](../images/nix99.png) -->
-<h2>Nix Package Manager</h2>
-<p>Nix is a <em>purely functional package manager</em>. This means that it treats packages
-like values in purely functional programming languages – they are built by
-functions that don’t have side-effects, and they never change after they have
-been built.</p>
-<p>Nix stores packages in the <em>Nix store</em>, usually the directory <code>/nix/store</code>,
-where each package has its own unique subdirectory such as:</p>
-<pre><code class="language-bash">/nix/store/y53c0lamag5wpx7vsiv7wmnjdgq97yd6-yazi-25.5.14pre20250526_74a8ea9
-</code></pre>
-<p>You can use the Nix on most Linux distributions and Mac OS also has good support
-for Nix. It should work on most platforms that support POSIX threads and have a
-C++11 compiler.</p>
-<p>When I install Nix on a distro like Arch Linux I usually use the Zero to Nix
-installer as it automates several steps, such as enabling flakes by default:</p>
-<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-</code></pre>
-<p>If you have concerns about the “curl to Bash” approach you could examine the
-installation script
-<a href="https://raw.githubusercontent.com/DeterminateSystems/nix-installer/main/nix-installer.sh">here</a>
-then download and run it:</p>
-<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix &gt; nix-installer.sh
-chmod +x nix-installer.sh
-./nix-installer.sh install
-</code></pre>
-<p>I got the above commands from
-<a href="https://zero-to-nix.com/start/install/">zero-to-nix</a></p>
-<p>The main difference between using the nix package manager on another
-distribution and NixOS is that NixOS uses Nix not just for package management
-but also to manage the system configuration (e.g., to build config files in
-<code>/etc</code>).</p>
-<p><a href="https://nix-community.github.io/home-manager/">Home Manager</a> is a Nix-powered
-tool for reproducible management of the contents of the users’ home directories.
-This includes programs, configuration files, environment variables, and
-arbitrary files. Home manager uses the same module system as NixOS.</p>
-<p>Now that we’ve discussed some of the basics of the Nix package manager, lets see
-how it is used to build and manage software in NixOS.</p>
-<h2>Channels</h2>
-<p>Nix packages are distributed through Nix channels; mechanisms for distributing
-Nix expressions and the associated binary caches for them. Channels are what
-determine which versions your packages have. (i.e. <em>stable</em> or <em>unstable</em>). A
-channel is a name for the latest “verified” git commits in Nixpkgs. Each channel
-represents a different policy for what “verified” means. Whenever a new commit
-in <code>Nixpkgs</code> passes the verification process, the respective channel is updated
-to point to that new commit.</p>
-<p>While channels provide a convenient way to get the latest stable or unstable
-packages, they introduce a challenge for strict reproducibility. Because a
-channel like <code>nixos-unstable</code> is constantly updated, fetching packages from it
-today might give you a different set of package versions than fetching from it
-tomorrow, even if your configuration remains unchanged. This “rolling release”
-nature at a global level can make it harder to share and reproduce exact
-development environments or system configurations across different machines or
-at different points in time.</p>
-<h2>Channels vs. Flakes Enhancing Reproducibility</h2>
-<p>Before the introduction of <strong>Nix Flakes</strong>, channels were the primary mechanism
-for sourcing <code>Nixpkgs</code>. While functional, they posed a challenge for exact
-reproducibility because they point to a moving target (the latest commit on a
-branch). This meant that a <code>nix-build</code> command run yesterday might produce a
-different result than one run today, simply because the channel updated.</p>
-<p>Nix Flakes were introduced to address this. Flakes bring a built-in,
-standardized way to define the exact inputs to a Nix build, including the
-precise Git revision of <code>Nixpkgs</code> or any other dependency.</p>
-<p>Here’s a quick comparison:</p>
-<table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Nix Channels (traditional)</th><th style="text-align: left">Nix Flakes (modern approach)</th></tr></thead><tbody>
-<tr><td style="text-align: left"><strong>Input Source</strong></td><td style="text-align: left">Global system configuration (<code>nix-channel --update</code>)</td><td style="text-align: left">Explicitly defined in <code>flake.nix</code> (e.g., <code>github:NixOS/nixpkgs/nixos-23.11</code>)</td></tr>
-<tr><td style="text-align: left"><strong>Reproducibility</strong></td><td style="text-align: left">“Rolling release”; less reproducible across time/machines</td><td style="text-align: left">Highly reproducible due to locked inputs (<code>flake.lock</code>)</td></tr>
-<tr><td style="text-align: left"><strong>Dependency Mgmt.</strong></td><td style="text-align: left">Implicitly managed by global channel</td><td style="text-align: left">Explicitly declared and version-locked within <code>flake.nix</code></td></tr>
-<tr><td style="text-align: left"><strong>Sharing</strong></td><td style="text-align: left">Relies on users having same channel version</td><td style="text-align: left">Self-contained; <code>flake.lock</code> ensures everyone gets same inputs</td></tr>
-<tr><td style="text-align: left"><strong>Learning Curve</strong></td><td style="text-align: left">Simpler initial setup, but tricky reproducibility debugging</td><td style="text-align: left">Higher initial learning curve, but simplifies reproducibility</td></tr>
-</tbody></table>
-<p>The ability of Flakes to “lock” the exact version of all dependencies in a
-<code>flake.lock</code> file is a game-changer for collaboration and long-term
-reproducibility, ensuring that your Nix configuration builds the same way, every
-time, everywhere.</p>
-<h2>Nixpkgs</h2>
-<p><strong>Nixpkgs</strong> is the largest repository of Nix packages and NixOS modules.</p>
-<p>For <strong>NixOS</strong> users, <code>nixos-unstable</code> channel branch is the rolling release,
-where the packages are tested and must pass integration tests.</p>
-<p>For <strong>standalone Nix</strong> users, <code>nixpkgs-unstable</code> channel branch is the rolling
-release, where packages pass only basic build tests and are upgraded often.</p>
-<p>For Flakes, as mentioned above they don’t use channels so <code>nixpkgs</code> will be
-listed as an <code>input</code> to your flake. (e.g.,
-<code>inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";</code>) When using flakes
-you can actually disable channels and actually recommended to avoid conflicts
-between traditional channel-based workflows and the flake system.</p>
-<h3>Updates</h3>
-<p>The mechanism for updating your Nix environment differs fundamentally between
-channels and flakes, directly impacting reproducibility and control.</p>
-<h4>Updating with Channels (Traditional Approach)</h4>
-<p>With channels, updates are a global operation that pulls the latest state of a
-specific branch.</p>
-<p><strong>How it works</strong>: You typically use <code>nix-channel --update</code> to fetch the latest
-commit from the channels you’ve subscribed to. For instance,
-<code>sudo nix-channel --update nixos</code> (for NixOS) or <code>nix-channel --update nixpkgs</code>
-(for <code>nix-env</code> on other Linux distributions).</p>
-<p><strong>Implication</strong>: This command updates your local system’s understanding of what
-“nixos” or “nixpkgs-unstable” means. From that point on, any
-<code>nixos-rebuild switch</code>, <code>nix-env -iA</code>, or <code>nix-build</code> commands that implicitly
-or explicitly refer to <code>nixpkgs</code> will use this newly updated version.</p>
-<p><strong>Reproducibility Challenge</strong>: The update itself is not recorded in your
-configuration files. If you share your <code>configuration.nix</code> with someone, they
-might run <code>nix-channel --update</code> on a different day and get a different set of
-package versions because the channel has moved. This makes it challenging to
-guarantee that two users building the “same” configuration will get identical
-results. You’re effectively relying on the implicit, globally managed state of
-your channels.</p>
-<h4>Updating with Flakes (Modern Approach)</h4>
-<p><strong>Flakes</strong>, by contrast, use a more explicit and localized update mechanism tied
-to your <code>flake.lock</code> file.</p>
-<p><strong>How it works</strong>: When you define a <code>flake.nix</code>, you specify the exact URL
-(e.g., a Git repository with a specific branch or tag) for each input. When you
-first use a flake, Nix resolves these URLs to a precise Git commit hash and
-records this hash, along with a content hash, in a <code>flake.lock</code> file.</p>
-<p>To update your flake inputs, you run <code>nix flake update</code>.</p>
-<p><strong>Implication</strong>: This command goes to each input’s specified URL (e.g.,
-<code>github:NixOS/nixpkgs/nixos-unstable</code>) and fetches the latest commit for that
-input. It then updates your <code>flake.lock</code> file with the new, precise Git commit
-hash and content hash for that input. Your <code>flake.nix</code> itself doesn’t change,
-but the <code>flake.lock</code> file now points to newer versions of your dependencies.</p>
-<p><strong>Reproducibility Advantage</strong>: The <code>flake.lock</code> file acts as a manifest of your
-exact dependency versions.</p>
-<p><strong>Sharing</strong>: When you share your flake (the <code>flake.nix</code> and <code>flake.lock</code> files),
-anyone using it will fetch precisely the same Git commit hashes recorded in the
-<code>flake.lock</code>, guaranteeing identical inputs and thus, identical builds (assuming
-the same system architecture).</p>
-<p><strong>Updating Selectively</strong>: You can update individual inputs within your flake by
-specifying them: <code>nix flake update nixpkgs</code>. This provides fine-grained control
-over which parts of your dependency graph you want to advance.</p>
-<p><strong>Rolling Back</strong>: Because the <code>flake.lock</code> explicitly records the versions, you
-can easily revert to a previous state by checking out an older <code>flake.lock</code> from
-your version control system.</p>
-<p><strong>In essence</strong>: Channels involve a global “pull” of the latest branch state,
-making reproducibility harder to guarantee across time and machines. Flakes,
-however, explicitly pin all inputs in <code>flake.lock</code>, and updates involve
-explicitly refreshing these pins, providing strong reproducibility and version
-control out of the box.</p>
-<h3>Managing software with Nix</h3>
-<p><strong>Derivation Overview</strong></p>
-<p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
-These are files written in the Nix language that describe how a particular piece
-of software should be built. These package definitions, when processed by Nix,
-are translated into derivations.</p>
-<p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
-to build a specific software package or any other kind of file or directory.
-It’s a declarative specification of:</p>
-<ul>
-<li>
-<p><strong>Inputs</strong>: What existing files or other derivations are needed as
-dependencies.</p>
-</li>
-<li>
-<p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
-output.</p>
-</li>
-<li>
-<p><strong>Environment</strong>: The specific environment (e.g., build tools, environment
-variables) required for the build process.</p>
-</li>
-<li>
-<p><strong>Outputs</strong>: The resulting files or directories that the derivation produces.</p>
-</li>
-</ul>
-<p>Think of a package definition as the initial instructions, and the derivation as
-the detailed, low-level plan that Nix uses to actually perform the build.</p>
-<p>Again, a derivation is like a blueprint that describes how to build a specific
-software package or any other kind of file or directory.</p>
-<p><strong>Key Characteristics of Derivations:</strong></p>
-<ul>
-<li>
-<p><strong>Declarative</strong>: You describe the desired outcome and the inputs, not the
-exact sequence of imperative steps. Nix figures out the necessary steps based
-on the builder and args.</p>
-</li>
-<li>
-<p><strong>Reproducible</strong>: Given the same inputs and build instructions, a derivation
-will always produce the same output. This is a cornerstone of Nix’s
-reproducibility.</p>
-</li>
-<li>
-<p><strong>Tracked by Nix</strong>: Nix keeps track of all derivations and their outputs in
-the Nix store. This allows for efficient management of dependencies and
-ensures that different packages don’t interfere with each other.</p>
-</li>
-<li>
-<p><strong>Content-Addressed</strong>: The output of a derivation is stored in the Nix store
-under a unique path that is derived from the hash of all its inputs and build
-instructions. This means that if anything changes in the derivation, the
-output will have a different path.</p>
-</li>
-</ul>
-<p>Here’s a simple Nix derivation that creates a file named hello in the Nix store
-containing the text “Hello, World!”:</p>
-<details>
-<summary> ✔️ Hello World Derivation Example (Click to expand):</summary>
-<pre><code class="language-nix">{pkgs ? import &lt;nixpkgs&gt; {}}:
-pkgs.stdenv.mkDerivation {
-  name = "hello-world";
-
-  dontUnpack = true;
-
-  # No need for src = null; when dontUnpack = true;
-  # src = null;
-
-  buildPhase = ''
-     # Create a shell script that prints "Hello, World!"
-    echo '#!${pkgs.bash}/bin/bash' &gt; hello-output-file # Shebang line
-    echo 'echo "Hello, World!"' &gt;&gt; hello-output-file # The command to execute
-    chmod +x hello-output-file # Make it executable
-  '';
-
-  installPhase = ''
-    mkdir -p $out/bin
-    cp hello-output-file $out/bin/hello # Copy the file from build directory to $out/bin
-  '';
-
-  meta = {
-    description = "A simple Hello World program built with Nix";
-    homepage = null;
-    license = pkgs.lib.licenses.unfree; # licenses.mit is often used as well
-    maintainers = [];
-  };
-}
-</code></pre>
-<p>And a <code>default.nix</code> with the following contents:</p>
-<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
-
-import ./hello.nix { pkgs = pkgs; }
-</code></pre>
-<ul>
-<li>
-<p><code>{ pkgs ? import &lt;nixpkgs&gt; {} }</code>: This is a function that takes an optional
-argument <code>pkgs</code>. We need Nixpkgs to access standard build environments like
-<code>stdenv</code>.</p>
-</li>
-<li>
-<p><code>pkgs.stdenv.mkDerivation { ... }:</code> This calls the mkDerivation function from
-the standard environment (stdenv). mkDerivation is the most common way to
-define software packages in Nix.</p>
-</li>
-<li>
-<p><code>name = "hello-world";</code>: Human-readable name of the derivation</p>
-</li>
-<li>
-<p>The rest are the build phases and package metadata.</p>
-</li>
-</ul>
-<p>To use the above derivation, save it as a <code>.nix</code> file (e.g. <code>hello.nix</code>). Then
-build the derivation using,:</p>
-<pre><code class="language-bash">nix-build
-this derivation will be built:
-  /nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv
-building '/nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv'...
-Running phase: patchPhase
-Running phase: updateAutotoolsGnuConfigScriptsPhase
-Running phase: configurePhase
-no configure script, doing nothing
-Running phase: buildPhase
-Running phase: installPhase
-Running phase: fixupPhase
-shrinking RPATHs of ELF executables and libraries in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
-checking for references to /build/ in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world...
-patching script interpreter paths in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
-stripping (with command strip and flags -S -p) in  /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world/bin
-/nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
-</code></pre>
-<ul>
-<li>
-<p>Nix will execute the <code>buildPhase</code> and <code>installPhase</code></p>
-</li>
-<li>
-<p>After a successful build, the output will be in the Nix store. You can find
-the exact path by looking at the output of the nix build command (it will be
-something like <code>/nix/store/your-hash-hello-world</code>).</p>
-</li>
-</ul>
-<p>Run the “installed” program:</p>
-<pre><code class="language-bash">./result/bin/hello
-</code></pre>
-<ul>
-<li>This will execute the <code>hello</code> file from the Nix store and print
-<code>"Hello, World!"</code>.</li>
-</ul>
-</details>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_package_manager.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Lang</title><link>https://saylesss88.github.io/nix/nix_language.html</link><description><![CDATA[<h1>Nix Language</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nixpkgs/fork_clone_contribute.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Lang</title><link>https://saylesss88.github.io/nix/nix_language.html</link><description><![CDATA[<h1>Nix Language</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -18397,7 +18109,7 @@ computes values only when needed, making it efficient for managing large
 systems.</p>
 <p>You can plug most of the following into the <code>nix repl</code> I’m showing it in a
 single code block here for brevity:</p>
-<pre><code class="language-nix"># Comments Look Like This!
+<pre><code class="language-nix,editable"># Comments Look Like This!
 
 # Strings
 "This is a string"          # String literal
@@ -18996,7 +18708,295 @@ grown to love the language. I find it fairly simple but powerful!</p>
 </details>
 <pre><code class="language-nix">builtins.head[ 5 6 7 ]
 </code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_language.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Paths</title><link>https://saylesss88.github.io/nix/nixLang/nix_paths.html</link><description><![CDATA[<h1>Nix Paths</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_language.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Package Manager</title><link>https://saylesss88.github.io/nix/nix_package_manager.html</link><description><![CDATA[<h1>Nix Package Manager</h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![nix99](../images/nix99.png) -->
+<h2>Nix Package Manager</h2>
+<p>Nix is a <em>purely functional package manager</em>. This means that it treats packages
+like values in purely functional programming languages – they are built by
+functions that don’t have side-effects, and they never change after they have
+been built.</p>
+<p>Nix stores packages in the <em>Nix store</em>, usually the directory <code>/nix/store</code>,
+where each package has its own unique subdirectory such as:</p>
+<pre><code class="language-bash">/nix/store/y53c0lamag5wpx7vsiv7wmnjdgq97yd6-yazi-25.5.14pre20250526_74a8ea9
+</code></pre>
+<p>You can use the Nix on most Linux distributions and Mac OS also has good support
+for Nix. It should work on most platforms that support POSIX threads and have a
+C++11 compiler.</p>
+<p>When I install Nix on a distro like Arch Linux I usually use the Zero to Nix
+installer as it automates several steps, such as enabling flakes by default:</p>
+<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+</code></pre>
+<p>If you have concerns about the “curl to Bash” approach you could examine the
+installation script
+<a href="https://raw.githubusercontent.com/DeterminateSystems/nix-installer/main/nix-installer.sh">here</a>
+then download and run it:</p>
+<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix &gt; nix-installer.sh
+chmod +x nix-installer.sh
+./nix-installer.sh install
+</code></pre>
+<p>I got the above commands from
+<a href="https://zero-to-nix.com/start/install/">zero-to-nix</a></p>
+<p>The main difference between using the nix package manager on another
+distribution and NixOS is that NixOS uses Nix not just for package management
+but also to manage the system configuration (e.g., to build config files in
+<code>/etc</code>).</p>
+<p><a href="https://nix-community.github.io/home-manager/">Home Manager</a> is a Nix-powered
+tool for reproducible management of the contents of the users’ home directories.
+This includes programs, configuration files, environment variables, and
+arbitrary files. Home manager uses the same module system as NixOS.</p>
+<p>Now that we’ve discussed some of the basics of the Nix package manager, lets see
+how it is used to build and manage software in NixOS.</p>
+<h2>Channels</h2>
+<p>Nix packages are distributed through Nix channels; mechanisms for distributing
+Nix expressions and the associated binary caches for them. Channels are what
+determine which versions your packages have. (i.e. <em>stable</em> or <em>unstable</em>). A
+channel is a name for the latest “verified” git commits in Nixpkgs. Each channel
+represents a different policy for what “verified” means. Whenever a new commit
+in <code>Nixpkgs</code> passes the verification process, the respective channel is updated
+to point to that new commit.</p>
+<p>While channels provide a convenient way to get the latest stable or unstable
+packages, they introduce a challenge for strict reproducibility. Because a
+channel like <code>nixos-unstable</code> is constantly updated, fetching packages from it
+today might give you a different set of package versions than fetching from it
+tomorrow, even if your configuration remains unchanged. This “rolling release”
+nature at a global level can make it harder to share and reproduce exact
+development environments or system configurations across different machines or
+at different points in time.</p>
+<h2>Channels vs. Flakes Enhancing Reproducibility</h2>
+<p>Before the introduction of <strong>Nix Flakes</strong>, channels were the primary mechanism
+for sourcing <code>Nixpkgs</code>. While functional, they posed a challenge for exact
+reproducibility because they point to a moving target (the latest commit on a
+branch). This meant that a <code>nix-build</code> command run yesterday might produce a
+different result than one run today, simply because the channel updated.</p>
+<p>Nix Flakes were introduced to address this. Flakes bring a built-in,
+standardized way to define the exact inputs to a Nix build, including the
+precise Git revision of <code>Nixpkgs</code> or any other dependency.</p>
+<p>Here’s a quick comparison:</p>
+<table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Nix Channels (traditional)</th><th style="text-align: left">Nix Flakes (modern approach)</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Input Source</strong></td><td style="text-align: left">Global system configuration (<code>nix-channel --update</code>)</td><td style="text-align: left">Explicitly defined in <code>flake.nix</code> (e.g., <code>github:NixOS/nixpkgs/nixos-23.11</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Reproducibility</strong></td><td style="text-align: left">“Rolling release”; less reproducible across time/machines</td><td style="text-align: left">Highly reproducible due to locked inputs (<code>flake.lock</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Dependency Mgmt.</strong></td><td style="text-align: left">Implicitly managed by global channel</td><td style="text-align: left">Explicitly declared and version-locked within <code>flake.nix</code></td></tr>
+<tr><td style="text-align: left"><strong>Sharing</strong></td><td style="text-align: left">Relies on users having same channel version</td><td style="text-align: left">Self-contained; <code>flake.lock</code> ensures everyone gets same inputs</td></tr>
+<tr><td style="text-align: left"><strong>Learning Curve</strong></td><td style="text-align: left">Simpler initial setup, but tricky reproducibility debugging</td><td style="text-align: left">Higher initial learning curve, but simplifies reproducibility</td></tr>
+</tbody></table>
+<p>The ability of Flakes to “lock” the exact version of all dependencies in a
+<code>flake.lock</code> file is a game-changer for collaboration and long-term
+reproducibility, ensuring that your Nix configuration builds the same way, every
+time, everywhere.</p>
+<h2>Nixpkgs</h2>
+<p><strong>Nixpkgs</strong> is the largest repository of Nix packages and NixOS modules.</p>
+<p>For <strong>NixOS</strong> users, <code>nixos-unstable</code> channel branch is the rolling release,
+where the packages are tested and must pass integration tests.</p>
+<p>For <strong>standalone Nix</strong> users, <code>nixpkgs-unstable</code> channel branch is the rolling
+release, where packages pass only basic build tests and are upgraded often.</p>
+<p>For Flakes, as mentioned above they don’t use channels so <code>nixpkgs</code> will be
+listed as an <code>input</code> to your flake. (e.g.,
+<code>inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";</code>) When using flakes
+you can actually disable channels and actually recommended to avoid conflicts
+between traditional channel-based workflows and the flake system.</p>
+<h3>Updates</h3>
+<p>The mechanism for updating your Nix environment differs fundamentally between
+channels and flakes, directly impacting reproducibility and control.</p>
+<h4>Updating with Channels (Traditional Approach)</h4>
+<p>With channels, updates are a global operation that pulls the latest state of a
+specific branch.</p>
+<p><strong>How it works</strong>: You typically use <code>nix-channel --update</code> to fetch the latest
+commit from the channels you’ve subscribed to. For instance,
+<code>sudo nix-channel --update nixos</code> (for NixOS) or <code>nix-channel --update nixpkgs</code>
+(for <code>nix-env</code> on other Linux distributions).</p>
+<p><strong>Implication</strong>: This command updates your local system’s understanding of what
+“nixos” or “nixpkgs-unstable” means. From that point on, any
+<code>nixos-rebuild switch</code>, <code>nix-env -iA</code>, or <code>nix-build</code> commands that implicitly
+or explicitly refer to <code>nixpkgs</code> will use this newly updated version.</p>
+<p><strong>Reproducibility Challenge</strong>: The update itself is not recorded in your
+configuration files. If you share your <code>configuration.nix</code> with someone, they
+might run <code>nix-channel --update</code> on a different day and get a different set of
+package versions because the channel has moved. This makes it challenging to
+guarantee that two users building the “same” configuration will get identical
+results. You’re effectively relying on the implicit, globally managed state of
+your channels.</p>
+<h4>Updating with Flakes (Modern Approach)</h4>
+<p><strong>Flakes</strong>, by contrast, use a more explicit and localized update mechanism tied
+to your <code>flake.lock</code> file.</p>
+<p><strong>How it works</strong>: When you define a <code>flake.nix</code>, you specify the exact URL
+(e.g., a Git repository with a specific branch or tag) for each input. When you
+first use a flake, Nix resolves these URLs to a precise Git commit hash and
+records this hash, along with a content hash, in a <code>flake.lock</code> file.</p>
+<p>To update your flake inputs, you run <code>nix flake update</code>.</p>
+<p><strong>Implication</strong>: This command goes to each input’s specified URL (e.g.,
+<code>github:NixOS/nixpkgs/nixos-unstable</code>) and fetches the latest commit for that
+input. It then updates your <code>flake.lock</code> file with the new, precise Git commit
+hash and content hash for that input. Your <code>flake.nix</code> itself doesn’t change,
+but the <code>flake.lock</code> file now points to newer versions of your dependencies.</p>
+<p><strong>Reproducibility Advantage</strong>: The <code>flake.lock</code> file acts as a manifest of your
+exact dependency versions.</p>
+<p><strong>Sharing</strong>: When you share your flake (the <code>flake.nix</code> and <code>flake.lock</code> files),
+anyone using it will fetch precisely the same Git commit hashes recorded in the
+<code>flake.lock</code>, guaranteeing identical inputs and thus, identical builds (assuming
+the same system architecture).</p>
+<p><strong>Updating Selectively</strong>: You can update individual inputs within your flake by
+specifying them: <code>nix flake update nixpkgs</code>. This provides fine-grained control
+over which parts of your dependency graph you want to advance.</p>
+<p><strong>Rolling Back</strong>: Because the <code>flake.lock</code> explicitly records the versions, you
+can easily revert to a previous state by checking out an older <code>flake.lock</code> from
+your version control system.</p>
+<p><strong>In essence</strong>: Channels involve a global “pull” of the latest branch state,
+making reproducibility harder to guarantee across time and machines. Flakes,
+however, explicitly pin all inputs in <code>flake.lock</code>, and updates involve
+explicitly refreshing these pins, providing strong reproducibility and version
+control out of the box.</p>
+<h3>Managing software with Nix</h3>
+<p><strong>Derivation Overview</strong></p>
+<p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
+These are files written in the Nix language that describe how a particular piece
+of software should be built. These package definitions, when processed by Nix,
+are translated into derivations.</p>
+<p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
+to build a specific software package or any other kind of file or directory.
+It’s a declarative specification of:</p>
+<ul>
+<li>
+<p><strong>Inputs</strong>: What existing files or other derivations are needed as
+dependencies.</p>
+</li>
+<li>
+<p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
+output.</p>
+</li>
+<li>
+<p><strong>Environment</strong>: The specific environment (e.g., build tools, environment
+variables) required for the build process.</p>
+</li>
+<li>
+<p><strong>Outputs</strong>: The resulting files or directories that the derivation produces.</p>
+</li>
+</ul>
+<p>Think of a package definition as the initial instructions, and the derivation as
+the detailed, low-level plan that Nix uses to actually perform the build.</p>
+<p>Again, a derivation is like a blueprint that describes how to build a specific
+software package or any other kind of file or directory.</p>
+<p><strong>Key Characteristics of Derivations:</strong></p>
+<ul>
+<li>
+<p><strong>Declarative</strong>: You describe the desired outcome and the inputs, not the
+exact sequence of imperative steps. Nix figures out the necessary steps based
+on the builder and args.</p>
+</li>
+<li>
+<p><strong>Reproducible</strong>: Given the same inputs and build instructions, a derivation
+will always produce the same output. This is a cornerstone of Nix’s
+reproducibility.</p>
+</li>
+<li>
+<p><strong>Tracked by Nix</strong>: Nix keeps track of all derivations and their outputs in
+the Nix store. This allows for efficient management of dependencies and
+ensures that different packages don’t interfere with each other.</p>
+</li>
+<li>
+<p><strong>Content-Addressed</strong>: The output of a derivation is stored in the Nix store
+under a unique path that is derived from the hash of all its inputs and build
+instructions. This means that if anything changes in the derivation, the
+output will have a different path.</p>
+</li>
+</ul>
+<p>Here’s a simple Nix derivation that creates a file named hello in the Nix store
+containing the text “Hello, World!”:</p>
+<details>
+<summary> ✔️ Hello World Derivation Example (Click to expand):</summary>
+<pre><code class="language-nix">{pkgs ? import &lt;nixpkgs&gt; {}}:
+pkgs.stdenv.mkDerivation {
+  name = "hello-world";
+
+  dontUnpack = true;
+
+  # No need for src = null; when dontUnpack = true;
+  # src = null;
+
+  buildPhase = ''
+     # Create a shell script that prints "Hello, World!"
+    echo '#!${pkgs.bash}/bin/bash' &gt; hello-output-file # Shebang line
+    echo 'echo "Hello, World!"' &gt;&gt; hello-output-file # The command to execute
+    chmod +x hello-output-file # Make it executable
+  '';
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp hello-output-file $out/bin/hello # Copy the file from build directory to $out/bin
+  '';
+
+  meta = {
+    description = "A simple Hello World program built with Nix";
+    homepage = null;
+    license = pkgs.lib.licenses.unfree; # licenses.mit is often used as well
+    maintainers = [];
+  };
+}
+</code></pre>
+<p>And a <code>default.nix</code> with the following contents:</p>
+<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+
+import ./hello.nix { pkgs = pkgs; }
+</code></pre>
+<ul>
+<li>
+<p><code>{ pkgs ? import &lt;nixpkgs&gt; {} }</code>: This is a function that takes an optional
+argument <code>pkgs</code>. We need Nixpkgs to access standard build environments like
+<code>stdenv</code>.</p>
+</li>
+<li>
+<p><code>pkgs.stdenv.mkDerivation { ... }:</code> This calls the mkDerivation function from
+the standard environment (stdenv). mkDerivation is the most common way to
+define software packages in Nix.</p>
+</li>
+<li>
+<p><code>name = "hello-world";</code>: Human-readable name of the derivation</p>
+</li>
+<li>
+<p>The rest are the build phases and package metadata.</p>
+</li>
+</ul>
+<p>To use the above derivation, save it as a <code>.nix</code> file (e.g. <code>hello.nix</code>). Then
+build the derivation using,:</p>
+<pre><code class="language-bash">nix-build
+this derivation will be built:
+  /nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv
+building '/nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv'...
+Running phase: patchPhase
+Running phase: updateAutotoolsGnuConfigScriptsPhase
+Running phase: configurePhase
+no configure script, doing nothing
+Running phase: buildPhase
+Running phase: installPhase
+Running phase: fixupPhase
+shrinking RPATHs of ELF executables and libraries in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+checking for references to /build/ in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world...
+patching script interpreter paths in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+stripping (with command strip and flags -S -p) in  /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world/bin
+/nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+</code></pre>
+<ul>
+<li>
+<p>Nix will execute the <code>buildPhase</code> and <code>installPhase</code></p>
+</li>
+<li>
+<p>After a successful build, the output will be in the Nix store. You can find
+the exact path by looking at the output of the nix build command (it will be
+something like <code>/nix/store/your-hash-hello-world</code>).</p>
+</li>
+</ul>
+<p>Run the “installed” program:</p>
+<pre><code class="language-bash">./result/bin/hello
+</code></pre>
+<ul>
+<li>This will execute the <code>hello</code> file from the Nix store and print
+<code>"Hello, World!"</code>.</li>
+</ul>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_package_manager.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Paths</title><link>https://saylesss88.github.io/nix/nixLang/nix_paths.html</link><description><![CDATA[<h1>Nix Paths</h1>
 <details>
 <summary> ✔️ Click to Expand Table of Contents</summary>
 <!-- toc -->
@@ -25114,400 +25114,7 @@ and tools that can help you understand the evaluation process, inspect the
 values of expressions, and trace the execution of your Nix code, enabling you to
 effectively troubleshoot and resolve issues in both Flake-based and traditional
 Nix projects.</p>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Intro to Nix</title><link>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</link><description><![CDATA[<h1>Chapter1</h1>
-<details>
-<summary> ✔️ Click to Expand Table of Contents</summary>
-<!-- toc -->
-</details>
-<!-- ![gruv13](images/gruv13.png) -->
-<p><img src="images/trees1.cleaned.png" alt="trees" /></p>
-<h2>Intro</h2>
-<p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
-towards using Flakes but will contrast traditional Nix where beneficial.
-Originally, this content started as a blog. I’m refining its flow to make it
-more cohesive.</p>
-<p>In this chapter, I will touch on the different parts of the Nix ecosystem, give
-a quick example of each and explain how they fit together.</p>
-<ul>
-<li>Click <a href="https://saylesss88.github.io/rss.xml">Here</a>, or the logo on the top
-right, next to print for the RSS feed.</li>
-</ul>
-<details>
-<summary>
-- ✔️: Will indicate an expandable section, click the little triangle to expand.
-</summary>
-<ul>
-<li>These sections are expandable!</li>
-</ul>
-</details>
-<p>The code blocks have an option to hide code, where I find it reasonable I will
-hide the outputs of the expressions. Click the eye in the right corner of the
-code block next to the copy clipboard.</p>
-<p>Example hover over top-right corner of code block and click the eye to see
-hidden text:</p>
-<pre><code class="language-nix">{
-  attrset = { a = 2; b = 4; };
-~  hidden_set = { a = hidden; b = set; };
-}
-</code></pre>
-<blockquote>
-<p>❗ If you’re new to Nix, think of it as a recipe book for software: you
-describe what you want (declarative), and Nix ensures it’s built the same way
-every time (reproducible).</p>
-</blockquote>
-<h3>Why Learn Nix?</h3>
-<p>The main reason to learn Nix is that it allows you to write declarative scripts
-for reproducible software builds. Rather than mutate the global state and
-install packages to a global location such as <code>/usr/bin</code> Nix stores packages in
-the Nix store, usually the directory <code>/nix/store</code>, where each package has its
-own unique subdirectory. This paradigm gives you some powerful features, such
-as:</p>
-<ul>
-<li>
-<p>Allowing multiple versions or variants of the same package at the same time.
-This prevents “DLL hell” from different applications having dependencies on
-different versions of the same package.</p>
-</li>
-<li>
-<p>Atomic upgrades: Upgrading or uninstalling an application cannot break other
-applications and either succeed completely or fail completely preventing
-partial upgrades breaking your system. The nix store is immutable preventing
-package management operations from overwriting other packages. They wouldn’t
-overwrite each other anyways because the hashing scheme ensures that new
-versions or repeat packages end up at different paths.</p>
-</li>
-<li>
-<p>Nix is designed to provide hermetic builds that aren’t affected by the
-environment, this helps you make sure that when packaging software that the
-dependencies are complete because they must be explicitly declared as inputs.
-With other package managers it is more difficult to be sure that an
-environment variable or something in your <code>$PATH</code> isn’t affecting your build.</p>
-</li>
-</ul>
-<p>Let’s dive into the key characteristics of Nix:</p>
-<table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody>
-<tr><td><strong>Pure</strong></td><td>Functions don’t cause side effects.</td></tr>
-<tr><td><strong>Functional</strong></td><td>Functions can be passed as arguments and returned as results.</td></tr>
-<tr><td><strong>Lazy</strong></td><td>Not evaluated until needed to complete a computation.</td></tr>
-<tr><td><strong>Declarative</strong></td><td>Describing a system outcome.</td></tr>
-<tr><td><strong>Reproducible</strong></td><td>Operations that are performed twice return same results</td></tr>
-</tbody></table>
-<blockquote>
-<p>❗ Important: In Nix, everything is an expression, there are no statements.</p>
-<p>❗ Important: Values in Nix are immutable.</p>
-</blockquote>
-<h3>The Nix Ecosystem</h3>
-<p>The <strong>Nix Language</strong> is the foundation of the ecosystem and is used to write
-<strong>Nix Expressions</strong>.</p>
-<p>Example:</p>
-<pre><code class="language-nix">{ hello = "world"; }
-</code></pre>
-<h1>or</h1>
-<pre><code class="language-nix">"foo" + "bar"
-</code></pre>
-<p>While the Nix language provides the foundation for writing expressions, it is
-only part of the ecosystem. These expressions become powerful when used within
-the Nix Package Manager, which evaluates and realizes them into tangible
-software builds and system configurations. This is where Nixpkgs and NixOS come
-into play.</p>
-<h3>The Nix Package Manager, Nixpkgs, and NixOS</h3>
-<p>At the heart of the Nix ecosystem is <strong>Nix Package Manager</strong>. This powerful
-engine is responsible for orchestrating the entire process: taking <strong>Nix
-expressions</strong> (like <em>package definitions</em> and <em>configuration modules</em>),
-evaluating them into precise <em>derivations</em>, executing their build steps (the
-<em>realization phase</em>), and meticulously managing the immutable Nix store.</p>
-<p>A cornerstone of the Nix ecosystem is <strong>Nixpkgs</strong>. This vast collection
-comprises tens of thousands of Nix expressions that describe how to build a wide
-array of software packages from source. Nixpkgs is more than just a package
-repository—it also contains <strong>NixOS Modules</strong>, declarative configurations that
-define system behavior, ensuring a structured and reproducible environment.
-These modules enable users to declaratively describe a Linux system, with each
-module contributing to the desired state of the overall system by leveraging
-<em>package definitions</em> and <em>derivations</em>. This is how NixOS emerges: it is quite
-simply the natural consequence of applying the Nix philosophy to building an
-entire Linux operating system.</p>
-<p>We will further expand our understanding of modules in
-<a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">Chapter 3</a></p>
-<p>The following is an example of a NixOS module that is part of the <code>nixpkgs</code>
-collection:</p>
-<pre><code class="language-nix"># nixpkgs/nixos/modules/programs/zmap.nix
-{
-  pkgs,
-  config,
-  lib,
-  ...
-}:
-
-let
-  cfg = config.programs.zmap;
-in
-{
-  options.programs.zmap = {
-    enable = lib.mkEnableOption "ZMap, a network scanner designed for Internet-wide network surveys";
-  };
-
-  config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.zmap ];
-
-    environment.etc."zmap/blacklist.conf".source = "${pkgs.zmap}/etc/zmap/blacklist.conf";
-    environment.etc."zmap/zmap.conf".source = "${pkgs.zmap}/etc/zmap.conf";
-  };
-}
-</code></pre>
-<ul>
-<li>This module, <code>programs.zmap.nix</code>, demonstrates how NixOS configurations work.
-It defines an enable option for the ZMap network scanner. If enabled by the
-user in their system configuration, the module ensures the <code>zmap</code> package is
-installed and its default configuration files are placed in <code>/etc</code>, allowing
-ZMap to be managed declaratively as part of the operating system.
-<ul>
-<li>
-<p>When <code>nixpkgs</code> is imported (e.g., in a NixOS configuration), the
-configuration options and settings defined by its modules (like
-<code>programs.zmap.nix</code>) become available for use, typically accessed via dot
-notation (e.g., <code>config.programs.zmap.enable</code>). This ability to make such a
-huge set of modules and packages readily available without a significant
-performance penalty is due to Nix’s <strong>lazy evaluation</strong>; only the
-expressions required for a particular build or configuration are actually
-evaluated.</p>
-</li>
-<li>
-<p>Most of the time you’ll simply <a href="https://search.nixos.org/packages">search</a>
-to see if the package is already included in <code>nixpkgs</code> and follow the
-instructions there to get it on your system. It is good practice to first
-search for the <a href="https://search.nixos.org/options?">options</a> to see what
-configurable settings are available, and then proceed to search for the
-package itself if you know it exists or if you need its specific package
-definition. When you look up the options for Zmap, <code>programs.zmap.enable</code> is
-all that is listed in this example.</p>
-</li>
-<li>
-<p>Home Manager uses the same underlying Nix module system as NixOS, and when
-you do something like home.packages = with pkgs; you are referring to the
-same package derivations from nixpkgs as you would with
-<code>environment.systemPackages</code>. However, Home Manager’s own configuration
-modules (e.g., for <code>programs.zsh</code> or <code>git</code>) are distinct and reside in the
-Home Manager repository, designed for user-specific configurations.</p>
-</li>
-</ul>
-</li>
-</ul>
-<p>One of the main differentiating aspects of Nix, as opposed to traditional
-package managers, is this concept that package builds are treated as pure
-functions. This functional paradigm ensures consistency and reproducibility,
-which are core tenets of the Nix philosophy.</p>
-<p><img src="images/nix_isnot_nixos.png" alt="Nix is not" /></p>
-<p><strong>Fig. X:</strong> Conceptual diagram illustrating the distinction between Nix and
-NixOS. Source: xeiaso, from the blog post “Making NixOS modules for fun and
-(hopefully) profit”, <a href="https://xeiaso.net/talks/asg-2023-nixos/">https://xeiaso.net/talks/asg-2023-nixos/</a>.</p>
-<p>Nix expressions permeate the ecosystem—everything in Nix is an expression,
-including the next key components: package definitions and derivations.</p>
-<h3>Package Definitions &amp; Derivations</h3>
-<p><strong>Package Definitions</strong> are specialized expressions that tell Nix how to build
-software.</p>
-<p>Example package definition:</p>
-<pre><code class="language-nix"># hello.nix
- {pkgs ? import &lt;nixpkgs&gt; {}}:
- pkgs.stdenv.mkDerivation {
-  pname = "hello";
-  version = "2.12.1";
-
-  src = pkgs.fetchurl {
-    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
-    sha256 = "086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd";
-  };
-
-  nativeBuildInputs = [pkgs.autoconf pkgs.automake pkgs.gcc];
-
-  configurePhase = ''
-    ./configure --prefix=$out
-  '';
-
-  buildPhase = ''
-    make
-  '';
-
-  installPhase = ''
-    make install
-  '';
- }
-</code></pre>
-<ol>
-<li><strong>Evaluation Phase</strong>:</li>
-</ol>
-<p>Now when you run something like:</p>
-<pre><code class="language-bash">nix-instantiate hello.nix
-warning: you did not specify '--add-root'; the result might be removed by the garbage collector
-/nix/store/p2hbg16a9kpqgx2nzcsq39wmnyxyq4jy-hello-2.12.1.drv
-</code></pre>
-<ul>
-<li>Nix evaluates the expression and produces a <code>.drv</code> file (the <strong>derivation</strong>),
-a precise JSON-like blueprint describing how the package will be built. It
-does not contain the built software itself.</li>
-</ul>
-<ol start="2">
-<li><strong>Realization Phase</strong>:</li>
-</ol>
-<p>When you run:</p>
-<pre><code class="language-bash">nix-build hello.nix
-#...snip...
-shrinking RPATHs of ELF executables and libraries in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
-shrinking /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin/hello
-checking for references to /build/ in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1...
-gzipping man pages under /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/share/man/
-patching script interpreter paths in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
-stripping (with command strip and flags -S -p) in  /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin
-/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
-</code></pre>
-<ul>
-<li>
-<p>Nix realizes the derivation by actually executing the build steps, fetching
-sources, compiling (if needed), and producing the final result (typically
-stored in e.g. <code>/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1</code>)</p>
-</li>
-<li>
-<p><code>nix-build</code> also creates a symlink named <code>result</code> in your current directory,
-pointing to the final build output in the Nix store.</p>
-</li>
-</ul>
-<ol start="3">
-<li>Execute the program:</li>
-</ol>
-<pre><code class="language-bash">./result/bin/hello
-Hello, world!
-</code></pre>
-<p><code>result/bin/hello</code> points to the executable inside the output of the
-derivation.The derivation describes how the package is built, but does not
-include the final binaries.</p>
-<p>To say that another way, the derivation is not the executable. The executable is
-one of the derivations <code>outputs</code>. When Nix “realizes” a derivation, it executes
-those build instructions, and the result is the actual built software, which
-gets placed into its own unique path in the Nix store.</p>
-<p>A single derivation can produce multiple outputs. The executable is typically
-part of the <code>out</code> output, specifically in its <code>bin</code> directory.</p>
-<p>Here is a small snippet of what a <code>.drv</code> file could look like, I got this from
-building the hello derivation and running the following on the store path:</p>
-<pre><code class="language-bash">nix show-derivation /nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1
-</code></pre>
-<pre><code class="language-nix">{
-  "/nix/store/871398c9cbskmzy6bvfnynr8yrlh7nk0-hello-2.12.1.drv": {
-    "args": [
-      "-e",
-      "/nix/store/v6x3cs394jgqfbi0a42pam708flxaphh-default-builder.sh"
-    ],
-    "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
-    "env": {
-      "__structuredAttrs": "",
-      "buildInputs": "",
-      "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
-      "cmakeFlags": "",
-      "configureFlags": "",
-      "depsBuildBuild": "",
-      "depsBuildBuildPropagated": "",
-      "depsBuildTarget": "",
-      "depsBuildTargetPropagated": "",
-      "depsHostHost": "",
-      "depsHostHostPropagated": "",
-      "depsTargetTarget": "",
-      "depsTargetTargetPropagated": "",
-      "doCheck": "",
-      "doInstallCheck": "",
-      "mesonFlags": "",
-      "name": "hello-2.12.1",
-      "nativeBuildInputs": "",
-      "out": "/nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1",
-      "outputs": "out",
-      "patches": "",
-      "pname": "hello",
-      "propagatedBuildInputs": "",
-      "propagatedNativeBuildInputs": "",
-      "src": "/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz",
-      "stdenv": "/nix/store/80wijs24wjp619zmrasrh805bax02xjm-stdenv-linux",
-      "strictDeps": "",
-      "system": "x86_64-linux",
-      "version": "2.12.1"
-    },
-# ... snip ...
-</code></pre>
-<h4>Conclusion</h4>
-<p>In this introductory chapter, we’ve laid the groundwork for understanding the
-powerful Nix ecosystem. We explored how the Nix Language forms the declarative
-bedrock, enabling us to define desired system states and software builds as
-expressions. You saw how the Nix Package Manager orchestrates this process,
-transforming those expressions into precise derivations during the evaluation
-phase, and then faithfully “realizing” them into reproducible, isolated
-artifacts within the immutable <code>/nix/store</code>.</p>
-<p>We also introduced the vast Nixpkgs collection, which provides tens of thousands
-of package definitions and forms the foundation for NixOS — a fully declarative
-operating system built on these principles—and even user-level configurations
-like those managed by Home Manager. This unique functional approach, with its
-emphasis on immutability and lazy evaluation, is what enables Nix’s promises of
-consistency, atomic upgrades, and truly hermetic builds, fundamentally changing
-how we think about software and system management.</p>
-<h5>Related Sub-Chapters</h5>
-<ul>
-<li>
-<p>The <a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a></p>
-</li>
-<li>
-<p><a href="https://saylesss88.github.io/nix/nix_package_manager.html">Nix Package Manager</a></p>
-</li>
-</ul>
-<p>Now that you have a foundational understanding of the Nix ecosystem and its core
-operational cycle, we are ready to delve deeper into the building blocks of Nix
-expressions. In the next chapter,
-<a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Understanding Nix Functions</a>,
-we will peel back the layers and explore the intricacies of function arguments,
-advanced patterns, scope, and how functions play a crucial role in building more
-sophisticated Nix expressions and derivations.</p>
-<p>Here are some resources that are helpful for getting started:</p>
-<h4>Resources</h4>
-<details>
-<summary> ✔️ Resources (Click to Expand)</summary>
-<ul>
-<li>
-<p><a href="https://search.nixos.org/packages">NixOS Search</a></p>
-</li>
-<li>
-<p><a href="https://search.nixos.org/options?">NixOS Options</a></p>
-</li>
-<li>
-<p><a href="https://home-manager-options.extranix.com/?query=&amp;release=master">Extranix Home-Manager Option Search</a></p>
-</li>
-<li>
-<p><a href="https://github.com/nix-community/awesome-nix">awesome-nix</a></p>
-</li>
-<li>
-<p><a href="https://wiki.nixos.org/wiki/Nix_ecosystem">Nix Core Ecosystem</a>, Nix, NixOS,
-Nix Lang, Nixpkgs are all distinctly different; related things which can be
-confusing for beginners this article explains them.</p>
-</li>
-<li>
-<p><a href="https://github.com/nixos/nixpkgs">nixpkgs</a>: Vast package repository</p>
-</li>
-<li>
-<p><a href="https://nixos.org/guides/how-nix-works/">How Nix Works</a></p>
-</li>
-<li>
-<p><a href="https://nix.dev/manual/nix/2.26/language/types#type-attrs">Nix Reference Manual Data Types</a>
-The main Data Types you’ll come across in the Nix ecosystem</p>
-</li>
-<li>
-<p><a href="https://wiki.nixos.org/wiki/NixOS_Wiki">NixOS Wiki</a></p>
-</li>
-<li>
-<p><a href="https://nix.dev/">nix.dev</a>: Has become the top respected source of
-information in my opinion. There is a lot of great stuff in here, and they
-actively update the information.</p>
-</li>
-</ul>
-</details>
-<pre><code>`````nix repl
-(let a = "2"; in                   # Let expressions are a way to create variables
-a + a + builtins.toString "4")
-`````
-</code></pre>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Understanding Nix Functions</title><link>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</link><description><![CDATA[<h1>Chapter 2</h1>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Understanding Nix Functions</title><link>https://saylesss88.github.io/Understanding_Nix_Functions_2.html</link><description><![CDATA[<h1>Chapter 2</h1>
 <details>
 <summary> ✔️ Table of Contents</summary>
 <!-- toc -->
@@ -27907,4 +27514,397 @@ valuable insights and information.</p>
 <a href="https://infinisil.com/modules.mp4">infinisilModules</a></p>
 <p><a href="https://www.youtube.com/watch?v=cZjOzOHb2ow">tweagModuleSystemRecursion</a></p>
 </details>
-]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/NixOS_Modules_Explained_3.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/NixOS_Modules_Explained_3.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Intro to Nix</title><link>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</link><description><![CDATA[<h1>Chapter1</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![gruv13](images/gruv13.png) -->
+<p><img src="images/trees1.cleaned.png" alt="trees" /></p>
+<h2>Intro</h2>
+<p>Welcome to <em>nix-book</em>, an introductory book about Nix. This book leans more
+towards using Flakes but will contrast traditional Nix where beneficial.
+Originally, this content started as a blog. I’m refining its flow to make it
+more cohesive.</p>
+<p>In this chapter, I will touch on the different parts of the Nix ecosystem, give
+a quick example of each and explain how they fit together.</p>
+<ul>
+<li>Click <a href="https://saylesss88.github.io/rss.xml">Here</a>, or the logo on the top
+right, next to print for the RSS feed.</li>
+</ul>
+<details>
+<summary>
+- ✔️: Will indicate an expandable section, click the little triangle to expand.
+</summary>
+<ul>
+<li>These sections are expandable!</li>
+</ul>
+</details>
+<p>The code blocks have an option to hide code, where I find it reasonable I will
+hide the outputs of the expressions. Click the eye in the right corner of the
+code block next to the copy clipboard.</p>
+<p>Example hover over top-right corner of code block and click the eye to see
+hidden text:</p>
+<pre><code class="language-nix">{
+  attrset = { a = 2; b = 4; };
+~  hidden_set = { a = hidden; b = set; };
+}
+</code></pre>
+<blockquote>
+<p>❗ If you’re new to Nix, think of it as a recipe book for software: you
+describe what you want (declarative), and Nix ensures it’s built the same way
+every time (reproducible).</p>
+</blockquote>
+<h3>Why Learn Nix?</h3>
+<p>The main reason to learn Nix is that it allows you to write declarative scripts
+for reproducible software builds. Rather than mutate the global state and
+install packages to a global location such as <code>/usr/bin</code> Nix stores packages in
+the Nix store, usually the directory <code>/nix/store</code>, where each package has its
+own unique subdirectory. This paradigm gives you some powerful features, such
+as:</p>
+<ul>
+<li>
+<p>Allowing multiple versions or variants of the same package at the same time.
+This prevents “DLL hell” from different applications having dependencies on
+different versions of the same package.</p>
+</li>
+<li>
+<p>Atomic upgrades: Upgrading or uninstalling an application cannot break other
+applications and either succeed completely or fail completely preventing
+partial upgrades breaking your system. The nix store is immutable preventing
+package management operations from overwriting other packages. They wouldn’t
+overwrite each other anyways because the hashing scheme ensures that new
+versions or repeat packages end up at different paths.</p>
+</li>
+<li>
+<p>Nix is designed to provide hermetic builds that aren’t affected by the
+environment, this helps you make sure that when packaging software that the
+dependencies are complete because they must be explicitly declared as inputs.
+With other package managers it is more difficult to be sure that an
+environment variable or something in your <code>$PATH</code> isn’t affecting your build.</p>
+</li>
+</ul>
+<p>Let’s dive into the key characteristics of Nix:</p>
+<table><thead><tr><th>Concept</th><th>Description</th></tr></thead><tbody>
+<tr><td><strong>Pure</strong></td><td>Functions don’t cause side effects.</td></tr>
+<tr><td><strong>Functional</strong></td><td>Functions can be passed as arguments and returned as results.</td></tr>
+<tr><td><strong>Lazy</strong></td><td>Not evaluated until needed to complete a computation.</td></tr>
+<tr><td><strong>Declarative</strong></td><td>Describing a system outcome.</td></tr>
+<tr><td><strong>Reproducible</strong></td><td>Operations that are performed twice return same results</td></tr>
+</tbody></table>
+<blockquote>
+<p>❗ Important: In Nix, everything is an expression, there are no statements.</p>
+<p>❗ Important: Values in Nix are immutable.</p>
+</blockquote>
+<h3>The Nix Ecosystem</h3>
+<p>The <strong>Nix Language</strong> is the foundation of the ecosystem and is used to write
+<strong>Nix Expressions</strong>.</p>
+<p>Example:</p>
+<pre><code class="language-nix">{ hello = "world"; }
+</code></pre>
+<h1>or</h1>
+<pre><code class="language-nix">"foo" + "bar"
+</code></pre>
+<p>While the Nix language provides the foundation for writing expressions, it is
+only part of the ecosystem. These expressions become powerful when used within
+the Nix Package Manager, which evaluates and realizes them into tangible
+software builds and system configurations. This is where Nixpkgs and NixOS come
+into play.</p>
+<h3>The Nix Package Manager, Nixpkgs, and NixOS</h3>
+<p>At the heart of the Nix ecosystem is <strong>Nix Package Manager</strong>. This powerful
+engine is responsible for orchestrating the entire process: taking <strong>Nix
+expressions</strong> (like <em>package definitions</em> and <em>configuration modules</em>),
+evaluating them into precise <em>derivations</em>, executing their build steps (the
+<em>realization phase</em>), and meticulously managing the immutable Nix store.</p>
+<p>A cornerstone of the Nix ecosystem is <strong>Nixpkgs</strong>. This vast collection
+comprises tens of thousands of Nix expressions that describe how to build a wide
+array of software packages from source. Nixpkgs is more than just a package
+repository—it also contains <strong>NixOS Modules</strong>, declarative configurations that
+define system behavior, ensuring a structured and reproducible environment.
+These modules enable users to declaratively describe a Linux system, with each
+module contributing to the desired state of the overall system by leveraging
+<em>package definitions</em> and <em>derivations</em>. This is how NixOS emerges: it is quite
+simply the natural consequence of applying the Nix philosophy to building an
+entire Linux operating system.</p>
+<p>We will further expand our understanding of modules in
+<a href="https://saylesss88.github.io/NixOS_Modules_Explained_3.html">Chapter 3</a></p>
+<p>The following is an example of a NixOS module that is part of the <code>nixpkgs</code>
+collection:</p>
+<pre><code class="language-nix"># nixpkgs/nixos/modules/programs/zmap.nix
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.programs.zmap;
+in
+{
+  options.programs.zmap = {
+    enable = lib.mkEnableOption "ZMap, a network scanner designed for Internet-wide network surveys";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [ pkgs.zmap ];
+
+    environment.etc."zmap/blacklist.conf".source = "${pkgs.zmap}/etc/zmap/blacklist.conf";
+    environment.etc."zmap/zmap.conf".source = "${pkgs.zmap}/etc/zmap.conf";
+  };
+}
+</code></pre>
+<ul>
+<li>This module, <code>programs.zmap.nix</code>, demonstrates how NixOS configurations work.
+It defines an enable option for the ZMap network scanner. If enabled by the
+user in their system configuration, the module ensures the <code>zmap</code> package is
+installed and its default configuration files are placed in <code>/etc</code>, allowing
+ZMap to be managed declaratively as part of the operating system.
+<ul>
+<li>
+<p>When <code>nixpkgs</code> is imported (e.g., in a NixOS configuration), the
+configuration options and settings defined by its modules (like
+<code>programs.zmap.nix</code>) become available for use, typically accessed via dot
+notation (e.g., <code>config.programs.zmap.enable</code>). This ability to make such a
+huge set of modules and packages readily available without a significant
+performance penalty is due to Nix’s <strong>lazy evaluation</strong>; only the
+expressions required for a particular build or configuration are actually
+evaluated.</p>
+</li>
+<li>
+<p>Most of the time you’ll simply <a href="https://search.nixos.org/packages">search</a>
+to see if the package is already included in <code>nixpkgs</code> and follow the
+instructions there to get it on your system. It is good practice to first
+search for the <a href="https://search.nixos.org/options?">options</a> to see what
+configurable settings are available, and then proceed to search for the
+package itself if you know it exists or if you need its specific package
+definition. When you look up the options for Zmap, <code>programs.zmap.enable</code> is
+all that is listed in this example.</p>
+</li>
+<li>
+<p>Home Manager uses the same underlying Nix module system as NixOS, and when
+you do something like home.packages = with pkgs; you are referring to the
+same package derivations from nixpkgs as you would with
+<code>environment.systemPackages</code>. However, Home Manager’s own configuration
+modules (e.g., for <code>programs.zsh</code> or <code>git</code>) are distinct and reside in the
+Home Manager repository, designed for user-specific configurations.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>One of the main differentiating aspects of Nix, as opposed to traditional
+package managers, is this concept that package builds are treated as pure
+functions. This functional paradigm ensures consistency and reproducibility,
+which are core tenets of the Nix philosophy.</p>
+<p><img src="images/nix_isnot_nixos.png" alt="Nix is not" /></p>
+<p><strong>Fig. X:</strong> Conceptual diagram illustrating the distinction between Nix and
+NixOS. Source: xeiaso, from the blog post “Making NixOS modules for fun and
+(hopefully) profit”, <a href="https://xeiaso.net/talks/asg-2023-nixos/">https://xeiaso.net/talks/asg-2023-nixos/</a>.</p>
+<p>Nix expressions permeate the ecosystem—everything in Nix is an expression,
+including the next key components: package definitions and derivations.</p>
+<h3>Package Definitions &amp; Derivations</h3>
+<p><strong>Package Definitions</strong> are specialized expressions that tell Nix how to build
+software.</p>
+<p>Example package definition:</p>
+<pre><code class="language-nix"># hello.nix
+ {pkgs ? import &lt;nixpkgs&gt; {}}:
+ pkgs.stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = pkgs.fetchurl {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd";
+  };
+
+  nativeBuildInputs = [pkgs.autoconf pkgs.automake pkgs.gcc];
+
+  configurePhase = ''
+    ./configure --prefix=$out
+  '';
+
+  buildPhase = ''
+    make
+  '';
+
+  installPhase = ''
+    make install
+  '';
+ }
+</code></pre>
+<ol>
+<li><strong>Evaluation Phase</strong>:</li>
+</ol>
+<p>Now when you run something like:</p>
+<pre><code class="language-bash">nix-instantiate hello.nix
+warning: you did not specify '--add-root'; the result might be removed by the garbage collector
+/nix/store/p2hbg16a9kpqgx2nzcsq39wmnyxyq4jy-hello-2.12.1.drv
+</code></pre>
+<ul>
+<li>Nix evaluates the expression and produces a <code>.drv</code> file (the <strong>derivation</strong>),
+a precise JSON-like blueprint describing how the package will be built. It
+does not contain the built software itself.</li>
+</ul>
+<ol start="2">
+<li><strong>Realization Phase</strong>:</li>
+</ol>
+<p>When you run:</p>
+<pre><code class="language-bash">nix-build hello.nix
+#...snip...
+shrinking RPATHs of ELF executables and libraries in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+shrinking /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin/hello
+checking for references to /build/ in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1...
+gzipping man pages under /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/share/man/
+patching script interpreter paths in /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+stripping (with command strip and flags -S -p) in  /nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1/bin
+/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1
+</code></pre>
+<ul>
+<li>
+<p>Nix realizes the derivation by actually executing the build steps, fetching
+sources, compiling (if needed), and producing the final result (typically
+stored in e.g. <code>/nix/store/53hqyw72dijq3wb5kc0ln04g681gk6cp-hello-2.12.1</code>)</p>
+</li>
+<li>
+<p><code>nix-build</code> also creates a symlink named <code>result</code> in your current directory,
+pointing to the final build output in the Nix store.</p>
+</li>
+</ul>
+<ol start="3">
+<li>Execute the program:</li>
+</ol>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
+<p><code>result/bin/hello</code> points to the executable inside the output of the
+derivation.The derivation describes how the package is built, but does not
+include the final binaries.</p>
+<p>To say that another way, the derivation is not the executable. The executable is
+one of the derivations <code>outputs</code>. When Nix “realizes” a derivation, it executes
+those build instructions, and the result is the actual built software, which
+gets placed into its own unique path in the Nix store.</p>
+<p>A single derivation can produce multiple outputs. The executable is typically
+part of the <code>out</code> output, specifically in its <code>bin</code> directory.</p>
+<p>Here is a small snippet of what a <code>.drv</code> file could look like, I got this from
+building the hello derivation and running the following on the store path:</p>
+<pre><code class="language-bash">nix show-derivation /nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1
+</code></pre>
+<pre><code class="language-nix">{
+  "/nix/store/871398c9cbskmzy6bvfnynr8yrlh7nk0-hello-2.12.1.drv": {
+    "args": [
+      "-e",
+      "/nix/store/v6x3cs394jgqfbi0a42pam708flxaphh-default-builder.sh"
+    ],
+    "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
+    "env": {
+      "__structuredAttrs": "",
+      "buildInputs": "",
+      "builder": "/nix/store/1jzhbwq5rjjaqa75z88ws2b424vh7m53-bash-5.2p32/bin/bash",
+      "cmakeFlags": "",
+      "configureFlags": "",
+      "depsBuildBuild": "",
+      "depsBuildBuildPropagated": "",
+      "depsBuildTarget": "",
+      "depsBuildTargetPropagated": "",
+      "depsHostHost": "",
+      "depsHostHostPropagated": "",
+      "depsTargetTarget": "",
+      "depsTargetTargetPropagated": "",
+      "doCheck": "",
+      "doInstallCheck": "",
+      "mesonFlags": "",
+      "name": "hello-2.12.1",
+      "nativeBuildInputs": "",
+      "out": "/nix/store/9na8mwp5zaprikqaqw78v6cdn1rxac7i-hello-2.12.1",
+      "outputs": "out",
+      "patches": "",
+      "pname": "hello",
+      "propagatedBuildInputs": "",
+      "propagatedNativeBuildInputs": "",
+      "src": "/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz",
+      "stdenv": "/nix/store/80wijs24wjp619zmrasrh805bax02xjm-stdenv-linux",
+      "strictDeps": "",
+      "system": "x86_64-linux",
+      "version": "2.12.1"
+    },
+# ... snip ...
+</code></pre>
+<h4>Conclusion</h4>
+<p>In this introductory chapter, we’ve laid the groundwork for understanding the
+powerful Nix ecosystem. We explored how the Nix Language forms the declarative
+bedrock, enabling us to define desired system states and software builds as
+expressions. You saw how the Nix Package Manager orchestrates this process,
+transforming those expressions into precise derivations during the evaluation
+phase, and then faithfully “realizing” them into reproducible, isolated
+artifacts within the immutable <code>/nix/store</code>.</p>
+<p>We also introduced the vast Nixpkgs collection, which provides tens of thousands
+of package definitions and forms the foundation for NixOS — a fully declarative
+operating system built on these principles—and even user-level configurations
+like those managed by Home Manager. This unique functional approach, with its
+emphasis on immutability and lazy evaluation, is what enables Nix’s promises of
+consistency, atomic upgrades, and truly hermetic builds, fundamentally changing
+how we think about software and system management.</p>
+<h5>Related Sub-Chapters</h5>
+<ul>
+<li>
+<p>The <a href="https://saylesss88.github.io/nix/nix_language.html">Nix Language</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/nix_package_manager.html">Nix Package Manager</a></p>
+</li>
+</ul>
+<p>Now that you have a foundational understanding of the Nix ecosystem and its core
+operational cycle, we are ready to delve deeper into the building blocks of Nix
+expressions. In the next chapter,
+<a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">Understanding Nix Functions</a>,
+we will peel back the layers and explore the intricacies of function arguments,
+advanced patterns, scope, and how functions play a crucial role in building more
+sophisticated Nix expressions and derivations.</p>
+<p>Here are some resources that are helpful for getting started:</p>
+<h4>Resources</h4>
+<details>
+<summary> ✔️ Resources (Click to Expand)</summary>
+<ul>
+<li>
+<p><a href="https://search.nixos.org/packages">NixOS Search</a></p>
+</li>
+<li>
+<p><a href="https://search.nixos.org/options?">NixOS Options</a></p>
+</li>
+<li>
+<p><a href="https://home-manager-options.extranix.com/?query=&amp;release=master">Extranix Home-Manager Option Search</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nix-community/awesome-nix">awesome-nix</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Nix_ecosystem">Nix Core Ecosystem</a>, Nix, NixOS,
+Nix Lang, Nixpkgs are all distinctly different; related things which can be
+confusing for beginners this article explains them.</p>
+</li>
+<li>
+<p><a href="https://github.com/nixos/nixpkgs">nixpkgs</a>: Vast package repository</p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/how-nix-works/">How Nix Works</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.26/language/types#type-attrs">Nix Reference Manual Data Types</a>
+The main Data Types you’ll come across in the Nix ecosystem</p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/NixOS_Wiki">NixOS Wiki</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/">nix.dev</a>: Has become the top respected source of
+information in my opinion. There is a lot of great stuff in here, and they
+actively update the information.</p>
+</li>
+</ul>
+</details>
+<pre><code>`````nix repl
+(let a = "2"; in                   # Let expressions are a way to create variables
+a + a + builtins.toString "4")
+`````
+</code></pre>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Getting_Started_with_Nix_1.html</guid><pubDate>Fri, 21 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>
