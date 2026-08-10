@@ -1,0 +1,1627 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>nix-book</title><id>https://saylesss88.github.io/atom6.xml</id><updated>2025-11-28T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://saylesss88.github.io/atom6.xml" rel="self"/><link href="https://saylesss88.github.io/atom7.xml" rel="next"/><link href="https://saylesss88.github.io/atom5.xml" rel="prev"/><link href="https://saylesss88.github.io/" rel="alternate"/><subtitle>Description</subtitle><entry><title>Flake Inputs</title><id>https://saylesss88.github.io/flakes/flake_inputs_4.1.html</id><updated>2025-11-28T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://saylesss88.github.io/flakes/flake_inputs_4.1.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Flake Inputs&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;The attribute &lt;code&gt;inputs&lt;/code&gt; specifies the dependencies of a flake, as an attrset
+mapping input names to flake references.&lt;/p&gt;
+&lt;p&gt;If a repository provides a &lt;code&gt;flake.nix&lt;/code&gt; you can include it as an input in your
+&lt;code&gt;flake.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;For example, I like yazi as my file explorer and have been using helix as my
+editor. To be able to get yazi to work with helix I needed the latest versions
+of both yazi and helix. One way to get the latest versions was to add their
+flakes as inputs to my flake:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+	inputs = {
+		nixpkgs.url = &quot;github:NixOS/nixpkgs/nixos-24.11&quot;;
+		home-manager = {
+			url = &quot;github:nix-community/home-manager/release-24.11&quot;;
+			inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+		};
+    helix = {
+      url = &quot;github:helix-editor/helix&quot;;
+      inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    };
+		yazi.url = &quot;github:sxyazi/yazi&quot;;
+	};
+	outputs = { nixpkgs, home-manager, ... } @ inputs: {
+	# ... snip ... #
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Now to use this input, I would reference these inputs in both my yazi and
+helix modules:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# yazi.nix
+{ pkgs, config, inputs, ... }: {
+	programs.yazi = {
+		enable = true;
+		package = inputs.yazi.packages.${pkgs.system}.default;
+	};
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# helix.nix
+{ pkgs, config, inputs, ... }: {
+	programs.helix = {
+		enable = true;
+		package = inputs.helix.packages.${pkgs.system}.helix;
+	};
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Understanding &lt;code&gt;.default&lt;/code&gt; vs. Named Outputs (e.g., &lt;code&gt;.helix&lt;/code&gt;) from the Source&lt;/p&gt;
+&lt;p&gt;The difference between &lt;code&gt;inputs.yazi.packages.${pkgs.system}.default&lt;/code&gt; and
+&lt;code&gt;inputs.helix.packages.${pkgs.system}.helix&lt;/code&gt; comes down to how the respective
+upstream flakes define their outputs. You can always inspect a flake’s
+&lt;code&gt;flake.nix&lt;/code&gt; or use &lt;code&gt;nix flake show &amp;lt;flake-reference&amp;gt;&lt;/code&gt; to understand its
+structure.&lt;/p&gt;
+&lt;h2&gt;Helix &lt;code&gt;flake.nix&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;Let’s look at the relevant section of Helix’s &lt;code&gt;flake.nix&lt;/code&gt; click the eye to see
+the full flake:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;~ {
+~   description = &quot;A post-modern text editor.&quot;;
+~
+~   inputs = {
+~     nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+~     rust-overlay = {
+~       url = &quot;github:oxalica/rust-overlay&quot;;
+~       inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+~     };
+~   };
+~
+~   outputs = {
+~     self,
+~     nixpkgs,
+~     rust-overlay,
+~     ...
+~   }: let
+~     inherit (nixpkgs) lib;
+~     systems = [
+~       &quot;x86_64-linux&quot;
+~       &quot;aarch64-linux&quot;
+~       &quot;x86_64-darwin&quot;
+~       &quot;aarch64-darwin&quot;
+~     ];
+~     eachSystem = lib.genAttrs systems;
+~     pkgsFor = eachSystem (system:
+~       import nixpkgs {
+~         localSystem.system = system;
+~         overlays = [(import rust-overlay) self.overlays.helix];
+~       });
+~     gitRev = self.rev or self.dirtyRev or null;
+   in {
+     packages = eachSystem (system: {
+       inherit (pkgsFor.${system}) helix;
+       /*
+       The default Helix build. Uses the latest stable Rust toolchain, and unstable
+       nixpkgs.
+
+       The build inputs can be overridden with the following:
+
+       packages.${system}.default.override { rustPlatform = newPlatform; };
+
+       Overriding a derivation attribute can be done as well:
+
+       packages.${system}.default.overrideAttrs { buildType = &quot;debug&quot;; };
+       */
+      default = self.packages.${system}.helix;
+    });
+~    checks =
+~      lib.mapAttrs (system: pkgs: let
+~        # Get Helix&apos;s MSRV toolchain to build with by default.
+~        msrvToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+~        msrvPlatform = pkgs.makeRustPlatform {
+~          cargo = msrvToolchain;
+~          rustc = msrvToolchain;
+~        };
+~      in {
+~        helix = self.packages.${system}.helix.override {
+~          rustPlatform = msrvPlatform;
+~        };
+~      })
+~      pkgsFor;
+~
+~    # Devshell behavior is preserved.
+~    devShells =
+~      lib.mapAttrs (system: pkgs: {
+~        default = let
+~          commonRustFlagsEnv = &quot;-C link-arg=-fuse-ld=lld -C target-cpu=native --cfg tokio_unstable&quot;;
+~          platformRustFlagsEnv = lib.optionalString pkgs.stdenv.isLinux &quot;-Clink-arg=-Wl,--no-rosegment&quot;;
+~        in
+~          pkgs.mkShell {
+~            inputsFrom = [self.checks.${system}.helix];
+~            nativeBuildInputs = with pkgs;
+~              [
+~                lld
+~                cargo-flamegraph
+~                rust-bin.nightly.latest.rust-analyzer
+~              ]
+~              ++ (lib.optional (stdenv.isx86_64 &amp;amp;&amp;amp; stdenv.isLinux) cargo-tarpaulin)
+~              ++ (lib.optional stdenv.isLinux lldb)
+~              ++ (lib.optional stdenv.isDarwin darwin.apple_sdk.frameworks.CoreFoundation);
+~            shellHook = &apos;&apos;
+~              export RUST_BACKTRACE=&quot;1&quot;
+~              export RUSTFLAGS=&quot;&apos;&apos;${RUSTFLAGS:-&quot;&quot;} ${commonRustFlagsEnv} ${platformRustFlagsEnv}&quot;
+~            &apos;&apos;;
+~          };
+~      })
+~      pkgsFor;
+~
+~    overlays = {
+~      helix = final: prev: {
+~        helix = final.callPackage ./default.nix {inherit gitRev;};
+~      };
+~
+~      default = self.overlays.helix;
+~    };
+~  };
+~  nixConfig = {
+~    extra-substituters = [&quot;https://helix.cachix.org&quot;];
+~    extra-trusted-public-keys = [&quot;helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs=&quot;];
+~  };
+~}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Dissecting &lt;code&gt;inherit (pkgsFor.${system}) helix;&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Imagine the Nix evaluation process for Helix &lt;code&gt;flake.nix&lt;/code&gt; in the &lt;code&gt;outputs&lt;/code&gt;
+section:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;packages = eachSystem (system: { ... });&lt;/code&gt; Part iterates through each
+&lt;code&gt;system&lt;/code&gt; (like &lt;code&gt;x86_64-linux&lt;/code&gt;). For each &lt;code&gt;system&lt;/code&gt;, it’s creating an attribute
+set that will become &lt;code&gt;self.packages.${system}&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Inside the &lt;code&gt;eachSystem&lt;/code&gt; function, for a specific system (e.g.
+&lt;code&gt;x86_64-linux&lt;/code&gt;): The code is building an attribute set that will ultimately
+be assigned to &lt;code&gt;self.packages.x86_64-linux&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;When you write &lt;code&gt;inherit (sourceAttrset) attributeName;&lt;/code&gt;, it’s equivalent to
+writing &lt;code&gt;attributeName = sourceAttrset.attributeName;&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;So, &lt;code&gt;inherit (pkgsFor.${system}) helix;&lt;/code&gt; is equivalent to:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;helix = pkgsFor.${system}.helix;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Therefore, because of &lt;code&gt;inherit (pkgsFor.${system}) helix;&lt;/code&gt;, the helix attribute
+is explicitly defined under
+&lt;code&gt;packages.${system}``. This is why you access it as &lt;/code&gt;inputs.helix.packages.${pkgs.system}.helix;`.&lt;/p&gt;
+&lt;h2&gt;Yazi &lt;code&gt;flake.nix&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;Now this is yazi’s &lt;code&gt;flake.nix&lt;/code&gt;, yazi’s documentation tells you to use &lt;code&gt;.default&lt;/code&gt;
+but lets examine the flake and see why:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;~{
+~  inputs = {
+~    nixpkgs.url = &quot;github:NixOS/nixpkgs/nixpkgs-unstable&quot;;
+~    flake-utils.url = &quot;github:numtide/flake-utils&quot;;
+~    rust-overlay = {
+~      url = &quot;github:oxalica/rust-overlay&quot;;
+~      inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+~    };
+~  };
+~
+~  outputs =
+~    {
+~      self,
+~      nixpkgs,
+~      rust-overlay,
+~      flake-utils,
+~      ...
+~    }:
+~    flake-utils.lib.eachDefaultSystem (
+~      system:
+~      let
+~        pkgs = import nixpkgs {
+~          inherit system;
+~          overlays = [ rust-overlay.overlays.default ];
+~        };
+~        toolchain = pkgs.rust-bin.stable.latest.default;
+~        rustPlatform = pkgs.makeRustPlatform {
+~          cargo = toolchain;
+~          rustc = toolchain;
+~        };
+~
+~        rev = self.shortRev or self.dirtyShortRev or &quot;dirty&quot;;
+~        date = self.lastModifiedDate or self.lastModified or &quot;19700101&quot;;
+~        version =
+~          (builtins.fromTOML (builtins.readFile ./yazi-fm/Cargo.toml)).package.version
+~          + &quot;pre${builtins.substring 0 8 date}_${rev}&quot;;
+~      in
+      {
+        packages = {
+          yazi-unwrapped = pkgs.callPackage ./nix/yazi-unwrapped.nix {
+            inherit
+              version
+              rev
+              date
+              rustPlatform
+              ;
+          };
+          yazi = pkgs.callPackage ./nix/yazi.nix { inherit (self.packages.${system}) yazi-unwrapped; };
+          default = self.packages.${system}.yazi;
+        };
+
+~        devShells = {
+~          default = pkgs.callPackage ./nix/shell.nix { };
+~        };
+~
+~        formatter = pkgs.nixfmt-rfc-style;
+~      }
+~    )
+~    // {
+~      overlays = {
+~        default = self.overlays.yazi;
+~        yazi = _: prev: { inherit (self.packages.${prev.stdenv.system}) yazi yazi-unwrapped; };
+~      };
+~    };
+~}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this case using &lt;code&gt;inputs.yazi.packages.${pkgs.system}.yazi&lt;/code&gt; would also work&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;yazi = pkgs.callPackage ./nix/yazi.nix { inherit (self.packages.${system}) yazi-unwrapped; };&lt;/code&gt;
+This line defines the yazi variable (or, more precisely, creates an attribute
+named yazi within the &lt;code&gt;packages.${system}&lt;/code&gt; set). It assigns to this yazi
+attribute the result of calling the Nix expression in &lt;code&gt;./nix/yazi.nix&lt;/code&gt; with
+yazi-unwrapped as an argument. This yazi attribute represents the actual,
+runnable Yazi package.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;default = self.packages.${system}.yazi;&lt;/code&gt; This line then aliases the yazi
+package. It creates another attribute named &lt;code&gt;default&lt;/code&gt; within the same
+&lt;code&gt;packages.${system}&lt;/code&gt; set and points it directly to the yazi attribute that was
+just defined.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;So, when you access &lt;code&gt;inputs.yazi.packages.${pkgs.system}.default&lt;/code&gt;, you’re
+effectively following the alias to the yazi package.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The choice to use &lt;code&gt;.default&lt;/code&gt; is primarily for convenience and adherence to a
+common flake convention, making the flake easier for users to consume without
+needing to dive into its internal structure.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</content></entry><entry><title>Flake outputs</title><id>https://saylesss88.github.io/flakes/flake_outputs_4.2.html</id><updated>2025-11-28T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://saylesss88.github.io/flakes/flake_outputs_4.2.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Flake Outputs&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;Flake outputs are what the flake produces when built. Flakes can have multiple
+outputs simultaneously such as:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Packages&lt;/strong&gt;: Self-contained bundles that are built using derivations and
+provide either some kind of software or dependencies of software.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://saylesss88.github.io/NixOS_Modules_Explained_3.html&quot;&gt;NixOS modules&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Nix development environments&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/templates&quot;&gt;Nix templates&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The &lt;code&gt;outputs&lt;/code&gt; top-level attribute is actually a function that takes an
+attribute set of inputs and returns an attribute set that is essentially a
+recipe for building the flake.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Output Schema&lt;/h2&gt;
+&lt;p&gt;Once the inputs are resolved, they’re passed to the &lt;code&gt;outputs&lt;/code&gt; attribute. This
+&lt;code&gt;outputs&lt;/code&gt; attribute is, in fact, a function, as indicated by the &lt;code&gt;:&lt;/code&gt; colon (or
+the &lt;code&gt;lambda&lt;/code&gt; syntax) that follows its definition. This function takes the
+resolved inputs (and &lt;code&gt;self&lt;/code&gt;, the flake’s directory in the store) as arguments,
+and its return value dictates the outputs of the flake, following this schema:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{ self, nixpkgs, ... }@inputs:
+{
+  # Executed by `nix flake check`
+  checks.&quot;&amp;lt;system&amp;gt;&quot;.&quot;&amp;lt;name&amp;gt;&quot; = derivation;
+  # Executed by `nix build .#&amp;lt;name&amp;gt;`
+  packages.&quot;&amp;lt;system&amp;gt;&quot;.&quot;&amp;lt;name&amp;gt;&quot; = derivation;
+  # Executed by `nix build .`
+  packages.&quot;&amp;lt;system&amp;gt;&quot;.default = derivation;
+  # Executed by `nix run .#&amp;lt;name&amp;gt;`
+  apps.&quot;&amp;lt;system&amp;gt;&quot;.&quot;&amp;lt;name&amp;gt;&quot; = {
+    type = &quot;app&quot;;
+    program = &quot;&amp;lt;store-path&amp;gt;&quot;;
+  };
+  # Executed by `nix run . -- &amp;lt;args?&amp;gt;`
+  apps.&quot;&amp;lt;system&amp;gt;&quot;.default = { type = &quot;app&quot;; program = &quot;...&quot;; };
+
+  # Formatter (alejandra, nixfmt or nixpkgs-fmt)
+  formatter.&quot;&amp;lt;system&amp;gt;&quot; = derivation;
+  # Used for nixpkgs packages, also accessible via `nix build .#&amp;lt;name&amp;gt;`
+  legacyPackages.&quot;&amp;lt;system&amp;gt;&quot;.&quot;&amp;lt;name&amp;gt;&quot; = derivation;
+  # Overlay, consumed by other flakes
+  overlays.&quot;&amp;lt;name&amp;gt;&quot; = final: prev: { };
+  # Default overlay
+  overlays.default = final: prev: { };
+  # Nixos module, consumed by other flakes
+  nixosModules.&quot;&amp;lt;name&amp;gt;&quot; = { config, ... }: { options = {}; config = {}; };
+  # Default module
+  nixosModules.default = { config, ... }: { options = {}; config = {}; };
+  # Used with `nixos-rebuild switch --flake .#&amp;lt;hostname&amp;gt;`
+  # nixosConfigurations.&quot;&amp;lt;hostname&amp;gt;&quot;.config.system.build.toplevel must be a derivation
+  nixosConfigurations.&quot;&amp;lt;hostname&amp;gt;&quot; = {};
+  # Used by `nix develop .#&amp;lt;name&amp;gt;`
+  devShells.&quot;&amp;lt;system&amp;gt;&quot;.&quot;&amp;lt;name&amp;gt;&quot; = derivation;
+  # Used by `nix develop`
+  devShells.&quot;&amp;lt;system&amp;gt;&quot;.default = derivation;
+  # Hydra build jobs
+  hydraJobs.&quot;&amp;lt;attr&amp;gt;&quot;.&quot;&amp;lt;system&amp;gt;&quot; = derivation;
+  # Used by `nix flake init -t &amp;lt;flake&amp;gt;#&amp;lt;name&amp;gt;`
+  templates.&quot;&amp;lt;name&amp;gt;&quot; = {
+    path = &quot;&amp;lt;store-path&amp;gt;&quot;;
+    description = &quot;template description goes here?&quot;;
+  };
+  # Used by `nix flake init -t &amp;lt;flake&amp;gt;`
+  templates.default = { path = &quot;&amp;lt;store-path&amp;gt;&quot;; description = &quot;&quot;; };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The first line &lt;code&gt;{ self, nixpkgs, ... }@ inputs:&lt;/code&gt; defines the functions
+parameters: It’s important to understand that within the scope of the &lt;code&gt;outputs&lt;/code&gt;
+function &lt;code&gt;nixpkgs&lt;/code&gt; is available at the top-level because we explicitly passed it
+as an argument but for individual modules outside this flake the scope is lost,
+and you need to use &lt;code&gt;inputs.nixpkgs&lt;/code&gt; (or equivalent)&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;It explicitly names the &lt;code&gt;self&lt;/code&gt; attribute, making it directly accessible. The
+variadic &lt;code&gt;...&lt;/code&gt; ellipses part of the function signature is what allows all
+your flake inputs to be brought into the function’s scope without having to
+list each one explicitly.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It destructures all other attributes (your defined &lt;code&gt;inputs&lt;/code&gt;) into the
+functions scope.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It gives you a convenient single variable, &lt;code&gt;inputs&lt;/code&gt;, that refers to the
+entire attribute set passed to the &lt;code&gt;outputs&lt;/code&gt; function. This allows you to
+access inputs either individually (e.g. &lt;code&gt;nixpkgs&lt;/code&gt;) or through the &lt;code&gt;inputs&lt;/code&gt;
+variable (e.g. &lt;code&gt;inputs.nixpkgs&lt;/code&gt;).&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;You can also define additional arbitrary attributes, but these are the outputs
+that Nix knows about.&lt;/p&gt;
+&lt;p&gt;As you can see, the majority of the outputs within the outputs schema expect a
+derivation. This means that for packages, applications, formatters, checks, and
+development shells, you’ll be defining a Nix derivation—a set of instructions
+that tells Nix how to build a particular software component. This is central to
+Nix’s declarative nature.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The command &lt;code&gt;nix flake show&lt;/code&gt;, takes a flake URI and prints all the outputs of
+the flake as a nice tree structure, mapping attribute paths to the types of
+values.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  ~/players/third  3s
+❯ nix flake show
+path:/home/jr/players/third?lastModified=1748272555&amp;amp;narHash=sha256-oNzkC6X9hA0MpOBmJSZ89w4znXxv4Q5EkFhp0ewehY0%3D
+├───nixosConfigurations
+│   └───testing: NixOS configuration
+└───nixosModules
+    └───default: NixOS module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To show you the structure of this little flake project:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  ~/players
+❯ tree
+ .
+├──  first
+│   ├──  flake.lock
+│   ├──  flake.nix
+│   └──  result -&amp;gt; /nix/store/701vyaanmqchd2nnaq71y65v8ws11zx0-nixos-system-nixos-24.11.20250523.f09dede
+├──  second
+│   ├──  flake.lock
+│   └──  flake.nix
+└──  third
+    ├──  flake.lock
+    ├──  flake.nix
+    └──  result -&amp;gt; /nix/store/mlszr5ws3xaly8m4q9jslgs31w6w76y2-nixos-system-nixos-24.11.20250523.f09dede
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Simple Example providing an output&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  outputs = { self }: {
+    bada = &quot;bing&quot;;
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You can then evaluate this specific output using &lt;code&gt;nix eval&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix eval .#bada
+&quot;bing&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Outputs understood by Nix&lt;/h2&gt;
+&lt;p&gt;While the attribute set that &lt;code&gt;outputs&lt;/code&gt; returns may contain arbitrary attributes,
+meaning any valid Nix value. Some of the standard outputs are understood by
+various &lt;code&gt;nix&lt;/code&gt; utilities. &lt;code&gt;packages&lt;/code&gt; is one of these:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs&quot;;
+  };
+
+  outputs = { self, nixpkgs }: {
+    # this is the re-exporting part!
+    packages.x86_64-linux.hello = nixpkgs.legacyPackages.x86_64-linux.hello;
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;Re-exporting happens when you take the value of &lt;code&gt;hello&lt;/code&gt; in its standard
+derivation format, exactly as &lt;code&gt;nixpkgs&lt;/code&gt; produces it and assign it to an
+attribute in your own flake’s outputs.
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;packages.x86_64-linux.hello&lt;/code&gt;(your flake’s output path) &lt;code&gt;=&lt;/code&gt;
+&lt;code&gt; nixpkgs.legacyPackages.x86_64-linux.hello&lt;/code&gt;(the source from the &lt;code&gt;nixpkgs&lt;/code&gt;
+flake’s output)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;We’re saying, My flakes &lt;code&gt;hello&lt;/code&gt; package is exactly the same as the &lt;code&gt;hello&lt;/code&gt;
+package found inside the &lt;code&gt;nixpkgs&lt;/code&gt; input flake.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It’s important to understand that within the scope of the &lt;code&gt;outputs&lt;/code&gt; function
+(i.e. within your flake), &lt;code&gt;nixpkgs&lt;/code&gt; is available at the top-level (i.e. the
+&lt;code&gt;= nixpkgs&lt;/code&gt; part) because we explicitly passed it as an argument but for
+individual modules outside of this flake the scope is lost, and
+&lt;code&gt;inputs.nixpkgs&lt;/code&gt; is needed.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The following command builds the reexported package:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#hello
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;or run it with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix run .#hello
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You might notice &lt;code&gt;x86_64-linux&lt;/code&gt; appearing in the package path, and there’s a
+good reason for it. Flakes are designed to provide &lt;em&gt;hermetic evaluation&lt;/em&gt;,
+meaning their outputs should be identical regardless of the environment where
+they’re built. A key factor in any build system is the platform (which combines
+the architecture and operating system, like &lt;code&gt;x86_64-linux&lt;/code&gt; or &lt;code&gt;aarch64-darwin&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;Because of Nix’s commitment to reproducibility across different systems, any
+flake output that involves building software packages must explicitly specify
+the platform. The standard approach is to structure these outputs as an
+attribute set where the names are platforms, and the values are the outputs
+specific to that platform. For the packages output, each platform-specific value
+is itself an attribute set containing the various packages built for that
+particular system.&lt;/p&gt;
+&lt;h2&gt;Exporting Functions&lt;/h2&gt;
+&lt;p&gt;This example outputs a &lt;code&gt;sayGoodbye&lt;/code&gt; function, via the &lt;code&gt;lib&lt;/code&gt; attribute, that
+takes a name for its input and outputs a string saying Goodbye very nicely to
+the person with that name:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  outputs = { self }: {
+    lib = {
+      sayGoodbye = name: &quot;Goodbye F*** Off, ${name}!&quot;;
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You could then specify this flake as an input to another flake and use
+&lt;code&gt;sayGoodbye&lt;/code&gt; however you’d like.&lt;/p&gt;
+&lt;p&gt;Or load it into the &lt;code&gt;nix repl&lt;/code&gt; like so:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix repl
+nix-repl&amp;gt; :lf .
+nix-repl&amp;gt; lib.sayGoodbye
+«lambda sayGoodbye @ /nix/store/665rwfvkwdx6kwvk9ldijp2a6jvcgv1n-source/flake.nix:4:20»
+nix-repl&amp;gt; lib.sayGoodbye &quot;Jr&quot;
+&quot;Goodbye F*** Off, Jr!&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;As you can see, specifying &lt;code&gt;lib.sayGoodbye&lt;/code&gt; without any arguments returns a
+function. (a lambda function)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Simplifying Multi-Platform Outputs with flake-utils&lt;/h2&gt;
+&lt;p&gt;Manually repeating these platform definitions for every output (&lt;code&gt;packages&lt;/code&gt;,
+&lt;code&gt;devShells&lt;/code&gt;, &lt;code&gt;checks&lt;/code&gt;, etc.) can quickly become verbose. This is where the
+flake-utils helper flake comes in handy. It provides utilities to reduce
+boilerplate when defining outputs for multiple systems.&lt;/p&gt;
+&lt;p&gt;A commonly used function is &lt;code&gt;flake-utils.lib.eachDefaultSystem&lt;/code&gt;, which
+automatically generates outputs for common platforms (like &lt;code&gt;x86_64-linux&lt;/code&gt;,
+&lt;code&gt;aarch64-linux&lt;/code&gt;, &lt;code&gt;x86_64-darwin&lt;/code&gt;, &lt;code&gt;aarch64-darwin&lt;/code&gt;). This transforms your
+outputs definition from manually listing each system to a more concise
+structure:&lt;/p&gt;
+&lt;h1&gt;Example using flake-utils&lt;/h1&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  inputs = {
+    nixpkgs.url = &quot;github:NixOS/nixpkgs/nixos-unstable&quot;;
+    flake-utils.url = &quot;github:numtide/flake-utils&quot;; # Don&apos;t forget to add flake-utils to inputs!
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
+        pkgs = import nixpkgs {inherit system;};
+      in {
+        packages.hello = pkgs.hello; # Now directly defines &apos;hello&apos; for the current &apos;system&apos; # packages.default = self.packages.${system}.hello; # Optional default alias
+        devShells.default = pkgs.mkShell {
+          packages = [pkgs.hello];
+        };
+      }
+    );
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This flake-utils pattern is particularly useful for defining consistent
+development environments across platforms, which can then be activated simply
+by running &lt;code&gt;nix develop&lt;/code&gt; in the flake’s directory.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Adding Formatter, Checks, and Devshell Outputs&lt;/h3&gt;
+&lt;p&gt;This is a minimal flake for demonstration with a hardcoded &lt;code&gt;system&lt;/code&gt;, for more
+portability:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  description = &quot;NixOS configuration&quot;;
+
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+    home-manager.url = &quot;github:nix-community/home-manager&quot;;
+    home-manager.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    treefmt-nix.url = &quot;github:numtide/treefmt-nix&quot;;
+   };
+
+  outputs = inputs@{ nixpkgs, home-manager, treefmt-nix, ... }: let
+
+    system = &quot;x86_64-linux&quot;;
+    host = &quot;your-hostname-goes-here&quot;;
+      # Define pkgs with allowUnfree
+    pkgs = import inputs.nixpkgs {
+      inherit system;
+      config.allowUnfree = true;
+    };
+
+        # Formatter configuration
+    treefmtEval = treefmt-nix.lib.evalModule pkgs ./lib/treefmt.nix;
+
+in {
+
+    formatter.${system} = treefmtEval.config.build.wrapper;
+
+    # Style check for CI
+    checks.${system}.style = treefmtEval.config.build.check self;
+
+    # Development shell
+    devShells.${system}.default = import ./lib/dev-shell.nix {
+      inherit inputs;
+    };
+
+
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = &quot;x86_64-linux&quot;;
+        modules = [
+          ./configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.jdoe = ./home.nix;
+
+            # Optionally, use home-manager.extraSpecialArgs to pass
+            # arguments to home.nix
+          }
+        ];
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And in &lt;code&gt;lib/treefmt.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# treefmt.nix
+{
+  projectRootFile = &quot;flake.nix&quot;;
+  programs = {
+    alejandra.enable = true;
+    deadnix.enable = true;
+    # rustfmt.enable = true;
+    # shellcheck.enable = true;
+    # prettier.enable = true;
+    statix.enable = true;
+    keep-sorted.enable = true;
+    # nixfmt = {
+    #   enable = true;
+    #   # strict = true;
+    # };
+  };
+  settings = {
+    global.excludes = [
+      &quot;LICENSE&quot;
+      &quot;README.md&quot;
+      &quot;.adr-dir&quot;
+      &quot;nu_scripts&quot;
+      # unsupported extensions
+      &quot;*.{gif,png,svg,tape,mts,lock,mod,sum,toml,env,envrc,gitignore,sql,conf,pem,*.so.2,key,pub,py,narHash}&quot;
+      &quot;data-mesher/test/networks/*&quot;
+      &quot;nss-datamesher/test/dns.json&quot;
+      &quot;*.age&quot;
+      &quot;*.jpg&quot;
+      &quot;*.nu&quot;
+      &quot;*.png&quot;
+      &quot;.jj/*&quot;
+      &quot;Cargo.lock&quot;
+      &quot;flake.lock&quot;
+      &quot;hive/moonrise/borg-key-backup&quot;
+      &quot;justfile&quot;
+    ];
+    formatter = {
+      deadnix = {
+        priority = 1;
+      };
+      statix = {
+        priority = 2;
+      };
+      alejandra = {
+        priority = 3;
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we have a few commands available to us in our flake directory:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nix fmt&lt;/code&gt;: Will format your whole configuration consistently&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;nix flake check&lt;/code&gt;: While this command was already available, it is now tied to
+treefmt’s check which will check the style of your syntax and provide
+suggestions.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;And this is &lt;code&gt;lib/dev-shell.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{
+  inputs,
+  system ? &quot;x86_64-linux&quot;,
+}: let
+  # Instantiate nixpkgs with the given system and allow unfree packages
+  pkgs = import inputs.nixpkgs {
+    inherit system;
+    config.allowUnfree = true;
+    overlays = [
+      # Add overlays if needed, e.g., inputs.neovim-nightly-overlay.overlays.default
+    ];
+  };
+in
+  pkgs.mkShell {
+    name = &quot;nixos-dev&quot;;
+    packages = with pkgs; [
+      # Nix tools
+      nixfmt-rfc-style # Formatter
+      deadnix # Dead code detection
+      nixd # Nix language server
+      nil # Alternative Nix language server
+      nh # Nix helper
+      nix-diff # Compare Nix derivations
+      nix-tree # Visualize Nix dependencies
+
+      # Code editing
+      helix # Your editor
+
+      # General utilities
+      git
+      ripgrep
+      jq
+      tree
+    ];
+
+    shellHook = &apos;&apos;
+      echo &quot;Welcome to the NixOS development shell!&quot;
+      echo &quot;System: ${system}&quot;
+      echo &quot;Tools available: nixfmt, deadnix, nixd, nil, nh, nix-diff, nix-tree, helix, git, ripgrep, jq, tree&quot;
+    &apos;&apos;;
+  }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now you can run &lt;code&gt;nix develop&lt;/code&gt; in the flake directory and if successfull, you’ll
+see the &lt;code&gt;echo&lt;/code&gt; commands above and you will have all the tools available in your
+environment without having to explicitly install them.&lt;/p&gt;
+</content></entry><entry><title>Flake outputs</title><id>https://saylesss88.github.io/flakes/flake_examples_4.3.html</id><updated>2025-11-28T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://saylesss88.github.io/flakes/flake_examples_4.3.html" rel="alternate"/><content type="html">&lt;h1&gt;Nix Flake Examples&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;This chapter provides practical examples to illustrate the concepts discussed in
+“Nix Flakes Explained.”&lt;/p&gt;
+&lt;h2&gt;Example showing the extensibility of Flakes&lt;/h2&gt;
+&lt;p&gt;NixOS modules and configurations offer us a powerful and composable way to
+define and share system configurations. Imagine we have several independent
+“players,” each with their own unique set of configurations or modules. How do
+we combine these individual contributions into a single, cohesive system without
+directly altering each player’s original flake?&lt;/p&gt;
+&lt;p&gt;This example demonstrates how flakes can extend and compose each other, allowing
+you to layer configurations on top of existing ones. This is particularly useful
+when you want to:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Build upon a base configuration without modifying its source.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Combine features from multiple independent flakes into a single system.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Create specialized versions of an existing configuration.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let’s simulate this by creating a players directory with three sub-directories:
+&lt;code&gt;first&lt;/code&gt;, &lt;code&gt;second&lt;/code&gt;, and &lt;code&gt;third&lt;/code&gt;. Each of these will contain its own &lt;code&gt;flake.nix&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir players
+cd players
+mkdir first
+mkdir second
+mkdir third
+cd first
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now create a &lt;code&gt;flake.nix&lt;/code&gt; with the following contents:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-24.11&quot;;
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+  }: {
+    nixosModules.default = {
+      config,
+      pkgs,
+      lib,
+      ...
+    }: {
+      # Create a file `/etc/first-file`
+      environment.etc.first-file.text = &quot;Hello player # 1!&quot;;
+      boot.initrd.includeDefaultModules = false;
+      documentation.man.enable = false;
+      boot.loader.grub.enable = false;
+      fileSystems.&quot;/&quot;.device = &quot;/dev/null&quot;;
+      system.stateVersion = &quot;24.11&quot;;
+    };
+    nixosConfigurations.testing = nixpkgs.lib.nixosSystem {
+      system = &quot;x86_64-linux&quot;;
+      modules = [
+        self.nixosModules.default
+      ];
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This demonstrates using &lt;code&gt;self&lt;/code&gt; to reference this flake from within its own
+outputs. This is the main use for &lt;code&gt;self&lt;/code&gt; with flakes. Without &lt;code&gt;self&lt;/code&gt;, I
+wouldn’t have a direct way to refer to the &lt;code&gt;nixosModules.default&lt;/code&gt; that’s
+defined within the same flake.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Now in the &lt;code&gt;players/second&lt;/code&gt; directory create this &lt;code&gt;flake.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-24.11&quot;;
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+  }: {
+    nixosModules.default = {
+      config,
+      pkgs,
+      lib,
+      ...
+    }: {
+      # Create a file `/etc/second-file`
+      environment.etc.second-file.text = &quot;Hello player # 2!&quot;;
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nixosModules.default&lt;/code&gt; is a module which is a function that, when called by
+the NixOS module system, returns an attribute set representing a piece of
+system configuration.
+&lt;ul&gt;
+&lt;li&gt;Within that attribute set, it specifies that the file &lt;code&gt;/etc/second-file&lt;/code&gt;
+should exist with “Hello player # 2!” as its content.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;And finally in &lt;code&gt;players/third&lt;/code&gt; create another &lt;code&gt;flake.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  inputs = {
+    first.url = &quot;/home/jr/players/first&quot;;
+    nixpkgs.follows = &quot;first/nixpkgs&quot;;
+    second = {
+      url = &quot;/home/jr/players/second&quot;;
+      inputs.nixpkgs.follows = &quot;first/nixpkgs&quot;;
+    };
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    first,
+    second,
+  }:
+    first.outputs
+    // {
+      nixosConfigurations.testing = first.nixosConfigurations.testing.extendModules {
+        modules = [
+          second.nixosModules.default
+        ];
+      };
+    };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;You’ll have to change the locations to where you placed your &lt;code&gt;players&lt;/code&gt;
+directory in the &lt;code&gt;inputs&lt;/code&gt; above.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;In your &lt;code&gt;third&lt;/code&gt; directory inspect it with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;  ~/players/third
+❯ nix flake show
+path:/home/jr/players/third?lastModified=1748271697&amp;amp;narHash=sha256-oNzkC6X9hA0MpOBmJSZ89w4znXxv4Q5EkFhp0ewehY0%3D
+├───nixosConfigurations
+│   └───testing: NixOS configuration
+└───nixosModules
+    └───default: NixOS module
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and build it with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build .#nixosConfigurations.testing.config.system.build.toplevel
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cat result/etc/first-file
+Hello player # 1!
+cat result/etc/second-file
+Hello player # 2!
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Understanding the Extension&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;As you saw in the &lt;code&gt;flake.nix&lt;/code&gt; for the third player, we leveraged two key flake
+features to combine and extend the previous configurations:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Attribute Set Union&lt;/strong&gt; (&lt;code&gt;//&lt;/code&gt; operator):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;outputs = { ..., first, second, ... }:
+first.outputs // { # ... your extensions here ...
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;//&lt;/code&gt; (attribute set union) operator allows us to take all the outputs from
+&lt;code&gt;first.outputs&lt;/code&gt; (which includes its &lt;code&gt;nixosConfigurations&lt;/code&gt; and &lt;code&gt;nixosModules&lt;/code&gt;)
+and then overlay or add to them on the right-hand side. This means our third
+flake will inherit all the outputs from first, but we can then modify or add new
+ones without changing the first flake itself.&lt;/p&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;&lt;code&gt;config.extendModules&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;    nixosConfigurations.testing = first.nixosConfigurations.testing.extendModules {
+      modules = [
+        second.nixosModules.default
+      ];
+    };
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is the core of the extension. We’re taking the testing NixOS configuration
+defined in the first flake (&lt;code&gt;first.nixosConfigurations.testing&lt;/code&gt;) and then
+calling its &lt;code&gt;extendModules&lt;/code&gt; function. This function allows us to inject
+additional NixOS modules into an already defined system configuration. In this
+case, we’re adding the default module from the second flake
+(&lt;code&gt;second.nixosModules.default&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;By combining these techniques, the third flake successfully creates a NixOS
+configuration that includes both the settings from first (like &lt;code&gt;/etc/first-file&lt;/code&gt;
+and the base system options) and the settings from second (like
+&lt;code&gt;/etc/second-file&lt;/code&gt;), all without directly altering the first or second flakes.
+This demonstrates the incredible power of flake extensibility for building
+complex, modular, and composable systems.&lt;/p&gt;
+</content></entry><entry><title>Nix Pull Requests</title><id>https://saylesss88.github.io/Nix_Pull_Requests_11.html</id><updated>2025-11-27T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://saylesss88.github.io/Nix_Pull_Requests_11.html" rel="alternate"/><content type="html">&lt;h1&gt;Chapter 11&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;img src=&quot;images/gruv16.png&quot; alt=&quot;gruv16&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;Nix Pull Requests&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Pull requests&lt;/strong&gt; communicate changes to a branch in a repository. Once a pull
+request is opened, you can review changes with collaborators and add follow-up
+commits.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;A &lt;strong&gt;pull request&lt;/strong&gt; is a proposal to merge a set of changes from one branch
+into another. In a pull request, collaborators can review and discuss the
+proposed set of changes before they integrate the changes into the main
+codebase.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Pull requests display the differences, or diffs, between the content in the
+source branch and the content in the target branch.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-mermaid&quot;&gt;graph LR
+    A[Your Local Repository] --&amp;gt; B(Feature Branch);
+    B --&amp;gt; C{GitHub Repository};
+    C -- &quot;Open Pull Request&quot; --&amp;gt; D[Pull Request on GitHub];
+    D -- &quot;Review &amp;amp; Discussion&quot; --&amp;gt; D;
+    D -- &quot;Merge&quot; --&amp;gt; E(Main Branch on GitHub);
+    E --&amp;gt; F[Nixpkgs Users];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Explanation of the Diagram&lt;/strong&gt;:&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to see Explanation &lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;A[Your Local Repository]&lt;/strong&gt;: This represents the copy of the Nixpkgs repo on
+your computer where you make changes.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;B (Feature Branch)&lt;/strong&gt;: You create a dedicated branch (e.g.&lt;code&gt;my-pack-update&lt;/code&gt;)
+to isolate your changes.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;C {GitHub Repository}&lt;/strong&gt;: This is the central online repo for Nixpkgs on
+Github. You push your feature branch to this repo.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;C – “Open Pull Request” – D [Pull Request on Github]&lt;/strong&gt;: You initiate a
+pull request from your feature branch to the main branch (usually &lt;code&gt;master&lt;/code&gt; or
+&lt;code&gt;main&lt;/code&gt;) through the GitHub interface.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;D [Pull Request on GitHub]&lt;/strong&gt;: This is where collaborators can see your
+proposed changes, discuss them, and provide feedback.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;D – “Review &amp;amp; Discussion” –&amp;gt; D&lt;/strong&gt;: The pull request facilitates
+communication and potential revisions based on the review.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;D – “Merge” –&amp;gt; E (Main Branch on GitHub)&lt;/strong&gt;: Once the changes are approved,
+they are merged into the main branch of the Nixpkgs repository.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;E (Main Branch on GitHub)&lt;/strong&gt;: The main branch now contains the integrated
+changes.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;E –&amp;gt; F [Nixpkgs Users]&lt;/strong&gt;): Eventually, these changes become available to
+all Nixpkgs users through updates to their Nix installations.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;p&gt;Flakes often rely on having access to the full history of the Git repository to
+correctly determine dependencies, identify specific revisions of inputs, and
+evaluate the flake. Not in all situations will a shallow clone work and this is
+one of them.&lt;/p&gt;
+&lt;p&gt;If you have any changes to your local copy of Nixpkgs make sure to stash them
+before the following:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git stash -u
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This command saves your uncommited changes (including staged files)
+temporarily. You can restore them later with &lt;code&gt;git stash pop&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Step 1 Clone Nixpkgs Locally&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;If you don’t have Nixpkgs locally, you’ll need to clone it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git clone https://github.com/NixOS/nixpkgs.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Step 2 Find a Relevant Pull Request&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;To find specifig commits and releases:&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://status.nixos.org/&quot;&gt;status.nixos.org&lt;/a&gt; provides the latest tested commits
+for each release - use when pinning to specific commits. List of active release
+channels - use when tracking latest channel versions.&lt;/p&gt;
+&lt;p&gt;The complete list of channels is available at
+&lt;a href=&quot;https://channels.nixos.org/&quot;&gt;nixos.org/channels&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;To find a relevant PR you can go to:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/nixpkgs/pulls&quot;&gt;Nixpkgs Pull Requests&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The following example actually uses the
+&lt;a href=&quot;https://github.com/NixOS/nix/pulls&quot;&gt;Nix Pull Requests&lt;/a&gt; the process is the
+same, but that is an important distinction.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;In the Filters enter &lt;code&gt;stack trace&lt;/code&gt; for this example.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The pull request I chose was &lt;a href=&quot;https://github.com/nixos/nix/pull/8623&quot;&gt;8623&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Step 3 Add the Remote Repository (if necessary)&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;If the pull request is from a different repository than your local clone (as in
+the case of the &lt;code&gt;nix&lt;/code&gt; PR while working in a &lt;code&gt;nixpkgs&lt;/code&gt; clone), you need to add
+that repository as a remote. It’s common to name the main Nixpkgs remote
+&lt;code&gt;origin&lt;/code&gt; and other related repositories like &lt;code&gt;nix&lt;/code&gt; as &lt;code&gt;upstream&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Assuming you are in your &lt;code&gt;nixpkgs&lt;/code&gt; clone and want to test a PR from the &lt;code&gt;nix&lt;/code&gt;
+repository:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git remote add upstream https://github.com/NixOS/nix.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Step 4 Fetch the Pull Request Changes&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Fetch the Pull Request Information:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git fetch upstream refs/pull/8623/head:pr-8623
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This command fetches the branch named &lt;code&gt;head&lt;/code&gt; from the pull request &lt;code&gt;8623&lt;/code&gt; in
+the &lt;code&gt;upstream&lt;/code&gt; remote and creates a local branch named &lt;code&gt;pr-8623&lt;/code&gt; that tracks
+it.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;:&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Output (Click to Enlarge) &lt;/summary&gt;
+&lt;pre&gt;&lt;code&gt;remote: Enumerating objects: 104651, done.
+remote: Counting objects: 100% (45/45), done.
+remote: Compressing objects: 100% (27/27), done.
+remote: Total 104651 (delta 33), reused 20 (delta 18), pack-reused 104606 (from 1)
+Receiving objects: 100% (104651/104651), 61.64 MiB | 12.56 MiB/s, done.
+Resolving deltas: 100% (74755/74755), done.
+From https://github.com/NixOS/nix
+ * [new ref]             refs/pull/8623/head -&amp;gt; pr-8623
+ * [new tag]             1.0                 -&amp;gt; 1.0
+ * [new tag]             1.1                 -&amp;gt; 1.1
+ * [new tag]             1.10                -&amp;gt; 1.10
+ * [new tag]             1.11                -&amp;gt; 1.11
+ * [new tag]             1.11.1              -&amp;gt; 1.11.1
+ * [new tag]             1.2                 -&amp;gt; 1.2
+ * [new tag]             1.3                 -&amp;gt; 1.3
+ * [new tag]             1.4                 -&amp;gt; 1.4
+ * [new tag]             1.5                 -&amp;gt; 1.5
+ * [new tag]             1.5.1               -&amp;gt; 1.5.1
+ * [new tag]             1.5.2               -&amp;gt; 1.5.2
+ * [new tag]             1.5.3               -&amp;gt; 1.5.3
+ * [new tag]             1.6                 -&amp;gt; 1.6
+ * [new tag]             1.6.1               -&amp;gt; 1.6.1
+ * [new tag]             1.7                 -&amp;gt; 1.7
+ * [new tag]             1.8                 -&amp;gt; 1.8
+ * [new tag]             1.9                 -&amp;gt; 1.9
+ * [new tag]             2.0                 -&amp;gt; 2.0
+ * [new tag]             2.2                 -&amp;gt; 2.2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/details&gt;
+&lt;p&gt;&lt;strong&gt;Step 5 Checkout the Local Branch:&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git checkout pr-8623
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Or with the &lt;code&gt;gh&lt;/code&gt; cli:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;gh pr checkout 8623
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;Build and Test the Changes&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Now we want to see if the code changes introduced by the pull request actually
+build correctly within the Nix ecosystem.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix build
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output:&lt;/strong&gt;&lt;/p&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Output (Click to Enlarge) &lt;/summary&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;error: builder for &apos;/nix/store/rk86daqgf6a9v6pdx6vcc5b580lr9f09-nix-2.20.0pre20240115_20b4959.drv&apos; failed with exit code 2;
+   last 25 log lines:
+   &amp;gt;
+   &amp;gt;         _NIX_TEST_ACCEPT=1 make tests/functional/lang.sh.test
+   &amp;gt;
+   &amp;gt;     to regenerate the files containing the expected output,
+   &amp;gt;     and then view the git diff to decide whether a change is
+   &amp;gt;     good/intentional or bad/unintentional.
+   &amp;gt;     If the diff contains arbitrary or impure information,
+   &amp;gt;     please improve the normalization that the test applies to the output.
+   &amp;gt; make: *** [mk/lib.mk:90: tests/functional/lang.sh.test] Error 1
+   &amp;gt; make: *** Waiting for unfinished jobs....
+   &amp;gt; ran test tests/functional/selfref-gc.sh... [PASS]
+   &amp;gt; ran test tests/functional/store-info.sh... [PASS]
+   &amp;gt; ran test tests/functional/suggestions.sh... [PASS]
+   &amp;gt; ran test tests/functional/path-from-hash-part.sh... [PASS]
+   &amp;gt; ran test tests/functional/gc-auto.sh... [PASS]
+   &amp;gt; ran test tests/functional/path-info.sh... [PASS]
+   &amp;gt; ran test tests/functional/flakes/show.sh... [PASS]
+   &amp;gt; ran test tests/functional/fetchClosure.sh... [PASS]
+   &amp;gt; ran test tests/functional/completions.sh... [PASS]
+   &amp;gt; ran test tests/functional/build.sh... [PASS]
+   &amp;gt; ran test tests/functional/impure-derivations.sh... [PASS]
+   &amp;gt; ran test tests/functional/build-delete.sh... [PASS]
+   &amp;gt; ran test tests/functional/build-remote-trustless-should-fail-0.sh... [PASS]
+   &amp;gt; ran test tests/functional/build-remote-trustless-should-pass-2.sh... [PASS]
+   &amp;gt; ran test tests/functional/nix-profile.sh... [PASS]
+   For full logs, run:
+     nix log /nix/store/rk86daqgf6a9v6pdx6vcc5b580lr9f09-nix-2.20.0pre20240115_20b4959.drv
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/details&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;nix build&lt;/code&gt;&lt;/strong&gt; (Part of the Nix Unified CLI):
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Declarative: when used within a Nix flake (&lt;code&gt;flake.nix&lt;/code&gt;), &lt;code&gt;nix build&lt;/code&gt; is a
+bit more declarative. It understands the outputs defined in your flake.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Clearer Output Paths: &lt;code&gt;nix build&lt;/code&gt; typically places build outputs in the
+&lt;code&gt;./result&lt;/code&gt; directory by default (similar to &lt;code&gt;nix-build&lt;/code&gt;’s &lt;code&gt;result&lt;/code&gt; symlink)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Better Error Reporting: It gives more informative error messages.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Future Direction&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Benefits of using &lt;code&gt;nix build&lt;/code&gt;:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Flake Integration:&lt;/strong&gt; &lt;code&gt;nix build&lt;/code&gt; naturally understands the flake’s outputs.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Development Shells:&lt;/strong&gt; When you are in a &lt;code&gt;nix develop&lt;/code&gt; shell, &lt;code&gt;nix build&lt;/code&gt; is
+the more idiomatic way to build packages defined in your dev environment.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Consistency:&lt;/strong&gt; Using the unified CLI promotes a more consistent workflow.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Next Steps&lt;/h2&gt;
+&lt;p&gt;As you can see this build failed, as for why the build failed, the key part of
+the error message is:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;make: *** [mk/lib.mk:90: tests/functional/lang.sh.test] Error 1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This suggests that one of the functional tests (&lt;code&gt;lang.sh.test&lt;/code&gt;) failed. This
+happens when the expected output of the test doesn’t match the actual output.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This can heppen when:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;The test expectations are outdated due to changes in the codebase.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The test captures environment-specific or transient outputs that are not
+properly normalized.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;The test includes impure or non-deterministic information, making it hard to
+verify.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;To address this, _NIX_TEST_ACCEPT=1 is used as an override mechanism that tells
+the test framework: &amp;gt; “Accept whatever output is generated as the new expected
+result.”&lt;/p&gt;
+&lt;p&gt;The message advises running:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;_NIX_TEST_ACCEPT=1 make tests/functional/lang.sh.test
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This will regenerate the expected output files, allowing you to inspect what
+changed with &lt;code&gt;git diff&lt;/code&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git diff tests/functional/lang.sh.test
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Verifies if Changes are Intentional:&lt;/strong&gt; If the difference is reasonable and
+expected (due to a legitimate update in the logic), you can commit these
+changes to update the test suit. If not, you have to refine the test
+normalization process further.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;If the changes seem valid, commit them:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;git add tests/functional/lang.sh.test
+git commit -m &quot;Update expected test output for lang.sh.test&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Running the following will provide the full logs:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nix log /nix/store/rk86daqgf6a9v6pdx6vcc5b580lr9f09-nix-2.20.0pre20240115_20b4959.drv
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;Testing Nixpkgs pull requests is a vital part of contributing to a healthy and
+reliable Nix ecosystem. By following these steps, you can help ensure that
+changes are well-vetted before being merged, ultimately benefiting all Nix
+users. Your efforts in testing contribute significantly to the quality and
+stability of Nixpkgs.&lt;/p&gt;
+</content></entry><entry><title>Unencrypted BTRFS Impermanence with Flakes</title><id>https://saylesss88.github.io/installation/unenc/unenc_impermanence.html</id><updated>2025-11-24T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://saylesss88.github.io/installation/unenc/unenc_impermanence.html" rel="alternate"/><content type="html">&lt;h1&gt;Unencrypted BTRFS Impermanence with Flakes&lt;/h1&gt;
+&lt;details&gt;
+&lt;summary&gt; ✔️ Click to Expand Table of Contents&lt;/summary&gt;
+&lt;!-- toc --&gt;
+&lt;/details&gt;
+&lt;p&gt;Figure 1: Impermanence Logo: Image of the Impermanence logo. Sourced from the&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/nix-community/impermanence&quot;&gt;Impermanence repo&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;This guide is for an unencrypted setup, there are a few links at the end for
+encrypted setups. This guide follows the previous
+&lt;a href=&quot;https://saylesss88.github.io/installation/unencrypted_setups.html&quot;&gt;minimal install guide&lt;/a&gt;
+but you should be able to adjust it carefully to meet your needs.&lt;/p&gt;
+&lt;p&gt;This section details how to set up impermanence on your NixOS system using BTRFS
+subvolumes. With impermanence, your operating system’s root filesystem will
+reset to a pristine state on each reboot, while designated directories and files
+remain persistent. This provides a highly reliable and rollback-friendly system.&lt;/p&gt;
+&lt;p&gt;In NixOS, “state” is any data or condition of the system that isn’t defined in
+your declarative configuration. The impermanence approach aims to make this
+state temporary (ephemeral) or easily resettable, so your system always matches
+your configuration and can recover from unwanted changes or corruption.&lt;/p&gt;
+&lt;h2&gt;Impermanence: The Concept and Its BTRFS Implementation&lt;/h2&gt;
+&lt;p&gt;In a traditional Linux system, most of this state is stored on the disk and
+persists indefinitely unless manually deleted or modified. However, this can
+lead to configuration drift, where the system accumulates changes (e.g., log
+files, temporary files, or unintended configuration tweaks) that make it harder
+to reproduce or maintain.&lt;/p&gt;
+&lt;p&gt;Impermanence, in the context of operating systems, refers to a setup where the
+majority of the system’s root filesystem (&lt;code&gt;/&lt;/code&gt;) is reset to a pristine state on
+every reboot. This means any changes made to the system (e.g., installing new
+packages, modifying system files outside of configuration management, creating
+temporary files) are discarded upon shutdown or reboot.&lt;/p&gt;
+&lt;h2&gt;What Does Impermanence Do?&lt;/h2&gt;
+&lt;p&gt;Impermanence is a NixOS approach that makes the system stateless (or nearly
+stateless) by wiping the root filesystem (&lt;code&gt;/&lt;/code&gt;) on each boot, ensuring a clean,
+predictable starting point. Only explicitly designated data (persistent state)
+is preserved across reboots, typically stored in specific locations like the
+/nix/persist subvolume. This is possible because NixOS can boot with only the
+&lt;code&gt;/boot&lt;/code&gt;, and &lt;code&gt;/nix&lt;/code&gt; directories. This achieves:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Clean Root Filesystem:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The root subvolume is deleted and recreated on each boot, erasing transient
+state (e.g., temporary files, runtime data).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;This ensures the system starts fresh, reducing clutter and making it behave
+closer to a declarative system defined by your NixOS configuration.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Selective Persistence:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Critical state (e.g., user files, logs, system configuration) is preserved in
+designated persistent subvolumes (e.g., /nix/persist, /var/log, /var/lib) or
+files.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;You control exactly what state persists by configuring
+&lt;code&gt;environment.persistence.&quot;/nix/persist&quot;&lt;/code&gt; or other mechanisms.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;❗ The understanding around persisting &lt;code&gt;/var/lib/nixos&lt;/code&gt; seems to be evolving.
+See,The importance of persisting &lt;code&gt;/var/lib/nixos&lt;/code&gt; See also necessary system
+state&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Reproducibility and Security:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;By wiping transient state, impermanence prevents unintended changes from
+accumulating, making the system more reproducible.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;It enhances security by ensuring sensitive temporary data (e.g., /tmp, runtime
+credentials) is erased on reboot.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Getting Started&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;Add impermanence to your flake.nix. You will change the hostname in the flake
+to match your networking.hostName.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;# flake.nix
+{
+  description = &quot;NixOS configuration&quot;;
+
+  inputs = {
+    nixpkgs.url = &quot;github:nixos/nixpkgs/nixos-unstable&quot;;
+    disko.url = &quot;github:nix-community/disko/latest&quot;;
+    disko.inputs.nixpkgs.follows = &quot;nixpkgs&quot;;
+    impermanence.url = &quot;github:nix-community/impermanence&quot;;
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = &quot;x86_64-linux&quot;;
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Discover where your root subvolume is located with &lt;code&gt;findmnt&lt;/code&gt;:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Before configuring impermanence, it’s crucial to know the device path and
+subvolume path of your main BTRFS partition where the root filesystem (/) is
+located. This information is needed for the mount command within the
+impermanence script.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;findmnt /
+TARGET   SOURCE         FSTYPE OPTIONS
+/        /dev/disk/by-partlabel/disk-main-root[/root]
+                        btrfs  rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=275,sub
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;From the SOURCE column, note the full path, including the device (e.g.,
+&lt;code&gt;/dev/disk/by-partlabel/disk-main-root&lt;/code&gt;) and the subvolume in brackets (e.g.,
+&lt;code&gt;[/root]&lt;/code&gt;). You will use the device path in the next step&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;/dev/disk/by-partlabel/disk-main-root&lt;/code&gt; is a symlink to the actual device path
+(e.g. &lt;code&gt;/dev/nvme0n1p2&lt;/code&gt;), but using the partlabel is generally more robust for
+scripts.&lt;/p&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Create an impermanence.nix:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now, create a new file named &lt;code&gt;impermanence.nix&lt;/code&gt; in your configuration directory
+(i.e. your flake directory). This file will contain all the specific settings
+for your impermanent setup, including BTRFS subvolume management and persistent
+data locations. Since this file is right next to your &lt;code&gt;configuration.nix&lt;/code&gt;,
+you’ll just add an &lt;code&gt;imports = [ ./impermanence.nix&lt;/code&gt; ] to your
+&lt;code&gt;configuration.nix&lt;/code&gt; apply it to your configuration.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-nix&quot;&gt;{lib, ...}: {
+  #  Reset root subvolume on boot
+  boot.initrd.postResumeCommands = lib.mkAfter &apos;&apos;
+    mkdir /btrfs_tmp
+      mount /dev/disk/by-partlabel/disk-main-root /btrfs_tmp # CONFIRM THIS IS CORRECT FROM findmnt
+      if [[ -e /btrfs_tmp/root ]]; then
+        mkdir -p /btrfs_tmp/old_roots
+        timestamp=$(date --date=&quot;@$(stat -c %Y /btrfs_tmp/root)&quot; &quot;+%Y-%m-%-d_%H:%M:%S&quot;)
+        mv /btrfs_tmp/root &quot;/btrfs_tmp/old_roots/$timestamp&quot;
+      fi
+
+      delete_subvolume_recursively() {
+        IFS=$&apos;\n&apos;
+        for i in $(btrfs subvolume list -o &quot;$1&quot; | cut -f 9- -d &apos; &apos;); do
+          delete_subvolume_recursively &quot;/btrfs_tmp/$i&quot;
+        done
+        btrfs subvolume delete &quot;$1&quot;
+      }
+
+      for i in $(find /btrfs_tmp/old_roots/ -maxdepth 1 -mtime +30); do
+        delete_subvolume_recursively &quot;$i&quot;
+      done
+
+      btrfs subvolume create /btrfs_tmp/root
+      umount /btrfs_tmp
+  &apos;&apos;;
+
+  # Use /persist as the persistence root, matching Disko&apos;s mountpoint
+  environment.persistence.&quot;/nix/persist&quot; = {
+    hideMounts = true;
+    directories = [
+      &quot;/etc&quot; # System configuration (Keep this here for persistence via bind-mount)
+      &quot;/var/spool&quot; # Mail queues, cron jobs
+      &quot;/srv&quot; # Web server data, etc.
+      &quot;/root&quot;
+    ];
+    files = [
+    ];
+  };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With btrfs subvolumes since each directory is its own subvolume, when the root
+is wiped on reboot the subvolumes are untouched.&lt;/p&gt;
+&lt;h3&gt;Applying Your Impermanence Configuration&lt;/h3&gt;
+&lt;p&gt;Once you have completed all the steps and created or modified the necessary
+files (&lt;code&gt;flake.nix&lt;/code&gt;, &lt;code&gt;impermanence.nix&lt;/code&gt;), you need to apply these changes to your
+NixOS system.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Navigate to your NixOS configuration directory (where your flake.nix is
+located).&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;cd /path/to/your/flake
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Rebuild and Switch: Execute the &lt;code&gt;nixos-rebuild switch&lt;/code&gt; command. This command
+will:&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Evaluate your flake.nix and the modules it imports (including your new
+impermanence.nix).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Build a new NixOS system closure based on your updated configuration.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Activate the new system configuration, making it the current running system.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;❗ NOTE: On the first rebuild after setting up impermanence, you may find that
+you’re not in the password database or cannot log in/sudo. This occurs because
+the initial state of your new ephemeral root filesystem, including /etc (where
+user passwords are stored), is fresh. It has to do with the timing of when
+environment.persistence takes effect during the first boot.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;To avoid this password issue, before your first nixos-rebuild switch for
+impermanence, run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo mkdir -p /nix/persist/etc # Ensure the target directory exists
+sudo cp -a /etc/* /nix/persist/etc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;This copies your current /etc directory contents (including existing user
+passwords) into your persistent &amp;gt;&amp;gt;storage.&lt;/li&gt;
+&lt;li&gt;Crucially: You must also ensure that &lt;code&gt;/etc&lt;/code&gt; is explicitly included in your
+&lt;code&gt;environment.persistence.&quot;/nix/persist&quot;&lt;/code&gt;.directories list in your
+&lt;code&gt;impermanence.nix&lt;/code&gt; like we did above, (or main configuration). This
+configures &amp;gt;NixOS to persistently bind-mount &lt;code&gt;/nix/persist/etc&lt;/code&gt; over &lt;code&gt;/etc&lt;/code&gt;
+on every subsequent boot. Once these steps are done and you reboot, your
+user passwords should function correctly, and future rebuilds will &amp;gt; not
+present this problem.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo nixos-rebuild switch --flake .#hostname # Replace &apos;hostname&apos; with your actual system hostname
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Perform an Impermanence Test (Before Reboot):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Before you reboot, create a temporary directory and file in a non-persistent
+location. Since you haven’t explicitly added &lt;code&gt;/imperm_test&lt;/code&gt; to your
+&lt;code&gt;environment.persistence.&quot;/nix/persist&quot;&lt;/code&gt; directories, this file should not
+survive a reboot.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir /imperm_test
+echo &quot;This should be Gone after Reboot&quot; | sudo tee /imperm_test/testfile
+ls -l /imperm_test/testfile # Verify the file exists
+cat /imperm_test/testfile # Verify content
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Reboot Your System: For the impermanence setup to take full effect and for
+your root filesystem to be reset for the first time, you must reboot your
+machine.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo reboot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Verify Impermanence (After Reboot):&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;After the system has rebooted, check if the test directory and file still
+exist:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;ls -l /imperm_test/testfile
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You should see an output like &lt;code&gt;ls: cannot access &apos;/imperm_test/testfile&apos;&lt;/code&gt;: No
+such file or directory. This confirms that the &lt;code&gt;/imperm_test&lt;/code&gt; directory and its
+contents were indeed ephemeral and were removed during the reboot process,
+indicating your impermanence setup is working correctly!&lt;/p&gt;
+&lt;p&gt;Your system should now come up with a fresh root filesystem, and only the data
+specified in your &lt;code&gt;environment.persistence.&quot;/nix/persist&quot;&lt;/code&gt; configuration will be
+persistent.&lt;/p&gt;
+&lt;h3&gt;Recovery with nixos-enter and chroot&lt;/h3&gt;
+&lt;p&gt;This is if you followed the minimal_install guide, it will need to be changed
+for a different disk layout.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Chroot&quot;&gt;Chroot&lt;/a&gt; is an operation that changes the
+apparent root directory for the current running process and their children. A
+program that is run in such a modified environment cannot access files and
+commands outside that environmental directory tree. This modified environment is
+called a chroot jail. –NixOS wiki&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;nixos-enter&lt;/code&gt; allows you to access a NixOS installation from a NixOS rescue
+system. To use, setup &lt;code&gt;/mnt&lt;/code&gt; as described in the
+&lt;a href=&quot;https://nixos.org/manual/nixos/stable/#sec-installation&quot;&gt;installation manual&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;🛠️ Recovery: Chroot into Your NixOS Btrfs+Impermanence System&lt;/p&gt;
+&lt;p&gt;Take note of your layout from commands like:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo fdisk -l
+lsblk
+sudo btrfs subvol list /
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Also inspect your &lt;code&gt;disk-config.nix&lt;/code&gt; to ensure you refer to the correct &lt;code&gt;subvol=&lt;/code&gt;
+names.&lt;/p&gt;
+&lt;p&gt;If you need to repair your system (e.g., forgot root password, fix a broken
+config, etc.), follow these steps to chroot into your NixOS install:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Boot a Live ISO&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Boot from a NixOS (or any recent Linux) live USB.&lt;/p&gt;
+&lt;p&gt;Open a terminal and become root:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;sudo -i
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Identify Your Devices&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Your main disk is &lt;code&gt;/dev/nvme0n1&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;EFI partition: &lt;code&gt;/dev/nvme0n1p1&lt;/code&gt; (mounted at &lt;code&gt;/boot&lt;/code&gt;)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Root partition: &lt;code&gt;/dev/nvme0n1p2&lt;/code&gt; (Btrfs, with subvolumes)&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;Mount the Btrfs Root Subvolume&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;First, mount the Btrfs partition somewhere temporary (not as / yet):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mount -o subvol=root,compress=zstd,noatime /dev/nvme0n1p2 /mnt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;4&quot;&gt;
+&lt;li&gt;Mount Other Subvolumes&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Now mount your other subvolumes as defined in your &lt;code&gt;disko.nix&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;# Mount Other Subvolumes
+# (Ensure /mnt directories are created for each *mountpoint*)
+
+# Home
+mkdir -p /mnt/home
+mount -o subvol=home,compress=zstd,noatime /dev/nvme0n1p2 /mnt/home
+
+# IMPORTANT: No separate mount for /mnt/home/user, as it&apos;s a nested subvolume
+# and handled by the /home mount.
+
+# Nix store
+mkdir -p /mnt/nix
+mount -o subvol=nix,compress=zstd,noatime /dev/nvme0n1p2 /mnt/nix
+
+# Nix persist
+mkdir -p /mnt/nix/persist
+# CRITICAL: Based our disko.nix, the subvolume name is &apos;persist&apos;, not &apos;nix/persist&apos;
+mount -o subvol=persist,compress=zstd,noatime /dev/nvme0n1p2 /mnt/nix/persist
+
+# /var/log
+mkdir -p /mnt/var/log
+mount -o subvol=log,compress=zstd,noatime /dev/nvme0n1p2 /mnt/var/log
+
+# /var/lib
+mkdir -p /mnt/var/lib
+# Confirmed: The subvolume named &apos;lib&apos; is mounted to /var/lib
+mount -o subvol=lib,compress=zstd,noatime /dev/nvme0n1p2 /mnt/var/lib
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note: If you get “subvolume not found,” check the subvolume names with
+&lt;code&gt;btrfs subvol list /mnt&lt;/code&gt;.&lt;/p&gt;
+&lt;ol start=&quot;5&quot;&gt;
+&lt;li&gt;Mount the EFI Partition&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mkdir -p /mnt/boot mount /dev/nvme0n1p1 /mnt/boot
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;6&quot;&gt;
+&lt;li&gt;(Optional) Mount Virtual Filesystems&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;mount --bind /dev /mnt/dev mount --bind /proc /mnt/proc mount --bind /sys
+/mnt/sys mount --bind /run /mnt/run
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol start=&quot;7&quot;&gt;
+&lt;li&gt;Chroot&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;chroot /mnt /run/current-system/sw/bin/bash
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;or, if using a non-NixOS live system:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-bash&quot;&gt;nixos-enter
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(You may need to install nixos-enter with nix-shell -p nixos-enter.) 8. You’re
+In!&lt;/p&gt;
+&lt;p&gt;You can now run nixos-rebuild, reset passwords, or fix configs as needed. 🔎&lt;/p&gt;
+&lt;p&gt;📓 Notes&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Adjust &lt;code&gt;compress=zstd,noatime&lt;/code&gt; if your config uses different mount options.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;For impermanence, make sure to mount all persistent subvolumes you need.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;If you use swap, you may want to enable it too (e.g., swapon /dev/zram0 if
+relevant).&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You can now recover, repair, or maintain your NixOS system as needed!&lt;/p&gt;
+&lt;h4&gt;Related Material&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Change_root&quot;&gt;Change root (chroot&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://www.mankier.com/8/nixos-enter&quot;&gt;nixos-enter&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://grahamc.com/blog/erase-your-darlings/&quot;&gt;erase your darlings&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://haseebmajid.dev/posts/2024-07-30-how-i-setup-btrfs-and-luks-on-nixos-using-disko/&quot;&gt;Guide for Btrfs with LUKS&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://notashelf.dev/posts/impermanence&quot;&gt;notashelf impermanence&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://wiki.nixos.org/wiki/Impermanence&quot;&gt;NixOS wiki Impermanence&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/nix-community/impermanence&quot;&gt;nix-community impermanence module&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</content></entry></feed>

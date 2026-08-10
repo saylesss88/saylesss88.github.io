@@ -1,0 +1,1913 @@
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.8.2</generator><atom:link href="https://saylesss88.github.io/rss7.xml" rel="self"></atom:link><atom:link href="https://saylesss88.github.io/rss6.xml" rel="prev"></atom:link><atom:link href="https://saylesss88.github.io/rss8.xml" rel="next"></atom:link><item><title>Nix Lang</title><link>https://saylesss88.github.io/nix/nix_language.html</link><description><![CDATA[<h1>Nix Language</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![lambda1](../images/lambda1.png) -->
+<h2>Nix Expression Language Syntax Overview</h2>
+<p>The Nix language is designed for conveniently creating and composing
+<em>derivations</em> precise descriptions of how contents of files are used to derive
+new files. –<a href="https://nix.dev/manual/nix/2.28/language/">Nix Reference Manual</a></p>
+<p>Nix is often described as “JSON with functions.” It’s a declarative language
+where you define outcomes, not step-by-step instructions. Instead of writing
+sequential code, you create expressions that describe data structures,
+functions, and dependencies. These expressions are evaluated lazily, meaning Nix
+computes values only when needed, making it efficient for managing large
+systems.</p>
+<p>You can plug most of the following into the <code>nix repl</code> I’m showing it in a
+single code block here for brevity:</p>
+<pre><code class="language-nix,editable"># Comments Look Like This!
+
+# Strings
+"This is a string"          # String literal
+
+''
+one
+two                        # multi-line String
+three
+''
+
+("foo" + "bar")           # =&gt; "foobar"
+
+"foo" != "bar"   # Inequality test  # =&gt; true
+
+!false      # =&gt; true
+
+("Home dir is ${builtins.getEnv "HOME"}")  # String Interpolation
+# =&gt; "Home dir is /home/jr"
+
+"3 6 ${builtins.toString 9}"
+# =&gt; "3 6 9"
+
+"goodbye ${ { d = "world";}.d}"
+# =&gt; "goodbye world"
+
+# Booleans
+
+(false &amp;&amp; true)    # AND         # =&gt; false
+
+(true || false)    # OR         # =&gt; true
+
+(if 6 &lt; 9 then "yay" else "nay")  # =&gt; "yay"
+
+null      # Null Value
+
+679       # Integer
+
+(6 + 7 + 9) # =&gt; 22   # Addition
+
+(9 - 3  - 2) # =&gt; 4   # Subtraction
+
+(6 / 3)  # =&gt; 2       # Division
+6.79      # Floating Point
+
+/etc/nixos      # Absolute Path
+
+../modules/nixos/boot.nix    # relative
+
+# Let expressions
+
+(let a = "2"; in                   # Let expressions are a way to create variables
+a + a + builtins.toString "4")
+# =&gt; "224"
+
+(let first = "firstname"; in
+"lastname " first)
+# =&gt; "lastname firstname"
+
+# Lists
+
+[ 1 2 "three" "bar" "baz" ]   # lists are whitespace separated
+
+builtins.elemAt [ 1 2 3 4 5 ] 3
+# =&gt; 4
+
+builtins.length [ 1 2 3 4 ]
+# =&gt; 4
+
+# Attrsets
+
+{ first = "Jim"; last = "Bo"; }.last # Attribute selection
+# =&gt; "Bo"
+
+{ a = 1; b = 3; } // { c = 4; b = 2; }   # Attribute Set merging
+# =&gt; { a = 1; b = 2; c = 4; }               # Right Side takes precedence
+
+builtins.listToAttrs [ { name = "Jr"; value = "Jr Juniorville"; } {name = "$"; value = "JR"; } { name = "jr"; value = "jr
+ville"; }]
+# =&gt; { "$" = "JR"; Jr = "Jr Juniorville"; jr = "jrville"; }
+
+# Control Flow
+
+if 2 * 2 == 4
+then "yes!"
+else "no!"
+# =&gt; "yes!"
+
+assert 2 * 2
+== 4; "yes!"
+# =&gt; "yes!"
+
+with builtins;
+head [ 5 6 7 ]
+# =&gt; 5
+
+# or
+
+builtins.head[ 5 6 7 ]
+
+inherit pkgs     # pkgs = pkgs;
+src;             # src = src;
+</code></pre>
+<h3>Understanding Laziness</h3>
+<p>Nix expressions are evaluated lazily, meaning Nix computes values only when
+needed. This is a powerful feature that makes Nix efficient for managing large
+systems, as it avoids unnecessary computations.</p>
+<p>For example, observe how <code>a</code> is never evaluated in the following <code>nix-repl</code>
+session:</p>
+<pre><code class="language-nix">nix-repl&gt; let a = builtins.div 4 0; b = 6; in b
+6
+</code></pre>
+<ul>
+<li>Since <code>a</code> isn’t used in the final result, there’s no division by zero error.</li>
+</ul>
+<h3>Strings and String Interpolation</h3>
+<p><strong>Strings</strong>: Strings are enclosed in double quotes (<code>"</code>) or two single quotes
+(<code>''</code>).</p>
+<pre><code class="language-nix">nix-repl&gt; "stringDaddy"
+"stringDaddy"
+nix-repl&gt; ''
+  This is a
+  multi-line
+  string
+''
+"This is a\nmulti-line\nstring.\n"
+</code></pre>
+<p><a href="https://nix.dev/manual/nix/2.24/language/string-interpolation">string interpolation</a>.
+is a language feature where a string, path, or attribute name can contain an
+expressions enclosed in <code>${ }</code>. This construct is called an <em>interpolated
+string</em>, and the expression inside is an <em>interpolated expression</em>.</p>
+<p>Rather than writing:</p>
+<pre><code class="language-nix">let path = "/usr/local"; in "--prefix=${path}"
+</code></pre>
+<p>This evaluates to <code>"--prefix=/usr/local"</code>. Interpolated expressions must
+evaluate to a string, path, or an attribute set with an <code>outPath</code> or
+<code>__toString</code> attribute.</p>
+<h3>Attribute Sets</h3>
+<p><strong>Attribute sets</strong> are all over Nix code and deserve their own section, they are
+name-value pairs wrapped in curly braces, where the names must be unique:</p>
+<pre><code class="language-nix">{
+  string = "hello";
+  int = 8;
+}
+</code></pre>
+<p>Attribute names usually don’t need quotes.</p>
+<p>You can access attributes using <em>dot notation</em>:</p>
+<pre><code class="language-nix">let person = { name = "Alice"; age = 30; }; in person.name
+"Alice"
+</code></pre>
+<p>You will sometimes see attribute sets with <code>rec</code> prepended. This allows access
+to attributes within the set:</p>
+<pre><code class="language-nix">rec {
+  x = y;
+  y = 123;
+}.x
+</code></pre>
+<p><strong>Output</strong>: <code>123</code></p>
+<p>or</p>
+<pre><code class="language-nix">rec {
+  one = 1;
+  two = one + 1;
+  three = two + 1;
+}
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix"> {
+  one = 1;
+  three = 3;
+  two = 2;
+ }
+</code></pre>
+<pre><code class="language-nix"># This would fail:
+{
+  one = 1;
+  two = one + 1;  # Error: undefined variable 'one'
+  three = two + 1;
+}
+</code></pre>
+<p>Recursive sets introduce the danger of <em>infinite recursion</em> For example:</p>
+<pre><code class="language-nix">rec {
+  x = y;
+  y = x;
+}.x
+</code></pre>
+<p>Will crash with an <code>infinite recursion encountered</code> error message.</p>
+<p>The
+<a href="https://nix.dev/manual/nix/2.24/language/operators.html#update">attribute set update operator</a>
+merges two attribute sets.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-nix">{ a = 1; b = 2; } // { b = 3; c = 4; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{ a = 1; b = 3; c = 4; }
+</code></pre>
+<p>However, names on the right take precedence, and updates are shallow.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-nix">{ a = { b = 1; }; } // { a = { c = 3; }; }
+</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-nix">{ a = { c = 3; }; }
+</code></pre>
+<p>Above, key <code>b</code> was completely removed, because the whole <code>a</code> value was replaced.</p>
+<p><strong>Inheriting Attributes</strong></p>
+<ul>
+<li>Click to see Output:</li>
+</ul>
+<pre><code class="language-nix">let x = 123; in
+{
+  inherit x;
+  y = 456;
+}
+</code></pre>
+<p>is equivalent to</p>
+<pre><code class="language-nix">let x = 123; in
+{
+  x = x;
+  y = 456;
+}
+</code></pre>
+<p>which are both equivalent to</p>
+<pre><code class="language-nix">{
+  x = 123;
+  y = 456;
+}
+</code></pre>
+<blockquote>
+<p>❗: This works because <code>x</code> is added to the lexical scope by the <code>let</code>
+construct.</p>
+</blockquote>
+<p>Now that we understand attribute sets lets move on to functions, a powerful
+feature of the Nix language that gives you the ability to reuse and share
+logical pieces of code.</p>
+<h3>Functions(lambdas):</h3>
+<p>Functions in Nix help you build reusable components and are the the building
+blocks of Nix. In the next chapter we’ll go even further into Nix functions and
+how to use them but I will touch on them here.</p>
+<p>Nix functions have this form:</p>
+<pre><code class="language-nix">pattern: body
+</code></pre>
+<p>The following is a function that expects an integer and returns it increased by
+1:</p>
+<pre><code class="language-nix">x: x + 1   # lambda function, not bound to a variable
+</code></pre>
+<p>The pattern tells us what the argument of the function has to look like, and
+binds variables in the body to (parts of) the argument.</p>
+<pre><code class="language-nix">(x: x + 5) 200
+205
+</code></pre>
+<p>They are all lambdas (i.e. anonymous functions without names) until we assign
+them to a variable like the following example.</p>
+<p>Functions are defined using this syntax, where <code>x</code> and <code>y</code> are attributes passed
+into the function:</p>
+<pre><code class="language-nix">{
+  my_function = x: y: x + y;
+}
+</code></pre>
+<p>The code below calls a function called <code>my_function</code> with the parameters <code>2</code> and
+<code>3</code>, and assigns its output to the <code>my_value</code> field:</p>
+<pre><code class="language-nix">{
+  my_value = my_function 2 3;
+}
+my_value
+5
+</code></pre>
+<p>The body of the function automatically returns the result of the function.
+Functions are called by spaces between it and its parameters. No commas are
+needed to separate parameters.</p>
+<p>The following is a function that expects an attribute set with required
+attributes <code>a</code> and <code>b</code> and concatenates them:</p>
+<pre><code class="language-nix">{ a, b }: a + b
+</code></pre>
+<p><strong>Default Values in Functions</strong>:</p>
+<p>Functions in Nix can define <strong>default values</strong> for their arguments. This allows
+for more flexible function calls where some arguments are optional.</p>
+<pre><code class="language-nix">{ x, y ? "foo", z ? "bar" }: z + y + x
+</code></pre>
+<ul>
+<li>Specifies a function that only requires an attribute named <code>x</code>, but optionally
+accepts <code>y</code> and <code>z</code>.</li>
+</ul>
+<p><strong>@-patterns in functions</strong>:</p>
+<p>An <code>@-pattern</code> provides a means of referring to the whole value being matched by
+the function’s argument pattern, in addition to destructuring it. This is
+especially useful when you want to access attributes that are not explicitly
+destructured in the pattern:</p>
+<pre><code class="language-nix">args@{ x, y, z, ... }: z + y + x + args.a
+# or
+{ x, y, z, ... } @ args: z + y + x + args.a
+</code></pre>
+<ul>
+<li>
+<p>Here, <code>args</code> is bound to the argument as <em>passed</em>, which is further matched
+against the pattern <code>{ x, y, z, ... }</code>. The <code>@-pattern</code> makes mainly sense
+with an ellipsis(<code>...</code>) as you can access attribute names as <code>a</code>, using
+<code>args.a</code>, which was given as an additional attribute to the function.</p>
+</li>
+<li>
+<p>We will expand on Functions in
+<a href="https://saylesss88.github.io/Understanding_Nix_Functions_2.html">This Chapter</a></p>
+</li>
+</ul>
+<h3>If, Let, and With Expressions</h3>
+<p>Nix is a pure expression language, meaning every construct evaluates to a value
+— there are no statements. Because of this, <strong>if expressions</strong> in Nix work
+differently than in imperative languages, where conditional logic often relies
+on statements (<code>if</code>, <code>elsif</code>, etc.).</p>
+<p><strong>If expressions in Nix</strong>:</p>
+<p>Since everything in Nix is an expression, an <code>if</code> expression must always produce
+a value:</p>
+<pre><code class="language-nix">nix-repl&gt; a = 6
+nix-repl&gt; b = 10
+nix-repl&gt; if a &gt; b then "yes" else "no"
+"no"
+</code></pre>
+<p>Here, <code>"no"</code> is the result because <code>a</code>(6) is not greater than <code>b</code>(10). Notice
+that there’s no separate conditional statement – the entire construct evaluates
+to a value.</p>
+<p>Another example, integrating built-in functions:</p>
+<pre><code class="language-nix">{
+  key = if builtins.pathExists ./path then "YES" else "NO!";
+}
+</code></pre>
+<p>If <code>./path</code> exists it will evaluate to the value <code>"YES"</code> or else it will
+evaluate to <code>"NO!"</code>.</p>
+<p>Thus, the final result of the expression would be:</p>
+<pre><code class="language-nix">{ key = "YES"; }
+# or
+{ key = "NO!"; }
+</code></pre>
+<p>Since Nix does not have statements, Nix’s <code>if</code> statements behave more like
+<a href="https://en.wikipedia.org/wiki/Ternary_conditional_operator">ternary operators</a>
+(<code>condition ? value_if_true : value_if_false</code>) in other languages.</p>
+<p><strong>Let expressions</strong>:</p>
+<p>Let expressions in Nix is primarily a mechanism for local variable binding and
+scoping. It allows you to define named values that are only accessible within
+the <code>in</code> block of the <code>let</code> expression. This is useful for keeping code clean
+and avoiding repitition.</p>
+<p>For example:</p>
+<pre><code class="language-nix">let
+  a = "foo";
+  b = "fighter";
+in a + b
+"foofighter"
+</code></pre>
+<p>Here, <code>a</code> and <code>b</code> are defined inside the <code>let</code> block, and their values are used
+in the <code>in</code> expression. Since everything in Nix is an expression, <code>a + b</code>
+evaluates to <code>"foofighter"</code></p>
+<p><strong>Using Let Expressions Inside Attribute Sets</strong></p>
+<p>Let expressions are commonly used when defining attribute sets (Click for
+output):</p>
+<pre><code class="language-nix">let
+  appName = "nix-app";
+  version = "1.0";
+in {
+  name = appName;
+  fullName = appName + "-" + version;
+}
+~{
+~  name = "nix-app";
+~  fullName = "nix-app-1.0";
+~}
+</code></pre>
+<p>This allows you to reuse values within an attribute set, making the code more
+modular and preventing duplication.</p>
+<p><strong>Let Expressions in Function Arguments</strong></p>
+<p>You can also use let expressions within function arguments to define
+intermediate values before returning an output:</p>
+<pre><code class="language-nix">{ pkgs, lib }:
+let
+  someVar = "hello";
+  otherVar = "world";
+in
+{ inherit pkgs lib someVar otherVar; }
+</code></pre>
+<p>Result:</p>
+<pre><code class="language-nix">{
+  pkgs = &lt;value&gt;;
+  lib = &lt;value&gt;;
+  someVar = "hello";
+  otherVar = "world";
+}
+</code></pre>
+<p>Here, <code>inherit</code> brings <code>pkgs</code> and <code>lib</code> into the resulting attribute set,
+alongside the locally defined variables <code>someVar</code> and <code>otherVar</code>.</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ul>
+<li>
+<p>Let expressions allow local variable bindings that are only visible inside the
+in block. They also help avoid repitition and improve readability.</p>
+</li>
+<li>
+<p>Commonly used inside attribute sets or function arguments.</p>
+</li>
+<li>
+<p>Their scope is limited to the expression in which they are declared.</p>
+</li>
+</ul>
+<p><strong>With expressions</strong>:</p>
+<p>A <code>with</code> expression in Nix is primarily used to simplify access to attributes
+within an attribute set. Instead of repeatedly referring to a long attribute
+path, with temporarily brings the attributes into scope, allowing direct access
+without prefixing them.</p>
+<p><strong>Basic Example: Reducing Attribute Path Usage</strong></p>
+<p>Consider the following expressions:</p>
+<pre><code class="language-nix">nix-repl&gt; longName = { a = 3; b = 4; }
+nix-repl&gt; longName.a + longName.b
+7
+</code></pre>
+<p>Here, we must explicitly reference <code>longName.a</code> and <code>longName.b</code>. Using a <code>with</code>
+expression simplifies this:</p>
+<pre><code class="language-nix">nix-repl&gt; with longName; a + b
+7
+</code></pre>
+<p>Now, within the scope of the with expression, <code>a</code> and <code>b</code> are accessible without
+prefixing them with <code>longName</code>.</p>
+<p><strong>Practical Use Case: Working with <code>pkgs</code></strong></p>
+<p>One of the most common uses of <code>with</code> that you’ll see is when dealing with
+packages from <code>nixpkgs</code> is writing the following:</p>
+<pre><code class="language-nix">{ pkgs }:
+with pkgs; {
+  myPackages = [ vim git neofetch ];
+}
+</code></pre>
+<p>Instead of writing this:</p>
+<pre><code class="language-nix">{ pkgs }:
+{
+  myPackages = [ pkgs.vim pkgs.git pkgs.neofetch ];
+}
+</code></pre>
+<blockquote>
+<p>Tip: Overusing <code>with lib;</code> or <code>with pkgs;</code> can reduce clarity, it may be fine
+for smaller modules where the scope is limited. For larger configurations,
+explicit references (<code>pkgs.something</code>) often make dependencies clearer and
+prevent ambiguity.</p>
+</blockquote>
+<h3>Nix Language Quirks</h3>
+<ol>
+<li><code>with</code> gets less priority than <code>let</code>. This can be confusing, especially if
+you like to write <code>with pkgs;</code>:</li>
+</ol>
+<pre><code class="language-nix">nix-repl&gt; pkgs = { x = 2; }
+
+nix-repl&gt; with pkgs; x
+2
+
+nix-repl&gt; with pkgs; let x = 4; in x
+4
+</code></pre>
+<p>This shows us that the <code>let</code> binding overrides the <code>with</code> binding.</p>
+<pre><code class="language-nix">let x = 4; in with pkgs; x
+4
+</code></pre>
+<p>Still returns <code>4</code>, but the reasoning is different. The <code>with</code> expression doesn’t
+define new bindings; it simply makes attributes from <code>pkgs</code> available as
+unqualified names. However, because <code>let x = 4</code> is <strong>outside</strong> the <code>with</code>, it
+already extablished <code>x = 4</code>, so when <code>with pkgs; x</code> is evaluated inside, <code>x</code>
+still refers to the <strong>outer</strong> <code>let</code> binding, not the one from <code>pkgs</code>.</p>
+<ol start="2">
+<li>Default values aren’t bound in <code>@-patterns</code></li>
+</ol>
+<p>In the following example, calling a function that binds a default value <code>"baz"</code>
+to the attribute <code>b</code> of an argument using an alias (<code>@</code>) pattern, with an empty
+attribute set as argument, results in the alias variable inputs being bound to
+the original empty attribute set instead of including the default value:</p>
+<pre><code class="language-nix">(inputs@(b ? "baz"): inputs) {}
+</code></pre>
+<p>Output:</p>
+<pre><code class="language-nix">{}
+</code></pre>
+<p>This happens because the alias <code>inputs@</code> binds to the argument as passed, before
+the default value for <code>b</code> is applied.</p>
+<p>The syntax requires curly brackets around the attribute set pattern for
+correctness, so the fixed syntax would be:</p>
+<pre><code class="language-nix">(inputs@{b ? "baz"}: inputs) {}
+</code></pre>
+<p>However, even with this fix, the inputs alias still refers to the original
+argument without defaults applied. So the quirk persists, showing how default
+values in <code>@-patterns</code> do not propagate into the aliased variable.</p>
+<ol start="3">
+<li>Destructuring function arguments:</li>
+</ol>
+<pre><code class="language-nix">nix-repl&gt; f = { x ? 2, y ? 4 }: x + y
+
+nix-repl&gt; f { }
+6
+</code></pre>
+<p>The function <code>f</code> takes an attribute set with default values (<code>x = 2</code>, <code>y = 4</code>)</p>
+<p>When called with <code>{}</code> (an empty set), it falls back to the default values
+(<code>2 + 4</code> -&gt; <code>6</code>)</p>
+<p>Using <code>@args</code> to capture the entire input set:</p>
+<p>The <code>@args</code> syntax allows us to retain access to the full attribute set, even
+after destructuring:</p>
+<pre><code class="language-nix">nix-repl&gt; f = { x ? 1, y ? 2, ... }@args: with args; x + y + z
+
+nix-repl&gt; f { z = 3; }
+6
+</code></pre>
+<p>The <code>{ x ? 1, y ? 2, ... }</code> syntax means <code>x</code> and <code>y</code> have defaults, while <code>...</code>
+allows additional attributes.</p>
+<p><code>@args</code> binds the entire attribute set (<code>args</code>) so that we can access <code>z</code>, which
+wouldn’t be destructured by default.</p>
+<p>When calling <code>f { z = 3; }</code>, we pass an extra attribute (<code>z = 3</code>), making
+<code>x + y + z</code> → <code>1 + 2 + 3 = 6</code>.</p>
+<ol start="4">
+<li>Imports and namespaces</li>
+</ol>
+<p>There is a keyword import, but it’s equivalent in other languages is eval. It
+can be used for namespacing too:</p>
+<pre><code class="language-nix">let
+  pkgs = import &lt;nixpkgs&gt; {};
+  lib = import &lt;nixpkgs/lib&gt;;
+in
+  pkgs.runCommand (lib.strings.removePrefix "....
+</code></pre>
+<p>consider using <code>import</code> here as using <code>qualified import ...</code> in Haskell or
+<code>import ...</code> in Python.</p>
+<p>Another way of importing is with <code>import ...;</code>, which corresponds to Python
+<code>from ... import *</code>.</p>
+<p>But because of not very great IDE support in Nix, <code>with import ...;</code> is
+discouraged. Rather use inherit, especially if you are targeting source code for
+Nix newcomers:</p>
+<pre><code class="language-nix">let
+  lib = import &lt;nixpkgs/lib&gt;;
+  inherit (lib.strings)
+    removePrefix removeSuffix
+  ;
+  inherit (lib.lists)
+    isList init drop
+  ;
+in
+  removePrefix ...
+</code></pre>
+<p><code>inherit</code> has higher priority than <code>with</code>, and conflicts with <code>let</code></p>
+<pre><code class="language-nix">nix-repl&gt; let pkgs = { x = 1; }; x = 2; x = 3; inherit (pkgs) x; in x
+error: attribute ‘x’ at (string):1:31 already defined at (string):1:24
+</code></pre>
+<p>This makes it a sane citizen of Nix lanugage… except it has a twin, called
+<code>{ inherit ...; }</code>. They DON’T do the same - <code>let inherit ...</code> adds
+let-bindings, and <code>{ inherit ...; }</code> adds attributes to a record.
+–<a href="https://nixos.wiki/wiki/Nix_Language_Quirks">https://nixos.wiki/wiki/Nix_Language_Quirks</a></p>
+<ol start="5">
+<li>Only attribute names can be interpolated, not Nix code:</li>
+</ol>
+<pre><code class="language-nix">nix-repl&gt; let ${"y"} = 4; in y
+4
+
+nix-repl&gt; with { ${"y"} = 4; }; y
+4
+
+let y = 1; x = ${y}; in x
+error: syntax error, unexpected DOLLAR_CURLY
+</code></pre>
+<p><strong>Conclusion</strong></p>
+<ul>
+<li>
+<p><code>let</code> bindings introduce new local values and override anything from <code>with</code>.</p>
+</li>
+<li>
+<p><code>with</code> doesn’t create bindings - it only makes attributes available within its
+scope.</p>
+</li>
+<li>
+<p>The order matters: If <code>let x = 4</code> is outside <code>with</code>, then <code>x = 4</code> already
+exists before <code>with</code> runs, so <code>with pkgs; x</code> resolves to <code>4</code>, not the value
+from <code>pkgs</code>.</p>
+</li>
+</ul>
+<h4>Resources</h4>
+<details>
+<summary> ✔️ Resources (Click to Expand) </summary>
+<p>A few resources to help get you started with the Nix Language, I have actually
+grown to love the language. I find it fairly simple but powerful!</p>
+<ul>
+<li>
+<p><a href="https://nix.dev/tutorials/nix-language.html">nix.dev nixlang-basics</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.24/language/">Nix Language Overview</a></p>
+</li>
+<li>
+<p><a href="https://learnxinyminutes.com/nix/">learn nix in y minutes</a></p>
+</li>
+<li>
+<p><a href="https://github.com/tazjin/nix-1p">nix onepager</a></p>
+</li>
+<li>
+<p><a href="https://zero-to-nix.com/concepts/nix-language/">zero-to-nix nix lang</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/nix-pills/04-basics-of-language.html">nix-pills basics of nixlang</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/nix-pills/04-basics-of-language">Basics of the Language Pill</a></p>
+</li>
+</ul>
+</details>
+<pre><code class="language-nix">builtins.head[ 5 6 7 ]
+</code></pre>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_language.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Package Manager</title><link>https://saylesss88.github.io/nix/nix_package_manager.html</link><description><![CDATA[<h1>Nix Package Manager</h1>
+<details>
+<summary> Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![nix99](../images/nix99.png) -->
+<h2>Nix Package Manager</h2>
+<p>Nix is a <em>purely functional package manager</em>. This means that it treats packages
+like values in purely functional programming languages – they are built by
+functions that don’t have side-effects, and they never change after they have
+been built.</p>
+<p>Nix stores packages in the <em>Nix store</em>, usually the directory <code>/nix/store</code>,
+where each package has its own unique subdirectory such as:</p>
+<pre><code class="language-bash">/nix/store/y53c0lamag5wpx7vsiv7wmnjdgq97yd6-yazi-25.5.14pre20250526_74a8ea9
+</code></pre>
+<p>You can use the Nix on most Linux distributions and Mac OS also has good support
+for Nix. It should work on most platforms that support POSIX threads and have a
+C++11 compiler.</p>
+<p>When I install Nix on a distro like Arch Linux I usually use the Zero to Nix
+installer as it automates several steps, such as enabling flakes by default:</p>
+<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+</code></pre>
+<p>If you have concerns about the “curl to Bash” approach you could examine the
+installation script
+<a href="https://raw.githubusercontent.com/DeterminateSystems/nix-installer/main/nix-installer.sh">here</a>
+then download and run it:</p>
+<pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix &gt; nix-installer.sh
+chmod +x nix-installer.sh
+./nix-installer.sh install
+</code></pre>
+<p>I got the above commands from
+<a href="https://zero-to-nix.com/start/install/">zero-to-nix</a></p>
+<p>The main difference between using the nix package manager on another
+distribution and NixOS is that NixOS uses Nix not just for package management
+but also to manage the system configuration (e.g., to build config files in
+<code>/etc</code>).</p>
+<p><a href="https://nix-community.github.io/home-manager/">Home Manager</a> is a Nix-powered
+tool for reproducible management of the contents of the users’ home directories.
+This includes programs, configuration files, environment variables, and
+arbitrary files. Home manager uses the same module system as NixOS.</p>
+<p>Now that we’ve discussed some of the basics of the Nix package manager, lets see
+how it is used to build and manage software in NixOS.</p>
+<h2>Channels</h2>
+<p>Nix packages are distributed through Nix channels; mechanisms for distributing
+Nix expressions and the associated binary caches for them. Channels are what
+determine which versions your packages have. (i.e. <em>stable</em> or <em>unstable</em>). A
+channel is a name for the latest “verified” git commits in Nixpkgs. Each channel
+represents a different policy for what “verified” means. Whenever a new commit
+in <code>Nixpkgs</code> passes the verification process, the respective channel is updated
+to point to that new commit.</p>
+<p>While channels provide a convenient way to get the latest stable or unstable
+packages, they introduce a challenge for strict reproducibility. Because a
+channel like <code>nixos-unstable</code> is constantly updated, fetching packages from it
+today might give you a different set of package versions than fetching from it
+tomorrow, even if your configuration remains unchanged. This “rolling release”
+nature at a global level can make it harder to share and reproduce exact
+development environments or system configurations across different machines or
+at different points in time.</p>
+<h2>Channels vs. Flakes Enhancing Reproducibility</h2>
+<p>Before the introduction of <strong>Nix Flakes</strong>, channels were the primary mechanism
+for sourcing <code>Nixpkgs</code>. While functional, they posed a challenge for exact
+reproducibility because they point to a moving target (the latest commit on a
+branch). This meant that a <code>nix-build</code> command run yesterday might produce a
+different result than one run today, simply because the channel updated.</p>
+<p>Nix Flakes were introduced to address this. Flakes bring a built-in,
+standardized way to define the exact inputs to a Nix build, including the
+precise Git revision of <code>Nixpkgs</code> or any other dependency.</p>
+<p>Here’s a quick comparison:</p>
+<table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Nix Channels (traditional)</th><th style="text-align: left">Nix Flakes (modern approach)</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Input Source</strong></td><td style="text-align: left">Global system configuration (<code>nix-channel --update</code>)</td><td style="text-align: left">Explicitly defined in <code>flake.nix</code> (e.g., <code>github:NixOS/nixpkgs/nixos-23.11</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Reproducibility</strong></td><td style="text-align: left">“Rolling release”; less reproducible across time/machines</td><td style="text-align: left">Highly reproducible due to locked inputs (<code>flake.lock</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Dependency Mgmt.</strong></td><td style="text-align: left">Implicitly managed by global channel</td><td style="text-align: left">Explicitly declared and version-locked within <code>flake.nix</code></td></tr>
+<tr><td style="text-align: left"><strong>Sharing</strong></td><td style="text-align: left">Relies on users having same channel version</td><td style="text-align: left">Self-contained; <code>flake.lock</code> ensures everyone gets same inputs</td></tr>
+<tr><td style="text-align: left"><strong>Learning Curve</strong></td><td style="text-align: left">Simpler initial setup, but tricky reproducibility debugging</td><td style="text-align: left">Higher initial learning curve, but simplifies reproducibility</td></tr>
+</tbody></table>
+<p>The ability of Flakes to “lock” the exact version of all dependencies in a
+<code>flake.lock</code> file is a game-changer for collaboration and long-term
+reproducibility, ensuring that your Nix configuration builds the same way, every
+time, everywhere.</p>
+<h2>Nixpkgs</h2>
+<p><strong>Nixpkgs</strong> is the largest repository of Nix packages and NixOS modules.</p>
+<p>For <strong>NixOS</strong> users, <code>nixos-unstable</code> channel branch is the rolling release,
+where the packages are tested and must pass integration tests.</p>
+<p>For <strong>standalone Nix</strong> users, <code>nixpkgs-unstable</code> channel branch is the rolling
+release, where packages pass only basic build tests and are upgraded often.</p>
+<p>For Flakes, as mentioned above they don’t use channels so <code>nixpkgs</code> will be
+listed as an <code>input</code> to your flake. (e.g.,
+<code>inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";</code>) When using flakes
+you can actually disable channels and actually recommended to avoid conflicts
+between traditional channel-based workflows and the flake system.</p>
+<h3>Updates</h3>
+<p>The mechanism for updating your Nix environment differs fundamentally between
+channels and flakes, directly impacting reproducibility and control.</p>
+<h4>Updating with Channels (Traditional Approach)</h4>
+<p>With channels, updates are a global operation that pulls the latest state of a
+specific branch.</p>
+<p><strong>How it works</strong>: You typically use <code>nix-channel --update</code> to fetch the latest
+commit from the channels you’ve subscribed to. For instance,
+<code>sudo nix-channel --update nixos</code> (for NixOS) or <code>nix-channel --update nixpkgs</code>
+(for <code>nix-env</code> on other Linux distributions).</p>
+<p><strong>Implication</strong>: This command updates your local system’s understanding of what
+“nixos” or “nixpkgs-unstable” means. From that point on, any
+<code>nixos-rebuild switch</code>, <code>nix-env -iA</code>, or <code>nix-build</code> commands that implicitly
+or explicitly refer to <code>nixpkgs</code> will use this newly updated version.</p>
+<p><strong>Reproducibility Challenge</strong>: The update itself is not recorded in your
+configuration files. If you share your <code>configuration.nix</code> with someone, they
+might run <code>nix-channel --update</code> on a different day and get a different set of
+package versions because the channel has moved. This makes it challenging to
+guarantee that two users building the “same” configuration will get identical
+results. You’re effectively relying on the implicit, globally managed state of
+your channels.</p>
+<h4>Updating with Flakes (Modern Approach)</h4>
+<p><strong>Flakes</strong>, by contrast, use a more explicit and localized update mechanism tied
+to your <code>flake.lock</code> file.</p>
+<p><strong>How it works</strong>: When you define a <code>flake.nix</code>, you specify the exact URL
+(e.g., a Git repository with a specific branch or tag) for each input. When you
+first use a flake, Nix resolves these URLs to a precise Git commit hash and
+records this hash, along with a content hash, in a <code>flake.lock</code> file.</p>
+<p>To update your flake inputs, you run <code>nix flake update</code>.</p>
+<p><strong>Implication</strong>: This command goes to each input’s specified URL (e.g.,
+<code>github:NixOS/nixpkgs/nixos-unstable</code>) and fetches the latest commit for that
+input. It then updates your <code>flake.lock</code> file with the new, precise Git commit
+hash and content hash for that input. Your <code>flake.nix</code> itself doesn’t change,
+but the <code>flake.lock</code> file now points to newer versions of your dependencies.</p>
+<p><strong>Reproducibility Advantage</strong>: The <code>flake.lock</code> file acts as a manifest of your
+exact dependency versions.</p>
+<p><strong>Sharing</strong>: When you share your flake (the <code>flake.nix</code> and <code>flake.lock</code> files),
+anyone using it will fetch precisely the same Git commit hashes recorded in the
+<code>flake.lock</code>, guaranteeing identical inputs and thus, identical builds (assuming
+the same system architecture).</p>
+<p><strong>Updating Selectively</strong>: You can update individual inputs within your flake by
+specifying them: <code>nix flake update nixpkgs</code>. This provides fine-grained control
+over which parts of your dependency graph you want to advance.</p>
+<p><strong>Rolling Back</strong>: Because the <code>flake.lock</code> explicitly records the versions, you
+can easily revert to a previous state by checking out an older <code>flake.lock</code> from
+your version control system.</p>
+<p><strong>In essence</strong>: Channels involve a global “pull” of the latest branch state,
+making reproducibility harder to guarantee across time and machines. Flakes,
+however, explicitly pin all inputs in <code>flake.lock</code>, and updates involve
+explicitly refreshing these pins, providing strong reproducibility and version
+control out of the box.</p>
+<h3>Managing software with Nix</h3>
+<p><strong>Derivation Overview</strong></p>
+<p>In Nix, the process of managing software starts with <strong>package definitions</strong>.
+These are files written in the Nix language that describe how a particular piece
+of software should be built. These package definitions, when processed by Nix,
+are translated into derivations.</p>
+<p>At its core, a derivation in Nix is a blueprint or a recipe that describes how
+to build a specific software package or any other kind of file or directory.
+It’s a declarative specification of:</p>
+<ul>
+<li>
+<p><strong>Inputs</strong>: What existing files or other derivations are needed as
+dependencies.</p>
+</li>
+<li>
+<p><strong>Build Steps</strong>: The commands that need to be executed to produce the desired
+output.</p>
+</li>
+<li>
+<p><strong>Environment</strong>: The specific environment (e.g., build tools, environment
+variables) required for the build process.</p>
+</li>
+<li>
+<p><strong>Outputs</strong>: The resulting files or directories that the derivation produces.</p>
+</li>
+</ul>
+<p>Think of a package definition as the initial instructions, and the derivation as
+the detailed, low-level plan that Nix uses to actually perform the build.</p>
+<p>Again, a derivation is like a blueprint that describes how to build a specific
+software package or any other kind of file or directory.</p>
+<p><strong>Key Characteristics of Derivations:</strong></p>
+<ul>
+<li>
+<p><strong>Declarative</strong>: You describe the desired outcome and the inputs, not the
+exact sequence of imperative steps. Nix figures out the necessary steps based
+on the builder and args.</p>
+</li>
+<li>
+<p><strong>Reproducible</strong>: Given the same inputs and build instructions, a derivation
+will always produce the same output. This is a cornerstone of Nix’s
+reproducibility.</p>
+</li>
+<li>
+<p><strong>Tracked by Nix</strong>: Nix keeps track of all derivations and their outputs in
+the Nix store. This allows for efficient management of dependencies and
+ensures that different packages don’t interfere with each other.</p>
+</li>
+<li>
+<p><strong>Content-Addressed</strong>: The output of a derivation is stored in the Nix store
+under a unique path that is derived from the hash of all its inputs and build
+instructions. This means that if anything changes in the derivation, the
+output will have a different path.</p>
+</li>
+</ul>
+<p>Here’s a simple Nix derivation that creates a file named hello in the Nix store
+containing the text “Hello, World!”:</p>
+<details>
+<summary> ✔️ Hello World Derivation Example (Click to expand):</summary>
+<pre><code class="language-nix">{pkgs ? import &lt;nixpkgs&gt; {}}:
+pkgs.stdenv.mkDerivation {
+  name = "hello-world";
+
+  dontUnpack = true;
+
+  # No need for src = null; when dontUnpack = true;
+  # src = null;
+
+  buildPhase = ''
+     # Create a shell script that prints "Hello, World!"
+    echo '#!${pkgs.bash}/bin/bash' &gt; hello-output-file # Shebang line
+    echo 'echo "Hello, World!"' &gt;&gt; hello-output-file # The command to execute
+    chmod +x hello-output-file # Make it executable
+  '';
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp hello-output-file $out/bin/hello # Copy the file from build directory to $out/bin
+  '';
+
+  meta = {
+    description = "A simple Hello World program built with Nix";
+    homepage = null;
+    license = pkgs.lib.licenses.unfree; # licenses.mit is often used as well
+    maintainers = [];
+  };
+}
+</code></pre>
+<p>And a <code>default.nix</code> with the following contents:</p>
+<pre><code class="language-nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+
+import ./hello.nix { pkgs = pkgs; }
+</code></pre>
+<ul>
+<li>
+<p><code>{ pkgs ? import &lt;nixpkgs&gt; {} }</code>: This is a function that takes an optional
+argument <code>pkgs</code>. We need Nixpkgs to access standard build environments like
+<code>stdenv</code>.</p>
+</li>
+<li>
+<p><code>pkgs.stdenv.mkDerivation { ... }:</code> This calls the mkDerivation function from
+the standard environment (stdenv). mkDerivation is the most common way to
+define software packages in Nix.</p>
+</li>
+<li>
+<p><code>name = "hello-world";</code>: Human-readable name of the derivation</p>
+</li>
+<li>
+<p>The rest are the build phases and package metadata.</p>
+</li>
+</ul>
+<p>To use the above derivation, save it as a <code>.nix</code> file (e.g. <code>hello.nix</code>). Then
+build the derivation using,:</p>
+<pre><code class="language-bash">nix-build
+this derivation will be built:
+  /nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv
+building '/nix/store/9mc855ijjdy3r6rdvrbs90cg2gf2q160-hello-world.drv'...
+Running phase: patchPhase
+Running phase: updateAutotoolsGnuConfigScriptsPhase
+Running phase: configurePhase
+no configure script, doing nothing
+Running phase: buildPhase
+Running phase: installPhase
+Running phase: fixupPhase
+shrinking RPATHs of ELF executables and libraries in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+checking for references to /build/ in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world...
+patching script interpreter paths in /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+stripping (with command strip and flags -S -p) in  /nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world/bin
+/nix/store/2ydxh5pd9a6djv7npaqi9rm6gmz2f73b-hello-world
+</code></pre>
+<ul>
+<li>
+<p>Nix will execute the <code>buildPhase</code> and <code>installPhase</code></p>
+</li>
+<li>
+<p>After a successful build, the output will be in the Nix store. You can find
+the exact path by looking at the output of the nix build command (it will be
+something like <code>/nix/store/your-hash-hello-world</code>).</p>
+</li>
+</ul>
+<p>Run the “installed” program:</p>
+<pre><code class="language-bash">./result/bin/hello
+</code></pre>
+<ul>
+<li>This will execute the <code>hello</code> file from the Nix store and print
+<code>"Hello, World!"</code>.</li>
+</ul>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nix_package_manager.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Nix Paths</title><link>https://saylesss88.github.io/nix/nixLang/nix_paths.html</link><description><![CDATA[<h1>Nix Paths</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p>The following examples are done with a local <code>nixpkgs</code> clone located at
+<code>~/src/nixpkgs</code></p>
+<p>Paths in Nix always need a <code>/</code> in them and always expand to absolute paths
+relative to your current directory.</p>
+<pre><code class="language-bash">nix repl
+nix-repl&gt; ./.
+/home/jr/src/nixpkgs
+nix-repl&gt; ./. + "/lib"
+/home/jr/src/nixpkgs/lib
+</code></pre>
+<p>Nix does <em>path normalization</em> every time you append strings, so if you just add
+a slash <code>/</code> its not actually there:</p>
+<pre><code class="language-bash">nix-repl&gt; ./.
+/home/jr/src/nixpkgs
+nix-repl&gt; ./. + "/"
+/home/jr/src/nixpkgs
+nix-repl&gt; ./. + "/" + "lib"
+/home/jr/src/nixpkgslib
+nix-repl&gt; "${./.}/lib"
+# using ${./.} causes a store copy
+copying '/homr/jr/src/nixpkgs' to the store
+"/nix/store/3z9fzx8z03wslxvri5syv3jnnhn5fkbd-nixpkgs/lib"
+nix-repl&gt; "${toString ./.}/lib"
+# using toString avoids making a store copy
+"/home/jr/src/nixpkgs/lib"
+nix-repl&gt; ./lib/..             # nix removes all `..` to avoid redundant path resolutions
+/home/jr/src/nixpkgs
+nix-repl&gt; :q
+</code></pre>
+<pre><code class="language-bash">realpath ./lib/..
+/home/jr/src/nixpkgs
+ln -s pkgs/applications lib-symlink
+realpath ./lib-symlink/..
+/home/jr/src/nixpkgs/pkgs
+nix repl
+nix-repl&gt; ./lib-symlink/..   # Nix doesn't read this file at all like realpath did
+/home/jr/src/nixpkgs
+nix-repl&gt; builtins.readDir ./. # listing of all entries in current dir and their types
+{
+  ".devcontainer" = "directory";
+  ".editorconfig" = "regular";
+  ".git" = "directory";
+  ".git-blame-ignore-revs" = "regular";
+  ".gitattributes" = "regular";
+  ".github" = "directory";
+  ".gitignore" = "regular";
+  ".mailmap" = "regular";
+  ".mergify.yml" = "regular";
+  ".version" = "symlink";
+  "CONTRIBUTING.md" = "regular";
+  COPYING = "regular";
+  "README.md" = "regular";
+  ci = "directory";
+  "default.nix" = "regular";
+  doc = "directory";
+  "flake.nix" = "regular";
+  lib = "directory";
+  maintainers = "directory";
+  nixos = "directory";
+  pkgs = "directory";
+  "shell.nix" = "regular";
+}
+nix-repl&gt; builtins.readFile ./default.nix
+"let\n  requiredVersion = import ./lib/minver.nix;\nin\n\nif !builtins ? nixVersion
+ || builtins.compareVersions requiredVersion builtins.nixVersion == 1 then\n\n  abort
+ ''\n\n    This version of Nixpkgs requires Nix &gt;= \${requiredVersion}, please
+ upgrade:\n\n    - If you are running NixOS, `nixos-rebuild' can be used to upgrade
+ your system.\n\n    - Alternatively, with Nix &gt; 2.0 `nix upgrade-nix' can be used
+ to imperatively\n      upgrade Nix. You may use `nix-env --version' to check which
+ version you have.\n\n    - If you installed Nix using the install script (https://nixos.org/nix/install),\n
+  it is safe to upgrade by running it again:\n\n          curl -L https://nixos.org/nix/install | sh\n\n
+For more information, please see the NixOS release notes at\n    https://nixos.org/nixos/manual
+ or locally at\n    \${toString ./nixos/doc/manual/release-notes}.\n\n    If you need further help,
+ see https://nixos.org/nixos/support.html\n  ''\n\nelse\n\n  import ./pkgs/top-level/impure.nix\n"
+nix-repl&gt; :l &lt;nixpkgs/lib&gt;
+nix-repl&gt; importJSON ./pkgs/development/python-modules/notebook/missing-hashes.json # Return the nix value for JSON
+{
+  "@nx/nx-darwin-arm64@npm:16.10.0" = "aabcc8499602b98c9fc3b768fe46dfd4e1b818caa84b740bd4f73a2e4528c719b979ecb1c10a0d793a1fead83073a08bc86417588046aa3e587e80af880bffd3";
+  "@nx/nx-darwin-x64@npm:16.10.0" = "9dd20f45f646d05306f23f5abb7ade69dcb962e23a013101e93365847722079656d30a19c735fdcfa5c4e0fdf08691f9d621073c58aef2861c26741ff4638375";
+  "@nx/nx-freebsd-x64@npm:16.10.0" = "35b93aabe3b3274d53157a6fc10fec7e341e75e6818e96cfbc89c3d5b955d225ca80a173630b6aa43c448c6b53b23f06a2699a25c0c8bc71396ee20a023d035f";
+  "@nx/nx-linux-arm-gnueabihf@npm:16.10.0" = "697b9fa4c70f84d3ea8fe32d47635864f2e40b0ceeb1484126598c61851a2ec34b56bb3eeb9654c37d9b14e81ce85a36ac38946b4b90ca403c57fe448be51ccb";
+  "@nx/nx-linux-arm64-gnu@npm:16.10.0" = "001e71fedfc763a4dedd6c5901b66a4a790d388673fb74675235e19bb8fe031ff3755568ed867513dd003f873901fabda31a7d5628b39095535cb9f6d1dc7191";
+  "@nx/nx-linux-arm64-musl@npm:16.10.0" = "58e3b71571bdadd2b0ddd24ea6e30cd795e706ada69f685403412c518fba1a2011ac8c2ac46145eab14649aa5a78e0cedcdb4d327ccb3b6ec12e055171f3840b";
+  "@nx/nx-linux-x64-gnu@npm:16.10.0" = "97729a7efb27301a67ebf34739784114528ddb54047e63ca110a985eaa0763c5b1ea7c623ead1a2266d07107951be81e82ffa0a30e6e4d97506659303f2c8c78";
+  "@nx/nx-linux-x64-musl@npm:16.10.0" = "442bdbd5e61324a850e4e7bd6f54204108580299d3c7c4ebcec324da9a63e23f48d797a87593400fc32af78a3a03a3c104bfb360f107fe732e6a6c289863853a";
+  "@nx/nx-win32-arm64-msvc@npm:16.10.0" = "b5c74184ebfc70294e85f8e309f81c3d40b5cf99068891e613f3bef5ddb946bef7c9942d9e6c7688e22006d45d786342359af3b4fc87aadf369afcda55c73187";
+  "@nx/nx-win32-x64-msvc@npm:16.10.0" = "c5b174ebd7a5916246088e17d3761804b88f010b6b3f930034fa49af00da33b6d1352728c733024f736e4c2287def75bafdc3d60d8738bd24b67e9a4f11763f8";
+}
+nix-repl&gt; builtins.toJSON  # serialize
+«primop toJSON»
+nix-repl&gt; builtins.fromTOML
+«primop fromTOML»
+nix-repl&gt; builtins.toXML
+</code></pre>
+<p>For more serialization formats see <code>nixpkgs/lib/generators.nix</code> as well as in
+<code>nixpkgs/pkgs/pkgs-lib/formats/</code> we can see them with the <code>nix repl</code> as follows:</p>
+<pre><code class="language-bash">cd ~/src/nixpkgs
+nix repl
+nix-repl&gt; :l .
+nix-repl&gt; lib.generators.toYAML {} { a = 10; }
+"{\"a\":10}"
+nix-repl&gt; lib.generators.toYAML {} { a.b.c = 10; }
+"{\"a\":{\"b\":{\"c\":10}}}"
+nix-repl&gt; builtins.trace (lib.generators.toYAML {} { a.b.c = 10; }) null
+trace: {"a":{"b":{"c":10}}}
+null
+nix-repl&gt; yamlFormat = pkgs.formats.yaml {}
+
+nix-repl&gt; yamlFormat
+{
+  generate = «lambda generate @ /home/jr/src/nixpkgs/pkgs/pkgs-lib/formats.nix:111:9»;
+  type = { ... };
+}
+</code></pre>
+<ul>
+<li>We can see that it provides a <code>generate</code> function that we can use. <code>generate</code>
+doesn’t just generate a string anymore because if we want to lift the
+restriction at evaluation time we can’t return the formatted form at
+evaluation time anymore. We need a name to return a derivation continued
+below:</li>
+</ul>
+<pre><code class="language-bash">yamlFormat.generate "name" { a.b.c = 10; }
+«derivation /nix/store/xakajb2rzbmqqkjbh08bxwqdf0xqvjly-name.drv»
+nix-repl&gt; :b yamlFormat.generate "name" { a.b.c = 10; }
+This derivation produced the following outputs:
+out -&gt; /nix/store/y4c5029k6w3l0qmdw7cq396zrdy5x8yj-name
+nix-repl&gt; :q
+</code></pre>
+<p>Let’s cat the result to see if it’s formatted correctly as YAML:</p>
+<pre><code class="language-bash">cat /nix/store/y4c5029k6w3l0qmdw7cq396zrdy5x8yj-name
+───────┬───────────────────────────────────────────────────────────────
+       │ File: /nix/store/y4c5029k6w3l0qmdw7cq396zrdy5x8yj-name
+───────┼──────────────────────────────────────────────────────────────
+   1   │ a:
+   2   │   b:
+   3   │     c: 10
+───────┴───────────────────────────────────────────────────────────
+</code></pre>
+<p>Looks good. There is also a <code>type</code>:</p>
+<pre><code class="language-bash">nix repl
+nix-repl&gt; :l .
+nix-repl&gt; yamlFormat = pkgs.format.yaml {}
+nix-repl&gt; yamlFormat.type
+{
+  _type = "option-type";
+  check = «lambda check @ /home/jr/src/nixpkgs/lib/types.nix:1029:19»;
+  deprecationMessage = null;
+  description = "YAML value";
+  descriptionClass = "conjunction";
+  emptyValue = { ... };
+  functor = { ... };
+  getSubModules = null;
+  getSubOptions = «lambda @ /home/jr/src/nixpkgs/lib/types.nix:214:25»;
+  merge = «lambda merge @ /home/jr/src/nixpkgs/lib/types.nix:1031:13»;
+  name = "nullOr";
+  nestedTypes = { ... };
+  substSubModules = «lambda substSubModules @ /home/jr/src/nixpkgs/lib/types.nix:1046:29»;
+  typeMerge = «lambda defaultTypeMerge @ /home/jr/src/nixpkgs/lib/types.nix:115:10»;
+}
+nix-repl&gt; lib.modules.mergeDefinitions [] yamlFormat.type [ { value = null; } ]
+{
+  defsFinal = [ ... ];
+  defsFinal' = { ... };
+  isDefined = true;
+  mergedValue = null;
+  optionalValue = { ... };
+}
+nix-repl&gt; (lib.modules.mergeDefinitions [] yamlFormat.type [ { value = null; } ]).mergedValue
+null
+nix-repl&gt; :p (lib.modules.mergeDefinitions [] yamlFormat.type [ { value = { a.b.c = 10; }; } ]).mergedValue
+{
+  a = {
+    b = { c = 10; };
+  };
+}
+nix-repl&gt; :p (lib.modules.mergeDefinitions [] yamlFormat.type [ { value = { a.b.c = 10; }; } { value = { a.b.d = 20; }; } ]).mergedValue
+{
+  a = {
+    b = {
+      c = 10;
+      d = 20;
+    };
+  };
+}
+</code></pre>
+<ul>
+<li><code>lib</code> can’t access any packages, it is entirely at evaluation time. It can’t
+access any formatters or things like that. If we lift that restriction as is
+done in <code>pkgs.formats</code> we can make it look much nicer.</li>
+</ul>
+<pre><code class="language-bash">cd ~/src/nixpkgs
+nix-build -A hello
+warning: Nix search path entry '/nix/var/nix/profiles/per-user/root/channels' does not exist, ignoring
+this path will be fetched (0.06 MiB download, 0.26 MiB unpacked):
+  /nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2
+copying path '/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2' from 'https://cache.nixos.org'...
+/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2
+</code></pre>
+<p>Say we rely on this store path in a derivation:</p>
+<pre><code class="language-bash">nix-repl&gt; thePath = "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2"
+nix-repl&gt; thePath + "/bin/hello"
+"/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello"
+</code></pre>
+<pre><code class="language-bash">hx ~/src/nixpkgs/test2.nix
+</code></pre>
+<pre><code class="language-nix"># test2.nix
+with import ./. {};
+
+runCommand "test" {
+    nativeBuildInputs = [
+        hello
+    ];
+}''
+  hello &gt; $out
+''
+</code></pre>
+<p>Try building it:</p>
+<pre><code class="language-bash">nix-build test2.nix &amp;&amp; cat result
+warning: Nix search path entry '/nix/var/nix/profiles/per-user/root/channels' does not exist, ignoring
+/nix/store/m55p4vpb8s7s28s20vs89i467kxbrdac-test
+Hello, world!
+</code></pre>
+<p>Now if we try it with the store path:</p>
+<pre><code class="language-nix"># test2.nix
+with import ./. {};
+
+runCommand "test" {
+}''
+  /nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello &gt; $out
+''
+</code></pre>
+<p>This doesn’t work</p>
+<pre><code class="language-bash">nix-build test2.nix
+last 1 log lines:
+&gt; /build/.attr-0l2nkwhif96f51f4amnlf414lhl4rv9vh8iffyp431v6s28gsr90: line 1: /nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello: No such file or directory
+For full logs, run:
+nix log /nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv
+nix-instantiate test2.nix
+/nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv
+nix derivation show /nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv | jq
+{
+  "/nix/store/58zcp9xwgf1sirmzf9sh61j8gz9lkw34-test.drv": {
+    "args": [
+      "-e",
+      "/nix/store/vj1c3wf9c11a0qs6p3ymfvrnsdgsdcbq-source-stdenv.sh",
+      "/nix/store/shkw4qm9qcw5sc5n1k5jznc83ny02r39-default-builder.sh"
+    ],
+    "builder": "/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/bash",
+    "env": {
+      "__structuredAttrs": "",
+      "buildCommand": "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello &gt; $out\n",
+      "buildInputs": "",
+      "builder": "/nix/store/xy4jjgw87sbgwylm5kn047d9gkbhsr9x-bash-5.2p37/bin/bash",
+      "cmakeFlags": "",
+      "configureFlags": "",
+      "depsBuildBuild": "",
+      "depsBuildBuildPropagated": "",
+      "depsBuildTarget": "",
+      "depsBuildTargetPropagated": "",
+      "depsHostHost": "",
+      "depsHostHostPropagated": "",
+      "depsTargetTarget": "",
+      "depsTargetTargetPropagated": "",
+      "doCheck": "",
+      "doInstallCheck": "",
+      "enableParallelBuilding": "1",
+      "enableParallelChecking": "1",
+      "enableParallelInstalling": "1",
+      "mesonFlags": "",
+      "name": "test",
+      "nativeBuildInputs": "",
+      "out": "/nix/store/ljrkx5midby3j7p4g96d74jrq8f9rpya-test",
+      "outputs": "out",
+      "passAsFile": "buildCommand",
+      "patches": "",
+      "propagatedBuildInputs": "",
+      "propagatedNativeBuildInputs": "",
+      "stdenv": "/nix/store/aq801xbgs98nxx3lckrym06qfvl8mfsf-stdenv-linux",
+      "strictDeps": "",
+      "system": "x86_64-linux"
+    },
+    "inputDrvs": {
+      "/nix/store/bmncp7arkdhrl6nkyg0g420935x792gl-stdenv-linux.drv": {
+        "dynamicOutputs": {},
+        "outputs": [
+          "out"
+        ]
+      },
+      "/nix/store/rfkzz952hz2d58d90mscxvk87v5wa5bz-bash-5.2p37.drv": {
+        "dynamicOutputs": {},
+        "outputs": [
+          "out"
+        ]
+      }
+    },
+    "inputSrcs": [
+      "/nix/store/shkw4qm9qcw5sc5n1k5jznc83ny02r39-default-builder.sh",
+      "/nix/store/vj1c3wf9c11a0qs6p3ymfvrnsdgsdcbq-source-stdenv.sh"
+    ],
+    "name": "test",
+    "outputs": {
+      "out": {
+        "path": "/nix/store/ljrkx5midby3j7p4g96d74jrq8f9rpya-test"
+      }
+    },
+    "system": "x86_64-linux"
+  }
+}
+</code></pre>
+<p>You see the <code>"inputDrvs"</code>, they are the derivations that we depend on and it
+doesn’t know about the <code>hello.drv</code>. In Nix for the builder sandbox it creates a
+sandbox that only contains the derivations that you depend on which ensures that
+you can’t depend on any derivation that you haven’t explicitly decalred.</p>
+<p>Nix does have <code>builtins.storePath</code> that allows you to do this, otherwise it’s
+kind of an anti pattern.</p>
+<pre><code class="language-nix"># test2.nix
+# test2.nix
+# test2.nix
+with import ./. {};
+  runCommand "test" {
+  } ''
+    ${builtins.storePath "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2"}/bin/hello &gt; $out
+  ''
+</code></pre>
+<p><code>builtins.storePath</code>: Turns a store path into the thing that it represents in
+the store.</p>
+<pre><code class="language-bash">nix-build test2.nix &amp;&amp; cat result
+/nix/store/x48741w0k9hgqywzv6wc7rk90r1y75js-test
+Hello, world!
+</code></pre>
+<p>To demonstrate what <code>builtins.storePath</code> does:</p>
+<pre><code class="language-bash">nix-repl&gt; builtins.storePath "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello"
+"/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2/bin/hello"
+nix-repl&gt; builtins.getContext "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2"
+{ }
+nix-repl&gt; builtins.getContext (builtins.storePath "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2")
+{
+  "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2" = { ... };
+}
+nix-repl&gt; :p builtins.getContext (builtins.storePath "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2")
+{
+  "/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2" = { path = true; };
+}
+</code></pre>
+<pre><code class="language-bash">nix-repl&gt; :l .
+warning: Nix search path entry '/nix/var/nix/profiles/per-user/root/channels' does not exist, ignoring
+Added 24878 variables.
+
+nix-repl&gt; hello.outPath
+# this is the output path of the hello derivation
+"/nix/store/29mhfr5g4dsv07d80b7n4bgs45syk3wl-hello-2.12.2"
+nix-repl&gt; :p builtins.getContext hello.outPath
+# we see that this is a `.drv`, this is because derivations can have multiple outputs
+{
+  "/nix/store/ljxsxdy1syy03b9kfnnh8x7zsk21fdcq-hello-2.12.2.drv" = {
+    outputs = [ "out" ];
+  };
+}
+# for example
+nix-repl&gt; openssl.outputs
+[
+  "bin"
+  "dev"
+  "out"
+  "man"
+  "doc"
+  "debug"
+]
+nix-repl&gt; openssl.all
+# a list of all the derivations
+[
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+  «derivation /nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv»
+]
+nix-repl&gt; lib.concatStringsSep " " openssl.all
+"/nix/store/rjzx8v679rwd6dsb6s08iy3j2rrax72s-openssl-3.4.1-bin /nix/store/kcgqglb4iax0zh5jlrxmjdik93wlgsrq-openssl-3.4.1-dev /nix/store/8pviily4fgsl02ijm65binz236717wfs-openssl-3.4.1 /nix/store/1l5b31cnswnbcdcac9rzs9xixnc2n9r5-openssl-3.4.1-man /nix/store/9fz5qmj0z70cbzy7mapml0sbi8z6ap0a-openssl-3.4.1-doc /nix/store/yk2g2gfcj2fy1ffyi1g91q7jmp4h8pxa-openssl-3.4.1-debug"
+nix-repl&gt; :p builtins.getContext (builtins.unsafeDiscardOutputDependency (lib.concatStringsSep " " openssl.all))
+{
+  "/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv" = {
+    outputs = [
+      "bin"
+      "debug"
+      "dev"
+      "doc"
+      "man"
+      "out"
+    ];
+  };
+}
+nix-repl&gt; :p builtins.getContext openssl.drvPath
+{
+  "/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv" = { allOutputs = true; };
+}
+# useful if you need to create a derivation that copies this derivation to another machine
+# remote builders usually take care of this but you may need it occasionally
+nix-repl&gt; :p builtins.getContext (builtins.unsafeDiscardOutputDependency openssl.drvPath)
+{
+  "/nix/store/rw3y8k94ib37dc86n0wivr551wyzxgsk-openssl-3.4.1.drv" = { path = true; };
+}
+</code></pre>
+<p>Relying on paths outside of the nix store is generally not recommended because
+of garbage collection and it’s considered unsafe.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/nixLang/nix_paths.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Practical Nix Functions</title><link>https://saylesss88.github.io/functions/practical_functions_2.1.html</link><description><![CDATA[<h1>Practical Nix Functions</h1>
+<details>
+<summary>
+✔️
+If you want to follow along with this example you'll have to place the following
+in your project directory. Section is collapsed to focus on functions:
+</summary>
+<p><img src="images/coding6.png" alt="coding6" /></p>
+<ol>
+<li>
+<p><a href="https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/2.49.3/graphviz-2.49.3.tar.gz">graphviz</a></p>
+</li>
+<li>
+<p><a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">hello</a></p>
+</li>
+<li>
+<p><code>autotools.nix</code>:</p>
+</li>
+</ol>
+<pre><code class="language-nix"># autotools.nix
+pkgs: attrs:
+with pkgs; let
+  defaultAttrs = {
+    builder = "${bash}/bin/bash";
+    args = [./builder.sh];
+    setup = ./setup.sh;
+    baseInputs = [gnutar gzip gnumake gcc binutils-unwrapped coreutils gawk gnused gnugrep patchelf findutils];
+    buildInputs = [];
+    system = builtins.currentSystem;
+  };
+in
+  derivation (defaultAttrs // attrs)
+</code></pre>
+<ol start="4">
+<li><code>setup.sh</code>:</li>
+</ol>
+<pre><code class="language-bash"># setup.sh (This is a library of functions setting up the environment, not directly executable)
+unset PATH
+for p in $baseInputs $buildInputs; do
+  if [ -d $p/bin ]; then
+    export PATH="$p/bin${PATH:+:}$PATH"
+  fi
+  if [ -d $p/lib/pkgconfig ]; then
+    export PKG_CONFIG_PATH="$p/lib/pkgconfig${PKG_CONFIG_PATH:+:}$PKG_CONFIG_PATH"
+  fi
+done
+
+function unpackPhase() {
+  tar -xzf $src
+
+  for d in *; do
+    if [ -d "$d" ]; then
+      cd "$d"
+      break
+    fi
+  done
+}
+
+function configurePhase() {
+  ./configure --prefix=$out
+}
+
+function buildPhase() {
+  make
+}
+
+function installPhase() {
+  make install
+}
+
+function fixupPhase() {
+  find $out -type f -exec patchelf --shrink-rpath '{}' \; -exec strip '{}' \; 2&gt;/dev/null
+}
+
+function genericBuild() {
+  unpackPhase
+  configurePhase
+  buildPhase
+  installPhase
+  fixupPhase
+}
+</code></pre>
+<ol start="5">
+<li>And finally <code>builder.sh</code>:</li>
+</ol>
+<pre><code class="language-bash"># builder.sh (This is the actual builder script specified in the derivation and
+# what `nix-build` expects)
+set -e
+source $setup
+genericBuild
+</code></pre>
+</details>
+<p>This is another example from the Nix-Pill series shown in another way to show
+some powerful aspects of functions.</p>
+<p>If you have a <code>default.nix</code> like this:</p>
+<pre><code class="language-nix"># default.nix
+{
+  hello = import ./hello.nix;
+  graphviz = import ./graphviz.nix;
+}
+</code></pre>
+<p>It expects the files that it imports to look like this:</p>
+<pre><code class="language-nix"># graphviz.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+  mkDerivation = import ./autotools.nix pkgs;
+in
+mkDerivation {
+  name = "graphviz";
+  src = ./graphviz-2.49.3.tar.gz;
+}
+</code></pre>
+<p>And <code>hello.nix</code>:</p>
+<pre><code class="language-nix"># hello.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+  mkDerivation = import ./autotools.nix pkgs;
+in
+mkDerivation {
+  name = "hello";
+  src = ./hello-2.12.1.tar.gz;
+}
+</code></pre>
+<p>You would build these with:</p>
+<pre><code class="language-bash">nix-build -A hello
+nix-build -A graphviz
+</code></pre>
+<p>As you can see both derivations are dependendent on <code>nixpkgs</code> which they
+<strong>both</strong> import directly. To centralize our dependencies and avoid redundant
+imports, we’ll refactor our individual package definitions (<code>hello.nix</code>,
+<code>graphviz.nix</code>) into functions. Our <code>default.nix</code> will then be responsible for
+setting up the common inputs (like <code>pkgs</code> and <code>mkDerivation</code>) and passing them
+as arguments when it imports and calls these package functions.</p>
+<p>Here is what our <code>default.nix</code> will look like:</p>
+<pre><code class="language-nix">let
+  pkgs = import &lt;nixpkgs&gt; { };
+  mkDerivation = import ./autotools.nix pkgs;
+in
+with pkgs;
+{
+  hello = import ./hello.nix { inherit mkDerivation; };
+  graphviz = import ./graphviz.nix {
+    inherit
+      mkDerivation
+      lib
+      gd
+      pkg-config
+      ;
+  };
+  graphvizCore = import ./graphviz.nix {
+    inherit
+      mkDerivation
+      lib
+      gd
+      pkg-config
+      ;
+    gdSupport = false;
+  };
+}
+</code></pre>
+<p>We define some local variables in the <code>let</code> expression and pass them around.</p>
+<p>The whole expression in the above <code>default.nix</code> returns an attribute set with
+the keys <code>hello</code>, <code>graphviz</code>, and <code>graphvizCore</code></p>
+<p>We import <code>hello.nix</code> and <code>graphviz.nix</code>, which both return a function. We call
+the functions, passing them a set of inputs with the <code>inherit</code> construct.</p>
+<p>Let’s change <code>hello.nix</code> into a function to match what the <code>default.nix</code> now
+expects.</p>
+<pre><code class="language-nix"># hello.nix
+{mkDerivation}:
+mkDerivation {
+  name = "hello";
+  src = ./hello-2.12.1.tar.gz;
+}
+</code></pre>
+<p>Now our <code>graphviz</code> attribute expects <code>graphviz.nix</code> to be a function that takes
+the arguments listed in the above <code>default.nix</code>, here’s what <code>graphviz.nix</code> will
+look like as a function:</p>
+<pre><code class="language-nix"># graphviz.nix
+{
+  mkDerivation,
+  lib,
+  gdSupport ? true,
+  gd,
+  pkg-config,
+}:
+mkDerivation {
+  name = "graphviz";
+  src = ./graphviz-2.49.3.tar.gz;
+  buildInputs =
+    if gdSupport
+    then [
+      pkg-config
+      (lib.getLib gd)
+      (lib.getDev gd)
+    ]
+    else [];
+}
+</code></pre>
+<p>We factorized the import of <code>nixpkgs</code> and <code>mkDerivation</code>, and also added a
+variant of <code>graphviz</code> with gd support disabled. The result is that both
+<code>hello.nix</code> and <code>graphviz.nix</code> are independent of the repository and
+customizable by passing specific inputs.</p>
+<p>Now, we can build the package with <code>gd</code> support disabled with the <code>graphvizCore</code>
+attribute:</p>
+<pre><code class="language-bash">nix-build -A graphvizCore
+# or we can still build the package that now defaults to gd support
+nix-build -A graphviz
+</code></pre>
+<p>This example showed us how to turn expressions into functions. We saw how
+functions are passed around and shared between Nix expressions and derivations.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/functions/practical_functions_2.1.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Overlays</title><link>https://saylesss88.github.io/flakes/overlays_4.5.html</link><description><![CDATA[<h1>Extending Flakes with Custom Packages using Overlays</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="../images/pokego.png" alt="Pokego Logo" />–<a href="https://github.com/rubiin/pokego">pokego repo</a></p>
+<p>Overlays are Nix functions that accept two arguments, <code>final</code> and <code>prev</code> and
+return a set of packages. Overlays are similar to <code>packageOverrides</code> as a way to
+customize Nixpkgs, <code>packageOverrides</code> acts as an overlay with only the <code>prev</code>
+argument. Therefore, <code>packageOverrides</code> is appropriate for basic use, but
+overlays are more powerful and easier to distribute.</p>
+<p>Example:</p>
+<pre><code class="language-nix">final: prev: {
+  firefox = prev.firefox.overrideAttrs (old: {
+    buildInputs = (old.buildInputs or []) ++ [ prev.vlc ];
+    env.FIREFOX_DISABLE_GMP_UPDATER = "1";
+  });
+}
+</code></pre>
+<p>To see the original derivation, run <code>nix edit -f "&lt;nixpkgs&gt;" firefox</code>.</p>
+<p>This modifies Firefox by:</p>
+<ul>
+<li>
+<p>Adding <code>vlc</code> to <code>buildInputs</code>, useful if a package requires additional
+dependencies.</p>
+</li>
+<li>
+<p>Setting an environment variable (<code>FIREFOX_DISABLE_GMP_UPDATER=1</code>) to disable
+automatic updates of the Gecko Media Plugin.</p>
+</li>
+</ul>
+<p>It is very common to use overlays in Nix to install packages that aren’t
+available in the standard Nixpkgs repository.</p>
+<p><strong>Overlays</strong> are one of the primary and recommended ways to extend and customize
+your Nix environment. It’s important to remember that Nix overlays are made to
+allow you to modify or extend the package set provided by Nixpkgs (or other Nix
+sources) without directly altering the original package definitions. This is
+crucial for maintaining reproducibility and avoiding conflicts. Overlays are
+essentially functions that take the previous package set and allow you to add,
+modify, or remove packages.</p>
+<ul>
+<li>To better understand the structure of my <code>flake.nix</code> it may be helpful to
+first read <a href="https://tsawyer87.github.io/posts/nix_flakes_tips/">This</a> blog
+post first.</li>
+</ul>
+<h2>Adding the overlays output to your Flake</h2>
+<p>I’ll show the process of adding the <code>pokego</code> package that is not in Nixpkgs:</p>
+<ol>
+<li>In my <code>flake.nix</code> I have a custom inputs variable within my let block of my
+flake like so just showing the necessary parts for brevity:</li>
+</ol>
+<pre><code class="language-nix"># flake.nix
+  outputs = my-inputs @ {
+    self,
+    nixpkgs,
+    treefmt-nix,
+    ...
+  }: let
+    system = "x86_64-linux";
+    host = "magic";
+    userVars = {
+      username = "jr";
+      gitUsername = "saylesss88";
+      editor = "hx";
+      term = "ghostty";
+      keys = "us";
+      browser = "firefox";
+      flake = builtins.getEnv "HOME" + "/flake";
+    };
+
+    inputs =
+      my-inputs
+      // {
+        pkgs = import inputs.nixpkgs {
+          inherit system;
+        };
+        lib = {
+          overlays = import ./lib/overlay.nix;
+          nixOsModules = import ./nixos;
+          homeModules = import ./home;
+          inherit system;
+        };
+      };
+      # ... snip ...
+</code></pre>
+<ul>
+<li>Why I Created <code>inputs.lib</code> in My <code>flake.nix</code>. In the above example, you’ll
+notice a <code>lib</code> attribute defined within the main <code>let</code> block.
+<ul>
+<li>
+<p>This might seem a bit unusual at first, as inputs are typically defined at
+the top level of a flake. However, this structure provides a powerful way to
+organize and reuse common Nix functions and configurations across my flake.</p>
+</li>
+<li>
+<p>By bundling my custom logic and modules into <code>inputs.lib</code>, I can pass
+<code>inputs</code> (which now includes my custom <code>lib</code>) as a <code>specialArgs</code> to other
+modules. This provides a clean way for all modules to access these shared
+resources. For example, in <code>configuration.nix</code>, <code>inputs.lib.overlays</code>
+directly references my custom overlay set.</p>
+</li>
+<li>
+<p>My <code>inputs.lib</code> is my own project-specific library, designed to hold
+functions and attribute sets relevant to my flake’s custom configurations.
+While <code>nixpkgs.lib</code> is globally available, my custom <code>lib</code> contains my
+unique additions.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>While defining <code>inputs</code> within the <code>let</code> block to achieve this structure is a
+personal preference and works well for my setup, the core benefit is the
+creation of a dedicated, centralized <code>lib</code> attribute that encapsulates my
+flake’s reusable Nix code, leading to a more organized and maintainable
+configuration.</p>
+<h2>The Actual Overlay</h2>
+<ol start="2">
+<li>In the <code>overlay.nix</code> I have this helper function and the defined package:</li>
+</ol>
+<pre><code class="language-nix"># overlay.nix
+_final: prev: let
+  # Helper function to import a package
+  callPackage = prev.lib.callPackageWith (prev // packages);
+
+  # Define all packages
+  packages = {
+    # Additional packages
+    pokego = callPackage ./pac_defs/pokego.nix {};
+  };
+in
+  packages
+</code></pre>
+<ol>
+<li><code>_final: prev:</code>: This is the function definition of the overlay.</li>
+</ol>
+<ul>
+<li>
+<p><code>_final</code>: This argument represents the final, merged package set after all
+overlays have been applied. It’s often unused within a single overlay, hence
+the <code>_</code> prefix (a Nix convention for unused variables).</p>
+</li>
+<li>
+<p><code>prev</code>: This is the crucial argument. It represents the package set before
+this overlay is applied. This allows you to refer to existing packages and
+functions from Nixpkgs.</p>
+</li>
+</ul>
+<ol start="2">
+<li>
+<p><code>let ... in packages</code>: This introduces a <code>let</code> expression, which defines
+local variables within the scope of this overlay function. The <code>in packages</code>
+part means that the overlay function will ultimately return the <code>packages</code>
+attribute set defined within the <code>let</code> block.</p>
+</li>
+<li>
+<p><code>callPackage = prev.lib.callPackageWith (prev // packages)</code>: This line
+defines a helper function called <code>callPackage</code>.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><code>prev.lib.callPackageWith</code> Is a function provided by Nixpkgs’ <code>lib</code>.
+<code>callPackageWith</code> is like <code>prev.lib.callPackage</code>, but allows the passing of
+additional arguments that will then be passed to the package definition.</p>
+</li>
+<li>
+<p><code>(prev // packages)</code>: This is an attribute set merge operation. It takes the
+<code>prev</code> package set (Nixpkgs before this overlay) and merges it with the
+<code>packages</code> attribute set defined later in this overlay.</p>
+</li>
+<li>
+<p>By using <code>callPackageWith</code> with this merged attribute set, the <code>callPackage</code>
+function defined here is set up to correctly import package definitions,
+ensuring they have access to both the original Nixpkgs and any other packages
+defined within this overlay.</p>
+</li>
+</ul>
+<ol start="4">
+<li>
+<p><code>packages = { ... };</code>: This defines an attribute set named <code>packages</code>. This
+set will contain all the new or modified packages introduced by this overlay.</p>
+</li>
+<li>
+<p><code>pokego = callPackages ./pac_defs/pokego.nix { };</code>: This is the core of how
+the <code>pokego</code> package is added.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><code>pokego =</code>: This defines a new attribute named <code>pokego</code> within the packages
+attribute set. This name will be used to refer to the pokego package later.</p>
+</li>
+<li>
+<p><code>callPackage ./pac_defs/pokego.nix {}</code>: This calls the callPackage helper
+function defined earlier.</p>
+</li>
+<li>
+<p><code>./pac_defs/pokego.nix</code>: This is the path to another Nix file(<code>pokego.nix</code>)
+that contains the actual package definition for pokego. This file would define
+how to fetch, build, and install the pokego software</p>
+</li>
+<li>
+<p><code>{}</code>: This is an empty attribute set passed as additional arguments to the
+<code>pokego.nix</code> package definition. If <code>pokego.nix</code> expected any specific
+parameters (like versions or dependencies), you would provide them here. Since
+it’s empty, it implies pokego.nix either has no required arguments or uses
+default values.</p>
+</li>
+</ul>
+<ol start="6">
+<li><code>in packages</code>: As mentioned earlier, the overlay function returns the
+packages attribute set. When this overlay is applied, the packages defined
+within this packages set (including pokego) will be added to the overall Nix
+package set.</li>
+</ol>
+<h2>The pokego Package definition</h2>
+<p>The following is the <code>./pac_defs/pokego.nix</code>:</p>
+<pre><code class="language-nix"># pokego.nix
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
+buildGoModule rec {
+  pname = "pokego";
+  version = "0.3.0";
+
+  src = fetchFromGitHub {
+    owner = "rubiin";
+    repo = "pokego";
+    rev = "v${version}";
+    hash = "sha256-cFpEi8wBdCzAl9dputoCwy8LeGyK3UF2vyylft7/1wY=";
+  };
+
+  vendorHash = "sha256-7SoKHH+tDJKhUQDoVwAzVZXoPuKNJEHDEyQ77BPEDQ0=";
+
+  # Install shell completions
+  postInstall = ''
+    install -Dm644 completions/pokego.bash "$out/share/bash-completion/completions/pokego"
+    install -Dm644 completions/pokego.fish "$out/share/fish/vendor_completions.d/pokego.fish"
+    install -Dm644 completions/pokego.zsh "$out/share/zsh/site-functions/_pokego"
+  '';
+
+  meta = with lib; {
+    description = "Command-line tool that lets you display Pokémon sprites in color directly in your terminal";
+    homepage = "https://github.com/rubiin/pokego";
+    license = licenses.gpl3Only;
+    maintainers = with maintainers; [
+      rubiin
+      jameskim0987
+      vinibispo
+    ];
+    mainProgram = "pokego";
+    platforms = platforms.all;
+  };
+}
+</code></pre>
+<h2>Adding the overlay to your configuration</h2>
+<p>There are a few places you could choose to put the following, I choose to use my
+<code>configuration.nix</code> because of my setup:</p>
+<pre><code class="language-nix"># configuration.nix
+nixpkgs.overlays = [inputs.lib.overlays]
+</code></pre>
+<h2>Installing Pokego</h2>
+<ul>
+<li>If you are managing your entire system configuration with NixOS, you would
+typically add <code>pokego</code> to your <code>environment.systemPackages</code>.</li>
+</ul>
+<pre><code class="language-nix"># configuration.nix
+environment.systemPackages = with pkgs; [
+  pokego
+]
+</code></pre>
+<ul>
+<li>If you prefer home-manager you can install <code>pokego</code> with home-manager also:</li>
+</ul>
+<pre><code class="language-nix"># home.nix
+home.packages = [
+  pkgs.pokego
+]
+</code></pre>
+<h3>Another Overlay Example</h3>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "https://flakehub.com/NixOS/nixpkgs/*.tar.gz";
+
+    nix.url = "https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz";
+  };
+
+  outputs = { self, nixpkgs, nix }:
+
+    let
+      system = "aarch64-darwin";
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          nix.overlays.default
+        ];
+      };
+    in
+    {
+     # `pkgs` is nixpkgs for the system, with nix's overlay applied
+    };
+}
+</code></pre>
+<ul>
+<li>
+<p>Normally,
+<code>pkgs = import nixpkgs { }`` imports Nixpkgs with default settings.  However, the example above customizes this import by passing arguments:  </code>pkgs
+= import nixpkgs { inherit system; overlays = [
+nix.overlays.default];}<code>.  This makes the pkgs variable represent nixpkgs specifically for the </code>aarch64-darwin`
+system, with the overlay from the nix flake applied.</p>
+</li>
+<li>
+<p>Consequently, any packages built using this customized <code>pkgs</code> will now depend
+on or use the specific nix version (<code>2.17.0</code>) provided by the nix flake,
+instead of the version that comes with the fetched <code>nixpkgs</code>. This technique
+can be useful for ensuring a consistent environment or testing specific
+package versions.</p>
+</li>
+</ul>
+<h2>Customizing Nixpkgs Imports and Overlays</h2>
+<p>While overlays are typically used to add or modify packages within a single
+<code>nixpkgs</code> instance, Nix’s lazy evaluation and flake inputs allow for even more
+powerful scenarios. You can have multiple versions of nixpkgs in a single flake,
+and they will only be evaluated when a package from that specific version is
+actually referenced. This complements overlays by giving you fine-grained
+control over which nixpkgs instance an overlay applies to, or which <code>nixpkgs</code>
+version a specific part of your project depends on.</p>
+<p>Consider this example where we import nixpkgs with a specific overlay applied
+directly at the import site:</p>
+<pre><code class="language-nix">{
+  inputs = {
+    nixpkgs.url = "[https://flakehub.com/NixOS/nixpkgs/*.tar.gz](https://flakehub.com/NixOS/nixpkgs/*.tar.gz)"; # This will be the base nixpkgs
+
+    nix.url = "[https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz](https://flakehub.com/f/NixOS/nix/2.17.0.tar.gz)"; # This flake provides an overlay for a specific Nix version
+  };
+
+  outputs = { self, nixpkgs, nix }:
+
+    let
+      system = "aarch64-darwin";
+      # Here, we import nixpkgs and apply the 'nix' flake's overlay.
+      # This 'pkgs' variable now holds a customized Nix package set.
+      # In this 'pkgs' set, the 'nix' package (and anything that depends on it)
+      # will be version 2.17.0 as defined by the 'nix' flake's overlay.
+      pkgs_with_custom_nix = import nixpkgs {
+        inherit system;
+        overlays = [
+          nix.overlays.default # Apply the overlay from the 'nix' flake here
+        ];
+      };
+    in
+    {
+      # We can then expose packages or devShells that use this customized `pkgs` set.
+      devShells.${system}.default = pkgs_with_custom_nix.mkShell {
+        packages = [
+          pkgs_with_custom_nix.nix # This 'nix' package is now version 2.17.0 due to the overlay!
+        ];
+        shellHook = ''
+          echo "Using Nix version: &lt;span class="math-inline"&gt;\(nix \-\-version\)"
+'';
+};
+# You can also make this customized package set available as a top-level overlay
+# if other parts of your flake or configuration want to use it.
+# overlays.custom-nix-version = final: prev: {
+#   inherit (pkgs_with_custom_nix) nix; # Expose the specific nix package from our overlayed pkgs
+# };
+# You can also import multiple versions of nixpkgs and select packages from them:
+# pkgs-2505 = import (inputs.nixpkgs-2505 or nixpkgs) { inherit system; }; # Example, assuming 2505 is an input
+# packages.&lt;/span&gt;{system}.my-tool-2505 = pkgs-2505.myTool; # Using a package from a specific stable version
+    };
+}
+</code></pre>
+<p>Normally, <code>pkgs = import nixpkgs { }</code> imports Nixpkgs with default settings.
+However, the example above customizes this import by passing arguments:
+<code>pkgs = import nixpkgs { inherit system; overlays = [ nix.overlays.default];}</code>.
+This makes the <code>pkgs_with_custom_nix</code> variable represent Nixpkgs specifically
+for the <code>aarch64-darwin</code> system, with the overlay from the nix flake applied at
+the time of import.</p>
+<p>Consequently, any packages built using this customized <code>pkgs_with_custom_nix</code>
+will now depend on or use the specific Nix version (<code>2.17.0</code>) provided by the
+nix flake’s overlay, instead of the version that comes with the base <code>nixpkgs</code>
+input. This technique is highly useful for ensuring a consistent environment or
+testing specific package versions without affecting the entire system’s
+<code>nixpkgs</code> set.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/overlays_4.5.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>

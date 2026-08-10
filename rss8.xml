@@ -1,0 +1,1876 @@
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.8.2</generator><atom:link href="https://saylesss88.github.io/rss8.xml" rel="self"></atom:link><atom:link href="https://saylesss88.github.io/rss7.xml" rel="prev"></atom:link><atom:link href="https://saylesss88.github.io/rss9.xml" rel="next"></atom:link><item><title>Specialisations</title><link>https://saylesss88.github.io/flakes/specialisations_4.6.html</link><description><![CDATA[<h1>NixOS Specialisations For Multiple Profiles</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><strong>NixOS specialisations</strong> are a powerful feature that allow you to define
+alternative system configurations variations within a single NixOS setup. Each
+specialisation can modify or extend the base configuration, and NixOS will
+generate separate boot entries for each, letting you choose at boot time (or
+switch at runtime) which environment to use. This is ideal for testing,
+hardware-specific tweaks, or separating work and personal environments without
+maintaining multiple configuration files</p>
+<h2>How Specialisations Work</h2>
+<p>Specialisations are defined as attributes under the <code>specialisation</code> option in
+your configuration. Each key (e.g., <code>niri-test</code>) represents a named
+specialisation, and its configuration attribute contains the NixOS options to
+apply on top of the base system</p>
+<p>By default, a specialisation inherits the parent configuration and applies its
+changes on top. You can also set <code>inheritParentConfig = false;</code> to create a
+completely separate configuration.</p>
+<p>After running <code>nixos-rebuild boot</code>, your bootloader will present extra entries
+for each specialisation. Selecting one boots into the system with that
+specialisation’s settings applied</p>
+<p>Runtime Switching: You can switch to a specialisation at runtime using
+activation scripts, e.g.:</p>
+<pre><code class="language-bash">nixos-rebuild switch --specialisation niri-test
+</code></pre>
+<p>or</p>
+<pre><code class="language-bash">/run/current-system/specialisation/niri-test/bin/switch-to-configuration switch
+</code></pre>
+<blockquote>
+<p>Note: Some changes (like kernel switches) require a reboot to take effect</p>
+</blockquote>
+<p>Example: Let’s create a basic specialisation to try out the Niri Window Manager:</p>
+<p>First we have to add the <code>niri-flake</code> as an input to our <code>flake.nix</code> and add the
+module to install it:</p>
+<pre><code class="language-nix"># flake.nix
+inputs = {
+     niri.url = "github:sodiboo/niri-flake";
+};
+</code></pre>
+<pre><code class="language-nix"># configuration.nix
+{ pkgs, inputs, ... }: {
+# ... snip ...
+imports = [
+    inputs.niri.nixosModules.niri
+];
+
+# This is the top-level overlay
+  nixpkgs.overlays = [inputs.niri.overlays.niri];
+
+# ... snip ...
+
+  specialisation = {
+    niri-test.configuration = {
+      system.nixos.tags = ["niri"];
+
+      # Add the Niri overlay for this specialisation
+      nixpkgs.overlays = [inputs.niri.overlays.niri];
+
+      # Enable Niri session
+      programs.niri = {
+        enable = true;
+        package = pkgs.niri-unstable;
+      };
+
+      # Optionally, add a test user and greetd for login
+      users.users.niri = {
+        isNormalUser = true;
+        extraGroups = ["networkmanager" "video" "wheel"];
+        initialPassword = "test"; # for testing only!
+        createHome = true;
+      };
+
+      services.greetd = {
+        enable = true;
+        settings = rec {
+          initial_session = {
+            command = lib.mkForce "${pkgs.niri}/bin/niri";
+            user = lib.mkForce "niri";
+          };
+          default_session = initial_session;
+        };
+      };
+
+      environment.etc."niri/config.kdl".text = ''
+        binds {
+          Mod+T { spawn "alacritty"; }
+          Mod+D { spawn "fuzzel"; }
+          Mod+Q { close-window; }
+          Mod+Shift+Q { exit; }
+        }
+      '';
+      environment.systemPackages = with pkgs; [
+        alacritty
+        waybar
+        fuzzel
+        mako
+        firefox
+      ];
+
+      programs.firefox.enable = true;
+
+      services.pipewire = {
+        enable = true;
+        alsa.enable = true;
+        pulse.enable = true;
+        # Optionally:
+        jack.enable = true;
+      };
+
+      hardware.alsa.enablePersistence = true;
+
+      networking.networkmanager.enable = true;
+    };
+  };
+}
+</code></pre>
+<p>I chose to use the nightly version so it was required to add the overlay at the
+top-level as well as inside the <code>specialisation</code> block.</p>
+<p>On my system it sped up build times to first run:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --flake .
+# And Then Run
+sudo nixos-rebuild boot --flake .
+</code></pre>
+<p><strong>What this does</strong>:</p>
+<ul>
+<li>
+<p>Creates a boot entry called <code>niri-test</code> with the Niri Wayland compositor, a
+test user, and a <code>greetd</code> login manager.</p>
+</li>
+<li>
+<p>Installs a set of packages and enables PipeWire with ALSA, PulseAudio, and
+JACK support.</p>
+</li>
+<li>
+<p>Provides a custom Niri configuration file for a few keybinds and enables
+NetworkManager.</p>
+</li>
+</ul>
+<h2>Using Your Specialisation After Boot</h2>
+<p>Once you have rebooted and selected your specialisation from the boot menu, you
+can use your system as usual. If you want to add or remove programs, change
+settings, or update your environment within a specialisation, simply:</p>
+<ol>
+<li>
+<p>Edit your configuration: Add or remove packages (e.g., add <code>ghostty</code> to
+<code>environment.systemPackages</code>) or change any other options inside the
+relevant <code>specialisation</code> block in your NixOS configuration.</p>
+</li>
+<li>
+<p>Apply changes with a rebuild: Run the standard NixOS rebuild command. If you
+are currently running the specialisation you want to update, use:</p>
+</li>
+</ol>
+<pre><code class="language-bash">sudo nixos-rebuild switch
+</code></pre>
+<p>This will apply your changes to the current specialisation</p>
+<p>If you want to build and activate a different specialisation from your current
+session, use:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --specialisation name
+</code></pre>
+<p>Or, you can activate a specialisation directly with:</p>
+<pre><code class="language-bash">sudo /run/current-system/specialisation/&lt;name&gt;/bin/switch-to-configuration switch
+</code></pre>
+<p>Replace <code>&lt;name&gt;</code> with your specialisation’s name.</p>
+<p>Reboot if needed: Most changes apply immediately, but some (like kernel or
+<code>initrd</code> changes) require a reboot for the specialisation to fully take effect</p>
+<p><strong>Tip</strong>:</p>
+<p>Each specialisation can have its own set of installed programs. Only those
+listed in the <code>environment.systemPackages</code> (or enabled via modules) inside the
+<code>specialisation</code> block will be available when you boot into that context.</p>
+<p>You manage and update your specialisation just like your main NixOS system no
+special commands or workflow are required beyond specifying the specialisation
+when rebuilding or switching.</p>
+<h2>Use Cases for Specialisations</h2>
+<ul>
+<li>
+<p><strong>Hardware Profiles</strong>: Enable/disable drivers or services for specific
+hardware (e.g., eGPU, WiFi, or SR-IOV setups)</p>
+</li>
+<li>
+<p><strong>Desktop Environments</strong>: Quickly switch between different desktop
+environments or compositors (e.g., GNOME, Plasma, Niri)</p>
+</li>
+<li>
+<p><strong>Testing</strong>: Safely try out unstable packages, new kernels, or experimental
+features without risking your main environment</p>
+</li>
+<li>
+<p><strong>User Separation</strong>: Create profiles for different users, each with their own
+settings, packages, and auto-login</p>
+</li>
+<li>
+<p><strong>Secure Environments</strong>: Combine with encrypted partitions for more secure,
+isolated setups</p>
+</li>
+</ul>
+<h2>Securely Separated Contexts with NixOS Specialisations</h2>
+<p>I will just explain the concept here for completeness, if you want to implement
+this I recommend following:</p>
+<p><a href="https://www.tweag.io/blog/2022-11-01-hard-user-separation-with-nixos/">Tweag Hard User Separation with NixOS</a></p>
+<details>
+<summary> ✔️ Click To Expand Section on Separate Contexts </summary>
+<p>If you use the same computer in different contexts such as for work and for your
+private life you may worry about the risks of mixing sensitive environments. For
+example, a cryptolocker received through a compromised work email could
+potentially encrypt your personal files, including irreplaceable family photos.</p>
+<p>A common solution is to install two different operating systems and dual-boot
+between them, keeping work and personal data isolated. However, this approach
+means you have two systems to maintain, update, and configure, which can be a
+significant hassle.</p>
+<p>NixOS offers a third alternative: With NixOS specialisations, you can manage two
+(or more) securely separated contexts within a single operating system. At boot
+time, you select which context you want to use work or personal. Each context
+can have its own encrypted root partition, user accounts, and configuration, but
+both share the same Nix store for packages. This means:</p>
+<ul>
+<li>
+<p>No duplicated packages: Both contexts use the same system-wide package store,
+saving space and simplifying updates.</p>
+</li>
+<li>
+<p>Single system to maintain: You update and manage only one NixOS installation,
+not two.</p>
+</li>
+<li>
+<p>Strong security boundaries: Each context can have its own encrypted root, so a
+compromise in one context (such as malware in your work environment) cannot
+access the data in the other context.</p>
+</li>
+<li>
+<p>Flexible management: You can configure both contexts from either environment,
+making administration easier.</p>
+</li>
+</ul>
+<p>This approach combines the security of dual-booting with the convenience and
+efficiency of a single, unified system.</p>
+<p><strong>How It Works</strong>:</p>
+<ul>
+<li>
+<p>Encrypted Partitions: Each context (work and personal) has its own encrypted
+root partition. The shared /nix/store partition is also encrypted, but can be
+unlocked by either context.</p>
+</li>
+<li>
+<p>Specialisations at Boot: NixOS generates multiple boot entries, one for each
+context. You simply choose your desired environment at boot time.</p>
+</li>
+<li>
+<p>Separation of Data: Your work and personal home directories, settings, and
+documents remain isolated from each other, while still benefiting from shared
+system packages.</p>
+</li>
+</ul>
+<p>Benefits Over Traditional Dual-Boot</p>
+<ul>
+<li>
+<p>Only one system to update and configure.</p>
+</li>
+<li>
+<p>No wasted disk space on duplicate packages.</p>
+</li>
+<li>
+<p>Seamless switching between contexts with a reboot.</p>
+</li>
+<li>
+<p>Consistent NixOS tooling and workflows in both environments.</p>
+</li>
+</ul>
+<p>What You Need</p>
+<ul>
+<li>
+<p>A physical or virtual machine supported by NixOS.</p>
+</li>
+<li>
+<p>Willingness to erase the system disk during setup.</p>
+</li>
+<li>
+<p>LVM (Logical Volume Manager) support: This setup requires using LVM for disk
+partitioning and management. LVM allows you to create multiple logical volumes
+on a single physical disk, making it possible to securely separate your work
+and personal environments while sharing a common Nix store. You will use LVM
+commands such as <code>pvcreate</code>, <code>vgcreate</code>, and <code>lvcreate</code> to prepare your disk
+layout</p>
+</li>
+</ul>
+<p>In summary: With NixOS specialisations and careful disk partitioning, you can
+achieve secure, convenient, and efficient context separation—no need to
+compromise between security and manageability.</p>
+</details>
+<h3>Tips and Best Practices</h3>
+<ul>
+<li>
+<p>Overriding Values: Use <code>lib.mkDefault</code> or <code>lib.mkForce</code> to make options
+overridable or forced in specialisations. I had to do it above because I have
+greetd setup for my main configuration as well.</p>
+</li>
+<li>
+<p>Selective Configuration: If you want certain options only in the default
+(non-specialised) system, use:</p>
+</li>
+</ul>
+<pre><code class="language-nix">config = lib.mkIf (config.specialisation != {}) { ... }
+</code></pre>
+<ul>
+<li>
+<p>This condition checks if you’re in a specialisation.</p>
+</li>
+<li>
+<p>Any settings inside this block will <strong>not</strong> be inherited by specialisations,
+keeping them exclusive to the main system.</p>
+</li>
+<li>
+<p>Runtime Limitations: Not all changes (e.g., kernel or <code>initrd</code>) can be fully
+applied at runtime; a reboot is required for those.</p>
+</li>
+<li>
+<p>Modularity: Specialisations work well with modular NixOS configs keep
+hardware, user, and service configs in separate files for easier management</p>
+</li>
+</ul>
+<p>References to Official Documentation and Community Resources</p>
+<ul>
+<li>
+<p><a href="https://www.tweag.io/blog/2022-08-18-nixos-specialisations/">Tweag: Introduction to NixOS specialisations</a></p>
+</li>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Specialisation">NixOS Wiki: Specialisation</a></p>
+</li>
+<li>
+<p><a href="https://www.tweag.io/blog/2022-11-01-hard-user-separation-with-nixos/">Tweag Hard User Separation with NixOS</a></p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/flakes/specialisations_4.6.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Comparing Flakes and Traditional Nix</title><link>https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html</link><description><![CDATA[<h1>Chapter 8</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![nixWinter](images/nixWinter.png) -->
+<h2>Comparing Flakes and Traditional Nix</h2>
+<ul>
+<li>This post is based on notes from Nix-Hour #4, comparing Traditional Nix and
+Flakes, focusing on achieving pure build results. See the
+<a href="https://www.youtube.com/watch?v=atmoYyBAhF4">YouTube video</a> for the original
+content. This guide adapts the information for clarity and ease of
+understanding.</li>
+</ul>
+<details>
+<summary> What is Purity in Nix? (click here) </summary>
+<ul>
+<li>
+<p>A key benefit of Nix Flakes is their <em>default</em> enforcement of <strong>pure
+evaluation</strong>.</p>
+</li>
+<li>
+<p>In Nix, an <strong>impure operation</strong> depends on something <em>outside</em> its explicit
+inputs. Examples include:</p>
+<ul>
+<li>User’s system configuration</li>
+<li>Environment variables</li>
+<li>Current time</li>
+</ul>
+</li>
+<li>
+<p>Impurity leads to unpredictable builds that may differ across systems or time.</p>
+</li>
+</ul>
+</details>
+<h2>Building a Simple “hello” Package: Flakes vs. Traditional Nix</h2>
+<ul>
+<li>We’ll demonstrate building a basic “hello” package using both Flakes and
+Traditional Nix to highlight the differences in handling purity.</li>
+</ul>
+<h2>Using Nix Flakes</h2>
+<details>
+<summary> Building Hello with Flakes (click here) </summary>
+<ol>
+<li>
+<p><strong>Setup:</strong></p>
+<pre><code class="language-bash">mkdir hello &amp;&amp; cd hello/
+</code></pre>
+</li>
+<li>
+<p><strong>Create <code>flake.nix</code> (Initial Impure Example):</strong></p>
+<pre><code class="language-nix"># flake.nix
+{
+  outputs = { self, nixpkgs }: {
+    myHello = (import nixpkgs {}).hello;
+  };
+}
+</code></pre>
+<ul>
+<li>Note: Flakes don’t have access to <code>builtins.currentSystem</code> directly.</li>
+</ul>
+</li>
+<li>
+<p><strong>Impure Build (Fails):</strong></p>
+<pre><code class="language-bash">nix build .#myHello
+</code></pre>
+<ul>
+<li>This fails because Flakes enforce purity by default.</li>
+</ul>
+</li>
+<li>
+<p><strong>Force Impure Build:</strong></p>
+<pre><code class="language-bash">nix build .#myHello --impure
+</code></pre>
+</li>
+<li>
+<p><strong>Making the Flake Pure:</strong></p>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        packages.myHello = pkgs.hello;
+      }
+    );
+}
+</code></pre>
+<ul>
+<li><code>flake-utils</code> simplifies making flakes system-agnostic and provides the
+<code>system</code> attribute.</li>
+</ul>
+</li>
+<li>
+<p><strong>Pure Build (Success):</strong></p>
+<pre><code class="language-bash">nix build .#myHello
+</code></pre>
+</li>
+</ol>
+  </details>
+<h2>Using Traditional Nix</h2>
+<details>
+<summary> Building hello with Traditional Nix </summary>
+<ol>
+<li>
+<p><strong>Setup:</strong></p>
+<pre><code class="language-bash">mkdir hello2 &amp;&amp; cd hello2/
+</code></pre>
+</li>
+<li>
+<p><strong>Create <code>default.nix</code> (Initial Impure Example):</strong></p>
+<pre><code class="language-nix"># default.nix
+{ myHello = (import &lt;nixpkgs&gt; { }).hello; }
+</code></pre>
+</li>
+<li>
+<p><strong>Build (Impure):</strong></p>
+<pre><code class="language-bash">nix-build -A myHello
+</code></pre>
+</li>
+<li>
+<p><strong>Impurity Explained:</strong></p>
+<pre><code class="language-bash">nix repl
+nix-repl&gt; &lt;nixpkgs&gt;
+/nix/var/nix/profiles/per-user/root/channels/nixos
+</code></pre>
+<ul>
+<li><code>&lt;nixpkgs&gt;</code> depends on the user’s environment (Nixpkgs channel), making it
+impure. Even with channels disabled, it relies on a specific Nixpkgs
+version in the store.</li>
+</ul>
+</li>
+<li>
+<p><strong>Achieving Purity: Using <code>fetchTarball</code></strong></p>
+<ul>
+<li>
+<p>GitHub allows downloading repository snapshots at specific commits,
+crucial for reproducibility.</p>
+</li>
+<li>
+<p><strong>Get Nixpkgs Revision from <code>flake.lock</code> (from the Flake example):</strong></p>
+</li>
+</ul>
+<pre><code class="language-nix"># flake.lock
+"nixpkgs": {
+  "locked": {
+    "lastModified": 1746372124,
+    "narHash": "sha256-n7W8Y6bL7mgHYW1vkXKi9zi/sV4UZqcBovICQu0rdNU=",
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "f5cbfa4dbbe026c155cf5a9204f3e9121d3a5fe0",
+    "type": "github"
+  },
+</code></pre>
+</li>
+<li>
+<p><strong>Modify <code>default.nix</code> for Purity:</strong></p>
+<pre><code class="language-nix"># default.nix
+let
+  nixpkgs = fetchTarball {
+    url = "[https://github.com/NixOS/nixpkgs/archive/f5cbfa4dbbe026c155cf5a9204f3e9121d3a5fe0.tar.gz](https://github.com/NixOS/nixpkgs/archive/f5cbfa4dbbe026c155cf5a9204f3e9121d3a5fe0.tar.gz)";
+    sha256 = "0000000000000000000000000000000000000000000000000000"; # Placeholder
+  };
+in {
+  myHello = (import nixpkgs {}).hello;
+}
+</code></pre>
+<ul>
+<li>Replace <code>&lt;nixpkgs&gt;</code> with <code>fetchTarball</code> and a specific revision. A
+placeholder <code>sha256</code> is used initially.</li>
+</ul>
+</li>
+<li>
+<p><strong>Build (Nix provides the correct <code>sha256</code>):</strong></p>
+<pre><code class="language-bash">nix-build -A myHello
+</code></pre>
+</li>
+<li>
+<p><strong>Verification:</strong> Both Flake and Traditional Nix builds now produce the same
+output path.</p>
+</li>
+<li>
+<p><strong>Remaining Impurities in Traditional Nix:</strong></p>
+<ul>
+<li>Default arguments to <code>import &lt;nixpkgs&gt; {}</code> can introduce impurity:
+<ul>
+<li><code>overlays</code>: <code>~/.config/nixpkgs/overlays</code> (user-specific)</li>
+<li><code>config</code>: <code>~/.config/nixpkgs/config.nix</code> (user-specific)</li>
+<li><code>system</code>: <code>builtins.currentSystem</code> (machine-specific)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Making Traditional Nix Fully Pure:</strong></p>
+<pre><code class="language-nix"># default.nix
+{system ? builtins.currentSystem}:
+let
+  nixpkgs = fetchTarball {
+    url =
+      "[https://github.com/NixOS/nixpkgs/archive/0243fb86a6f43e506b24b4c0533bd0b0de211c19.tar.gz](https://github.com/NixOS/nixpkgs/archive/0243fb86a6f43e506b24b4c0533bd0b0de211c19.tar.gz)";
+    sha256 = "1qvdbvdza7hsqhra0yg7xs252pr1q70nyrsdj6570qv66vq0fjnh";
+  };
+in {
+  myHello = (import nixpkgs {
+    overlays = [];
+    config = {};
+    inherit system;
+  }).hello;
+}
+</code></pre>
+<ul>
+<li>Override impure defaults for <code>overlays</code>, <code>config</code>, and make <code>system</code> an
+argument.</li>
+</ul>
+</li>
+<li>
+<p><strong>Building with a Specific System:</strong></p>
+<pre><code class="language-bash">nix-build -A myHello --argstr system x86_64-linux
+</code></pre>
+</li>
+<li>
+<p><strong>Pure Evaluation Mode in Traditional Nix:</strong></p>
+<pre><code class="language-bash">nix-instantiate --eval --pure-eval --expr 'fetchGit { url = ./.; rev = "b4fe677e255c6f89c9a6fdd3ddd9319b0982b1ad"; }'
+</code></pre>
+<ul>
+<li>Example of using <code>--pure-eval</code>.</li>
+</ul>
+<pre><code class="language-bash">nix-build --pure-eval --expr '(import (fetchGit { url = ./.; rev = "b4fe677e255c6f89c9a6fdd3ddd9319b0982b1ad"; }) { system = "x86_64-linux"; }).myHello'
+</code></pre>
+<ul>
+<li>Building with a specific revision and system.</li>
+</ul>
+</li>
+</ol>
+  </details>
+<h3>Updating Nixpkgs</h3>
+<details>
+<summary> Updating Nixpkgs with Flakes </summary>
+<pre><code class="language-bash">nix flake update
+</code></pre>
+<pre><code class="language-nix">nix build .#myHello --override-input nixpkgs github:NixOS/nixpkgs/nixos-24.11
+</code></pre>
+</details>
+<h3>Updating Traditional Nix (using <code>niv</code>)</h3>
+<details>
+<summary> Updating with niv </summary>
+<pre><code class="language-nix">nix-shell -p niv
+niv init
+</code></pre>
+<pre><code class="language-nix"># default.nix
+{ system ? builtins.currentSystem,
+  sources ? import nix/sources.nix,
+  nixpkgs ? sources.nixpkgs,
+  pkgs ? import nixpkgs {
+    overlays = [ ];
+    config = { };
+    inherit system;
+  }, }: {
+  myHello = pkgs.hello;
+}
+</code></pre>
+<p>And build it with:</p>
+<pre><code class="language-bash">nix-build -A myHello
+</code></pre>
+<pre><code class="language-bash">niv update nixpkgs --branch=nixos-unstable
+nix-build -A myHello
+</code></pre>
+</details>
+<details>
+<summary> Adding Home-Manager with Flakes (click here) </summary>
+<pre><code class="language-nix"># flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    flake-utils.url = "github:numtide/flake-utils";
+    home-manager.url = "github:nix-community/home-manager";
+  };
+
+  outputs = { self, nixpkgs, flake-utils, home-manager, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        packages.myHello = pkgs.hello;
+        packages.x86_64-linux.homeManagerDocs =
+          home-manager.packages.x86_64-linux.docs-html;
+      });
+}
+</code></pre>
+<pre><code class="language-bash">nix flake update
+nix flake show github:nix-community/home-manager
+</code></pre>
+<pre><code class="language-nix">home-manager.inputs.follows = "nixpkgs";
+</code></pre>
+</details>
+<h4>Adding Home-Manager with Traditional Nix</h4>
+<details>
+<summary> Adding Home-Manager with Traditional Nix (click here) </summary>
+```nix
+niv add nix-community/home-manager
+```
+<pre><code class="language-nix">nix repl
+nix-repl&gt; s = import ./nix/sources.nix
+nix-repl&gt; s.home-manager
+</code></pre>
+<pre><code class="language-nix">{ system ? builtins.currentSystem, sources ? import nix/sources.nix
+  , nixpkgs ? sources.nixpkgs, pkgs ? import nixpkgs {
+    overlays = [ ];
+    config = { };
+    inherit system;
+  }, }: {
+  homeManagerDocs = (import sources.home-manager { pkgs = pkgs; }).docs;
+
+  myHello = pkgs.hello;
+}
+</code></pre>
+<pre><code class="language-bash">nix-build -A homeManagerDocs
+</code></pre>
+</details>
+<h4>Conclusion</h4>
+<p>In this chapter, we’ve explored the key differences between traditional Nix and
+Nix Flakes, particularly focusing on how each approach handles purity,
+dependency management, and project structure. We’ve seen that while traditional
+Nix can achieve purity with careful configuration, Flakes enforce it by default,
+offering a more robust and standardized way to build reproducible environments.
+Flakes also streamline dependency management and provide a more structured
+project layout compared to the often ad-hoc nature of traditional Nix projects.</p>
+<p>However, regardless of whether you’re working with Flakes or traditional Nix,
+understanding how to debug and trace issues within your Nix code is crucial.
+When things go wrong, you’ll need tools and techniques to inspect the evaluation
+process, identify the source of errors, and understand how your modules and
+derivations are being constructed.</p>
+<p>In our next chapter,
+<a href="https://saylesss88.github.io/Debugging_and_Tracing_NixOS_Modules_9.html">Debugging and Tracing Modules</a>,
+we will delve into the world of Nix debugging. We’ll explore various techniques
+and tools that can help you understand the evaluation process, inspect the
+values of expressions, and trace the execution of your Nix code, enabling you to
+effectively troubleshoot and resolve issues in both Flake-based and traditional
+Nix projects.</p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>My Chapter</title><link>https://saylesss88.github.io/installation/index.html</link><description><![CDATA[<h1>Installation Guides</h1>
+<p>This section provides detailed guides for installing NixOS. You’ll choose
+between an <strong>unencrypted</strong> or <strong>encrypted</strong> base setup. After your core
+installation, you can explore adding optional features like <code>sops</code> for encrypted
+secrets, <code>lanzaboote</code> for Secure Boot, or <code>impermanence</code> for a stateless system.</p>
+<hr />
+<h2>1. Unencrypted Disko Btrfs Subvol Installation</h2>
+<ul>
+<li>
+<p><strong>Guide:</strong>
+<a href="https://saylesss88.github.io/installation/unenc/unencrypted_setups.html">Minimal Btrfs-Subvol Install with Disko and Flakes</a></p>
+</li>
+<li>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>
+<p>Users who want a straightforward and quick setup.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/unenc/unenc_impermanence.html">Unencrypted Impermanence</a></p>
+</li>
+<li>
+<p>You can still add Lanzaboote and sops secrets after the install for a more
+secure system. To get the full benefits of Lanzaboote it is recommended to
+use full disk encryption.</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>2. Encrypted Disko Btrfs Subvol Installation</h2>
+<ul>
+<li>
+<p><strong>Encrypted Install Guide:</strong>
+<a href="https://saylesss88.github.io/installation/enc/enc_install.html">Encrypted Install</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
+</li>
+<li>
+<p><strong>Important Considerations:</strong></p>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Secure Boot with Lanzaboote</a>
+For the full benefit of Secure Boot (with Lanzaboote), it’s highly
+recommended to have a second stage of protection, such as an encrypted disk.</p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Adding Sops</a>
+You can easily add <code>sops</code> (for managing encrypted secrets) to your
+configuration <em>after</em> the initial encrypted installation and reboot. This
+can simplify the initial setup process. However, always remember the core
+goal of using encrypted secrets: <strong>never commit unencrypted or even hashed
+sensitive data directly into your Git repository.</strong> With modern equipment
+brute force attacks are a real threat.</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2>3. Post-Installation Security &amp; Features</h2>
+<p>Once your base NixOS system is installed, consider these powerful additions:</p>
+<ul>
+<li>
+<p><strong><code>sops-nix</code>:</strong> For managing encrypted secrets directly within your NixOS
+configuration, ensuring sensitive data is never stored in plain text.</p>
+</li>
+<li>
+<p><strong><code>lanzaboote</code>:</strong> For enabling Secure Boot, verifying the integrity of your
+boot chain (requires UEFI and custom keys).</p>
+</li>
+<li>
+<p><strong><code>impermanence</code>:</strong> For setting up a stateless NixOS system, where the root
+filesystem reverts to a clean state on every reboot.</p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/index.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Unencrypted Install</title><link>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</link><description><![CDATA[<h1>Minimal BTRFS-Subvol Install with Disko and Flakes</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<h1>Unencrypted Setups</h1>
+<p>Figure 1: BTRFS Logo: Image of the BTRFS logo. Sourced from the BTRFS repo BTRFS
+logo</p>
+<p>Why I Chose BTRFS I chose BTRFS because I was already familiar with it from
+using it with Arch Linux and I found it to be very easy to use. From what I’ve
+read, there are licensing issues between the Linux Kernel and ZFS which means
+that ZFS is not part of the Linux Kernel; it’s maintained by the OpenZFS project
+and available as a separate kernel module. This can cause issues and make you
+think more about your filesystem than I personally want to at this point.</p>
+<details>
+<summary>✔️ Click for BTRFS Subvolume Overview</summary>
+<p>A <strong>Btrfs subvolume</strong> is essentially a distinct section within a Btrfs
+filesystem that maintains its own set of files and directories, along with a
+separate inode numbering system. Unlike block-level partitions (such as LVM
+logical volumes), Btrfs subvolumes operate at the file level and are based on
+file extents.</p>
+<p><strong>Extents</strong> in Btrfs are contiguous blocks of data on disk that store the actual
+contents of files. When files are created or modified, Btrfs manages these
+extents efficiently, allowing features like deduplication and snapshots.
+Multiple subvolumes can reference the same extents, meaning that identical data
+is not duplicated on disk, which saves space and improves performance.</p>
+<p>A <strong>snapshot</strong> in Btrfs is a special kind of subvolume that starts with the same
+content as another subvolume at the time the snapshot is taken. Snapshots are
+typically writable by default, so you can make changes in the snapshot without
+affecting the original subvolume. This is possible because Btrfs tracks changes
+at the extent level, only creating new extents when files are modified (a
+technique called copy-on-write).</p>
+<p>Subvolumes in Btrfs behave much like regular directories from a user’s
+perspective, but they support additional operations such as renaming, moving,
+and nesting (placing subvolumes within other subvolumes). There are no
+restrictions on nesting, though it can affect how snapshots are created and
+managed. Each subvolume is assigned a unique and unchangeable numeric ID
+(subvolid or rootid).</p>
+<p>You can access a Btrfs subvolume in two main ways:</p>
+<ul>
+<li>
+<p>As a normal directory within the filesystem.</p>
+</li>
+<li>
+<p>By mounting it directly as if it were a separate filesystem, using the subvol
+or subvolid mount options. When mounted this way, you only see the contents of
+that subvolume, similar to how a bind mount works.</p>
+</li>
+</ul>
+<p>When a new Btrfs filesystem is created, it starts with a “top-level” subvolume
+(with an internal ID of 5). This subvolume is always present and cannot be
+deleted or replaced, and it is the default mount point unless changed with btrfs
+subvolume set-default.</p>
+<p>Subvolumes can also have storage quotas set using Btrfs’s quota groups , but
+otherwise, they all draw from the same underlying storage pool. Thanks to
+features like deduplication and snapshots, subvolumes can share data efficiently
+at the extent level.While ZFS is a solid choice and offers some benefits over
+BTRFS, I recommend looking into it before making your own decision.</p>
+<p>If you have a ton of RAM you could most likely skip the minimal install and just
+set your system up as needed or just use
+<a href="https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/">tmpfs as root</a></p>
+</details>
+<h2>Getting Started with Disko</h2>
+<p>Disko allows you to declaratively partition and format your disks, and then
+mount them to your system. I recommend checking out the
+<a href="https://github.com/nix-community/disko/tree/master?tab=readme-ov-file">README</a>
+as it is a disk destroyer if used incorrectly.</p>
+<p>We will mainly be following the
+<a href="https://github.com/nix-community/disko/blob/master/docs/quickstart.md">disko quickstart guide</a></p>
+<p>Figure 2: <strong>Disko Logo</strong>: Image of the logo for Disko, the NixOS declarative
+disk partitioning tool. Sourced from the
+<a href="https://github.com/nix-community/disko">Disko project</a> disko logo</p>
+<ol>
+<li>Get the
+<a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
+Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
+link to the
+<a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
+download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
+executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
+<code>sudo ./Ventoy2Disk.sh</code> Follow the prompts to finish the install.</li>
+</ol>
+<p>You’ll have to run it on for the USB drive you’re trying to use, you can do that
+by unplugging the USB stick and running <code>lsblk</code>, then plug it in again and run:</p>
+<pre><code class="language-bash">lsblk -f
+NAME          FSTYPE      FSVER LABEL   UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sda
+└─sda1        vfat        FAT32 MYUSB   46E8-9304
+sdb           vfat        FAT12         F054-697D                               1.4M     0% /run/media/jr/F054-697D
+nvme0n1
+├─nvme0n1p1   vfat        FAT32         BCD8-8C51                               1.8G    12% /boot
+</code></pre>
+<ul>
+<li><code>sdb</code> is a USB plugin for a mouse. <code>sda</code> is the USB stick that I want to
+target here:</li>
+</ul>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i /dev/sda
+# Or to force overwrite an existing Ventoy entry
+sudo ./Ventoy2Disk.sh -I /dev/sda
+</code></pre>
+<ol start="2">
+<li>The minimal installer uses wpa_supplicant instead of NetworkManager, to
+enable networking run the following:</li>
+</ol>
+<pre><code class="language-bash">sudo systemctl start wpa_supplicant
+wpa_cli
+</code></pre>
+<pre><code class="language-bash">&gt; add_network
+0
+
+&gt; set_network 0 ssid "myhomenetwork"
+OK
+
+&gt; set_network 0 psk "mypassword"
+OK
+
+&gt; enable_network 0
+OK
+</code></pre>
+<p>To exit type <code>quit</code>, then check your connection with <code>ping google.com</code>.</p>
+<p>Another option is to do the following, so either the above method or the below
+method after starting <code>wpa_supplicant</code>:</p>
+<pre><code class="language-bash"># Alternative for quick setup (less interactive, but often faster)
+sudo wpa_passphrase "myhomenetwork" "mypassword" &gt;&gt; /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+sudo systemctl restart wpa_supplicant@wlan0.service
+</code></pre>
+<ol start="3">
+<li>Get your Disk Name with lsblk</li>
+</ol>
+<p>The output should be something like:</p>
+<pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+nvme0n1     259:0    0   1,8T  0 disk
+</code></pre>
+<ol start="4">
+<li>Copy the disk configuration to your machine. You can choose one from the
+examples directory.</li>
+</ol>
+<ul>
+<li><strong>Option A</strong>: (Simpler for new users) I also created a starter repo containing
+much of what’s needed. If you choose this option follow the README.md included
+with the repo.</li>
+</ul>
+<pre><code class="language-bash">cd ~
+git clone https://github.com/saylesss88/my-flake.git
+</code></pre>
+<blockquote>
+<p>Make sure to change line 7 in disk-config.nix to what you got from step 3
+device = “/dev/nvme0n1”;</p>
+</blockquote>
+<ul>
+<li><strong>Option B</strong>: (More flexible, more manual steps) Skip cloning the repo above
+and for the btrfs-subvolume default layout, run the following:</li>
+</ul>
+<pre><code class="language-bash">cd /tmp
+curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/btrfs-subvolumes.nix -o /tmp/disk-config.nix
+</code></pre>
+<ol start="5">
+<li>Make Necessary changes, I set mine up for impermanence with the following:</li>
+</ol>
+<pre><code class="language-bash">nano /tmp/disk-config.nix
+</code></pre>
+<pre><code class="language-nix">{
+  disko.devices = {
+    disk = {
+      main = {
+        type = "disk";
+        device = "/dev/nvme0n1";
+        content = {
+          type = "gpt";
+          partitions = {
+            ESP = {
+              priority = 1;
+              name = "ESP";
+              start = "1M";
+              end = "512M";
+              type = "EF00";
+              content = {
+                type = "filesystem";
+                format = "vfat";
+                mountpoint = "/boot";
+                mountOptions = ["umask=0077"];
+              };
+            };
+            root = {
+              size = "100%";
+              content = {
+                type = "btrfs";
+                extraArgs = ["-f"]; # Override existing partition
+                # Subvolumes must set a mountpoint in order to be mounted,
+                # unless their parent is mounted
+                subvolumes = {
+                  # Subvolume name is different from mountpoint
+                  "/root" = {
+                    mountpoint = "/";
+                    mountOptions = ["subvol=root" "compress=zstd" "noatime"];
+                  };
+                  # Subvolume name is the same as the mountpoint
+                  "/home" = {
+                    mountOptions = ["subvol=home" "compress=zstd" "noatime"];
+                    mountpoint = "/home";
+                  };
+                  # Sub(sub)volume doesn't need a mountpoint as its parent is mounted
+                  "/home/user" = {};
+                  # Parent is not mounted so the mountpoint must be set
+                  "/nix" = {
+                    mountOptions = [
+                      "subvol=nix"
+                      "compress=zstd"
+                      "noatime"
+                    ];
+                    mountpoint = "/nix";
+                  };
+                  "/nix/persist" = {
+                    mountpoint = "/nix/persist";
+                    mountOptions = ["subvol=persist" "compress=zstd" "noatime"];
+                  };
+                  "/log" = {
+                    mountpoint = "/var/log";
+                    mountOptions = ["subvol=log" "compress=zstd" "noatime"];
+                  };
+                  "/lib" = {
+                    mountpoint = "/var/lib";
+                    mountOptions = ["subvol=lib" "compress=zstd" "noatime"];
+                  };
+                  # This subvolume will be created but not mounted
+                  "/test" = {};
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  fileSystems."/nix/persist".neededForBoot = true;
+  fileSystems."/var/log".neededForBoot = true;
+  fileSystems."/var/lib".neededForBoot = true;
+}
+</code></pre>
+<ul>
+<li>For <code>/tmp</code> on RAM use something like the following. I’ve found that having
+disko manage swaps causes unnecessary issues. Using zram follows the ephemeral
+route:</li>
+</ul>
+<pre><code class="language-nix">{
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.zram;
+in {
+  options.custom.zram = {
+    enable = lib.mkEnableOption "Enable utils module";
+  };
+
+  config = lib.mkIf cfg.enable {
+    zramSwap = {
+      enable = true;
+      # one of "lzo", "lz4", "zstd"
+      algorithm = "zstd";
+       priority = 5;
+       memoryPercent = 50;
+    };
+  };
+}
+</code></pre>
+<p>And in your <code>configuration.nix</code> you would add:</p>
+<pre><code class="language-nix"># configuration.nix
+custom = {
+    zram.enable = true;
+};
+</code></pre>
+<p>After adding the above module, you can see it with:</p>
+<pre><code class="language-bash">swapon --show
+NAME       TYPE      SIZE USED PRIO
+/dev/zram0 partition 7.5G   0B    5
+</code></pre>
+<ol start="6">
+<li>Run disko to partition, format and mount your disks. Warning this will wipe
+EVERYTHING on your disk. Disko doesn’t work with dual boot.</li>
+</ol>
+<pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount /tmp/disk-config.nix
+</code></pre>
+<p>Check it with the following:</p>
+<pre><code class="language-bash">mount | grep /mnt
+</code></pre>
+<p>The output for an nvme0n1 disk would be similar to the following:</p>
+<pre><code class="language-bash">#... snip ...
+/dev/nvme0n1p2 on /mnt type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=285,subvol=/root)
+/dev/nvme0n1p2 on /mnt/persist type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=261,subvol=/persist)
+/dev/nvme0n1p2 on /mnt/etc type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=261,subvol=/persist)
+/dev/nvme0n1p2 on /mnt/nix type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=260,subvol=/nix)
+/dev/nvme0n1p2 on /mnt/var/lib type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=258,subvol=/lib)
+/dev/nvme0n1p2 on /mnt/var/log type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=259,subvol=/log)
+/dev/nvme0n1p2 on /mnt/nix/store type btrfs (ro,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=260,subvol=/nix)
+# ... snip ...
+</code></pre>
+<ol start="7">
+<li>Generate necessary files, here we use –no-filesystems because disko handles
+the fileSystems attribute for us.</li>
+</ol>
+<pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
+</code></pre>
+<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now,
+rebuild and then move on. Such as, your hostname, git, an editor of your choice.
+After your additions run <code>sudo nixos-rebuild</code> switch to apply the changes. If
+you do this, you can skip the <code>nix-shell -p</code> command coming up.</p>
+<pre><code class="language-bash">sudo mv /tmp/disk-config.nix /mnt/etc/nixos
+</code></pre>
+<h2>Setting a Flake for your minimal Install</h2>
+<ol start="8">
+<li>Create the flake in your home directory, then move it to /mnt/etc/nixos. This
+avoids needing to use sudo for every command while in the /mnt/etc/nixos
+directory.</li>
+</ol>
+<pre><code class="language-bash">cd ~
+mkdir flake &amp;&amp; cd flake
+nix-shell -p git yazi helix
+export NIX_CONFIG='experimental-features = nix-command flakes'
+export EDITOR='hx'
+hx flake.nix
+</code></pre>
+<blockquote>
+<p>You’ll change hostname = nixpkgs.lib.nixosSystem to your chosen hostname,
+(e.g. magic = nixpkgs.lib.nixosSystem). This will be the same as your
+networking.hostName = “magic”; in your configuration.nix that we will set up
+shortly.</p>
+</blockquote>
+<pre><code class="language-nix"># flake.nix
+{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    disko.url = "github:nix-community/disko/latest";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
+    # impermanence.url = "github:nix-community/impermanence";
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      # Change `my-hostname` to match `networking.hostName`
+      my-hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          # inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<p>Move all the files into your flake:</p>
+<pre><code class="language-bash">cd /mnt/etc/nixos/
+sudo mv disk-config.nix hardware-configuration.nix configuration.nix ~/flake
+</code></pre>
+<ol start="9">
+<li>Edit configuration.nix with what is required, the following is required, I
+clone my original flake repo and move the pieces into place but it’s fairly
+easy to just type it all out:</li>
+</ol>
+<ul>
+<li>
+<p>Bootloader, (e.g., boot.loader.systemd-boot.enable = true;)</p>
+</li>
+<li>
+<p>User, the example uses username change this to your chosen username. If you
+don’t set your hostname it will be nixos.</p>
+</li>
+<li>
+<p>Networking, networking.networkmanager.enable = true;</p>
+</li>
+<li>
+<p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
+</li>
+<li>
+<p><code>initialHashedPassword</code>: Run <code>mkpasswd --method=yescrypt</code>, then enter your
+desired password. Example output,</p>
+</li>
+</ul>
+<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/pass.txt
+</code></pre>
+<ul>
+<li>You can check the quality with pwscore:</li>
+</ul>
+<pre><code class="language-bash">nix-shell -p libpwquality
+
+pwscore
+very-secure-password
+100
+</code></pre>
+<p>read the hashed password into the file with :r /tmp/pass.txt and move it into
+place.</p>
+<pre><code class="language-nix"># configuration.nix
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}: {
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./disk-config.nix
+  ];
+
+  networking.hostName = "my-hostname"; # This will match the `hostname` of your flake
+
+  networking.networkmanager.enable = true;
+
+  boot.loader.systemd-boot.enable = true; # (for UEFI systems only)
+  # List packages installed in system profile.
+  # You can use https://search.nixos.org/ to find more packages (and options).
+  environment.systemPackages = with pkgs; [
+    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    #   wget
+    git
+  ];
+
+  time.timeZone = "America/New_York";
+
+# Change `nixos` to your chosen username, change the group to match
+  users.users.nixos = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
+    initialHashedPassword = "COPY_YOUR_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
+    # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
+  };
+  # Create a matching group
+  users.groups.nixos = {};
+
+  console.keyMap = "us";
+
+  nixpkgs.config.allowUnfree = true;
+
+  system.stateVersion = "25.05";
+}
+</code></pre>
+<p>Shred pass.txt:</p>
+<pre><code class="language-bash">shred /tmp/pass.txt
+rm /tmp/pass.txt
+</code></pre>
+<ol start="10">
+<li>Move the flake to /mnt/etc/nixos and run nixos-install:</li>
+</ol>
+<pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
+sudo nixos-install --flake /mnt/etc/nixos/flake .#hostname
+# if the above command doesn't work try this:
+sudo nixos-install --flake /mnt/etc/nixos/flake#hostname
+</code></pre>
+<p>You will be prompted to enter a new password if everything succeeds.</p>
+<p>If everything checks out, reboot the system and you should be prompted to enter
+your user and password to login to a shell to get started.</p>
+<p>The flake will be placed at <code>/etc/nixos/flake</code>, I choose to move it to my home
+directory. Since the file was first in <code>/etc</code> you’ll need to adjust the
+permissions with something like <code>sudo chown nixos:nixos ~/flake</code>. This is based
+off of the example above where we created both a nixos user and group.</p>
+<p>You can check the layout of your btrfs system with:</p>
+<pre><code class="language-bash">sudo btrfs subvolume list /
+</code></pre>
+<ul>
+<li>You may notice some old_roots in the output, which are snapshots, which are
+likely created before system upgrades or reboots for rollback purposes. They
+can be deleted or rolled back as needed.</li>
+</ul>
+<p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
+<p>To continue following along and set up impermanence
+<a href="https://saylesss88.github.io/installation/unencrypted/impermanence.html">Click Here</a></p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/unenc/unencrypted_setups.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Encrypted Install (BTRFS)</title><link>https://saylesss88.github.io/installation/enc/enc_install.html</link><description><![CDATA[<h1>Encrypted Setups</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p>NixOS supports file systems that are encrypted using LUKS (Linux Unified Key
+Setup). This guide walks you through an encrypted NixOS installation using Disko
+for disk management and Btrfs for subvolumes. It is designed for users who want
+full disk encryption and a modern filesystem layout. If you prefer an
+unencrypted setup, you can skip the LUKS and encryption steps, but this guide
+focuses on security and flexibility.</p>
+<ul>
+<li>For Unencrypted layout
+<a href="https://saylesss88.github.io/installation/unencrypted/unencrypted.html">Click Here</a></li>
+</ul>
+<p>If you choose to set up impermanence, ensure it matches your install. Encrypted
+Setup with Encrypted Impermanence and Unencrypted Setup with Unencrypted
+Impermanence.</p>
+<blockquote>
+<p>❗ NOTE: This is a bit convoluted, there are a few paths you can follow. If
+you choose to use the starter repo (<a href="https://github.com/saylesss88/my-flake">https://github.com/saylesss88/my-flake</a>)
+just follow the included README and use this for reference.</p>
+</blockquote>
+<h2>What does LUKS Encryption Protect?</h2>
+<p>It’s important to understand what disk encryption protects and what it doesn’t
+protect so you don’t have any misconceptions about how safe your data is.</p>
+<ul>
+<li>
+<p><a href="https://wiki.nixos.org/wiki/Full_Disk_Encryption">NixOS Wiki FDE</a></p>
+</li>
+<li>
+<p><a href="https://wiki.archlinux.org/title/Data-at-rest_encryption">Arch Wiki Data-at-rest encryption</a></p>
+</li>
+<li>
+<p><a href="https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html">Authenticated Booot and DE on Linux</a></p>
+</li>
+<li>
+<p><a href="https://oddlama.org/blog/bypassing-disk-encryption-with-tpm2-unlock/">Bypassing FDE with TPM2 Unlock</a></p>
+</li>
+</ul>
+<p><strong>What LUKS Protects</strong>:</p>
+<ul>
+<li>
+<p><strong>Data Confidentiality at Rest</strong>: LUKS encrypts entire block devices (such as
+disk partitions or whole drives), ensuring that all data stored on the
+encrypted device is unreadable without the correct decryption key or
+passphrase. This protects sensitive information from unauthorized access if
+the device is lost, stolen, or physically accessed by an attacker.</p>
+</li>
+<li>
+<p><strong>Physical Security</strong>: If someone gains physical possession of your device
+(for example, by stealing your laptop or removing a hard drive), LUKS ensures
+the data remains inaccessible and appears as random, meaningless bytes without
+the correct credentials.</p>
+</li>
+<li>
+<p><strong>Protection Against Offline Attacks</strong>: LUKS defends against attackers who
+attempt to bypass the operating system by booting from another device or
+removing the drive and mounting it elsewhere. Without the decryption key, the
+data remains protected.</p>
+</li>
+</ul>
+<p><strong>What LUKS Does Not Protect</strong>:</p>
+<ul>
+<li>
+<p><strong>Data in Use</strong>: Once the system is booted and the encrypted device is
+unlocked, the data becomes accessible to the operating system and any user or
+process with the necessary permissions. LUKS does not protect against attacks
+on a running system, such as malware, remote exploits, or unauthorized users
+with access to an unlocked session.</p>
+</li>
+<li>
+<p><strong>File-Level Access Control</strong>: LUKS encrypts entire partitions or disks, not
+individual files or directories. It does not provide granular file-level
+encryption or access control within the operating system.</p>
+</li>
+<li>
+<p><strong>Network Attacks</strong>: LUKS only protects data stored on disk. It does not
+encrypt data transmitted over networks or protect against network-based
+attacks.</p>
+</li>
+<li>
+<p><strong>Bootloader and EFI Partitions</strong>: The initial bootloader or EFI system
+partition cannot be encrypted with LUKS, so some parts of the boot process may
+remain exposed unless additional measures are taken. (i.e., Secure Boot,
+additional passwords, TPM2)</p>
+</li>
+</ul>
+<p>To Sum it Up: LUKS encryption protects the confidentiality of all data stored on
+an encrypted block device by making it unreadable without the correct passphrase
+or key. This ensures that, if your device is lost or stolen, your data remains
+secure and inaccessible to unauthorized users. However, LUKS does not protect
+data once the system is unlocked and running, nor does it provide file-level
+encryption or protect against malware and network attacks. For comprehensive
+security, LUKS should be combined with strong access controls and other security
+best practices.</p>
+<h2>The Install</h2>
+<ol>
+<li>
+<p>Get the
+<a href="https://channels.nixos.org/nixos-25.05/latest-nixos-minimal-x86_64-linux.iso">Nixos Minimal ISO</a>
+Get it on a usb stick, I use Ventoy with Ventoy2Disk.sh. The following is the
+link to the
+<a href="https://sourceforge.net/projects/ventoy/files/v1.1.05/ventoy-1.1.05-linux.tar.gz/download">Ventoy TarBall</a>
+download, untar it with <code>tar -xzf ventoy-1.1.05-linux.tar.gz</code>, and make it
+executable with <code>chmod +x Ventoy2Disk.sh</code>, and finally execute it with
+<code>sudo bash Ventoy2Disk.sh</code> Follow the prompts to finish the install.</p>
+</li>
+<li>
+<p>Configuring Networking</p>
+</li>
+</ol>
+<p>The minimal installer uses <code>wpa_supplicant</code> instead of NetworkManager. Choose
+one of the following methods to enable networking:</p>
+<pre><code class="language-bash">sudo systemctl start wpa_supplicant
+wpa_cli
+</code></pre>
+<h3>Option A: Interactive <code>wpa_cli</code></h3>
+<pre><code class="language-bash">&gt; add_network
+0
+
+&gt; set_network 0 ssid "myhomenetwork"
+OK
+
+&gt; set_network 0 psk "mypassword"
+OK
+
+&gt; enable_network 0
+OK
+</code></pre>
+<p>To exit type <code>quit</code>, then check your connection with <code>ping google.com</code>.</p>
+<h3>Option B: Non-Interactive <code>wpa_passphrase</code></h3>
+<p>This method is quicker for known networks and persists the configuration for the
+live environment.</p>
+<p>First, identify your wireless interface name (e.g., <code>wlan0</code>) using <code>ip a</code>.</p>
+<pre><code class="language-bash">sudo systemctl start wpa_supplicant # Ensure wpa_supplicant is running
+# This command generates the config and appends it to a file specific to wlan0
+sudo wpa_passphrase "myhomenetwork" "mypassword" | sudo tee /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+sudo systemctl restart wpa_supplicant@wlan0.service
+</code></pre>
+<p>After either method, exit <code>wpa_cli</code> with <code>quit</code>. Then test your connection:</p>
+<pre><code class="language-bash">ping 1.1.1.1
+</code></pre>
+<ol start="3">
+<li>Get your Disk Name with <code>lsblk</code></li>
+</ol>
+<p>The output should be something like:</p>
+<pre><code class="language-bash">NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+nvme0n1     259:0    0   1,8T  0 disk
+</code></pre>
+<blockquote>
+<p>❗ From here, you can either</p>
+</blockquote>
+<ol start="4">
+<li>Copy the disk configuration to your machine. You can choose one from the
+<a href="https://github.com/nix-community/disko/tree/master/example">examples directory</a>.</li>
+</ol>
+<p>There is still a starter repo that can save you some typing, make sure to
+carefully review if you decide to use it:</p>
+<pre><code class="language-bash">export NIX_CONFIG='experimental-features = nix-command flakes'
+export EDITOR='hx' # or 'vi'
+nix-shell -p git yazi helix mkpasswd
+git config --global user.name "gitUsername"
+git config --global user.email "gitEmail"
+# OPTIONAL starter repo containing disk-config set up for impermanence
+git clone https://github.com/saylesss88/my-flake.git
+</code></pre>
+<p>I prefer <code>helix</code> here as it’s defaults are great. (i.e., auto closing brackets
+and much more)</p>
+<p>If you choose to use the starter repo you won’t need to run the next command as
+it is already populated in the repo and should use the
+<a href="https://github.com/saylesss88/my-flake">Starter Repo README</a> most of the rest
+of the guide is for manual disko without the starter repo.</p>
+<p>If you click on the layout you want then click the <code>Raw</code> button near the top,
+then copy the <code>url</code> and use it in the following command:</p>
+<pre><code class="language-bash">cd /tmp
+curl https://raw.githubusercontent.com/nix-community/disko/refs/heads/master/example/luks-btrfs-subvolumes.nix -o /tmp/disk-config.nix
+</code></pre>
+<p>The above curl command is to the <code>luks-btrfs-subvolumes.nix</code> layout.</p>
+<ol start="5">
+<li>Make Necessary changes, I prepared mine for impermanence with the following:</li>
+</ol>
+<pre><code class="language-bash">hx /tmp/disk-config.nix
+</code></pre>
+<p>Make sure you identify your system disk name with <code>lsblk</code> and change the
+<code>device</code> attribute below to match your disk.</p>
+<pre><code class="language-bash">lsblk
+nvme0n1       259:0    0 476.9G  0 disk
+├─nvme0n1p1   259:1    0   512M  0 part  /boot
+└─nvme0n1p2   259:2    0 476.4G  0 part
+</code></pre>
+<p>My disk is <code>nvme0n1</code>, change below to match yours:</p>
+<pre><code class="language-nix">{
+  disko.devices = {
+    disk = {
+      nvme0n1 = {
+        type = "disk";
+        # Make sure this is correct with `lsblk`
+        device = "/dev/nvme0n1";
+        content = {
+          type = "gpt";
+          partitions = {
+            ESP = {
+              label = "boot";
+              name = "ESP";
+              size = "1G";
+              type = "EF00";
+              content = {
+                type = "filesystem";
+                format = "vfat";
+                mountpoint = "/boot";
+                mountOptions = [
+                  "defaults"
+                ];
+              };
+            };
+            luks = {
+              size = "100%";
+              label = "luks";
+              content = {
+                type = "luks";
+                name = "cryptroot";
+                content = {
+                  type = "btrfs";
+                  extraArgs = ["-L" "nixos" "-f"];
+                  subvolumes = {
+                    "/root" = {
+                      mountpoint = "/";
+                      mountOptions = ["subvol=root" "compress=zstd" "noatime"];
+                    };
+                    "/root-blank" = {
+                      mountOptions = ["subvol=root-blank" "nodatacow" "noatime"];
+                    };
+                    "/home" = {
+                      mountpoint = "/home";
+                      mountOptions = ["subvol=home" "compress=zstd" "noatime"];
+                    };
+                    "/nix" = {
+                      mountpoint = "/nix";
+                      mountOptions = ["subvol=nix" "compress=zstd" "noatime"];
+                    };
+                    "/persist" = {
+                      mountpoint = "/persist";
+                      mountOptions = ["subvol=persist" "compress=zstd" "noatime"];
+                    };
+                    "/log" = {
+                      mountpoint = "/var/log";
+                      mountOptions = ["subvol=log" "compress=zstd" "noatime"];
+                    };
+                    "/lib" = {
+                      mountpoint = "/var/lib";
+                      mountOptions = ["subvol=lib" "compress=zstd" "noatime"];
+                    };
+                    "/persist/swap" = {
+                      mountpoint = "/persist/swap";
+                      mountOptions = ["subvol=swap" "noatime" "nodatacow" "compress=no"];
+                      swap.swapfile.size = "18G";
+                    };
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  fileSystems."/persist".neededForBoot = true;
+  fileSystems."/var/log".neededForBoot = true;
+  fileSystems."/var/lib".neededForBoot = true;
+}
+</code></pre>
+<p>I have 16G of RAM so to be safe for hibernation I chose to give it some extra
+space. The boot partition is 1G, this extra space is for specialisations and
+lanzaboote.</p>
+<p>or for a swapfile:</p>
+<pre><code class="language-nix">swapDevices = [
+  {
+    device = "/persist/swap/swapfile";
+    size = 18 * 1024; # Size in MB (18GB)
+    # or
+    # size = 16384; # Size in MB (16G);
+  }
+];
+</code></pre>
+<h2>Setting up zram and /tmp on RAM</h2>
+<p>While <code>/tmp</code> is handled by <code>tmpfs</code> (as shown the below <code>configuration.nix</code>), you
+can further enhance memory efficiency with <code>zram</code> for compressed swap, as shown
+below.</p>
+<blockquote>
+<pre><code class="language-nix">{
+  lib,
+  config,
+  ...
+}: let
+  cfg = config.custom.zram;
+in {
+  options.custom.zram = {
+    enable = lib.mkEnableOption "Enable utils module";
+  };
+
+  config = lib.mkIf cfg.enable {
+    zramSwap = {
+      enable = true;
+      # one of "lzo", "lz4", "zstd"
+      algorithm = "zstd";
+       priority = 5;
+       memoryPercent = 50;
+    };
+  };
+}
+</code></pre>
+<p>And in your <code>configuration.nix</code> you would add:</p>
+<pre><code class="language-nix"># configuration.nix
+custom = {
+    zram.enable = true;
+};
+</code></pre>
+</blockquote>
+<p>After adding the above module and rebuilding, you can see it with:</p>
+<pre><code class="language-bash">swapon --show
+NAME       TYPE      SIZE USED PRIO
+/dev/zram0 partition 7.5G   0B    5
+</code></pre>
+<ol start="6">
+<li>Run disko to partition, format and mount your disks. <strong>Warning</strong> this will
+wipe <strong>EVERYTHING</strong> on your disk. Disko doesn’t work with dual boot.</li>
+</ol>
+<pre><code class="language-bash">sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode destroy,format,mount /tmp/disk-config.nix
+</code></pre>
+<p>Check it with the following:</p>
+<pre><code class="language-bash">mount | grep /mnt
+</code></pre>
+<p>The output for an <code>nvme0n1</code> disk would be similar to the following:</p>
+<pre><code class="language-bash">#... snip ...
+/dev/nvme0n1p2 on /mnt type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=285,subvol=/root)
+/dev/nvme0n1p2 on /mnt/persist type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=261,subvol=/persist)
+/dev/nvme0n1p2 on /mnt/etc type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=261,subvol=/persist)
+/dev/nvme0n1p2 on /mnt/nix type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=260,subvol=/nix)
+/dev/nvme0n1p2 on /mnt/var/lib type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=258,subvol=/lib)
+/dev/nvme0n1p2 on /mnt/var/log type btrfs (rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=259,subvol=/log)
+/dev/nvme0n1p2 on /mnt/nix/store type btrfs (ro,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=260,subvol=/nix)
+# ... snip ...
+</code></pre>
+<ol start="7">
+<li>Generate necessary files, here we use <code>--no-filesystems</code> because disko
+handles the <code>fileSystems</code> attribute for us.</li>
+</ol>
+<pre><code class="language-bash">nixos-generate-config --no-filesystems --root /mnt
+</code></pre>
+<ul>
+<li>The above command will place a <code>configuration.nix</code> and
+<code>hardware-configuration.nix</code> in <code>/mnt/etc/nixos/</code></li>
+</ul>
+<p>It may be helpful to add a couple things to your <code>configuration.nix</code> now, while
+it’s in its default location. You can just add what you want and rebuild once
+with <code>sudo nixos-rebuild switch</code> and move on. (i.e. <code>git</code>, an editor, etc.).</p>
+<h3>Setting a Flake for your minimal Install</h3>
+<ol start="8">
+<li>Create the flake in your home directory to avoid needing to use sudo for
+every command:</li>
+</ol>
+<pre><code class="language-bash">cd   # Move to home directory
+mkdir flake
+cd /mnt/etc/nixos/
+sudo mv hardware-configuration.nix configuration.nix ~/flake/
+sudo mv /tmp/disk-config.nix ~/flake/
+</code></pre>
+<pre><code class="language-bash">cd flake
+hx flake.nix
+</code></pre>
+<blockquote>
+<p>You’ll change <code>hostName = nixpkgs.lib.nixosSystem</code> to your chosen hostname,
+(e.g. <code>magic = nixpkgs.lib.nixosSystem</code>). This will be the same as your
+<code>networking.hostName = "magic";</code> in your <code>configuration.nix</code> that we will set
+up shortly.</p>
+</blockquote>
+<pre><code class="language-nix"># flake.nix
+{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    disko.url = "github:nix-community/disko/latest";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
+    # impermanence.url = "github:nix-community/impermanence";
+  };
+
+  outputs = inputs@{ nixpkgs, ... }: {
+    nixosConfigurations = {
+      # Change `hostName` to your chosen host name
+      nixos = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          inputs.disko.nixosModules.disko
+          # inputs.impermanence.nixosModules.impermanence
+        ];
+      };
+    };
+  };
+}
+</code></pre>
+<ol start="9">
+<li>Edit <code>configuration.nix</code> with what is required, the following are required, I
+clone my original flake repo and move the pieces into place but it’s fairly
+easy to just type it all out:</li>
+</ol>
+<ul>
+<li>
+<p>Bootloader, (e.g., <code>boot.loader.systemd-boot.enable = true;</code>)</p>
+</li>
+<li>
+<p>User, the example uses <code>username</code> change this to your chosen username. If you
+don’t set your hostname it will be <code>nixos</code>.</p>
+</li>
+<li>
+<p>Networking, <code>networking.networkmanager.enable = true;</code></p>
+</li>
+<li>
+<p><code>hardware-configuration.nix</code> &amp; <code>disk-config.nix</code> for this setup</p>
+</li>
+<li>
+<p>If you type this out by hand and mess up a single character, you will have to
+start over completely. A fairly safe way to do this is with <code>vim</code> or <code>hx</code> and
+redirect the hashed pass to a <code>/tmp/pass.txt</code>, you can then read it into your
+<code>users.nix</code>:</p>
+</li>
+</ul>
+<pre><code class="language-bash">mkpasswd --method=yescrypt &gt; /tmp/pass.txt
+# Enter your chosen password
+</code></pre>
+<p>And then when inside <code>configuration.nix</code>, move to the line where you want the
+hashed password and type <code>:r /tmp/pass.txt</code> to read the hash into your current
+file.</p>
+<pre><code class="language-nix"># configuration.nix
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}: {
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./disk-config.nix
+  ];
+
+  # systemd Stage 1: if enabled, it handles unlocking of LUKS-encrypted volumes during boot.
+    boot.initrd.luks.devices = {
+    cryptroot = {
+      device = "/dev/disk/by-partlabel/luks";
+      allowDiscards = true;
+    };
+  };
+
+  # This complements using zram, putting /tmp on RAM
+    boot = {
+    tmp = {
+      useTmpfs = true;
+      tmpfsSize = "50%";
+    };
+  };
+
+  # Enable autoScrub for btrfs
+    services.btrfs.autoScrub = {
+    enable = true;
+    interval = "weekly";
+    fileSystems = ["/"];
+  };
+
+
+  # Change me!
+  networking.hostName = "nixos"; # This will match the `hostname` of your flake
+
+  networking.networkmanager.enable = true;
+
+  boot.loader.systemd-boot.enable = true; # (for UEFI systems only)
+  # List packages installed in system profile.
+  # You can use https://search.nixos.org/ to find more packages (and options).
+  environment.systemPackages = with pkgs; [
+    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    #   wget
+    git
+  ];
+
+  time.timeZone = "America/New_York";
+
+# Change me to your chosen username (i.e. change nixosUser to your username)
+  users.users.nixosUser = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" ]; # Add "wheel" for sudo access
+    initialHashedPassword = "READ_MKPASSWD_OUTPUT_HERE"; # &lt;-- This is where it goes!
+    # home = "/home/nixos"; # Optional: Disko typically handles home subvolumes
+  };
+  # Change me to match your chosen username
+  users.group.nixosUser = {};
+
+  console.keyMap = "us";
+
+  nixpkgs.config.allowUnfree = true;
+
+  system.stateVersion = "25.05";
+}
+</code></pre>
+<p>Although, just adding the <code>disk-config.nix</code> works for prompting you for your
+encryption passphrase adding the following is a more robust way of ensuring Nix
+is aware of this:</p>
+<pre><code class="language-nix">    boot.initrd.luks.devices = {
+    cryptroot = {
+      device = "/dev/disk/by-partlabel/luks";
+      allowDiscards = true;
+    };
+  };
+</code></pre>
+<ol start="10">
+<li>Move the flake to <code>/mnt/etc/nixos</code> and run <code>nixos-install</code>:</li>
+</ol>
+<pre><code class="language-bash">sudo mv ~/flake /mnt/etc/nixos/
+</code></pre>
+<ul>
+<li>Give everything a quick once over, insuring your host is set in both your
+<code>flake.nix</code>, and <code>configuration.nix</code>. Ensure you changed the username in the
+<code>configuration.nix</code> from <code>nixos</code> to your chosen name, this is the name you’ll
+use to login after you enter your encryption passphrase.</li>
+</ul>
+<p>The below command uses <code>#nixos</code> because that’s what the defaults are, you’ll
+change it to your chosen hostname.</p>
+<pre><code class="language-bash">sudo nixos-install --flake /mnt/etc/nixos/flake#nixos
+</code></pre>
+<ul>
+<li>You will be prompted to enter a new password if everything succeeds.</li>
+</ul>
+<h2>Create a Blank Snapshot of /root</h2>
+<p>This is essential if you plan on using impermanence with this encrypted setup.
+We take a snapshot of <code>/root</code> while it’s a clean slate, right after we run disko
+to format the disk.</p>
+<p>To access all of the subvolumes, we have to mount the Btrfs partitions
+top-level.</p>
+<ol>
+<li>Unlock the LUKS device, if not already unlocked as it should be from running
+disko:</li>
+</ol>
+<pre><code class="language-bash">sudo cryptsetup open /dev/disk/by-partlabel/luks cryptroot
+</code></pre>
+<ol start="2">
+<li>Mount the Btrfs top-level (<code>subvolid=5</code>):</li>
+</ol>
+<pre><code class="language-bash">sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
+</code></pre>
+<ol start="3">
+<li>List the contents:</li>
+</ol>
+<pre><code class="language-bash">ls /mnt
+# you should see something like
+root   home  nix  persist  log  lib  ...
+</code></pre>
+<ol start="4">
+<li>Now we can take a snapshot of the <code>root</code> subvolume:</li>
+</ol>
+<pre><code class="language-bash">sudo btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
+</code></pre>
+<ol start="5">
+<li>Verify Your Blank Snapshot:</li>
+</ol>
+<p>Before continuing, make sure your blank snapshot exists. This is crucial for
+impermanence to work properly.</p>
+<pre><code class="language-bash">sudo btrfs subvolume list /mnt
+</code></pre>
+<p>You should see output containing both <code>root</code> and <code>root-blank</code> subvolumes:</p>
+<pre><code class="language-bash">ID 256 gen ... path root
+ID 257 gen ... path root-blank
+</code></pre>
+<p>Check that the snapshot is read only, this ensures that our snapshot will remain
+the same as the day we took it. It was set <code>ro</code> in disko but lets check anyways:</p>
+<pre><code class="language-bash">sudo btrfs property get -ts /mnt/root-blank
+# output should be
+ro=true
+</code></pre>
+<ol start="5">
+<li>Make sure to unmount:</li>
+</ol>
+<pre><code class="language-bash">sudo umount /mnt
+</code></pre>
+<ul>
+<li>
+<p>If everything checks out, reboot the system and you should be prompted to
+enter your <code>user</code> and <code>password</code> to login to a shell to get started.</p>
+</li>
+<li>
+<p>The flake will be placed at <code>/etc/nixos/flake</code> after the install and reboot, I
+choose to move it to my home directory. Since the file was first in <code>/etc</code>
+you’ll need to adjust the permissions with something like
+<code>sudo chown -R $USER:$USER ~/flake</code> and then you can work on it without
+privilege escalation. This requires that you create a group for your user as
+done in the <code>configuration.nix</code> above.</p>
+</li>
+<li>
+<p>You can check the layout of your btrfs system with:</p>
+</li>
+</ul>
+<pre><code class="language-bash">sudo btrfs subvolume list /
+</code></pre>
+<h2>Persisting Critical System State</h2>
+<p>The following is a one time operation, we’re just getting it out of the way now.
+This moves all of the important system state to a persistant location, further
+preparing for impermanence.</p>
+<p>It’s essential that you have first run the <code>nixos-install</code> command to populate
+these directories before copying them over.</p>
+<pre><code class="language-bash">sudo mkdir -p /mnt/persist/etc
+sudo mkdir -p /mnt/persist/var/lib
+sudo mkdir -p /mnt/persist/var/log
+sudo mkdir -p /mnt/persist/home
+sudo mkdir -p /mnt/persist/root
+sudo cp -a /mnt/etc/. /mnt/persist/etc/
+sudo cp -a /mnt/var/lib/. /mnt/persist/var/lib
+sudo cp -a /mnt/var/log/. /mnt/persist/var/log
+sudo cp -a /mnt/home/. /mnt/persist/home/
+sudo cp -a /mnt/root/. /mnt/persist/root/
+</code></pre>
+<p>Since we are in a live environment, after the install and reboot the <code>/mnt</code>
+prefix will be removed.</p>
+<h2>Reboot</h2>
+<p>Now that everything is done, we can safely reboot and ensure that our LUKS
+password/passphrase is accepted as well as our userlevel password and username.</p>
+<p>After reboot, you can continue to setup
+<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops Encrypted Secrets</a>
+and
+<a href="https://saylesss88.github.io/installation/enc/lanzaboote.html">Lanzaboote Secure Boot</a></p>
+<ul>
+<li>
+<p>To set up impermanence for this specific layout, follow the link
+<a href="https://saylesss88.github.io/installation/enc/encrypted_impermanence.html">Encrypted Impermanence</a></p>
+</li>
+<li>
+<p><a href="https://btrfs.readthedocs.io/en/latest/Subvolumes.html">BTRFS Subvolumes</a></p>
+</li>
+<li>
+<p><a href="https://www.freedesktop.org/software/systemd/man/latest/systemd-cryptenroll.html">systemd-cryptenroll man page</a></p>
+</li>
+<li>
+<p><a href="https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/">Linux TPM PCR Registry</a></p>
+</li>
+<li>
+<p><a href="https://oddlama.org/blog/bypassing-disk-encryption-with-tpm2-unlock/">Bypassing FDE with TPM2</a></p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/installation/enc/enc_install.html</guid><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>

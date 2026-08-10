@@ -1,0 +1,3089 @@
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>nix-book</title><link>https://saylesss88.github.io/</link><description>Description</description><generator>mdbook-rss-feed 1.8.2</generator><atom:link href="https://saylesss88.github.io/rss5.xml" rel="self"></atom:link><atom:link href="https://saylesss88.github.io/rss4.xml" rel="prev"></atom:link><atom:link href="https://saylesss88.github.io/rss6.xml" rel="next"></atom:link><item><title>Whonix KVM on NixOS</title><link>https://saylesss88.github.io/nix/whonix_kvm.html</link><description><![CDATA[<h1>Whonix KVM on NixOS</h1>
+<details>
+<summary> ✔️ Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="../images/swappy-20250901-101339.cleaned.png" alt="Whonix Logo" /></p>
+<blockquote>
+<p>⚠️ WARNING: There is no general software that can guarantee absolute anonymity
+or security; perfect security is a myth. Security is a continuous process, not
+a one-time product. It also depends on time and resources: if an adversary has
+enough of either, eventual compromise is probable. However, by layering
+defenses and following best practices, we can make attacks costly and
+time-consuming, deterring all but highly targeted adversaries.</p>
+</blockquote>
+<p>It is highly recommended to harden your Host Machine as Type 2 hypervisors are
+only as secure as their host. KVM is actually a type 1 hypervisor but relies on
+QEMU for emulation which is a Type 2 hypervisor. This actually makes it a sort
+of hybrid in between Type 1 and Type 2 but is in theory less secure than running
+a Xen hypervisor (Type 1) on bare-metal.</p>
+<p>Whonix offers many benefits, including the convenience of running within your
+current operating system without needing to reboot or use a separate Tails USB.
+It provides similar strong anonymity protections by routing all traffic through
+Tor in isolated virtual machines. The Whonix documentation is transparent about
+its limitations, which helps build trust and confidence in its security model.</p>
+<ul>
+<li>
+<p><a href="https://www.whonix.org/wiki/Comparison_with_Others">Whonix Compared to Tails</a></p>
+</li>
+<li>
+<p>Tails is great but they add an add blocker to Tor that makes every Tails user
+unique from the rest of Tor Browser users reducing anonymity.</p>
+</li>
+</ul>
+<blockquote>
+<p>⚠️ Never rely solely on the Virtual Machine to protect you, if your host OS
+isn’t secure a Virtual Machine won’t protect you. If you have high threat
+model, you may want to choose a Host with better support for AppArmor and
+Selinux as they are highly limited on NixOS.</p>
+</blockquote>
+<p>That being said, there is a lot you can do to harden NixOS…</p>
+<h3>Harden NixOS and set up GnuPG</h3>
+<ul>
+<li>
+<p><a href="https://saylesss88.github.io/nix/hardening_NixOS.html">Hardening NixOS</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/hardening_networking.html">Hardening Networking</a></p>
+</li>
+<li>
+<p><a href="https://saylesss88.github.io/nix/gpg-agent.html">GnuPG and gpg-agent on NixOS</a></p>
+</li>
+</ul>
+<h3>A Few Things to Consider when using Whonix</h3>
+<ul>
+<li>
+<p>No activity conducted inside <code>Whonix-Workstation</code> can cause IP/DNS leaks so
+long as <code>Whonix-Gateway</code> is left unchanged or only documented changes are made
+like configuring bridges, establishing onion services and running updates.</p>
+</li>
+<li>
+<p>Whonix does not and does not claim to protect users against advanced
+adversaries such as nation state actors, if they target you, you will be
+infected! If used correctly, Whonix can provide partial protection against
+passive surveillance programs, it all depends on whether Tor can provide
+adequate protection or not, which is not clear at this time.</p>
+</li>
+<li>
+<p>You shouldn’t use a VPN with Whonix and it is obvious that you’re using Tor
+because connections are made to known Tor Relays, which are publicly listed
+and identifiable.</p>
+</li>
+</ul>
+<blockquote>
+<p>⚠️It is impossible to Hide Tor use from the internet service provider (ISP).
+It has been concluded this goal is difficult beyond practicality.
+–<a href="https://www.whonix.org/wiki/Hide_Tor_from_your_Internet_Service_Provider">Whonix Hide Tor from your ISP</a></p>
+</blockquote>
+<ul>
+<li>
+<p>Millions of people use Tor daily for wholly legitimate reasons, particularly
+to assert their privacy rights when faced with countless corporate /
+government network observers and censors.</p>
+</li>
+<li>
+<p>True anonymity is very difficult to successfully pull off and not something
+that you can maintain for a long time.</p>
+<ul>
+<li><a href="https://www.whonix.org/wiki/Tips_on_Remaining_Anonymous">Whonix Tips for remaining Anonymous</a></li>
+</ul>
+</li>
+</ul>
+<h2>🔑 Key Terms</h2>
+<p>Whonix is an operating system based on Debian base (Kicksecure Hardened) and the
+Tor network, which is designed for maximum anonymity and security. Whonix
+consists of two Debian based VMs, the <code>Whonix-Gateway</code> and <code>Whonix-Workstation</code>.</p>
+<p>In this case NixOS is the <strong>Host Operating System</strong>, NixOS runs the KVM kernel
+module, libvirtd service, and QEMU virtualization service which together enable
+hosting VMs. It is recommended to harden the host before moving on.</p>
+<p><strong>Guests</strong> are the virtualized operating systems running inside the host’s
+virtual machines. In this case the Whonix VMs are the <strong>Guest Machines</strong>.</p>
+<p><code>Whonix-Gateway</code> the first of 2 VMs runs Tor processes and forces all traffic
+through the Tor network using iptables.</p>
+<p><code>Whonix-Workstation</code> the second VM, is responsible for running user applications
+such as the Tor Browser. The Whonix-Workstation is isolated from both the
+Whonix-Gateway and the Host OS, if an app misbehaves, it is contained within the
+isolated Whonix-Workstation. It is largely unaware of sensitive info and won’t
+leak unless an advanced adversary is able to break out of the VM.</p>
+<p>The primary goal of Whonix is to be safer than Tor alone and that no one can
+find out the user’s IP, location, or de-anonymize the user. It offers full
+spectrum anti-tracking protection that is much safer than VPNs. Whonix provides
+this through security by isolation, no app is trusted.</p>
+<p><code>Whonix Concept</code>: Whonix is an Isolating Proxy with an additional Transparent
+Proxy, which can be optionally disabled. –Whonix Docs</p>
+<p>Since Whonix is based on Kicksecure which is based on Debian stable, you can
+typically look up solutions in a Kicksecure, Debian, or Ubuntu forum.</p>
+<ul>
+<li>The Whonix Team recommends KVM over VirtualBox for a number of
+reasons:<a href="https://www.whonix.org/wiki/KVM#Why_Use_KVM_Over_VirtualBox?">Why choose KVM over VirtualBox</a></li>
+</ul>
+<p>If you really want to use VirtualBox, I got it working off of this config:</p>
+<p>VirtualBox = Type 2 hypervisor</p>
+<details>
+<summary> ✔️ Click to Expand VirtualBox Example </summary>
+<p>Change <code>your-user</code> to your username</p>
+<pre><code class="language-nix"># vbox.nix
+{
+  config,
+  lib,
+  ...
+}: let
+  cfg = config.custom.virtualbox;
+in {
+  options.custom.virtualbox = {
+    enable = lib.mkEnableOption "Enable VirtualBox";
+  };
+
+  config = lib.mkIf cfg.enable {
+    virtualisation.virtualbox.host = {
+      enable = false;
+      # enableExtensionPack = true;
+    };
+
+    user.user.your-user.extraGroups = ["vboxusers"];
+
+    boot.kernelModules =
+      if config.hardware.cpu.amd.updateMicrocode
+      then ["kvm-amd"]
+      else ["kvm-intel"];
+  };
+}
+</code></pre>
+<p>Enable it with <code>custom.virtualbox.enable = true;</code>.</p>
+<ul>
+<li><a href="https://www.whonix.org/wiki/VirtualBox">Whonix VBox Download</a></li>
+</ul>
+<p>After rebuilding with virtualbox enabled and downloading the virtualbox whonix,
+open VirtualBox and import the Whonix file.</p>
+<p>Fix the error:: VirtualBox can’t enable the AMD-V extension. Please disable the
+KVM kernel extension:</p>
+<p>If both of these are active, they compete with each other:</p>
+<pre><code class="language-bash">sudo lsmod | grep -E 'kvm|vbox'
+</code></pre>
+<p>Check the currently in use modules:</p>
+<pre><code class="language-bash">modprobe -r kvm
+</code></pre>
+<p>Disable kvm and kvm_amd:</p>
+<pre><code class="language-bash">sudo rmmod kvm_amd
+sudo rmmod kvm
+# To re-enable them when necessary
+# sudo modprobe kvm
+# sudo modprobe kvm_amd
+</code></pre>
+<ul>
+<li><a href="https://atetux.com/quick-fix-virtualbox-cant-enable-the-amd-v-extension">Quick fix</a></li>
+</ul>
+<p>There is an opposite viewpoint,
+<a href="https://www.whonix.org/wiki/Dev/VirtualBox#Why_use_VirtualBox_over_KVM?">Why choose VirtualBox over KVM</a></p>
+</details>
+<h2>Whonix-Gateway</h2>
+<p>The whonix-gateway is software designed to run Tor.</p>
+<p>The Gateway acts as a firewall and is what is routing all your traffic through
+Tor.</p>
+<p>You will spend minimal time in the Gateway, it’s mainly used for Tor
+configuration which is reserved for advanced users.</p>
+<h3>Whonix-Workstation</h3>
+<p>All user applications should only be launched from Whonix-Workstation to ensure
+they utilize the Tor network. (Never launch the Tor browser or any other user
+app from Whonix-Gateway.)</p>
+<p>Leaky applications can’t breakout of the Workstation, all network connections
+are forced to go through the Whonix-Gateway where they are torrified and routed
+to the internet.</p>
+<h2>Whonix KVM (Kernel Virtual Machine) on NixOS</h2>
+<p><strong>KVM</strong> (Kernel-based Virtual Machine) is a Linux kernel module that provides
+hardware-assisted virtualization.</p>
+<p>It allows the Linux kernel to act as a hypervisor, enabling virtual machines
+(VMs) to run with near-native speeds by using CPU virtualization extensions
+(Intel VT-x or AMD-V).</p>
+<p>KVM itself doesn’t handle the entire VM lifecycle; it provides the core
+virtualization infrastructure.</p>
+<p><strong>QEMU</strong> (Quick Emulator) is an open-source user-space program that emulates
+hardware for virtual machines.</p>
+<p>When combined with KVM, QEMU uses hardware acceleration to run VMs much faster
+by offloading CPU virtualization to KVM.</p>
+<p>So, QEMU provides the device emulation and VM management interface, while KVM
+provides the fast virtualization engine within the kernel.</p>
+<p><strong>Install Qemu-KVM</strong>:</p>
+<pre><code class="language-nix">{
+  config,
+  pkgs,
+  ...
+}: {
+  ##  QEMU-KVM
+  environment.systemPackages = with pkgs; [
+    qemu
+    # Optional
+    virt-viewer
+  ];
+
+  # Virt-Manager GUI
+  programs.virt-manager.enable = true;
+  virtualisation = {
+    # libvirtd daemon
+    libvirtd = {
+      enable = true;
+      qemu = {
+        # enables a TPM emulator
+        swtpm.enable = true;
+      };
+    };
+    # allow USB device to be forwarded
+    spiceUSBRedirection.enable = true;
+  };
+  # Spice protocol improves VM display and input responsiveness
+  services.spice-vdagentd.enable = true;
+}
+</code></pre>
+<hr />
+<p>The <strong>libvirtd</strong> is the primary daemon (service) in the libvirt virtualization
+management system. It runs on your host machine and acts as the core management
+component for virtual machines (VMs).</p>
+<p>Add <code>libvirtd</code> &amp; <code>kvm</code> to your users <code>extraGroups</code>:</p>
+<pre><code class="language-nix">users.users = {
+    your-user = {
+        extraGroups = [
+            "libvirtd"
+            "kvm"
+        ];
+    };
+};
+</code></pre>
+<p>Restart <code>libvirtd</code>:</p>
+<pre><code class="language-bash">sudo systemctl restart libvirtd
+</code></pre>
+<hr />
+<h2>Network Start</h2>
+<p>Ensure KVM’s / QEMU’s default network is enabled and has started:</p>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-autostart default
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-start default
+</code></pre>
+<hr />
+<h3>Download Whonix (KVM) (stable)</h3>
+<ol>
+<li>
+<p><a href="https://www.whonix.org/download/libvirt/17.4.4.6/Whonix-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz">Whonix (KVM) (stable) Download</a></p>
+</li>
+<li>
+<p>Go to <a href="https://www.whonix.org/wiki/KVM">whoniix.org</a> to verify the signature.
+Download the <code>OpenPGP Signature</code>, and the <code>Download Whonix OpenPGP Key</code>. Your
+Downloads directory will look like this:</p>
+</li>
+</ol>
+<pre><code class="language-bash">~/Downloads󰏫 ls
+╭───┬───────────────────────────────────────────────────────┬──────┬─────────┬───────────────╮
+│ # │                         name                          │ type │  size   │   modified    │
+├───┼───────────────────────────────────────────────────────┼──────┼─────────┼───────────────┤
+│ 0 │ Whonix-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz     │ file │  3.3 GB │ 2 minutes ago │
+│ 1 │ Whonix-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz.asc │ file │  1.0 kB │ a minute ago  │
+│ 2 │ derivative.asc                                        │ file │ 77.3 kB │ 3 minutes ago │
+╰───┴───────────────────────────────────────────────────────┴──────┴─────────┴───────────────╯
+</code></pre>
+<p>Import <code>derivative.asc</code>:</p>
+<pre><code class="language-bash">gpg --import derivative.asc
+</code></pre>
+<p>Verify the Public Key:</p>
+<pre><code class="language-bash">gpg --verify Whonix-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz.asc Whonix-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz
+gpg: Signature made Sun 10 Aug 2025 09:04:13 AM EDT
+gpg:                using RSA key 6E979B28A6F37C43BE30AFA1CB8D50BB77BB3C48
+gpg: Good signature from "Patrick Schleizer &lt;adrelanos@kicksecure.com&gt;" [unknown]
+gpg:                 aka "Patrick Schleizer &lt;adrelanos@riseup.net&gt;" [unknown]
+gpg:                 aka "Patrick Schleizer &lt;adrelanos@whonix.org&gt;" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 916B 8D99 C38E AF5E 8ADC  7A2A 8D66 066A 2EEA CCDA
+     Subkey fingerprint: 6E97 9B28 A6F3 7C43 BE30  AFA1 CB8D 50BB 77BB 3C48
+~/Downloads󰏫                                                                                                 09/04/2025 11:53:10 AM
+</code></pre>
+<p>Now <code>gpg --list-keys</code> will show Patrick Schleizer’s Key.</p>
+<p>It is good practice to sign your verified key and then push it to the public
+keyserver to contribute to the web of trust but optional.</p>
+<ol start="3">
+<li><a href="https://www.whonix.org/wiki/KVM#Decompress">Decompress the Image</a> and follow
+the rest of the Whonix KVM install instructions from there.</li>
+</ol>
+<p>Nixpkgs doesn’t have the <code>xz-utils</code> package but it does have the <code>xz</code> package.</p>
+<p>Nixpkgs also has <code>nixpkgs.safe-rm</code> if you wanted to follow the suggestions from
+Whonix.</p>
+<pre><code class="language-bash">nix-shell -p xz safe-rm
+</code></pre>
+<pre><code class="language-bash">tar -xvf Whonix*.libvirt.xz
+</code></pre>
+<hr />
+<h3>Import the Whonix VM Templates</h3>
+<p>The following commands come directly from the
+<a href="https://www.whonix.org/wiki/KVM#Importing_Whonix_VM_Templates">Whonix KVM Docs Importing Whonix VM Templates</a></p>
+<ol>
+<li>Add the virtual networks. This step only needs to be done once and not with
+every upgrade.</li>
+</ol>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-define Whonix_external*.xml
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-define Whonix_internal*.xml
+</code></pre>
+<ol start="2">
+<li>Activate the virtual networks:</li>
+</ol>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-autostart Whonix-External
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-start Whonix-External
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-autostart Whonix-Internal
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system net-start Whonix-Internal
+</code></pre>
+<ol start="3">
+<li>Import the Whonix Gateway and Workstation images:</li>
+</ol>
+<pre><code class="language-bash">sudo virsh -c qemu:///system define Whonix-Gateway*.xml
+</code></pre>
+<pre><code class="language-bash">sudo virsh -c qemu:///system define Whonix-Workstation*.xml
+</code></pre>
+<p>After the above steps, either copy or move the <code>qcow2</code> images to
+<code>/var/lib/libvirt/images</code>:</p>
+<blockquote>
+<p>❗ It’s recommended to move the files into place, if you want to copy them you
+need to use a special command FYI.</p>
+</blockquote>
+<pre><code class="language-bash">sudo mkdir -p /var/lib/libvirt/images
+</code></pre>
+<pre><code class="language-bash">sudo mv Whonix-Gateway*.qcow2 /var/lib/libvirt/images/Whonix-Gateway.qcow2
+</code></pre>
+<pre><code class="language-bash">sudo mv Whonix-Workstation*.qcow2 /var/lib/libvirt/images/Whonix-Workstation.qcow2
+</code></pre>
+<h3>Cleanup</h3>
+<pre><code class="language-bash">safe-rm Whonix*
+</code></pre>
+<pre><code class="language-bash">safe-rm -r WHONIX*
+</code></pre>
+<h3>Launch virt-manager and start the VMs</h3>
+<pre><code class="language-bash">virt-manager
+</code></pre>
+<p>From here it will take a bit to load both VMs, you can click on one and go to
+<code>Edit</code>, <code>Virtual Machine Details</code> and from there you have some options to give
+the VM more CPUs and memory.</p>
+<p>Considering that the Whonix-Workstation is where all of the user applications
+will be opened, it makes sense to give it more CPUs and memory.</p>
+<p>I’ve seen recommendations for a minimum of 4G of RAM for the Workstation and 2GB
+for the Gateway.</p>
+<ul>
+<li>
+<p>Increase vCPU count for better performance</p>
+</li>
+<li>
+<p>Enable XML editing in settings</p>
+</li>
+<li>
+<p>Enable copy pasting by adding <code>&lt;clipboard copypaste="yes"/&gt;</code></p>
+</li>
+</ul>
+<h2>Start Whonix-Gateway</h2>
+<p><img src="../images/swappy-20250901-101351.cleaned.png" alt="Whonix Old Logo" /></p>
+<p>Always start the Whonix-Gateway first.</p>
+<p>Click on Whonix-Gateway, press Play, and choose the default Persistent VM.</p>
+<p>To view the gateway press <code>Open</code>.</p>
+<p>You can use the “System Maintenance Panel” to <code>Check for Updates</code> and then
+<code>Install Updates</code>. This can also be used for user and password creation, the
+default user is <code>user</code> with a passwordless login.</p>
+<p>Change the password manually:</p>
+<pre><code class="language-bash">sudo passwd
+changeme
+</code></pre>
+<p>Change the passwords and disable auto-login.</p>
+<p>Run a systemcheck if it wasn’t run automatically. Click the Xfce Logo and go to
+<code>System</code>, <code>System Check</code>.</p>
+<ul>
+<li><a href="https://www.whonix.org/wiki/Common_CLI_Commands">Whonix Common CLI Commands</a></li>
+</ul>
+<h2>Whonix-Workstation</h2>
+<p>Whonix-Workstation is another VM, designed to provide users with a secure and
+anonymous environment for running applications and performing online tasks.</p>
+<p>When you first launch <code>Whonix-Workstation</code>, choose the second option down or
+reboot, and then choose “Persistent Mode Sysmaint Session”. From there, you can
+go through the same steps as you did for the Gateway.</p>
+<p>With the workstation, a security feature disables <code>sudo</code> for the default user.
+Instead of the <code>user</code> account, a separate <code>sysmaint</code> (system maintenance)
+account is used for administrative tasks that require root privileges, such as
+updates and package installations.</p>
+<ul>
+<li>Change all user passwords and disable auto-login</li>
+</ul>
+<p>After you get your system updated and upgraded, you’ll want to reboot the
+Workstation and start it in the first Persistent mode available rather than the
+<code>sysmaint</code> mode.</p>
+<p>Once Workstation is running and both VMs are updated and upgraded, check that
+your IP address is a Tor IP:</p>
+<pre><code class="language-bash">curl ip.me
+#
+curl ip.me
+</code></pre>
+<p>Each consecutive time that you run <code>curl ip.me</code>, Tor establishes a new circuit
+and you will get a different IP returned each time for as many Tor nodes are
+available. Not that you would want to but it’s cool functionality giving us a
+visual of the new circuit.</p>
+<p>Start Tor and check what you are fingerprinted as by typing <code>deviceinfo.me</code> into
+the URL.</p>
+<h4>Launching Tor Browser</h4>
+<p>Click the Xfce logo and choose Tor Browser. On the first launch, you will need
+to update Tor by clicking in the top right corner.</p>
+<p>Or you can open the terminal and type:</p>
+<pre><code class="language-bash">update-torbrowser
+</code></pre>
+<ul>
+<li>Every time you run the above command, the old browser will be killed, along
+with your old browser profile, including bookmarks and passwords. If the
+update suggests a downgrade from your current version don’t do it, it is
+likely a downgrade attack.</li>
+</ul>
+<p>Make sure you don’t forget to go to the Settings, Privacy and Security, and set
+the <code>Security Level</code> to <code>Safest</code> to disable JavaScript and more before exploring
+the dark web.</p>
+<p>Visit <code>https://check.torproject.org</code>, you should see “Congratulations. This
+browser is configured to use Tor.”</p>
+<p>If you need a place to start, check out <code>https://tor.taxi</code> by plugging that into
+the URL. Always include the <code>https</code> yourself!</p>
+<blockquote>
+<p>❗ NOTE: Use HTTPS and TLS wherever possible, since Tor only encrypts traffic
+as it travels through the network of three nodes. Traffic at Exit nodes is
+vulnerable if unencrypted, because when it reaches the Exit node it is plain
+text. Prefer the use of <code>.onion</code> services because they form a tunnel that is
+encrypted end-to-end, using a random rendezvous point within the Tor network;
+HTTPS isn’t required within Onion services. Prefer the use of <code>.onion</code>
+services because they form a tunnel that is encrypted end-to-end, using a
+random rendezvous point within the Tor network; HTTPS isn’t required within
+Onion services.
+–<a href="https://www.whonix.org/wiki/Tor_Myths_and_Misconceptions#All_my_traffic_is_encrypted_by_default">All my traffic is encrypted by default?</a></p>
+</blockquote>
+<h2>Live Mode</h2>
+<p>To get Whonix to perform more similarly to Tails you could run Whonix in Live
+Mode. Live Mode is a privacy-focused mode where nothing is saved at shutdown,
+making it great for handling sensitive data.</p>
+<ul>
+<li><a href="https://www.kicksecure.com/wiki/Live_Mode">Live Mode</a></li>
+</ul>
+<p>Same process, reboot the Workstation and Choose
+<code>LIVE Mode | USER Session | disposable use</code></p>
+<ul>
+<li><a href="https://www.kicksecure.com/wiki/Anti-Forensics_Precautions">Anti Forensics Precautions</a></li>
+</ul>
+<h2>Download and Verify Kicksecure KVM</h2>
+<ul>
+<li><a href="https://www.kicksecure.com/wiki/KVM">Kicksecure KVM wiki</a></li>
+</ul>
+<ol>
+<li>
+<p><a href="https://www.kicksecure.com/download/libvirt/17.4.4.6/Kicksecure-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz">Download Kicksecure Xfce (KVM) (stable) (FREE!)</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/download/libvirt/17.4.4.6/Kicksecure-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz.asc">Download OpenPGP Signature</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/keys/derivative.asc">Download Kicksecure OpenPGP Key</a></p>
+</li>
+<li>
+<p>Import the <code>derivative.asc</code> file:</p>
+</li>
+</ol>
+<pre><code class="language-bash">gpg --import derivative.asc
+</code></pre>
+<ol start="5">
+<li>Make sure both files are done downloading and run the following to verify,
+your file names might be slightly different:</li>
+</ol>
+<pre><code class="language-bash">gpg --verify Kicksecure-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz.asc Kicksecure-Xfce-17.4.4.6.Intel_AMD64.qcow2.libvirt.xz
+gpg: Signature made Sun 10 Aug 2025 07:32:52 AM EDT
+gpg:                using RSA key 6E979B28A6F37C43BE30AFA1CB8D50BB77BB3C48
+gpg: Good signature from "Patrick Schleizer &lt;adrelanos@kicksecure.com&gt;" [unknown]
+gpg:                 aka "Patrick Schleizer &lt;adrelanos@riseup.net&gt;" [unknown]
+gpg:                 aka "Patrick Schleizer &lt;adrelanos@whonix.org&gt;" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 916B 8D99 C38E AF5E 8ADC  7A2A 8D66 066A 2EEA CCDA
+     Subkey fingerprint: 6E97 9B28 A6F3 7C43 BE30  AFA1 CB8D 50BB 77BB 3C48
+</code></pre>
+<ol start="6">
+<li><strong>Decompress</strong></li>
+</ol>
+<pre><code class="language-bash">tar -xvf Kicksecure*.libvirt.xz
+</code></pre>
+<p>Don’t use <code>unxz</code>!</p>
+<h3>Resources</h3>
+<ul>
+<li>
+<p><a href="https://www.whonix.org/wiki/Documentation">Whonix Docs</a></p>
+</li>
+<li>
+<p><a href="https://www.whonix.org/wiki/About">Whonix Overview</a></p>
+</li>
+<li>
+<p><a href="https://www.whonix.org/wiki/Dev/Technical_Introduction">Whonix Technical Intro</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Computer_Security_Introduction">Kicksecure Computer Security Intro</a></p>
+</li>
+<li>
+<p><a href="https://www.kicksecure.com/wiki/Computer_Security_Introduction#Advanced_Security_Guide">Kicksecure Advanced Security Guide</a></p>
+</li>
+</ul>
+<p>k
+<a href="https://www.kicksecure.com/wiki/System_Hardening_Checklist">System Hardening Checklist</a></p>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/nix/whonix_kvm.html</guid><pubDate>Thu, 04 Dec 2025 00:00:00 +0000</pubDate></item><item><title>Functions and NixOS Modules</title><link>https://saylesss88.github.io/functions/functions_and_modules_2.2.html</link><description><![CDATA[<h1>Functions and NixOS Modules</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p>When you start exploring NixOS configurations or tools like Home Manager, you’ll
+encounter a concept called Nix Modules. Modules are also functions, but they
+behave differently regarding their arguments, which can be a source of
+confusion.</p>
+<p><strong>What are NixOS Modules</strong>?</p>
+<p>Nix Modules are a powerful system built on top of basic Nix functions, primarily
+used for declarative system configurations (like NixOS, Home Manager, NixOps,
+etc.). They allow you to define parts of your system configuration in separate
+files that are then composed together.</p>
+<p>Each module is typically a Nix function that returns an attribute set with
+specific keys like <code>options</code>, <code>config</code>, and <code>imports</code>.</p>
+<p><strong>Automatic Arguments in Modules</strong></p>
+<p>Unlike the functions we’ve been writing, Nix’s module system automatically
+passes a standard set of arguments to every module function it evaluates. You
+don’t explicitly pass these arguments when you <code>import</code> a module file; the
+module system handles it for you.</p>
+<p>The most common automatic arguments you’ll see are:</p>
+<ul>
+<li>
+<p><code>config</code>: The aggregated configuration options of all modules combined. This
+is what you use to read other configuration values.</p>
+</li>
+<li>
+<p><code>options</code>: The definitions of all available configuration options across all
+modules.</p>
+</li>
+<li>
+<p><code>pkgs</code>: The standard Nixpkgs set, equivalent to <code>import &lt;nixpkgs&gt; {}</code>. This is
+incredibly convenient as you don’t need to import it in every module.</p>
+</li>
+<li>
+<p><code>lib</code>: The Nixpkgs utility library (<code>pkgs.lib</code>), providing helper functions
+for common tasks.</p>
+</li>
+<li>
+<p><code>specialArgs</code>: An attribute set of extra arguments to be passed to the module
+functions.</p>
+</li>
+</ul>
+<p>A typical module might start like this:</p>
+<pre><code class="language-nix"># Example NixOS module
+{ config, pkgs, lib, ... }: # These arguments are passed automatically by the module system
+{
+  # ... module options and configuration
+  environment.systemPackages = [ pkgs.firefox pkgs.git ];
+  services.nginx.enable = true;
+  # ...
+}
+</code></pre>
+<p>In the above module, the only required argument is <code>pkgs</code> because we explicitly
+use it in the module (i.e. <code>pkgs.firefox</code>). Editors have pretty good support for
+letting you know if you’re missing arguments or have unnecessary ones. <code>config</code>,
+and <code>lib</code> and would be required if we were setting any options in this module.</p>
+<p>This automatic passing of arguments is a core feature of the module system that
+simplifies writing configurations, as you always have access to <code>pkgs</code>, <code>lib</code>,
+and the evolving <code>config</code> and <code>options</code> without boilerplate.</p>
+<h4><code>specialArgs</code>: Passing Custom Arguments to Modules</h4>
+<p>While the module system passes a standard set of arguments automatically, what
+if you need to pass additional, custom data to your modules that isn’t part of
+the standard <code>config</code>, <code>pkgs</code>, <code>lib</code>, or <code>options</code>? This is where <code>specialArgs</code>
+comes in.</p>
+<p><code>specialArgs</code> is an attribute you can pass to the <code>import</code> function when you
+load a module (or a set of modules). It’s typically used to provide data that
+your modules need but isn’t something Nixpkgs would normally manage.</p>
+<p>For example, in a <code>configuration.nix</code>:</p>
+<pre><code class="language-nix"># From your configuration.nix
+{ config, pkgs, lib, ... }: # Standard module arguments
+
+let
+  myCustomValue = "helloWorld";
+in
+{
+  # ... imports all modules, including your custom ones
+  imports = [
+    ./hardware-configuration.nix
+    ./my-webserver-module.nix
+  ];
+
+  # This is where specialArgs would be used (often in import statements)
+  # Example: passing a custom value to ALL modules:
+  # (in module context, this is more complex, but conceptually)
+  # let
+  #   allModules = [ ./my-module.nix ];
+  # in
+  # lib.nixosSystem {
+  #   modules = allModules;
+  #   specialArgs = {
+  #     username = "johndoe";
+  #     mySecretKey = "/run/keys/ssh_key";
+  #   };
+  #   # ...
+  # };
+}
+</code></pre>
+<p>And then, inside <code>my-webserver-module.nix</code>:</p>
+<pre><code class="language-nix"># my-webserver-module.nix
+{ config, pkgs, lib, username, mySecretKey, ... }: # username and mySecretKey come from specialArgs
+{
+  # ... use username and mySecretKey in your module
+  users.users.${username} = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" ];
+    # ...
+  };
+  # ...
+}
+</code></pre>
+<p>Any argument listed in a module’s function signature that is not one of the
+standard <code>config</code>, <code>pkgs</code>, <code>lib</code>, <code>options</code> (or <code>pkgs.callPackage</code>, etc., which
+are often implicit through <code>pkgs</code>) must be provided via <code>specialArgs</code> at the
+point where the modules are composed.</p>
+<p>Any values listed in a module that aren’t automatically passed via Nixpkgs must
+be explicitly provided through <code>specialArgs</code>.</p>
+<h3><code>specialArgs</code> and <code>extraSpecialArgs</code> with Flakes</h3>
+<p>NixOS modules use <code>specialArgs</code> and Home-Manager uses <code>extraSpecialArgs</code> to
+allow you to pass extra arguments.</p>
+<p>Or with Flakes it would look like this:</p>
+<pre><code class="language-nix">{
+  description = "My Flake";
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+   };
+
+  outputs = { self, nixpkgs, home-manager, ... }:
+    let
+      lib = nixpkgs.lib;
+      pkgs = nixpkgs.legacyPackages.${"x86_64-linux"};
+      system = "x86_64-linux";
+  host = "magic";
+  username = "jr";
+  userVars = {
+    timezone = "America/New_York";
+    locale = "en_US.UTF-8";
+    gitUsername = "TSawyer87";
+    dotfilesDir = "~/.dotfiles";
+    wm = "hyprland";
+    browser = "firefox";
+    term = "ghostty";
+    editor = "hx";
+    keyboardLayout = "us";
+  };
+    in {
+      nixosConfigurations = {
+        YOURHOSTNAME = lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [ ./configuration.nix ];
+          specialArgs = {
+            inherit userVars; # == userVars = userVars;
+            inherit host;
+            inherit username;
+          };
+        };
+      };
+      homeConfigurations = {
+        USERNAME = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ ./home.nix ];
+          extraSpecialArgs = {
+            inherit userVars;
+            inherit host;
+            inherit username;
+            # or it can be written like this:
+            # inherit userVars host username;
+          };
+        };
+      };
+    };
+}
+</code></pre>
+<p>Now if I want to use any of these arguments in modules I can by any module file
+referenced by my configuration.</p>
+<p>For example, the following is a <code>git.nix</code> module that uses the variables from
+the flake passed from <code>extraSpecialArgs</code> in this case because it’s a
+home-manager module:</p>
+<pre><code class="language-nix"># git.nix
+{ userVars, ... }: {
+  programs = {
+    git = {
+      enable = true;
+      userName = userVars.gitUsername;
+    };
+  };
+}
+</code></pre>
+<table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Regular Nix Function (e.g., <code>hello.nix</code>)</th><th style="text-align: left">Nix Module (e.g., <code>my-config-module.nix</code>)</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Arguments</strong></td><td style="text-align: left"><strong>You must explicitly pass every single argument.</strong></td><td style="text-align: left"><strong>Automatically receives <code>config</code>, <code>pkgs</code>, <code>lib</code>, <code>options</code>, etc.</strong></td></tr>
+<tr><td style="text-align: left"><strong>Custom Args</strong></td><td style="text-align: left">Passed directly in the function call.</td><td style="text-align: left">Passed via <code>specialArgs</code> when the modules are composed.</td></tr>
+<tr><td style="text-align: left"><strong>Boilerplate</strong></td><td style="text-align: left">Often needs <code>pkgs = import &lt;nixpkgs&gt; {};</code> if not explicitly passed.</td><td style="text-align: left"><code>pkgs</code> and <code>lib</code> are always available automatically.</td></tr>
+<tr><td style="text-align: left"><strong>Purpose</strong></td><td style="text-align: left">Defines a package, a utility, or a single value.</td><td style="text-align: left">Defines a reusable part of a declarative system configuration.</td></tr>
+</tbody></table>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/functions/functions_and_modules_2.2.html</guid><pubDate>Sun, 30 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Git</title><link>https://saylesss88.github.io/vcs/git.html</link><description><![CDATA[<h1>Version Control with Git</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<!-- ![Git Logo](../images/git1.png) -->
+<p>⚠️ <strong>Important</strong>: Never commit secrets (passwords, API keys, tokens, etc.) in
+plain text to your Git repository. If you plan to publish your NixOS
+configuration, always use a secrets management tool like sops-nix or agenix to
+keep sensitive data safe. See the
+<a href="https://saylesss88.github.io/installation/enc/sops-nix.html">Sops-Nix Guide</a>
+for details.</p>
+<p>It’s also important to understand that <strong>all files in the <code>/nix/store</code> are
+world-readable by default</strong> This has important security implications for anyone
+managing sensitive data on a NixOS system.</p>
+<p>What Does “World-Readable” Mean?</p>
+<ul>
+<li>
+<p>All files in /nix/store are readable by any user on the system.</p>
+</li>
+<li>
+<p>This is by design, the nix store is intended to be shared, immutable store of
+all packages and configuration files.</p>
+</li>
+<li>
+<p>Permissions are typically set to <code>r-xr-xr-x</code>(read and execute for everyone)</p>
+</li>
+</ul>
+<p><strong>Security Implications</strong></p>
+<ul>
+<li>
+<p>Never store secrets or sensitive data in plane text in the Nix store.</p>
+</li>
+<li>
+<p>If you include secrets directly in your configuration, they will end up in the
+<code>/nix/store</code> and be accessible to any user or process on the system.</p>
+</li>
+<li>
+<p>This applies to files, environment variables, and any data embedded in
+derivations.</p>
+</li>
+</ul>
+<p><strong>Best Practices</strong></p>
+<ul>
+<li>
+<p>Always use a secrets management tool (like <code>sops-nix</code> or <code>agenix</code>) that
+decrypts secrets at activation time and stores them outside the Nix store,
+with restricted permissions.</p>
+</li>
+<li>
+<p>Do not embed secrets directly in Nix expressions or configuration files that
+will be build into the store.</p>
+</li>
+<li>
+<p>Even hashed passwords can be vulnerable when stored in a public repository, be
+conscious of what you store where.</p>
+</li>
+<li>
+<p>If you’re unsure about what’s safe to share, start with a private repository.
+This gives you time to learn about secrets management and review your
+configuration before making anything public.</p>
+</li>
+</ul>
+<p>First, I’ll briefly explain some of the limitations of NixOS Rollbacks and then
+I’ll go into how Git compliments them.</p>
+<h2>Limitations of NixOS Rollbacks</h2>
+<p>NixOS is famous for its ability to roll back to previous system generations,
+either from the boot menu or with commands like <code>nixos-rebuild --rollback</code>.</p>
+<p>When you perform rollbacks in NixOS, whether from the boot menu or using
+commands like <code>nixos-rebuild --rollback</code> only the contents and symlinks managed
+by the Nix store are affected. The rollback works by switching which system
+generation is active, atomically updating symlinks to point to the previous
+version of all packages, <code>systemd</code> units and services stored in <code>/nix/store</code>.</p>
+<p>However, it’s important to understand what these rollbacks actually do and what
+they don’t do. What NixOS Rollbacks Cover</p>
+<ul>
+<li>
+<p>System generations: When you rebuild your system, NixOS creates a new
+“generation” that you can boot into or roll back to. This includes all
+packages, services, and system configuration managed by Nix.</p>
+</li>
+<li>
+<p>Quick recovery: If an upgrade breaks your system, you can easily select an
+older generation at boot and get back to a working state</p>
+</li>
+</ul>
+<p><strong>Key Limitations</strong>:</p>
+<ul>
+<li>
+<p><strong>Configuration files are not reverted</strong>: Rolling back only changes which
+system generation is active, it does not revert your actual configuration
+files (like <code>configuration.nix</code> or your flake files)</p>
+</li>
+<li>
+<p><strong>User data and service data are not rolled back</strong>: Only files managed by Nix
+are affected. Databases, user files, and other persistent data remain
+unchanged, which can cause problems if, for example, a service migrates its
+database schema during an upgrade</p>
+</li>
+<li>
+<p><strong>Manual changes persist</strong>: Any manual edits to configuration files or system
+state outside of Nix are not reverted by a rollback</p>
+</li>
+</ul>
+<h2>How Git Helps</h2>
+<!-- ![Git Logo 2](../images/git3.png) -->
+<ul>
+<li>
+<p>The <a href="https://docs.github.com/en/github-cli/github-cli/quickstart">gh-cli</a>,
+simplifies quite a few things for working with GitHub from the command line.</p>
+</li>
+<li>
+<p><strong>Tracks every configuration change</strong>: By version-controlling your NixOS
+configs with Git, you can easily see what changed, when, and why.</p>
+</li>
+<li>
+<p><strong>True config rollback</strong>: If a configuration change causes issues, you can use
+<code>git checkout</code> or <code>git revert</code> to restore your config files to a previous good
+state, then rebuild your system</p>
+</li>
+<li>
+<p><strong>Safer experimentation</strong>: You can confidently try new settings or upgrades,
+knowing you can roll back both your system state (with NixOS generations) and
+your config files (with Git).</p>
+</li>
+<li>
+<p><strong>Collaboration and backup</strong>: Git lets you share your setup, collaborate with
+others, and restore your configuration if your machine is lost or damaged.</p>
+</li>
+</ul>
+<p>In summary: NixOS rollbacks are powerful for system state, but they don’t manage
+your configuration file history. Git fills this gap, giving you full control and
+traceability over your NixOS configs making your system both robust and truly
+reproducible. Version control is a fundamental tool for anyone working with
+NixOS, whether you’re customizing your desktop, managing servers, or sharing
+your configuration with others. Git is the most popular version control system
+and is used by the NixOS community to track, share, and back up system
+configurations.</p>
+<p><strong>Why use Git with NixOS?</strong></p>
+<ul>
+<li>
+<p><strong>Track every change</strong>: Git lets you record every modification to your
+configuration files, so you can always see what changed, when, and why.</p>
+</li>
+<li>
+<p><strong>Experiment safely</strong>: Try new settings or packages without fear—if something
+breaks, you can easily roll back to a previous working state.</p>
+</li>
+<li>
+<p><strong>Sync across machines</strong>: With Git, you can keep your NixOS setups in sync
+between your laptop, desktop, or servers, and collaborate with others.</p>
+</li>
+<li>
+<p><strong>Disaster recovery</strong>: Accidentally delete your config? With Git, you can
+restore it from your repository in minutes.</p>
+</li>
+</ul>
+<p>Installing Git on NixOS</p>
+<p>You can install Git by adding it to your system packages in your
+configuration.nix or via Home Manager:</p>
+<h2>Git Tips</h2>
+<!-- ![Octocat](../images/octocat.png) -->
+<p>If you develop good git practices on your own repositories it will make it
+easier to contribute with others as well as get help from others.</p>
+<h2>Atomic Commits</h2>
+<p><strong>Atomic commits</strong> are a best practice in Git where each commit represents a
+single, focused, and complete change to the codebase. The main characteristics
+of atomic commits are:</p>
+<ul>
+<li>
+<p><strong>One purpose</strong>: Each commit should address only one logical change or task.</p>
+</li>
+<li>
+<p><strong>Complete</strong>: The commit should leave the codebase in a working state.</p>
+</li>
+<li>
+<p><strong>Descriptive</strong>: The commit message should be able to clearly summarize the
+change in a single sentence.</p>
+</li>
+</ul>
+<p><strong>Why Atomic Commits Matter</strong></p>
+<ul>
+<li>
+<p><strong>Easier debugging</strong>: You can use tools like <code>git bisect</code> to quickly find
+which commit introduced a bug, since each commit is isolated.</p>
+</li>
+<li>
+<p><strong>Simpler reverts</strong>: You can revert without affecting unrelated changes.</p>
+</li>
+<li>
+<p><strong>Better collaboration</strong>: Code reviews and merges are more manageable when
+changes are small and focused.</p>
+</li>
+</ul>
+<p>When you lump together a bunch of changes into a single commit it can lead to
+quite a few undesirable consequences. They make it harder to track down bugs,
+it’s more difficult to revert undesired changes without reverting desired ones,
+make larger tickets harder to manage.</p>
+<p><strong>Every time a logical component is completed, commit it</strong>. Smaller commits make
+it easier for other devs and yourself to understand the changes and roll them
+back if necessary. This also makes it easier to share your code with others to
+get help when needed and makes merge conflicts less frequent and complex.</p>
+<p><strong>Finish the component, then commit it</strong>: There’s really no reason to commit
+unfinished work, use <code>git stash</code> for unfinished work and <code>git commit</code> for when
+the logical component is complete. Use common sense and break complex components
+into logical chunks that can be finished quickly to allow yourself to commit
+more often.</p>
+<p><strong>Write Good Commit Messages</strong>: Begin with a summary of your changes, add a line
+of whitespace between the summary and the body of your message. Make it clear
+why this change was necessary. Use consistent language with generated messages
+from commands like <code>git merge</code> which is imperative and present tense
+(<code>&lt;&lt;change&gt;&gt;</code>, not <code>&lt;&lt;changed&gt;&gt;</code> or <code>&lt;&lt;changes&gt;&gt;</code>).</p>
+<h3>Tips for Keeping Commits Atomic with a Linear History</h3>
+<p>Squashing limits the benefits of atomic commits as it combines them all into a
+single commit as if you didn’t take the time to write them all out atomically.</p>
+<p>🧠 Why Rebasing Wins for Linear History</p>
+<ul>
+<li>
+<p>No Merge Bubbles: Rebasing avoids those extra merge commits that clutter
+<code>git log --graph</code>. You get a clean, readable timeline.</p>
+</li>
+<li>
+<p>Atomic Commit Integrity: Each commit stands alone and tells a story. Rebasing
+preserves that narrative without diluting it with merge noise.</p>
+</li>
+<li>
+<p>Better Blame &amp; Bisect: Tools like git blame and git bisect work best when
+history is linear and logical.</p>
+</li>
+<li>
+<p>Time-Travel Simplicity: Cherry-picking or reverting is easier when commits
+aren’t tangled in merge commits.</p>
+</li>
+</ul>
+<p>By default, when you run <code>git pull</code> git merges the commits into your local repo.
+To change this to a rebase you can set the following:</p>
+<pre><code class="language-bash">git config --global pull.rebase true
+git config --global rebase.autoStash true
+git config --global fetch.prune true  # auto delets remote-tracking branches that no longer exist
+git config --global pull.ff only          # blocks merge pulls
+</code></pre>
+<p>Note: With pull.ff only pulls will fail if they would have had to merge. This
+could happen if your local branch has diverged from the remote (e.g., someone
+pushed new commits and you also committed locally) <code>git pull</code> will throw an
+error like:</p>
+<pre><code class="language-bash">fatal: Not possible to fast-forward, aborting.
+</code></pre>
+<p><strong>How to fix it</strong></p>
+<p>You basically do what Git won’t auto-do:</p>
+<pre><code class="language-bash">git fetch origin
+git rebase origin/main
+</code></pre>
+<p>This rewinds your local commits, applies remote commits, and replays yours on
+top, keeping the history linear.</p>
+<p>If you don’t care about your local changes and want to discard them you can use
+the following command:</p>
+<pre><code class="language-bash">git reset --hard origin/main
+</code></pre>
+<p>This just makes your branch identical to the remote, no rebase required. This
+prevents rogue merge commits, preserving atomic commits and linear logs.</p>
+<p>You could set an alias for this with:</p>
+<pre><code class="language-bash">git config --global alias.grs '!git fetch origin &amp;&amp; git rebase origin/main'
+</code></pre>
+<p>To check whether a setting is active or now you can use:</p>
+<pre><code class="language-bash">git config --get rebase.autoStash
+true
+</code></pre>
+<p>To set these options with home-manager:</p>
+<pre><code class="language-nix"># ... snip ...
+    extraConfig = lib.mkOption {
+      type = lib.types.attrs;
+      default = {
+        commit.gpgsign = true;
+        gpg.format = "ssh";
+        user.signingkey = "/etc/ssh/ssh_host_ed25519_key.pub";
+        extraConfig = {
+          pull = {
+            rebase = true;
+            ff = "only";
+        };
+        };
+        rebase = {
+          autoStash = true; # Auto stashes and unstashes local changes during rebase
+        };
+        fetch = {
+          prune = true; # Automatically deletes remote-tracking branches that no longer exist
+        };
+# ... snip ...
+</code></pre>
+<h2>Time Travel in Git</h2>
+<details>
+<summary> ✔️ Click to Expand Time Travel Section </summary>
+<p><strong>View an old commit</strong>:</p>
+<pre><code class="language-bash">git checkout &lt;commit_hash&gt;
+</code></pre>
+<p>This puts you in a “detached HEAD” state, letting you explore code as it was at
+that commit. To return, checkout your branch again.</p>
+<p><strong>Go back and keep history (revert)</strong>:</p>
+<pre><code class="language-bash">git revert &lt;commit_hash&gt;
+</code></pre>
+<p><strong>Go back and rewrite history (reset)</strong>:</p>
+<ul>
+<li>Soft reset (keep changes staged):</li>
+</ul>
+<pre><code class="language-bash">git reset --soft &lt;commit_hash&gt;
+</code></pre>
+<ul>
+<li>Mixed reset (keep changes in working directory):</li>
+</ul>
+<pre><code class="language-bash">git reset &lt;commit_hash&gt;
+</code></pre>
+<ul>
+<li>Hard reset (discard all changes after the commit):</li>
+</ul>
+<pre><code class="language-bash">git reset --hard &lt;commit_hash&gt;
+</code></pre>
+<p>Use the above command with caution, it can delete commits from history.</p>
+<ul>
+<li>Relative time travel:</li>
+</ul>
+<pre><code class="language-bash">git reset --hard HEAD@{5.minutes.ago}
+</code></pre>
+<p>or</p>
+<pre><code class="language-bash">git reset --hard HEAD@{yesterday}
+</code></pre>
+<p><strong>Create a branch from the past</strong>:</p>
+<pre><code class="language-bash">git checkout -b &lt;new-brach&gt; &lt;commit_hash&gt;
+</code></pre>
+<p>This starts a new branch from any previous commit, preserving current changes.</p>
+</details>
+<p>Some repositories have guidelines, such as Nixpkgs:</p>
+<details>
+<summary> ✔️ Click to Expand Nixpkgs Commit Conventions </summary>
+<p><strong>Commit conventions</strong></p>
+<ul>
+<li>
+<p>Create a commit for each logical unit.</p>
+</li>
+<li>
+<p>Check for unnecessary whitespace with <code>git diff --check</code> before committing.</p>
+</li>
+<li>
+<p>If you have commits pkg-name: oh, forgot to insert whitespace: squash commits
+in this case. Use <code>git rebase -i</code>. See Squashing Commits for additional
+information.</p>
+</li>
+<li>
+<p>For consistency, there should not be a period at the end of the commit
+message’s summary line (the first line of the commit message).</p>
+</li>
+<li>
+<p>When adding yourself as maintainer in the same pull request, make a separate
+commit with the message maintainers: <code>add &lt;handle&gt;</code>. Add the commit before
+those making changes to the package or module. See Nixpkgs Maintainers for
+details.</p>
+<p>Make sure you read about any commit conventions specific to the area you’re
+touching. See: Commit conventions for changes to <code>pkgs</code>. Commit conventions
+for changes to <code>lib</code>. Commit conventions for changes to <code>nixos</code>. Commit
+conventions for changes to <code>doc</code>, the Nixpkgs manual.</p>
+</li>
+</ul>
+<p><strong>Writing good commit messages</strong></p>
+<p>In addition to writing properly formatted commit messages, it’s important to
+include relevant information so other developers can later understand why a
+change was made. While this information usually can be found by digging code,
+mailing list/Discourse archives, pull request discussions or upstream changes,
+it may require a lot of work.</p>
+<p>Package version upgrades usually allow for simpler commit messages, including
+attribute name, old and new version, as well as a reference to the relevant
+release notes/changelog. Every once in a while a package upgrade requires more
+extensive changes, and that subsequently warrants a more verbose message.</p>
+<p>Pull requests should not be squash merged in order to keep complete commit
+messages and GPG signatures intact and must not be when the change doesn’t make
+sense as a single commit.</p>
+</details>
+<p>A <strong>Git workflow</strong> is a recipe or recommendation for how to use Git to
+accomplish work in a consistent and productive manner. Having a defined workflow
+lets you leverage Git effectively and consistently. This is especially important
+when working on a team.</p>
+<p><strong>Origin</strong> is the <em>default name</em> (alias) for the <strong>remote repository</strong> that your
+<strong>local repository</strong> is connected to, usually the one you cloned from.</p>
+<p><strong>Remote Repositories</strong> are versions of your project that are hosted on the
+internet or network somewhere.</p>
+<ul>
+<li>
+<p>When you run <code>git push origin main</code>, you’re telling Git to push your changes
+to the remote repo called <code>origin</code>.</p>
+</li>
+<li>
+<p>You can see which URL <code>origin</code> points to with <code>git remote -v</code>.</p>
+</li>
+<li>
+<p>You can have multiple remotes (like <code>origin</code>, <code>upstream</code>, etc.) each pointing
+to a different remote repo. Each of which is generally either read-only or
+read/write for you. Collaborating involves managing these remotes and pushing
+and pulling data to and from them when you need to share work.</p>
+</li>
+</ul>
+<blockquote>
+<p>❗ You can have a remote repo on your local machine. The word “remote” doesn’t
+imply that the repository is somewhere else, only that it’s elsewhere.</p>
+</blockquote>
+<ul>
+<li>The name <code>origin</code> is just a convention, it’s not special. It is automatically
+set when you clone a repo.</li>
+</ul>
+<!-- ![git local remote](../images/git_local-remote.png) -->
+<p><strong>Local</strong> is your local copy of the repository, git tracks the differences
+between <strong>local</strong> and <strong>remote</strong> which is a repo hosted elsewhere (e.g., GitHub
+GitLab etc.)</p>
+<p>The <strong>Upstream</strong> in Git typically refers to the original repository from which
+your local repository or fork was derived. The <strong>Upstream</strong> is the remote repo
+that serves as the main source of truth, often the original project you forked
+from. You typically fetch changes from upstream to update your local repo with
+the latest updates from the original project, but you don’t push to upstream
+unless you have write access.</p>
+<h3>A Basic Git Workflow</h3>
+<!-- ![Git logo 3](../images/git2.png) -->
+<ol>
+<li>Initialize your Repository:</li>
+</ol>
+<p>If you haven’t already created a Git repo in your NixOS config directory (for
+example, in your flake or <code>/etc/nixos</code>):</p>
+<pre><code class="language-bash">cd ~/flake
+git init
+git add .
+git commit -m "Initial commit: NixOS Configuration"
+</code></pre>
+<p>Taking this initial snapshot with Git is a best practice—it captures the exact
+state of your working configuration before you make any changes.</p>
+<ul>
+<li>
+<p>The command <code>git add .</code> stages all files in the directory (and its
+subdirectories) for commit, meaning Git will keep track of them in your
+project history.</p>
+</li>
+<li>
+<p>The command <code>git commit -m "message"</code> then saves a snapshot of these staged
+files, along with your descriptive message, into the repository.</p>
+<ul>
+<li>Think of a commit as a “save point” in your project. You can always go back
+to this point if you need to, making it easy to experiment or recover from
+mistakes. This two-step process, staging with <code>git add</code> and saving with
+<code>git commit</code> is at the heart of how Git tracks and manages changes over
+time.</li>
+</ul>
+</li>
+</ul>
+<!-- ![git commit add](../images/git-add-commit.png) -->
+<ol start="2">
+<li>Make and Track Changes:</li>
+</ol>
+<p>Now that you’ve saved a snapshot of your working configuration, you’re free to
+experiment and try new things, even if they might break your setup.</p>
+<p>Suppose you want to try a new desktop environment, like Xfce. You edit your
+<code>configuration.nix</code> to add:</p>
+<pre><code class="language-nix">services.xserver.desktopManager.xfce.enable = true;
+</code></pre>
+<p>You run:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch # if configuration.nix is in /etc/nixos/
+</code></pre>
+<p>But something goes wrong: the system boots, but your desktop is broken or won’t
+start. You decide to roll back using the boot menu or:</p>
+<pre><code class="language-bash">sudo nixos-rebuild switch --rollback
+</code></pre>
+<p><strong>What happens?</strong></p>
+<ul>
+<li>
+<p>Your system reverts to the previous working generation in <code>/nix/store</code></p>
+</li>
+<li>
+<p>But: Your <code>configuration.nix</code> file is still changed, it still has the line
+enabling Xfce. If you rebuild again, you’ll get the same broken system,
+because your config itself wasn’t rolled back.</p>
+</li>
+</ul>
+<p><strong>How does Git Help on Failure?</strong></p>
+<p>Git gives you quite a few options and ways to inspect what has been done.</p>
+<ul>
+<li>
+<p>Use <code>git status</code> to see what’s changed, and <code>git checkout -- &lt;file&gt;</code> to
+restore any file to its last committed state.</p>
+</li>
+<li>
+<p>Review your changes with <code>git diff</code> to see exactly what you modified before
+deciding whether to keep or revert those changes.</p>
+</li>
+<li>
+<p>Reset everything with <code>git reset --hard HEAD</code>, this will discard all local
+changes and return to your last commit.</p>
+</li>
+</ul>
+<p>With Git you can simply run:</p>
+<pre><code class="language-bash">git checkout HEAD~1 configuration.nix
+# or, if you committed before the change:
+git revert &lt;commit-hash&gt;
+</code></pre>
+<p>Show the full hash of the latest commit:</p>
+<pre><code class="language-bash">git rev-parse HEAD
+f53fef375d89496c0174e70ce94993d43335098e
+</code></pre>
+<p>Short hash:</p>
+<pre><code class="language-bash">git log --pretty=format:'%h' -n 1
+f53fef3
+git revert f53fef3
+</code></pre>
+<p>Show a list of Recent commits:</p>
+<pre><code class="language-bash">git log
+# a list of all commits, with hashes, author, date, and message
+git log --oneline
+git log --oneline
+f53fef3 (HEAD -&gt; main) thunar
+b34ea22 thunar
+801cbcf thunar
+5e72ba5 sops
+8b67c59 sops
+1a353cb sops
+</code></pre>
+<p>You can copy the commit hash from any of these and use it in commands like
+<code>git checkout &lt;hash&gt;</code> or <code>git revert &lt;hash&gt;</code>.</p>
+<p><strong>Commit successful experiments</strong></p>
+<ul>
+<li>If your changes work, stage, and commit them:</li>
+</ul>
+<pre><code class="language-bash">git add .
+# or more specifically the file you changed or created
+git add configuration.nix
+git commit -m "Describe the new feature or fix"
+</code></pre>
+<h3>Basic Branching</h3>
+<p>With Git you’re always on a branch and the default branch is <code>master</code>. Many
+change it to <code>main</code> because of the suggestion Git gives you. I think people are
+too easily offended these days, just keep this in mind that <code>main</code> and <code>master</code>
+refer to the main development branch.</p>
+<p>You can get a listing of your current branches with:</p>
+<pre><code class="language-bash">git branch
+* (no branch)
+  main
+</code></pre>
+<p>The <code>*</code> is next to the current branch and is where the <code>HEAD</code> is currently
+pointing. It says <code>(no branch)</code> because I’m currently in detached <code>HEAD</code> where
+<code>HEAD</code> points to no branch. The reason for this is because I’ve been trying out
+Jujutsu VCS and that’s JJ’s default setting, a detached <code>HEAD</code>.</p>
+<p>Git actually gives you a warning about working in a detached <code>HEAD</code>:</p>
+<pre><code class="language-bash">You are in 'detached HEAD' state. You can make experimental
+changes and commit them, and you can discard any commits you make
+in this state without impacting any branch by switching back.
+
+If you want to create a new branch to retain commits you create,
+you can do so now (using 'git switch -c &lt;new-branch-name&gt;') or
+later (using 'git branch &lt;new-branch-name&gt; &lt;commit-id&gt;').
+
+See 'git help switch' for details.
+</code></pre>
+<p>To attach the <code>HEAD</code> (i.e., have the pointer pointing to a branch), use the
+<code>git checkout</code> command</p>
+<pre><code class="language-bash">git checkout main
+Switched to branch 'main'
+</code></pre>
+<pre><code class="language-bash">git branch
+* main
+# Ensure that you have the latest "tip" from the remote repository `origin`
+git fetch origin main
+From github.com:sayls8/flake
+ * branch            main       -&gt; FETCH_HEAD
+</code></pre>
+<p>Although we’re working on our own repo and there is basically no chance of our
+local branch diverging from our remote, it’s still good to get in the practice
+of getting everything in sync before merging or rebasing etc.</p>
+<p><code>git fetch</code> doesn’t update <code>main</code>, it just updates your references. To update
+<code>main</code> you would use <code>git pull origin/main</code> or <code>git rebase origin/main</code></p>
+<p>You can inspect your upstream branches with the following command:</p>
+<pre><code class="language-bash">git remote show origin
+* remote origin
+  Fetch URL: git@github.com:saylesss88/flake.git
+  Push  URL: git@github.com:saylesss88/flake.git
+  HEAD branch: main
+  Remote branch:
+    main tracked
+  Local ref configured for 'git push':
+    main pushes to main (fast-forwardable)
+</code></pre>
+<p><code>* branch     main      -&gt; FETCH_HEAD</code>: This line signifies that the <code>main</code>
+branch from the remote repository (likely <code>origin</code>) was successfully fetched,
+and the commit ID of its current tip (its latest commit) is now stored in your
+local <code>FETCH_HEAD</code> reference.</p>
+<p>Now that we know our local <code>main</code> is up to date with our remote <code>origin/main</code> we
+can safely create a new feature branch:</p>
+<pre><code class="language-bash">git checkout -b feature/prose_wrap
+Switched to a new branch 'feature/prose_wrap'
+</code></pre>
+<p>Right now the branch <code>feature/prose_wrap</code> is exactly the same as <code>main</code> and we
+can safely make changes without affecting <code>main</code>. We can try crazy or even
+“dangerous” things and always be able to revert to a working state with
+<code>git checkout main</code>.</p>
+<p>If our crazy idea works out, we can then merge our feature branch into <code>main</code>.</p>
+<p>Ok the feature works, I’ve added and committed the change. Now it’s time to
+point the <code>HEAD</code> to <code>main</code> and then either merge or rebase the feature branch
+into <code>main</code>:</p>
+<pre><code class="language-bash">git checkout main
+git fetch origin main
+git merge feature/prose_wrap
+Updating c8bd54c..b281f79
+Fast-forward
+ home/editors/helix/default.nix | 69 +++++++++++++++++++++++++++++++--------------------------------------
+ 1 file changed, 31 insertions(+), 38 deletions(-)
+</code></pre>
+<ul>
+<li>“fast-forward” means that our <code>feature/prose_wrap</code> branch was directly ahead
+of the last commit on <code>main</code>. When you merge one commit with another commit
+that can be reached by following the first commits history, remember the
+feature branch is exactly the same as <code>main</code> until I made another commit. If
+the branches diverged more and the history can’t be followed, Git will perform
+a 3-way merge where it creates a new “merge commit” that combines the 2
+changes.</li>
+</ul>
+<p>If you have a bunch of branches and forget which have been merged yet use:</p>
+<pre><code class="language-bash">git branch --merged
+feature/prose_wrap
+* main
+# OR to see branches that haven't been merged use:
+git branch --no-merged
+</code></pre>
+<p>It’s now safe to delete the feature branch:</p>
+<pre><code class="language-bash">git branch -d feature/prose_wrap
+Deleted branch feature/prose_wrap (was b281f79)
+</code></pre>
+<blockquote>
+<p>❗ TIP: If your feature branch has a lot of sloppy commits that won’t be of
+much benefit to anyone, squash them first then merge. The workflow would look
+something like this:</p>
+<pre><code class="language-bash"> # Make sure you're on the main branch
+ git checkout main
+
+ # Merge the feature branch with squash
+ git merge --squash feature/prose_wrap
+</code></pre>
+<ul>
+<li>This combines all the commits in your branch and adds them to your <code>main</code>
+staging area, it doesn’t move HEAD or create a merge commit for you. To
+apply the changes into one big commit, finalize it with:</li>
+</ul>
+<pre><code class="language-bash"> git commit -m "Add prose wrapping feature"
+</code></pre>
+<p>This is often referred to as the “squash commit”.</p>
+</blockquote>
+<p>Branching means to diverge from the main line of development and continue to do
+work without risking messing up your main branch. There are a few commits on
+your main branch so to visualize this it would look something like this, image
+is from <a href="https://git-scm.com/book/en/v2">Pro Git</a>:</p>
+<!-- ![Git Branch 1](../images/git-branch3.png) -->
+<h2>Nix flake update example with branches</h2>
+<p>Let’s say you haven’t ran <code>nix flake update</code> in a while and you don’t want to
+introduce errors to your working configuration. To do so we can first, make sure
+we don’t lose any changes on our main branch:</p>
+<pre><code class="language-bash">git add .
+git commit -m "Staging changes before switching branches"
+# I always like to make sure the configuration will build before pushing to git
+sudo nixos-rebuild switch --flake .
+# If everything builds and looks correct
+git push origin main
+</code></pre>
+<p>OR, if you have incomplete changes that you don’t want to commit yet you can
+stash them with <code>git stash</code>:</p>
+<pre><code class="language-bash">git status
+On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add &lt;file&gt;..." to update what will be committed)
+  (use "git restore &lt;file&gt;..." to discard changes in working directory)
+        modified:   home/git.nix
+
+no changes added to commit (use "git add" and/or "git commit -a")
+</code></pre>
+<p>Now we want to switch branches, without committing the incomplete changes to
+<code>git.nix</code>:</p>
+<pre><code class="language-bash">git stash
+Saved working directory and index state WIP on main: 0e46d6b git: lol alias
+
+git status
+On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+</code></pre>
+<blockquote>
+<p>❗ <code>git stash</code> is equivalent to <code>git stash push</code></p>
+</blockquote>
+<p>To see which stashes you have stored, use <code>git sash list</code>:</p>
+<pre><code class="language-bash">git stash list
+stash@{0}: WIP on main: 0e46d6b git: lol alias
+</code></pre>
+<p>To apply the most recent stash:</p>
+<pre><code class="language-bash">git stash apply
+git add home/git.nix
+On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add &lt;file&gt;..." to update what will be committed)
+  (use "git restore &lt;file&gt;..." to discard changes in working directory)
+        modified:   home/git.nix
+
+# or for multiple stashes
+git stash apply stash@{2}
+</code></pre>
+<p>Running <code>git stash apply</code> applies the changes that were in your stash but
+doesn’t automatically restage them, to apply the changes and stage them in one
+command:</p>
+<pre><code class="language-bash">git stash apply --index
+</code></pre>
+<p>Now let’s create our branch so we can safely update:</p>
+<pre><code class="language-bash">git checkout -b update-test
+Switched to a new branch 'update-test'
+</code></pre>
+<p><code>-b</code> is to switch to the branch that was just created</p>
+<p>Some may prefer a more descriptive branch name such as: <code>update/flake-inputs</code>, I
+kept it short for the example. Or if your company uses an issue tracker,
+including the ticket number in the branch name can be helpful:
+<code>update/123-flake-inputs</code></p>
+<p>The above command is equivalent to:</p>
+<pre><code class="language-bash">git branch update-test
+git checkout update-test
+</code></pre>
+<p><del>Now our branches would look something like this, note how both branches
+currently point to the same commit:</del> I discovered that Git Book has pretty
+restrictive licensing and will eventually find a replacement.</p>
+<!-- ![Git Branch 2](../images/git-branch2.png) -->
+<p>Now, lets run our update:</p>
+<pre><code class="language-bash">nix flake update
+sudo nixos-rebuild test --flake .
+# If everything looks ok let's try applying the changes
+sudo nixos-rebuild switch --flake .
+# And if everything looks ok:
+git add .
+git commit -m "feat: Updated all flake inputs"
+git push origin update-test
+</code></pre>
+<blockquote>
+<p>❗ This is the same workflow for commiting a PR. After you first fork and
+clone the repo you want to work on, you then create a new feature branch and
+push to that branch on your fork. This allows you to create a PR comparing
+your changes to their existing configuration.</p>
+</blockquote>
+<p><del>At this point our graph would look similar to the following</del>:</p>
+<!-- ![Git Branch 3](../images/git-branch1.png) -->
+<p>If we are satisfied, we can switch back to our <code>main</code> branch and merge
+<code>update-test</code> into it:</p>
+<pre><code class="language-bash">git checkout main
+git merge origin/update-test
+git branch -D update-test
+sudo nixos-rebuild test --flake .
+sudo nixos-rebuild switch --flake .
+</code></pre>
+<p>It’s good practice to delete a branch after you’ve merged and are done with it.</p>
+<h2>Rebasing Branches</h2>
+<p>To combine two seperate branches into one unified history you typically use
+<code>git merge</code> or <code>git rebase</code>.</p>
+<p><code>git merge</code> takes two commit pointers and finds a common base commit between
+them, it then creates a “merge commit” that combines the changes.</p>
+<p><code>git rebase</code> is used to move a sequence of commits to a new base commit.</p>
+<!-- ![Git rebase](../images/rebase.png) -->
+<h2>Configure Git Declaratively</h2>
+<p>The following example is the <code>git.nix</code> from the hydenix project it shows some
+custom options and a way to manage everything from a single location:</p>
+<pre><code class="language-nix"># git.nix from hydenix: declarative Git configuration for Home Manager
+{ lib, config, ... }:
+
+let
+  cfg = config.hydenix.hm.git;
+in
+{
+
+  options.hydenix.hm.git = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = config.hydenix.hm.enable;
+      description = "Enable git module";
+    };
+
+    name = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Git user name";
+    };
+
+    email = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Git user email";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+
+    programs.git = {
+      enable = true;
+      userName = cfg.name;
+      userEmail = cfg.email;
+      extraConfig = {
+        init.defaultBranch = "main";
+        pull.rebase = false;
+      };
+    };
+  };
+}
+</code></pre>
+<blockquote>
+<p>❗ You can easily change the name of the option, everything after <code>config.</code> is
+custom. So you could change it to for example, <code>config.custom.git</code> and you
+would enable it with <code>custom.git.enable = true;</code> in your <code>home.nix</code> or
+equivalent.</p>
+</blockquote>
+<p>Then he has a <code>hm/default.nix</code> with the following to enable it.</p>
+<pre><code class="language-nix">#...snip...
+
+ # hydenix home-manager options go here
+  hydenix.hm = {
+    #! Important options
+    enable = true;
+      git = {
+        enable = true; # enable git module
+        name = null; # git user name eg "John Doe"
+        email = null; # git user email eg "john.doe@example.com"
+      };
+    }
+
+    # ... snip ...
+</code></pre>
+<p>You can enable git, and set your git username as well as git email right here.</p>
+<h3>Resources</h3>
+<ul>
+<li>
+<p><a href="https://gist.github.com/luismts/495d982e8c5b1a0ced4a57cf3d93cf60">GitCommitBestPractices</a></p>
+</li>
+<li>
+<p><a href="https://git-scm.com/book/en/v2">ProGit</a></p>
+</li>
+<li>
+<p><a href="https://ohshitgit.com/">Oh shit Git</a></p>
+</li>
+</ul>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/vcs/git.html</guid><pubDate>Sun, 30 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Intro to Nushell</title><link>https://saylesss88.github.io/intro_to_nushell_on_NixOS.html</link><description><![CDATA[<h1>Chapter 12</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<p><img src="images/nu.png" alt="Nu" /></p>
+<h2>Intro to Nushell on NixOS</h2>
+<ul>
+<li>
+<p><strong>TL;DR</strong>:I recently switched default shells from zsh to nushell, this post is
+about some of the challenges and advantages of using nushell with NixOS.</p>
+</li>
+<li>
+<p>While the average user might not immediately see significant advantages, those
+who frequently work with structured data formats like JSON, YAML, and CSV –
+such as developers interacting with APIs, system administrators managing
+configurations, and data professionals – will likely find Nushell’s native
+data handling and powerful pipeline capabilities a plus. Additionally, users
+who value a more consistent and safer scripting experience might appreciate
+Nushell’s language-first design and features like strong typing.</p>
+</li>
+<li>
+<p>I’ll start with some of the unique build design choices and unique features
+that I think make Nushell special, then show an example using Nushell to
+manipulate JSON data. Finally, I will highlight some of the visually appealing
+aspects of Nushell and lastly I share some resources for learning more.</p>
+</li>
+</ul>
+<h2>The Good</h2>
+<ul>
+<li>
+<p>Nushell borrows concepts from many shells and languages and is itself both a
+programming language and a shell. Because of this, it has its own way of
+working with files, directories, websites, and more.</p>
+</li>
+<li>
+<p>Nushell is powerful and has many essential commands built directly into the
+shell (“internal” commands) rather than a link to an executable. You can use
+this set of commands across different operating systems, having this
+consistency is helpful when creating cross-platform code.</p>
+</li>
+<li>
+<p>When internal Nushell commands (like <code>ls</code>, <code>open</code>, <code>where</code>, <code>get</code>, <code>sort-by</code>,
+etc.) produce output, they generally do so in Nushell’s structured data format
+(tables or records). This is the shell’s native way of representing
+information.</p>
+</li>
+<li>
+<p>Beyond these foundational strengths, Nushell offers a range of unique features
+that enhance its functionality and make it particularly well-suited for
+data-heavy tasks. Here are some highlights that showcase its versatility.</p>
+</li>
+</ul>
+<p><strong>Some Unique Features</strong>:</p>
+<ul>
+<li>
+<p>Besides the built-in commands, Nushell has a
+<a href="https://www.nushell.sh/book/standard_library.html">standard library</a> Nushell
+operates on <em>structured data</em>. You could call it a “data-first” shell and
+programming language.</p>
+</li>
+<li>
+<p>Also included, is a full-featured dataframe processing engine using
+<a href="https://github.com/pola-rs/polars">Polars</a> if you want to process large data
+efficiently directly in your shell, check out the
+<a href="https://www.nushell.sh/book/dataframes.html">Dataframes-Docs</a></p>
+</li>
+<li>
+<p><strong>Multi-Line Editing</strong>:</p>
+</li>
+<li>
+<p>When writing a long command you can press Enter to add a newline and move to
+the next line. For example:</p>
+</li>
+</ul>
+<pre><code class="language-nu">ls            |    # press enter
+where name =~ |    # press enter, comments after pipe ok
+get name      |    # press enter
+mv ...$in ./backups/
+</code></pre>
+<ul>
+<li>
+<p>This allows you to cycle through the entire multi-line command using the up
+and down arrow keys and then customize different lines or sections of the
+command.</p>
+</li>
+<li>
+<p>You can manually insert a newline using <code>Alt+Enter</code> or <code>Shift+Enter</code>.</p>
+</li>
+<li>
+<p>The <a href="https://www.nushell.sh/book/line_editor.html">Reedline-Editor</a> is
+powerful and provides good <code>vi-mode</code> or <code>emacs</code> support built in.</p>
+</li>
+<li>
+<p>It’s default <code>Ctrl+r</code> history command is nice to work with out of the box.</p>
+</li>
+<li>
+<p>The <a href="https://www.nushell.sh/book/explore.html#parameters">explore</a> command, is
+nu’s version of a table pager, just like <code>less</code> but for table structured data:</p>
+</li>
+</ul>
+<pre><code class="language-nu">$nu | explore --peek
+</code></pre>
+<ul>
+<li>
+<p>With the above command you can navigate with vim keybinds or arrow keys.</p>
+</li>
+<li>
+<p>These features demonstrate Nushell’s user-friendly interface, but what truly
+sets it apart is its underlying design as a structured data scripting
+language. This “language-first” approach powers many of its distinctive
+capabilities.</p>
+</li>
+</ul>
+<p><img src="images/explore.png" alt="explore" /></p>
+<p><strong>Unique design</strong>:</p>
+<ul>
+<li>
+<p><strong>Fundamentally designed as a structured data scripting language</strong>: and then
+it acts as a shell on top of that foundation. This “language first” approach
+is what gives it many of its distinctive features and makes it a powerful
+scripting language. I reiterate this here because of the implications of this.
+A few of those features are:</p>
+<ul>
+<li>
+<p><strong>Pipelines of structured data</strong>: Unlike traditional shells that primarily
+deal with plain text streams, Nushell pipelines operate on tables of
+structured data. Each command can understand and manipulate this structured
+data directly.</p>
+</li>
+<li>
+<p><strong>Consistent syntax</strong>: Its syntax is more consistent and predictable
+compared to the often quirky syntax of Bash and Zsh, drawing inspiration
+from other programming languages.</p>
+</li>
+<li>
+<p><strong>Strong typing</strong> Nushell has a type system, which helps catch errors early
+and allows for more robust scripting.</p>
+</li>
+<li>
+<p><strong>First-class data types</strong>: It treats various data formats (like JSON, CSV,
+TOML) as native data types, making it easier to work with them. Because of
+this, Nushell aims to replace the need for external tools like <code>jq</code>, <code>awk</code>,
+<code>sed</code>, <code>cut</code>, and even some uses of <code>grep</code> and <code>curl</code>.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Variables are Immutable by Default</strong>: Nushell’s commands are based on a
+functional-style of programming which requires immutability, sound familiar?</p>
+</li>
+<li>
+<p><strong>Nushell’s Environment is Scoped</strong>: Nushell takes many design cues from
+compiled languages, one is that languages should avoid global mutable state.
+Shells have commonly used global mutation to update the environment, Nushell
+attempts to steer clear of this increasing reproducability.</p>
+</li>
+<li>
+<p><strong>Single-use Environment Variables</strong>:</p>
+</li>
+</ul>
+<pre><code class="language-nu">FOO=BAR $env.FOO
+# =&gt; BAR
+</code></pre>
+<ul>
+<li><strong>Permanent Environment Variables</strong>: In your <code>config.nu</code></li>
+</ul>
+<pre><code class="language-nu"># config.nu
+$env.FOO = 'BAR'
+</code></pre>
+<ul>
+<li>
+<p><a href="https://www.nushell.sh/book/coming_from_bash.html">Coming-From-Bash</a></p>
+</li>
+<li>
+<p>These design principles make Nushell a powerful tool for scripting, but
+they’re best understood through a hands-on example. Let’s see how Nushell’s
+structured data capabilities shine in a common task: processing a JSON file.</p>
+</li>
+</ul>
+<p><strong>Example</strong>: I wanted to provide a practical example to illustrate some of these
+“Good” features in action. And break it down for better understanding.</p>
+<ul>
+<li>
+<p>Let’s consider a common task: processing data from a JSON file. Imagine you
+have a file containing a list of users with their names and ages. With
+traditional shells, you’d likely need to rely on external tools like <code>jq</code> to
+parse and filter this data. However, Nushell can handle this directly within
+its own commands.</p>
+</li>
+<li>
+<p>For this example you could create a <code>test</code> directory and move to it:</p>
+</li>
+</ul>
+<pre><code class="language-bash">mkdir test ; cd test
+</code></pre>
+<ul>
+<li>Create a <code>users.json</code> with the following contents:</li>
+</ul>
+<p>👇 users.json</p>
+<pre><code class="language-json">[
+  { "name": "Alice", "age": 25 },
+  { "name": "Bob", "age": 30 },
+  { "name": "Charlie", "age": 20 }
+]
+</code></pre>
+<ul>
+<li>And create the following <code>filter.nu</code> that first converts <code>users.json</code> into its
+own internal structured data format with the <code>open</code> command, then to filters
+out people under <code>21</code> with the <code>where</code> control flow construct, then selects
+the <code>name</code> and <code>age</code> columns, sorts them by age, and finally converts them
+back to <code>json</code> and saves them to a file called <code>filtered_users.json</code>. A lot
+happening in a 6 line script.</li>
+</ul>
+<pre><code class="language-nu"># filter.nu
+open users.json           # Read JSON file into structured data
+| where age &gt; 21         # Filter users older than 21
+| select name age        # Select only name and age columns
+| sort-by age            # Sort by age
+| to json                # Convert back to JSON
+| save filtered_users.json # Save result to a new file
+</code></pre>
+<ul>
+<li>The <code>open</code> command takes data from a file (or even a URL in some cases) and
+parses it and converts it into Nushells own internal structured data format.
+So this command isn’t just showing you the contents of <code>users.json</code> but doing
+a conversion to Nu’s special structured format.</li>
+</ul>
+<pre><code class="language-nu">open users.json
+╭───┬─────────┬─────╮
+│ # │  name   │ age │
+├───┼─────────┼─────┤
+│ 0 │ Alice   │  25 │
+│ 1 │ Bob     │  30 │
+│ 2 │ Charlie │  20 │
+╰───┴─────────┴─────╯
+</code></pre>
+<ul>
+<li>The <code>source</code> command in Nushell is used to execute the commands within a
+script file (like <code>filter.nu</code>) in the current Nushell environment. It’s
+similar to running the script directly in the shell, but keeps the shell open
+for further use. In this example, <code>source filter.nu</code> runs the commands inside
+<code>filter.nu</code>, processing the <code>users.json</code> file and creating the
+<code>filtered_users.json</code> file:</li>
+</ul>
+<pre><code class="language-nu">source filter.nu
+# View the contents with bat
+bat filtered_users.json
+───────┬──────────────────────────────────────────────────────────────────────────────────────
+       │ File: filtered_users.json
+───────┼──────────────────────────────────────────────────────────────────────────────────────
+   1   │ [
+   2   │   {
+   3   │     "name": "Alice",
+   4   │     "age": 25
+   5   │   },
+   6   │   {
+   7   │     "name": "Bob",
+   8   │     "age": 30
+   9   │   }
+  10   │ ]
+───────┴───────────────────────────────────────────────────────────────────────────────────
+</code></pre>
+<ul>
+<li>As you can see, without needing any external tools, Nushell was able to read,
+filter, select, sort, and then re-serialize JSON data using a clear and
+concise pipeline. This demonstrates its power in handling structured data
+natively, making common data manipulation tasks within the shell significantly
+more streamlined and readable compared to traditional approaches.</li>
+</ul>
+<p><strong>In the filter.nu example:</strong></p>
+<pre><code class="language-nu"># filter.nu
+open users.json           # Read JSON file into structured data
+| where age &gt; 21         # Filter users older than 21
+| select name age        # Select only name and age columns
+| sort-by age            # Sort by age
+| to json                # Convert back to JSON
+| save filtered_users.json # Save result to a new file
+</code></pre>
+<details>
+<summary> ✔️ Summary of above Command (Click to Expand)</summary>
+<ol>
+<li>
+<p><code>open users.json</code>: Produces a <strong>Nushell table</strong> representing the data.</p>
+</li>
+<li>
+<p><code>| where age &gt; 21</code>: Receives the table, filters rows based on the <code>age</code>
+column, and outputs a new, filtered table.</p>
+</li>
+<li>
+<p><code>| select name age</code>: Receives the filtered table, selects only the <code>name</code> and
+<code>age</code> columns, and outputs a table with fewer columns.</p>
+</li>
+<li>
+<p><code>| sort-by age</code>: Receives the table, sorts the rows based on the <code>age</code>
+column, and outputs a sorted table.</p>
+</li>
+<li>
+<p><code>| to json</code>: Receives the sorted table and converts it back into JSON text.</p>
+</li>
+<li>
+<p><code>| save filtered_users.json</code>: Receives the JSON text and saves it to a file.</p>
+</li>
+</ol>
+<ul>
+<li>
+<p>So, while the concept of piping is the same, the nature of the data flowing
+through the Nushell pipeline is richer and more structured, enabling more
+powerful and direct data manipulation.</p>
+</li>
+<li>
+<p>While Nushell’s strengths, like its structured data pipelines, make it a
+game-changer for many tasks, it’s not without its challenges, especially when
+integrated with NixOS’s Bash-centric ecosystem. Let’s explore some of the
+limitations you might encounter when adopting Nushell as your default shell.</p>
+</li>
+</ul>
+</details>
+<h3>The Bad</h3>
+<ul>
+<li>
+<p>While the project is still maturing, the active community and ongoing
+improvements are promising. Don’t get too discouraged by the following, there
+would be a bad section for any shell imo.</p>
+</li>
+<li>
+<p>There are many similarities so it can be easy to forget that some Bash (and
+POSIX in general) style constructs just won’t work in Nushell. Considering
+that NixOS seems to have been designed for bash, even Zsh isn’t fully
+compatable you may want to think twice before you choose Nushell as your
+default.</p>
+</li>
+<li>
+<p>The documentation is incomplete and written by devs for devs imo, it is quite
+a bit different from anything else I’ve seen so there is a bit of a learning
+curve. Nushell is generally still considered to be in a stage where it might
+not be the most seamless or trouble-free experience as a daily driver default
+shell for most users, especially on a system like NixOS known for its unique
+approach.</p>
+</li>
+<li>
+<p>The <a href="https://github.com/haslersn/any-nix-shell">any-nix-shell</a> project doesn’t
+include Nushell as with many others because of it’s lack of maturity.</p>
+</li>
+<li>
+<p>The following addition comes from Joey_McKur’s sugggestion, on mentioning the
+<code>job</code> command as one of the biggest criticisms against Nu because it doesn’t
+support background tasks. I should also note that Nushell’s team is aware of
+these criticisms and actively working on improving job control.</p>
+</li>
+</ul>
+<p><strong>Limited Feature Set Compared to Traditional Job Control:</strong></p>
+<ul>
+<li>
+<p><strong>Lack of Full POSIX Job Control</strong>: Nushell’s job control doesn’t yet fully
+implement all the features and signals defined by POSIX job control (e.g.,
+more nuanced signal handling, stopped jobs). While it covers the basics, users
+accustomed to advanced Bash job control might find it lacking.</p>
+</li>
+<li>
+<p><strong>Foregrounding Behavior</strong>: There have been criticisms about how foregrounding
+jobs interacts with the terminal and potential issues with signal propagation.</p>
+</li>
+</ul>
+<p><strong>Output Handling Challenges</strong>:</p>
+<ul>
+<li>
+<p><strong>Interleaved Output</strong>: Managing the output of multiple backgrounded jobs can
+sometimes be messy, with output from different jobs potentially interleaving
+in the terminal. While Nushell tries to handle this, it’s not always as clean
+as desired.</p>
+</li>
+<li>
+<p><strong>Redirection Complexity</strong>: Redirecting the input and output of backgrounded
+jobs can be less straightforward than in Bash, sometimes requiring more
+explicit handling.</p>
+</li>
+</ul>
+<p><strong>Integration with Pipelines:</strong></p>
+<ul>
+<li><strong>Backgrounding Pipelines</strong>: Backgrounding complex pipelines with multiple
+stages can sometimes lead to unexpected behavior or difficulties in managing
+the entire pipeline as a single job.</li>
+</ul>
+<p><strong>Error Reporting:</strong></p>
+<ul>
+<li>
+<p><strong>Difficult to Track Errors in Background Jobs</strong>: Identifying and debugging
+errors in backgrounded jobs can be less direct than with foreground processes,
+and the job command’s output might not always provide sufficient information
+for troubleshooting.</p>
+</li>
+<li>
+<p>Many of Nushell’s challenges stem from its departure from traditional shell
+conventions, particularly those of Bash, which NixOS heavily relies on. To
+better understand these differences and how they impact your workflow, let’s
+compare Nushell’s static, structured approach to Bash’s dynamic, text-based
+model.</p>
+</li>
+</ul>
+<h3>Key Differences Between Nushell &amp; Bash</h3>
+<table><thead><tr><th><strong>Feature</strong></th><th><strong>Bash (Dynamic)</strong></th><th><strong>Nushell (Static)</strong></th></tr></thead><tbody>
+<tr><td>Code Execution</td><td>Line-by-line</td><td>Whole script parsed first</td></tr>
+<tr><td>Error Detection</td><td>Runtime errors only</td><td>Catches errors before running</td></tr>
+<tr><td>Support for <code>eval</code></td><td>✅ Allowed</td><td>❌ Not supported</td></tr>
+<tr><td>Custom Parsing</td><td>Limited</td><td>Built-in semantic analysis</td></tr>
+<tr><td>IDE Features</td><td>Basic syntax highlighting</td><td>Advanced integration, linting, and formatting</td></tr>
+</tbody></table>
+<ul>
+<li>
+<p><code>&amp;&amp;</code> doesn’t work use <code>;</code> instead.</p>
+</li>
+<li>
+<p><code>&gt;</code> is used as the greater-than operator for comparisons:</p>
+</li>
+</ul>
+<pre><code class="language-nu">"hello" | save output.txt
+</code></pre>
+<p>is equivalent to the following in bash:</p>
+<pre><code class="language-bash">echo "hello" &gt; output.txt
+</code></pre>
+<ul>
+<li>If you notice above the nushell command doesn’t require an <code>echo</code> prefix, this
+is because Nushell has <strong>Implicit Return</strong>:</li>
+</ul>
+<pre><code class="language-nu">"Hello, World" == (echo "Hello, World")
+# =&gt; true
+</code></pre>
+<ul>
+<li>
+<p>The above example shows that the string, <code>"Hello, World"</code> is equivalent to the
+output value from <code>echo "Hello, World"</code></p>
+</li>
+<li>
+<p><strong>Every Command Returns a Value</strong>:</p>
+</li>
+</ul>
+<pre><code class="language-nu">let p = 7
+print $p  # 7
+$p * 6    # 42
+</code></pre>
+<ul>
+<li>Understanding these differences highlights why Nushell feels so distinct from
+Bash, but it’s the shell’s advanced features and integrations that truly make
+it shine. Let’s dive into some of the beautiful and powerful tools and custom
+commands that elevate Nushell for NixOS users.</li>
+</ul>
+<h3>The Beautiful and Powerful</h3>
+<ul>
+<li>
+<p><code>Ctrl+t</code> List Commands with carapace and fzf:</p>
+<p><img src="images/nu4.png" alt="nu4" /></p>
+</li>
+<li>
+<p><code>Carapace</code>
+<a href="https://carapace-sh.github.io/carapace-bin/install.html">Carapace-Bin Install</a>:</p>
+</li>
+</ul>
+<p>The folling is showing tab completion, I typed <code>hx fl&lt;TAB&gt;</code>:</p>
+<p><img src="images/nu9.png" alt="nu9" /></p>
+<ul>
+<li>
+<p><code>Carapace</code> man example:</p>
+<p><img src="images/nu7.png" alt="nu7" /></p>
+</li>
+</ul>
+<p><strong>Custom Nushell Commands</strong></p>
+<p>Most of the following scripts come from the
+<a href="https://github.com/nushell/nu_scripts#">nu_scripts repo</a></p>
+<ul>
+<li>The following command allows you to choose which input to update interactively
+with fzf.</li>
+</ul>
+<details>
+<summary> ✔️ Click to See Command</summary>
+<pre><code class="language-nu"># nix.nu
+# upgrade system packages
+# `nix-upgrade` or `nix-upgrade -i`
+def nix-upgrade [
+  flake_path: string = "/home/jr/flake", # path that contains a flake.nix
+  --interactive (-i) # select packages to upgrade interactively
+]: nothing -&gt; nothing {
+  let working_path = $flake_path | path expand
+  if not ($working_path | path exists) {
+    echo "path does not exist: $working_path"
+    exit 1
+  }
+  let pwd = $env.PWD
+  cd $working_path
+  if $interactive {
+    let selections = nix flake metadata . --json
+    | from json
+    | get locks.nodes
+    | columns
+    | str join "\n"
+    | fzf --multi --tmux center,20%
+    | lines
+    # Debug: Print selections to verify
+    print $"Selections: ($selections)"
+    # Check if selections is empty
+    if ($selections | is-empty) {
+      print "No selections made."
+      cd $pwd
+      return
+    }
+    # Use spread operator to pass list items as separate arguments
+    nix flake update ...$selections
+  } else {
+    nix flake update
+  }
+  cd $pwd
+  nh os switch $working_path
+}
+</code></pre>
+</details>
+<p><strong>Usage</strong>:</p>
+<pre><code class="language-nu">nix-upgrade
+# or for individual packages
+nix-upgrade -i
+</code></pre>
+<p><img src="images/nu5.png" alt="nu5" /></p>
+<ul>
+<li>The <code>ns</code> command is designed to search for Nix packages using <code>nix search</code> and
+present the results in a cleaner format, specifically removing the
+architecture and operating system prefix that nix search often includes.</li>
+</ul>
+<details>
+<summary> ✔️ Click To Expand</summary>
+<pre><code class="language-nu">def ns [
+    term: string # Search target.
+] {
+
+    let info = (
+        sysctl -n kernel.arch kernel.ostype
+        | lines
+        | {arch: ($in.0|str downcase), ostype: ($in.1|str downcase)}
+    )
+
+    nix search --json nixpkgs $term
+        | from json
+        | transpose package description
+        | flatten
+        | select package description version
+        | update package {|row| $row.package | str replace $"legacyPackages.($info.arch)-($info.ostype)." ""}
+}
+</code></pre>
+</details>
+<p><strong>Usage</strong>:</p>
+<pre><code class="language-nu">ns fzf&lt;ENTER&gt;
+</code></pre>
+<p><img src="images/nu10.png" alt="nu10" /></p>
+<ul>
+<li><code>nufetch</code> command:</li>
+</ul>
+<details>
+<summary> ✔️ Click To Expand</summary>
+<pre><code class="language-nu"># `nufetch` `(nufetch).packages`
+def nufetch [] {
+{
+"kernel": $nu.os-info.kernel_version,
+"nu": $env.NU_VERSION,
+"packages": (ls /etc/profiles/per-user | select name | prepend [[name];
+["/run/current-system/sw"]] | each { insert "number" (nix path-info --recursive
+ ($in | get name) | lines | length) | insert "size" ( nix path-info -S
+ ($in | get name) | parse -r '\s(.*)' | get capture0.0 | into filesize) | update
+ "name" ($in | get name | parse -r '.*/(.*)' | get capture0.0 | if $in == "sw"
+ {"system"} else {$in}) | rename "environment"}),
+"uptime": (sys host).uptime
+}
+}
+</code></pre>
+</details>
+<p><img src="images/nu1.png" alt="nu1" /></p>
+<ul>
+<li><code>duf</code> command, I have mine aliased to <code>df</code>:</li>
+</ul>
+<p><img src="images/nu8.png" alt="nu8" /></p>
+<ul>
+<li><code>ps</code> command:</li>
+</ul>
+<p><img src="images/ps.png" alt="ps" /></p>
+<ul>
+<li><code>nix-list-system</code> command lists all installed packages:</li>
+</ul>
+<pre><code class="language-nu"># list all installed packages
+def nix-list-system []: nothing -&gt; list&lt;string&gt; {
+  ^nix-store -q --references /run/current-system/sw
+  | lines
+  | filter { not ($in | str ends-with 'man') }
+  | each { $in | str replace -r '^[^-]*-' '' }
+  | sort
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="language-bash">nix-list-system
+</code></pre>
+<p><img src="images/nu6.png" alt="nu6" /></p>
+<ul>
+<li>These custom Nushell commands showcase its flexibility, but sometimes you need
+to work around Nushell’s limitations, like compatability with certain NixOS
+tools. This is where <code>just</code> and <code>justfiles</code> come in, simplifying complex
+workflows and bridging gaps in Nushell’s functionality.</li>
+</ul>
+<h2>Using Just and Justfiles</h2>
+<ul>
+<li>
+<p>The following is my <code>justfile</code> that I keep right next to my <code>flake.nix</code> it
+simplifies some commands and makes things work that weren’t working with
+nushell for my case, you’ll have to change it to match your configuration.
+It’s not perfect but works for my use case, take whats useful and leave the
+rest.</p>
+</li>
+<li>
+<p>You’ll first need to install <a href="https://github.com/casey/just">just</a> to make use
+of <code>justfiles</code>.</p>
+</li>
+</ul>
+<pre><code class="language-bash"># nix shell nixpkgs#just nixpkgs#nushell
+set shell := ["nu", "-c"]
+flake_path := "/home/jr/flake"
+hostname := "magic"
+home_manager_output := "jr@magic"
+
+utils_nu := absolute_path("utils.nu")
+
+default:
+    @just --list
+# Rebuild
+[group('nix')]
+fr:
+    nh os switch --hostname {{hostname}} {{flake_path}}
+
+# Flake Update
+[group('nix')]
+fu:
+    nh os switch  --hostname {{hostname}} --update {{flake_path}}
+
+# Update specific input
+# Usage: just upp nixpkgs
+[group('nix')]
+upp input:
+    nix flake update {{input}}
+# Test
+[group('nix')]
+ft:
+    nh os test --hostname {{hostname}} {{flake_path}}
+# Collect Garbage
+[group('nix')]
+ncg:
+    nix-collect-garbage --delete-old ; sudo nix-collect-garbage -d ; sudo /run/current-system/bin/switch-to-configuration boot
+
+[group('nix')]
+cleanup:
+    nh clean all
+
+</code></pre>
+<ul>
+<li>To list available commands type, (you must be in the same directory as the
+justfile): <code>just</code></li>
+</ul>
+<p><img src="images/just2.png" alt="just" /></p>
+<ul>
+<li>
+<p>So <code>just fmt</code> will run <code>nix fmt</code>.</p>
+</li>
+<li>
+<p>A lot of the <code>.nu</code> files came from this repo by BlindFS:</p>
+<ul>
+<li>
+<p><a href="https://github.com/blindFS/modern-dot-files/tree/main">modern-dot-files</a> he
+uses Nix Darwin so there are a few changes for NixOS. I found this through
+<a href="https://github.com/nushell/this_week_in_nu">this_week_in_nu</a>.</p>
+</li>
+<li>
+<p><a href="https://github.com/TSawyer87/flakes/tree/main/homeManagerModules/shells/nushell">my-nu-config</a>
+If you use this, you’ll need to change the first line of <code>fzf.nu</code> to the
+location of your config. You’ll also need to change the constants at the top
+of <code>config.nu</code>. These are my old dotfiles, I have recently updated and made
+sure this config is up to date with recent nushell changes. Also, change the
+<code>let flake_path = ($env.HOME | path join "flake")</code> to your flake path.</p>
+</li>
+<li>
+<p>The examples use this starship
+config<a href="https://github.com/Aylur/dotfiles/blob/main/home/starship.nix">Aylur-dotfiles</a>
+The logic on the bottom enables starship for Nushell, Zsh, and Bash!</p>
+</li>
+<li>
+<p>If you wan’t to use my config you’ll have to enable the experimental-feature
+<code>pipe-operators</code> in the same place you enable flakes and nix-command.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>There are still situations where I need to switch to zsh or bash to get
+something to work i.e. <code>nix-shell</code> and a few others.</p>
+</li>
+<li>
+<p>From custom commands to <code>justfile</code> integrations, Nushell offers a wealth of
+tools to enhance your NixOS experience, even if occasional workarounds are
+needed. To dive deeper into Nushell and tailor it to your needs, here are some
+valuable resources to explore, from official documentation to community-driven
+configurations.</p>
+</li>
+</ul>
+<h4>Resources</h4>
+<details>
+<summary> ✔️ Click to Expand Resources </summary>
+<ul>
+<li>
+<p><a href="https://www.nushell.sh/book/">Nushell-Book</a></p>
+</li>
+<li>
+<p><a href="https://www.nushell.sh/cookbook/">Nushell-Cookbook</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nushell/nu_scripts">nu_scripts</a> some of the custom
+commands came from here.</p>
+</li>
+<li>
+<p><a href="https://github.com/nushell/nushell/tree/main/crates/nu-utils/src/default_files">nushell sample-config</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nushell/awesome-nu#plugins">awesome-nu repo</a></p>
+</li>
+<li>
+<p><a href="https://github.com/nushell/showcase">nu showcase-repo</a></p>
+</li>
+<li>
+<p><a href="https://discord.com/invite/NtAbbGn">discord</a> You can find custom commands,
+configurations, etc here.</p>
+</li>
+</ul>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/intro_to_nushell_on_NixOS.html</guid><pubDate>Sun, 30 Nov 2025 00:00:00 +0000</pubDate></item><item><title>Intro to Derivations</title><link>https://saylesss88.github.io/Intro_to_Nix_Derivations_7.html</link><description><![CDATA[<h1>Chapter 7</h1>
+<details>
+<summary> ✔️ Click to Expand Table of Contents</summary>
+<!-- toc -->
+</details>
+<h2>Introduction to Nix Derivations</h2>
+<p><img src="images/gruv10.png" alt="gruv10" /></p>
+<p>Nix’s build instructions, known as <strong>derivations</strong>, are defined using the Nix
+Language. These derivations can describe anything from individual software
+packages to complete system configurations. The Nix package manager then
+deterministically “realizes” (builds) these derivations, ensuring consistency
+because they rely solely on a predefined set of inputs.</p>
+<p>Most things in NixOS are built around derivations. Your NixOS system is
+described by such a single system derivation. When you want to apply a new
+configuration, <code>nixos-rebuild</code> handles the process:</p>
+<p>It first builds this derivation:</p>
+<pre><code class="language-bash">nix-build '&lt;nixpkgs/nixos&gt;' -A system
+</code></pre>
+<p>Then, once the build is complete, it switches to that new system:</p>
+<pre><code class="language-bash">result/bin/switch-to-configuration
+</code></pre>
+<p>After the build, <code>nixos-rebuild</code> updates a crucial symbolic link:
+<code>/run/current-system</code> This symlink always points to the active, running version
+of your system in the Nix store. In essence, the <code>/run/current-system</code> path is
+the currently active system derivation. This design choice gives NixOS its
+powerful atomic upgrade and rollback capabilities: changing your system involves
+building a new system derivation and updating this symlink to point to the
+latest version.</p>
+<blockquote>
+<pre><code class="language-nix"> ls -lsah /run/current-system
+ 0 lrwxrwxrwx 1 root root 85 May 23 12:11 /run/current-system -&gt; /nix/store/
+ cy2c0kxpjrl7ajlg9v3zh898mhj4dyjv-nixos-system-magic-25.11.20250520.2795c50
+</code></pre>
+</blockquote>
+<ul>
+<li>
+<p>The <code>-&gt;</code> indicates a symlink and it’s pointing to a <strong>store path</strong> which is
+the result of a derivation being built (the system closure)</p>
+</li>
+<li>
+<p>For beginners, the analogy of a cooking recipe is helpful:</p>
+<ul>
+<li>
+<p><strong>Ingredients (Dependencies):</strong> What other software or libraries are needed.</p>
+</li>
+<li>
+<p><strong>Steps (Build Instructions):</strong> The commands to compile, configure, and
+install.</p>
+</li>
+<li>
+<p><strong>Final Dish (Output):</strong> The resulting package or resource.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>A Nix derivation encapsulates all this information, telling Nix what inputs to
+use, how to build it, and what the final output should be.</p>
+<p>Nix derivations run in <strong>pure</strong>, <strong>isolated environments</strong>, meaning they
+<strong>cannot</strong> access the internet during the build phase. This ensures that builds
+are reproducible – they don’t depend on external sources that might change over
+time.</p>
+<p>There are <code>Fixed-output-derivations</code> that allow fetching resources during the
+build process by explicitly specifying the expected hash upfront. Just keep this
+in mind that normal derivations don’t have network access.</p>
+<h2>Creating Derivations in Nix</h2>
+<p>The primary way to define packages in Nix is through the <code>mkDerivation</code>
+function, which is part of the standard environment (<code>stdenv</code>). While a
+lower-level <code>derivation</code> function exists for advanced use cases, <code>mkDerivation</code>
+simplifies the process by automatically managing dependencies and the build
+environment.</p>
+<p><code>mkDerivation</code> (and <code>derivation</code>) takes a set of attributes as its argument. At
+a minimum, you’ll often encounter these essential attributes:</p>
+<ol>
+<li>
+<p><strong>name:</strong> A human-readable identifier for the derivation (e.g., “foo”,
+“hello.txt”). This helps you and Nix refer to the package.</p>
+</li>
+<li>
+<p><strong>system:</strong> Specifies the target architecture for the build (e.g.,
+<code>builtins.currentSystem</code> for your current machine).</p>
+</li>
+<li>
+<p><strong>builder:</strong> Defines the program that will execute the build instructions
+(e.g., <code>bash</code>).</p>
+</li>
+</ol>
+<p><strong>How do we pass these required attributes to the <code>derivation</code> function?</strong></p>
+<p>Functions in Nix often take a single argument which is an attribute set. For
+<code>derivation</code> and <code>mkDerivation</code>, this takes the form
+<code>functionName { attribute1 = value1; attribute2 = value2; ... }</code>, where the <code>{}</code>
+encloses the set of attributes being passed as the function’s argument.</p>
+<p>Remember that <code>derivation</code> and <code>mkDerivation</code> take a set (i.e. <code>{}</code>) of
+attributes as its first argument. So, in order to pass the required attributes
+you would do something like this:</p>
+<pre><code class="language-nix">nix-repl&gt; pkgs = import &lt;nixpkgs&gt; {}
+
+nix-repl&gt; d = derivation {
+            name = "mydrv";
+            builder = "${pkgs.bash}/bin/bash";
+            args = [
+              "-c" # Tells bash to execute the following string as a command
+              ''
+                # Explicitly set PATH to include coreutils bin directory
+                export PATH="${pkgs.coreutils}/bin:$PATH"
+                mkdir $out
+              ''
+            ];
+            system = builtins.currentSystem;
+          }
+
+nix-repl&gt; :b d
+</code></pre>
+<ul>
+<li>When I was starting out, seeing the above written in the following format made
+it clearer in my mental map that we were passing these attributes as arguments
+but both accomplish the same thing.</li>
+</ul>
+<pre><code class="language-nix">d = derivation { name = "myname"; builder = "${coreutils}/bin/true"; system = builtins.currentSystem; }
+</code></pre>
+<ul>
+<li>When you write <code>pkgs = import &lt;nixpkgs&gt; {};</code>, you are importing the Nixpkgs
+<code>default.nix</code> file, which resolves to a function. Calling that function by
+passing it an empty attribute set <code>{}</code> as its argument. The function then
+evaluates and returns the entire <code>pkgs</code> attribute set. To specify a different
+system for example, you could do something like:</li>
+</ul>
+<pre><code class="language-nix">pkgsForAarch64 = import &lt;nixpkgs&gt; { system = "aarch64-linux"; };
+</code></pre>
+<p>So when you see:</p>
+<pre><code class="language-nix">import &lt;nixpkgs&gt; { overlays = []; config = {}; }
+</code></pre>
+<ul>
+<li>
+<p>Instead, these empty sets explicitly override any global or implicit
+overlays/configurations that Nix might otherwise pick up from environment
+variables (like <code>NIXPKGS_CONFIG</code>), default locations (like
+<code>~/.config/nixpkgs/config.nix</code> or <code>~/.config/nixpkgs/overlays</code>), or other
+mechanisms.</p>
+</li>
+<li>
+<p>This is to prevent accidental partial application from other parts of your
+configuration and is saying “Do not pass any custom configuration options for
+this particular import”</p>
+</li>
+<li>
+<p><code>derivation</code> is a pre-made, built-in function in the Nix language. Here, we
+are passing it an attribute set as argument with the three required
+attributes. (<code>name</code>, <code>builder</code>, <code>system</code>, and we added an extra argument
+<code>args</code>.)</p>
+</li>
+</ul>
+<h2>The Hello World Derivation</h2>
+<p>For this example, first create a <code>hello</code> directory and add the
+<a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">Hello tarball</a> to said
+directory.</p>
+<p>Now lets create the classic Hello derivation:</p>
+<pre><code class="language-nix"># hello.nix
+let
+  pkgs = import &lt;nixpkgs&gt; { };
+in
+derivation {
+  name = "hello";
+  builder = "${pkgs.bash}/bin/bash";
+  args = [ ./hello_builder.sh ];
+  inherit (pkgs)
+    gnutar
+    gzip
+    gnumake
+    gcc
+    coreutils
+    gawk
+    gnused
+    gnugrep
+    ;
+  bintools = pkgs.binutils.bintools;
+  src = ./hello-2.12.1.tar.gz;
+  system = builtins.currentSystem;
+}
+</code></pre>
+<ul>
+<li>As you can see, this isn’t the only required file but is a recipe outlining
+how to build the <code>hello</code> package. The <code>tar.gz</code> package can be found
+<a href="https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz">here</a> You would just place
+the tarball in the same directory as the derivation along with the following
+<code>hello_builder.sh</code>:</li>
+</ul>
+<pre><code class="language-bash"># hello_builder.sh
+export PATH="$gnutar/bin:$gcc/bin:$gnumake/bin:$coreutils/bin:$gawk/bin:$gzip/bin:$gnugrep/bin:$gnused/bin:$bintools/bin"
+tar -xzf $src
+cd hello-2.12.1
+./configure --prefix=$out
+make
+make install
+</code></pre>
+<p>And build it with:</p>
+<pre><code class="language-bash">nix-build hello.nix
+</code></pre>
+<p>Finally execute it with:</p>
+<pre><code class="language-bash">./result/bin/hello
+Hello, world!
+</code></pre>
+<h2>Simple Rust Derivation</h2>
+<p>Create a <code>simple.rs</code> with the following contents:</p>
+<pre><code class="language-rust">fn main() {
+  println!("Simple Rust!")
+}
+</code></pre>
+<p>And a <code>rust_builder.sh</code> like this (this is our builder script):</p>
+<pre><code class="language-bash"># rust_builder.sh
+# Set up the PATH to include rustc coreutils and gcc
+export PATH="$rustc/bin:$coreutils/bin:$gcc/bin"
+
+# IMPORTANT: Create the $out directory BEFORE rustc tries to write to it
+mkdir -p "$out"
+
+# Compile the Rust source code and place the executable inside $out
+rustc -o "$out/simple_rust" "$src"
+</code></pre>
+<p>Now we’ll enter the <code>nix repl</code> and build it:</p>
+<pre><code class="language-bash">❯ nix repl
+Nix 2.28.3
+Type :? for help.
+
+nix-repl&gt; :l &lt;nixpkgs&gt;
+added 3950 variables.
+
+# Define the variables for rustc, coreutils, bash, AND gcc from the loaded nixpkgs
+nix-repl&gt; rustc = pkgs.rustc
+
+nix-repl&gt; coreutils = pkgs.coreutils
+
+nix-repl&gt; bash = pkgs.bash
+
+nix-repl&gt; gcc = pkgs.gcc
+
+# Now define the derivation
+nix-repl&gt; simple_rust_program = derivation {
+            name = "simple-rust-program";
+            builder = "${bash}/bin/bash";
+            args = [ ./rust_builder.sh ];
+            rustc = rustc;
+            coreutils = coreutils;
+            gcc = gcc;
+            src = ./simple.rs;
+            system = builtins.currentSystem;
+          }
+
+nix-repl&gt; :b simple_rust_program
+This derivation produced the following outputs:
+out -&gt; /nix/store/fmyqr2d3ph0lpnxd0xppwvwyhv3iyb7y-simple-rust-program
+</code></pre>
+<pre><code class="language-bash">nix-store -r /nix/store/fmyqr2d3ph0lpnxd0xppwvwyhv3iyb7y-simple-rust-program
+
+warning: you did not specify '--add-root'; the result might be removed by the garbage collector
+/nix/store/fmyqr2d3ph0lpnxd0xppwvwyhv3iyb7y-simple-rust-program
+</code></pre>
+<p>This simple Rust example, built with a direct derivation call, illustrates:</p>
+<ul>
+<li>
+<p>How Nix explicitly manages every single tool in your build environment
+(<code>bash</code>, <code>rustc</code>, <code>gcc</code>, <code>coreutils</code>).</p>
+</li>
+<li>
+<p>The strict isolation of Nix builds, where nothing is implicitly available.</p>
+</li>
+<li>
+<p>The deterministic mapping of inputs to unique output paths in the Nix store.</p>
+</li>
+<li>
+<p>The above example shows the fundamental structure of a Nix derivation, how
+it’s defined within the <code>nix-repl</code>.</p>
+</li>
+<li>
+<p><code>.drv</code> files are intermediate files that describe how to build a derivation;
+it’s the bare minimum information.</p>
+</li>
+</ul>
+<h2>When Derivations are Built</h2>
+<p>Nix doesn’t build derivations during the evaluation of your Nix expressions.
+Instead, it processes your code in two main phases (and why you need to use
+<code>:b simple_rust_program</code> or <code>nix-store -r</code> to actually build or realize it):</p>
+<ol>
+<li>
+<p>Evaluation/Instantiate Phase: This is when Nix parses and interprets your
+.nix expression. The result is a precise derivation description (often
+represented as a .drv file on disk), and the unique “out paths” where the
+final built products will go are calculated. No actual code is compiled or
+executed yet. Achieved with <code>nix-instantiate</code></p>
+</li>
+<li>
+<p>Realize/Build Phase: Only after a derivation has been fully described does
+Nix actually execute its build instructions. It first ensures all the
+derivation’s inputs (dependencies) are built, then runs the builder script
+in an isolated environment, and places the resulting products into their
+designated “out paths” in the Nix store. Achieved with <code>nix-store -r</code></p>
+</li>
+</ol>
+<h2>Referring to other derivations</h2>
+<p>The way that we can refer to other packages/derivations is to use the <code>outPath</code>.</p>
+<p>The <code>outPath</code> describes the location of the files of that derivation. Nix can
+then convert the derivation set into a string:</p>
+<pre><code class="language-bash">nix repl
+nix-repl&gt; :l &lt;nixpkgs&gt;
+nix-repl&gt; fzf
+«derivation /nix/store/vw1zag9q4xvf10z24j1qybji7wfsz78v-fzf-0.62.0.drv»
+nix-repl&gt; fzf.outPath
+"/nix/store/z3ayhjslz72ldiwrv3mn5n7rs96p2g8a-fzf-0.62.0"
+nix-repl&gt; builtins.toString fzf
+"/nix/store/z3ayhjslz72ldiwrv3mn5n7rs96p2g8a-fzf-0.62.0"
+</code></pre>
+<ul>
+<li>As long as there is an <code>outPath</code> attribute, Nix will do the “set to string
+conversion”.</li>
+</ul>
+<h2>Produce a development shell from a derivation</h2>
+<p>Building on the concept of a derivation as a recipe, let’s create our first
+practical derivation. This example shows how to define a temporary development
+environment (a shell) using stdenv.mkDerivation, which is the primary function
+for defining packages in Nix.</p>
+<pre><code class="language-nix"># my-shell.nix
+# We use a `let` expression to bring `pkgs` and `stdenv` into scope.
+# This is a recommended practice over `with import &lt;nixpkgs&gt; {}`
+# for clarity and to avoid potential name collisions.
+let
+  pkgs = import &lt;nixpkgs&gt; {};
+  stdenv = pkgs.stdenv; # Access stdenv from the imported nixpkgs
+in
+
+# Make a new "derivation" that represents our shell
+stdenv.mkDerivation {
+  name = "my-environment";
+
+  # The packages in the `buildInputs` list will be added to the PATH in our shell
+  buildInputs = [
+    # cowsay is an arbitrary package
+    # see https://nixos.org/nixos/packages.html to search for more
+    pkgs.cowsay
+    pkgs.fortune
+  ];
+}
+</code></pre>
+<p><strong>Usage</strong></p>
+<pre><code class="language-bash">nix-shell my-shell.nix
+fortune | cowsay
+ _________________________________________
+/ "Lines that are parallel meet at        \
+| Infinity!" Euclid repeatedly, heatedly, |
+| urged.                                  |
+|                                         |
+| Until he died, and so reached that      |
+| vicinity: in it he found that the       |
+| damned things diverged.                 |
+|                                         |
+\ -- Piet Hein                            /
+ -----------------------------------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+</code></pre>
+<ul>
+<li>To exit type: <code>exit</code></li>
+</ul>
+<p>This Nix expression defines a temporary development shell. Let’s break it down:</p>
+<ul>
+<li>
+<p><code>pkgs = import &lt;nixpkgs&gt; {};</code>: Standard way to get access to all the packages
+and helper functions (i.e. <code>nixpkgs.lib</code>)</p>
+</li>
+<li>
+<p><code>stdenv = pkgs.stdenv;</code>: <code>stdenv</code> provides us <code>mkDerivation</code> and is from the
+<code>nixpkgs</code> collection.</p>
+</li>
+<li>
+<p><code>stdenv.mkDerivation { ... };</code>: This is the core function for creating
+packages.</p>
+<ul>
+<li><code>stdenv</code> provides a set of common build tools and conventions.</li>
+</ul>
+</li>
+<li>
+<p><code>mkDerivation</code> takes an attribute set (a collection of key-value pairs) as its
+argument.</p>
+</li>
+<li>
+<p><code>name = "my-environment";</code>: This gives your derivation a human-readable name.</p>
+</li>
+<li>
+<p><code>buildInputs = [ pkgs.cowsay ];</code>: This is a list of dependencies that will be
+available in the build environment of this derivation (or in the <code>PATH</code> if you
+enter the shell created by this derivation). <code>pkgs.cowsay</code> refers to the
+<code>cowsay</code> package from the imported <code>pkgs</code> collection.</p>
+</li>
+</ul>
+<p>The command <code>nix-instantiate --eval my-shell.nix</code> evaluates the Nix expression
+in the file. It does not build the derivation. Instead, it returns the Nix value
+that the expression evaluates to.</p>
+<pre><code class="language-bash">nix-instantiate --eval my-shell.nix
+</code></pre>
+<p>This value is a structured data type that encapsulates all the attributes (like
+<code>name</code>, <code>system</code>, <code>buildInputs</code>, etc.) required to build the derivation. Your
+output shows this detailed internal representation of the derivation’s “recipe”
+as understood by Nix. This is useful for debugging and inspecting the
+derivation’s definition.</p>
+<h2>Our Second Derivation: Understanding the Builder</h2>
+<details>
+<summary> Understanding the Builder (Click to Expand) </summary>
+<ul>
+<li>To understand how derivations work, let’s create a very basic example using a
+bash script as our <code>builder</code>.</li>
+</ul>
+<h3>Why a Builder Script?</h3>
+<ul>
+<li>The <code>builder</code> attribute in a derivation tells Nix <em>how</em> to perform the build
+steps. A simple and common way to define these steps is with a bash script.</li>
+</ul>
+<h3>The Challenge with Shebangs in Nix</h3>
+<ul>
+<li>
+<p>In typical Unix-like systems, you might start a bash script with a shebang
+(<code>#!/bin/bash</code> or <code>#!/usr/bin/env bash</code>) to tell the system how to execute it.
+However, in Nix derivations, we generally avoid this.</p>
+</li>
+<li>
+<p><strong>Reason:</strong> Nix builds happen in an isolated environment where the exact path
+to common tools like <code>bash</code> isn’t known beforehand (it resides within the Nix
+store). Hardcoding a path or relying on the system’s <code>PATH</code> would break Nix’s
+stateless property.</p>
+</li>
+</ul>
+<h3>The Importance of Statelessness in Nix</h3>
+<ul>
+<li>
+<p><strong>Stateful Systems (Traditional):</strong> When you install software traditionally,
+it often modifies the core system environment directly. This can lead to
+dependency conflicts and makes rollbacks difficult.</p>
+</li>
+<li>
+<p><strong>Stateless Systems (Nix):</strong> Nix takes a different approach. When installing a
+package, it creates a unique, immutable directory in the Nix store. This
+means:</p>
+<ul>
+<li>
+<p><strong>No Conflicts:</strong> Different versions of the same package can coexist without
+interfering with each other.</p>
+</li>
+<li>
+<p><strong>Reliable Rollback:</strong> You can easily switch back to previous versions
+without affecting system-wide files.</p>
+</li>
+<li>
+<p><strong>Reproducibility:</strong> Builds are more likely to produce the same result
+across different machines if they are “pure” (don’t rely on external system
+state).</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3>The Isolated Nix Build Environment: A Quick Overview</h3>
+<p>When Nix executes a builder script, it sets up a highly controlled and pristine
+environment to ensure <strong>reproducibility</strong> and <strong>isolation</strong>. Here’s what
+happens:</p>
+<ol>
+<li>
+<p><strong>Fresh Start:</strong> Nix creates a temporary, empty directory for the build and
+makes it the current working directory.</p>
+</li>
+<li>
+<p><strong>Clean Environment:</strong> It completely clears the environment variables from
+your shell.</p>
+</li>
+<li>
+<p><strong>Controlled Inputs:</strong> Nix then populates the environment with <em>only</em> the
+variables essential for the build, such as:</p>
+<ul>
+<li>
+<p><code>$NIX_BUILD_TOP</code>: The path to the temporary build directory.</p>
+</li>
+<li>
+<p><code>$PATH</code>: Carefully set to include only the explicit <code>buildInputs</code> you’ve
+specified, preventing reliance on arbitrary system tools.</p>
+</li>
+<li>
+<p><code>$HOME</code>: Set to <code>/homeless-shelter</code> to prevent programs from reading
+user-specific configuration files.</p>
+</li>
+<li>
+<p>Variables for each declared output (<code>$out</code>, etc.), indicating where the
+final results should be placed in the Nix store.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Execution &amp; Logging:</strong> The builder script is run with its specified
+arguments. All its output (stdout/stderr) is captured in a log.</p>
+</li>
+<li>
+<p><strong>Clean Up &amp; Registration:</strong> If successful, the temporary directory is
+removed. Nix then scans the build outputs for references to other store
+paths, ensuring all dependencies are correctly tracked for future use and
+garbage collection. Finally, it normalizes file permissions and timestamps
+in the output for consistent hashing.</p>
+</li>
+</ol>
+<p>This meticulous setup ensures that your builds are independent of the machine
+they run on and always produce the same result, given the same inputs.</p>
+<h2>Our builder Script</h2>
+<ul>
+<li>For our first derivation, we’ll create a simple <code>builder.sh</code> file in the
+current directory:</li>
+</ul>
+<pre><code class="language-bash"># builder.sh
+declare -xp
+echo foo &gt; $out
+</code></pre>
+<ul>
+<li>
+<p>The command <code>declare -xp</code> lists exported variables (it’s a bash builtin
+function).</p>
+</li>
+<li>
+<p>Nix needs to know where the final built product (the “cake” in our earlier
+analogy) should be placed. So, during the derivation process, Nix calculates a
+unique output path within the Nix store. This path is then made available to
+our builder script as an environment variable named <code>$out</code>. The <code>.drv</code> file,
+which is the recipe, contains instructions for the builder, including setting
+up this <code>$out</code> variable. Our builder script will then put the result of its
+work (in this case, the “foo” file) into this specific <code>$out</code> directory.</p>
+</li>
+<li>
+<p>As mentioned earlier we need to find the nix store path to the bash
+executable, common way to do this is to load Nixpkgs into the repl and check:</p>
+</li>
+</ul>
+<pre><code class="language-bash">nix-repl&gt; :l &lt;nixpkgs&gt;
+Added 3950 variables.
+nix-repl&gt; "${bash}"
+"/nix/store/ihmkc7z2wqk3bbipfnlh0yjrlfkkgnv6-bash-4.2-p45"
+</code></pre>
+<p>So, with this little trick we are able to refer to <code>bin/bash</code> and create our
+derivation:</p>
+<pre><code class="language-bash">nix-repl&gt; d = derivation { name = "foo"; builder = "${bash}/bin/bash";
+ args = [ ./builder.sh ]; system = builtins.currentSystem; }
+nix-repl&gt; :b d
+[1 built, 0.0 MiB DL]
+
+this derivation produced the following outputs:
+  out -&gt; /nix/store/gczb4qrag22harvv693wwnflqy7lx5pb-foo
+</code></pre>
+<ul>
+<li>
+<p>The contents of the resulting store path (<code>/nix/store/...-foo</code>) now contain
+the file <code>foo</code>, as intended. We have successfully built a derivation!</p>
+</li>
+<li>
+<p>Derivations are the primitive that Nix uses to define packages. “Package” is a
+loosely defined term, but a derivation is simply the result of calling
+<code>builtins.derivation</code>.</p>
+</li>
+</ul>
+</details>
+<h2>Our Last Derivation</h2>
+<p>Create a new directory and a <code>hello.nix</code> with the following contents:</p>
+<pre><code class="language-nix"># hello.nix
+{
+  stdenv,
+  fetchzip,
+}:
+
+stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = fetchzip {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "";
+  };
+}
+</code></pre>
+<p>Save this file to <code>hello.nix</code> and run <code>nix-build</code> to observe the build failure:</p>
+<ul>
+<li>Click to expand output:</li>
+</ul>
+<pre><code class="language-nix">$ nix-build hello.nix
+~error: cannot evaluate a function that has an argument without a value ('stdenv')
+~       Nix attempted to evaluate a function as a top level expression; in
+~       this case it must have its arguments supplied either by default
+~       values, or passed explicitly with '--arg' or '--argstr'. See
+~       https://nix.dev/manual/nix/stable/language/constructs.html#functions.
+~
+~       at /home/nix-user/hello.nix:3:3:
+~
+~            2| {
+~            3|   stdenv,
+~             |   ^
+~            4|   fetchzip,
+</code></pre>
+<p><strong>Problem</strong>: The expression in <code>hello.nix</code> is a <em>function</em>, which only produces
+it’s intended output if it is passed the correct <em>arguments</em>.(i.e. <code>stdenv</code> is
+available from <code>nixpkgs</code> so we need to import <code>nixpkgs</code> before we can use
+<code>stdenv</code>):</p>
+<p>The recommended way to do this is to create a <code>default.nix</code> file in the same
+directory as the <code>hello.nix</code> with the following contents:</p>
+<pre><code class="language-nix"># default.nix
+let
+  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-24.05";
+  pkgs = import nixpkgs { config = {}; overlays = []; };
+in
+{
+  hello = pkgs.callPackage ./hello.nix { };
+}
+</code></pre>
+<p>This allows you to run <code>nix-build -A hello</code> to realize the derivation in
+<code>hello.nix</code>, similar to the current convention used in Nixpkgs:</p>
+<ul>
+<li>Click to expand Output:</li>
+</ul>
+<pre><code class="language-nix">nix-build -A hello
+~error: hash mismatch in fixed-output derivation '/nix/store/pd2kiyfa0c06giparlhd1k31bvllypbb-source.drv':
+~         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+~            got:    sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=
+~error: 1 dependencies of derivation '/nix/store/b4mjwlv73nmiqgkdabsdjc4zq9gnma1l-hello-2.12.1.drv' failed to build
+</code></pre>
+<ul>
+<li>Another way to do this is with
+<a href="https://nix.dev/manual/nix/2.24/command-ref/nix-prefetch-url">nix-prefetch-url</a>
+It is a utility to calculate the sha beforehand.</li>
+</ul>
+<pre><code class="language-bash">nix-prefetch-url https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz
+path is '/nix/store/pa10z4ngm0g83kx9mssrqzz30s84vq7k-hello-2.12.1.tar.gz'
+086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd
+</code></pre>
+<ul>
+<li>When you use <code>nix-prefetch-url</code>, you get a Base32 hash when nix needs SRI
+format.</li>
+</ul>
+<p>Run the following command to convert from Base32 to SRI:</p>
+<pre><code class="language-bash">nix hash to-sri --type sha256 086vqwk2wl8zfs47sq2xpjc9k066ilmb8z6dn0q6ymwjzlm196cd
+sha256-jZkUKv2SV28wsM18tCqNxoCZmLxdYH2Idh9RLibH2yA=
+</code></pre>
+<ul>
+<li>This actually fetched a different sha than the Nix compiler returned in the
+example where we replace the empty sha with the one Nix gives us. The
+difference was that <code>fetchzip</code> automatically extracts archives before
+computing the hash and slight differences in the metadata cause different
+results. I had to switch from <code>fetchzip</code> to <code>fetchurl</code> to get the correct
+results.
+<ul>
+<li>
+<p>Extracted archives can differ in timestamps, permissions, or compression
+details, causing different hash values.</p>
+</li>
+<li>
+<p>A simple takeaway is to use <code>fetchurl</code> when you need an exact match, and
+<code>fetchzip</code> when working with extracted contents.</p>
+</li>
+<li>
+<p><a href="https://nixos.org/manual/nixpkgs/stable/#fetchurl">fetchurl</a></p>
+</li>
+<li>
+<p><code>fetchurl</code> returns a <code>fixed-output derivation</code>(FOD): A derivation where a
+cryptographic hash of the output is determined in advance using the
+outputHash attribute, and where the builder executable has access to the
+network.</p>
+</li>
+</ul>
+</li>
+</ul>
+<p>Lastly replace the empty sha256 placeholder with the returned value from the
+last command:</p>
+<pre><code class="language-nix"># hello.nix
+{
+  stdenv,
+  fetchzip,
+}:
+
+stdenv.mkDerivation {
+  pname = "hello";
+  version = "2.12.1";
+
+  src = fetchzip {
+    url = "https://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz";
+    sha256 = "sha256-1kJjhtlsAkpNB7f6tZEs+dbKd8z7KoNHyDHEJ0tmhnc=";
+  };
+}
+</code></pre>
+<p>Run <code>nix-build -A hello</code> again and you’ll see the derivation successfully
+builds.</p>
+<h2>Best Practices</h2>
+<p><strong>Reproducible source paths</strong>: If we built the following derivation in
+<code>/home/myuser/myproject</code> then the store path of <code>src</code> will be
+<code>/nix/store/&lt;hash&gt;-myproject</code> causing the build to no longer be reproducible:</p>
+<pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
+
+pkgs.stdenv.mkDerivation {
+  name = "foo";
+  src = ./.;
+}
+</code></pre>
+<blockquote>
+<p>❗ TIP: Use <code>builtins.path</code> with the <code>name</code> attribute set to something fixed.
+This will derive the symbolic name of the store path from the <code>name</code> instead
+of the working directory:</p>
+<pre><code class="language-nix">let pkgs = import &lt;nixpkgs&gt; {}; in
+
+pkgs.stdenv.mkDerivation {
+  name = "foo";
+  src = builtins.path { path = ./.; name = "myproject"; };
+}
+</code></pre>
+</blockquote>
+<h3>Conclusion</h3>
+<p>In this chapter, we’ve laid the groundwork for understanding Nix derivations,
+the fundamental recipes that define how software and other artifacts are built
+within the Nix ecosystem. We’ve explored their key components – inputs, builder,
+build phases, and outputs – and how they contribute to Nix’s core principles of
+reproducibility and isolated environments. Derivations are the workhorses behind
+the packages and tools we use daily in Nix.</p>
+<p>As you’ve learned, derivations offer a powerful and principled approach to
+software management. However, the way we organize and manage these derivations,
+along with other Nix expressions and dependencies, has evolved over time.
+Traditionally, Nix projects often relied on patterns involving <code>default.nix</code>
+files, channel subscriptions, and manual dependency management.</p>
+<p>A more recent and increasingly popular approach to structuring Nix projects and
+managing dependencies is through Nix Flakes. Flakes introduce a standardized
+project structure, explicit input tracking, and a more robust way to ensure
+reproducible builds across different environments.</p>
+<p>In our next chapter,
+<a href="https://saylesss88.github.io/Comparing_Flakes_and_Traditional_Nix_8.html">Comparing Flakes and Traditional Nix</a>,
+we will directly compare and contrast these two approaches. We’ll examine the
+strengths and weaknesses of traditional Nix practices in contrast to the
+benefits and features offered by Nix Flakes. This comparison will help you
+understand the motivations behind Flakes and when you might choose one approach
+over the other for your Nix projects.</p>
+<p>As you can see below, there is a ton of information on derivations freely
+available.</p>
+<h4>Links To Articles about Derivations</h4>
+<details>
+<summary> Click To Expand Resources </summary>
+<ul>
+<li>
+<p><a href="https://nixos.org/guides/nix-pills/06-our-first-derivation">NixPillsOurFirstDerivation</a></p>
+</li>
+<li>
+<p><a href="https://nixos.org/guides/nix-pills/07-working-derivation">NixPills-WorkingDerivation</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/manual/nix/2.24/language/derivations">nix.dev-Derivations</a></p>
+</li>
+<li>
+<p><a href="https://nix.dev/tutorials/packaging-existing-software">nix.dev-packagingExistingSoftware</a></p>
+</li>
+<li>
+<p><a href="https://ianthehenry.com/posts/how-to-learn-nix/my-first-derivation/">howToLearnNix-MyFirstDerivation</a></p>
+</li>
+<li>
+<p><a href="https://ianthehenry.com/posts/how-to-learn-nix/derivations-in-detail/">howToLearnNix-DerivationsInDetail</a></p>
+</li>
+<li>
+<p><a href="https://www.sam.today/blog/creating-a-super-simple-derivation-learning-nix-pt-3">Sparky/blog-creatingASuperSimpleDerivation</a> #
+How to learn Nix</p>
+</li>
+<li>
+<p><a href="https://www.sam.today/blog/derivations-102-learning-nix-pt-4">Sparky/blog-Derivations102</a></p>
+</li>
+<li>
+<p><a href="https://scrive.github.io/nix-workshop/04-derivations/01-derivation-basics.html">ScriveNixWorkshop-nixDerivationBasics</a></p>
+</li>
+<li>
+<p><a href="https://zero-to-nix.com/concepts/derivations/">zeroToNix-Derivations</a></p>
+</li>
+<li>
+<p><a href="https://www.tweag.io/blog/2021-02-17-derivation-outputs-and-output-paths/">Tweag-derivationOutputs</a></p>
+</li>
+<li>
+<p><a href="https://ayats.org/blog/nix-tuto-2">theNixLectures-Derivations</a></p>
+</li>
+<li>
+<p><a href="https://bmcgee.ie/posts/2023/02/nix-what-are-fixed-output-derivations-and-why-use-them/">bmcgee-whatAreFixed-OutputDerivations</a></p>
+</li>
+</ul>
+</details>
+]]></description><author>saylesss88</author><guid>https://saylesss88.github.io/Intro_to_Nix_Derivations_7.html</guid><pubDate>Sat, 29 Nov 2025 00:00:00 +0000</pubDate></item></channel></rss>
