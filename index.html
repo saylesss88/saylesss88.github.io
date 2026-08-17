@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Clap Derive - rust-gaps</title>
+        <title>Introduction - rust-gaps</title>
 
 
         <!-- Custom HTML head -->
@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0e578f64.js";
+            window.path_to_searchindex_js = "searchindex-f12c4183.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-4d19d945.js"></script>
+        <script src="toc-e6cd3322.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -174,423 +174,29 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="clap-derive"><a class="header" href="#clap-derive">Clap Derive</a></h1>
-<h2 id="understanding-clap-by-building-it-yourself"><a class="header" href="#understanding-clap-by-building-it-yourself">Understanding <code>clap</code> by Building It Yourself</a></h2>
-<p>Most tutorials start with <code>clap</code> and show you how to use it. This one starts
-without it.</p>
-<p>Before reaching for <a href="https://crates.io/crates/clap">clap</a>, it’s worth building
-the same thing by hand. Parsing arguments manually forces you to see exactly
-what <code>clap</code> is doing for you, and once you see that, the derive API stops
-feeling like magic and starts feeling obvious.</p>
-<p>We’ll build <code>echor</code> (Credit:
-<a href="https://github.com/kyclark/command-line-rust/tree/main/02_echor">Command-Line Rust</a>),
-a Rust implementation of the Unix <code>echo</code> command in three passes:</p>
-<ol>
-<li><strong>Raw args</strong>: <code>env::args()</code> directly in main, no abstractions</li>
-<li><strong>Structured args</strong>: a typed struct with a <code>build</code> method, same shape <code>clap</code>
-uses</li>
-<li><strong>clap derive</strong>: replace <code>build()</code> with <code>#[derive(Parser)]</code> and watch how
-little changes</li>
-</ol>
-<p>Then we’ll close by looking at what <code>clap</code> is actually doing internally, by
-implementing a naive version of its three-trait pipeline.</p>
-<h2 id="what-problem-does-clap-solve"><a class="header" href="#what-problem-does-clap-solve">What problem does <code>clap</code> solve?</a></h2>
-<p>When a user runs your program, the OS hands it a flat list of strings:</p>
-<pre><code class="language-sh">cargo run -- hello world -n
-# the program receives: ["target/debug/echor", "hello", "world", "-n"]
-</code></pre>
-<p>Your program has to:</p>
-<ol>
-<li><strong>Parse</strong>: decode what each string means (is <code>-n</code> a flag? is <code>hello</code>
-positional text?)</li>
-<li><strong>Validate</strong>: check the result makes sense (did the user provide any text at
-all?)</li>
-<li><strong>Run</strong>: use the validated result</li>
-</ol>
-<p><code>clap</code> handles steps one and two automatically. By the time your <code>main</code> logic
-runs, you’re guaranteed a valid, typed <code>Args</code> struct. That guarantee, and the
-help text, error messages, and type coercion you get for free. (is the entire
-value proposition).</p>
-<h2 id="pass-1-raw-args-in-main"><a class="header" href="#pass-1-raw-args-in-main">Pass 1: Raw args in <code>main</code></a></h2>
-<p><code>echo</code> takes literal text arguments and an optional <code>-n</code> flag to suppress the
-trailing newline. Let’s implement it with nothing but the standard library:</p>
-<pre><code class="language-rs">use std::env;
-
-fn main() {
-    let args: Vec&lt;String&gt; = env::args().collect();
-
-    let mut omit_newline = false;
-    let mut text: Vec&lt;String&gt; = Vec::new();
-
-    // parsing: decide where each arg goes
-    for arg in args.iter().skip(1) {
-        if arg == "-n" {
-            omit_newline = true;
-        } else {
-            text.push(arg.clone());
-        }
-    }
-
-    // validation: checks that the result is usable
-    if text.is_empty() {
-        eprintln!("error: at least one argument required");
-        std::process::exit(1);
-    }
-
-    // logic: use the validated result
-    print!("{}{}", text.join(" "), if omit_newline { "" } else { "\n" });
-}
-</code></pre>
-<p>Walking through the pieces:</p>
-<ul>
-<li><code>env::args().collect()</code> gives you every string the OS passed in, including
-<code>args[0]</code> which is always the binary path, not user input</li>
-<li><code>.skip(1)</code> drops that binary name so the loop only sees actual arguments</li>
-<li><code>omit_newline</code> is a bool because <code>-n</code> is either present or not</li>
-<li><code>text</code> is a <code>Vec&lt;String&gt;</code> because echo can take multiple words. Every non-flag
-arg gets pushed in</li>
-<li><code>text.join(" ")</code> collapses the vec back into a single string:
-<code>["hello", "world"]</code> → “hello world”</li>
-</ul>
-<pre><code class="language-bash">cargo run -- hello world
-# args[0] = "target/debug/echor"  (skipped)
-# args[1] = "hello"               → text
-# args[2] = "world"               → text
-# Output: hello world
-</code></pre>
-<p>This works, but everything lives in <code>main</code>: the parsing variables, the loop, the
-validation, and the output logic are all tangled together. That three-phase
-structure: parse, validate, run is implicit. The next pass makes it explicit.</p>
-<h2 id="pass-2-typed-struct-with-build"><a class="header" href="#pass-2-typed-struct-with-build">Pass 2: Typed struct with <code>build()</code></a></h2>
-<p>The same logic, reorganized around a struct:</p>
-<pre><code class="language-rs">use std::{env, process};
-
-#[derive(Debug)]
-struct Args {
-    /// The text values to be printed to standard output
-    text: Vec&lt;String&gt;,
-    /// Flag indicating whether the trailing newline (`\n`) should be omitted
-    omit_newline: bool,
-}
-
-impl Args {
-    /// Parses and validates cli arguments manually from `env::args()`
-    ///
-    /// # Errors
-    /// Returns a string slice error message if no text arguments are provided
-    fn build() -&gt; Result&lt;Args, &amp;'static str&gt; {
-        let mut args = Args {
-            text: Vec::new(),
-            omit_newline: false,
-        };
-
-        // Skip the first argument (the binary path) &amp; iterate through user inputs
-        for arg in env::args().skip(1) {
-            if arg == "-n" {
-                args.omit_newline = true;
-            } else {
-                args.text.push(arg);
-            }
-        }
-
-        // Validate that required arguments are present
-        if args.text.is_empty() {
-            return Err("error: at least one argument required");
-        }
-
-        Ok(args)
-    }
-}
-
-fn main() {
-    // Parse arguments and handle validation errors
-    let args = Args::build().unwrap_or_else(|err| {
-        eprintln!("{err}");
-        process::exit(1);
-    });
-    // Print the joined text, appending a newline unless `-n` was specified
-    print!(
-        "{}{}",
-        args.text.join(" "),
-        if args.omit_newline { "" } else { "\n" }
-    )
-}
-</code></pre>
-<p>The code does exactly the same thing as Pass 1. What changed is the structure:</p>
-<ul>
-<li>The shape of valid input is now explicit. <code>Args</code> documents what the program
-expects just by existing</li>
-<li><code>build()</code> returns <code>Result</code>, so errors are values your program can handle
-rather than panics or silent failures</li>
-<li><code>main</code> is now only responsible for error handling and output. The three phases
-are cleanly separated</li>
-</ul>
-<p>Notice that main now receives a clean <code>Args</code> value with no <code>Option</code> or <code>Result</code>
-to unwrap. This is the pattern <code>clap</code> enforces: by the time you reach your
-logic, parsing and validation are already done.</p>
-<h2 id="pass-3-clap-derive"><a class="header" href="#pass-3-clap-derive">Pass 3: <code>clap</code> derive</a></h2>
-<p>Now replace <code>build</code> with <code>#[derive(Parser)]</code>:</p>
-<pre><code class="language-rs">use clap::Parser;
-
-/// Rust version of `echo`
-#[derive(Debug, Parser)]
-#[command(author, version, about)]
-struct Args {
-    /// Input text
-    text: Vec&lt;String&gt;,
-
-    /// Do not print newline
-    #[arg(short('n'))]
-    omit_newline: bool,
-}
-
-fn main() {
-    let args = Args::parse();
-
-    print!(
-        "{}{}",
-        args.text.join(" "),
-        if args.omit_newline { "" } else { "\n" }
-    );
-}
-</code></pre>
-<p>The struct is identical. <code>main</code> is identical. The only things that disappeared
-are <code>build()</code> and the <code>unwrap_or_else</code>, <code>clap</code> handles both. What you get in
-exchange:</p>
-<ul>
-<li>Automatic <code>--help</code> and <code>--version</code> flags</li>
-<li>Typed error messages with usage hints when the user passes bad input</li>
-<li>Type coercion (<code>"42"</code> → <code>u32</code>, paths validated as <code>PathBuf</code>, etc.)</li>
-<li>Short and long flag variants for free (<code>-n</code> / <code>--omit-newline</code>)</li>
-</ul>
-<p>The mapping from struct fields to argument types is direct:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th style="text-align: left"><strong>Field type</strong></th><th style="text-align: left"><strong>What clap expects</strong></th></tr>
-</thead>
-<tbody>
-<tr><td style="text-align: left"><code>String</code></td><td style="text-align: left">exactly one positional value</td></tr>
-<tr><td style="text-align: left"><code>Vec&lt;String&gt;</code></td><td style="text-align: left">one or more positional values, collected</td></tr>
-<tr><td style="text-align: left"><code>bool</code></td><td style="text-align: left">a flag, present = true, absent = false</td></tr>
-<tr><td style="text-align: left"><code>Option&lt;String&gt;</code></td><td style="text-align: left">one optional value, absent = None</td></tr>
-<tr><td style="text-align: left"><code>Option&lt;PathBuf&gt;</code></td><td style="text-align: left">one optional path, absent = None</td></tr>
-<tr><td style="text-align: left"><code>u8</code> with <code>ArgAction::Count</code></td><td style="text-align: left">how many times the flag was passed</td></tr>
-</tbody>
-</table>
-</div>
-<p>The <code>#[arg(...)]</code> attributes are overrides on top of those defaults. Without
-<code>#[arg(short('n'))]</code>, <code>clap</code> would infer the flag name from the field name
-(<code>--omit-newline</code>). The attribute pins it to <code>-n</code>.</p>
-<h2 id="command-line-argument-types"><a class="header" href="#command-line-argument-types">Command-Line Argument Types</a></h2>
-<p>Before going further, it’s worth naming the categories clap works with, because
-the derive attributes map directly to them.</p>
-<ul>
-<li><a href="https://docs.rs/clap/latest/clap/_concepts/index.html"><code>clap</code> CLI concepts</a></li>
-</ul>
-<p><strong>Positional arguments</strong>: identified by their position, not a name. Order
-matters.</p>
-<pre><code class="language-sh">cp source.txt dest.txt
-#   ^^^^^^^^^^ ^^^^^^^^
-#   position 1  position 2
-</code></pre>
-<p><strong>Flags</strong>: boolean switches, either present or not. Order doesn’t matter.</p>
-<pre><code class="language-sh">echo -n hello
-ls -l
-ls --long    # same as -l, long form
-</code></pre>
-<p>Short flags use a single dash and one character <code>-n</code>. Long flags use double dash
-and a word <code>--number</code>. They’re typically the same flag, just two ways to write
-it.</p>
-<p><strong>Options</strong>: like flags but take a value after them:</p>
-<pre><code class="language-sh">cargo run --example myexample
-#          ^^^^^^^^ ^^^^^^^^^
-#           option     value
-cut -d "," -f 1
-#      ^^^    ^
-#      value  value
-</code></pre>
-<p><strong>Subcommands</strong>: a word that selects a mode, then has its own args:</p>
-<pre><code class="language-sh">cargo build --release
-#     ^^^^^
-jj desc -m "message"
-#  ^^^^^^
-</code></pre>
-<p>In a clap struct the field type and attributes map directly to these categories:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th style="text-align: left"><strong>Arg type</strong></th><th style="text-align: left"><strong>Clap representation</strong></th></tr>
-</thead>
-<tbody>
-<tr><td style="text-align: left">Positional</td><td style="text-align: left">field with no <code>short</code>/<code>long</code>, e.g. <code>text: Vec&lt;String&gt;</code></td></tr>
-<tr><td style="text-align: left">Flag</td><td style="text-align: left"><code>bool</code> field with <code>short</code>/<code>long</code></td></tr>
-<tr><td style="text-align: left">Option</td><td style="text-align: left"><code>Option&lt;T&gt;</code> field with <code>short</code>/<code>long</code></td></tr>
-<tr><td style="text-align: left">Subcommand</td><td style="text-align: left"><code>#[command(subcommand)]</code> enum field</td></tr>
-</tbody>
-</table>
-</div>
-<hr>
-<h3 id="what-clap-is-actually-doing-a-naive-implementation"><a class="header" href="#what-clap-is-actually-doing-a-naive-implementation">What <code>clap</code> is actually doing: a naive implementation</a></h3>
-<ul>
-<li><a href="https://github.com/clap-rs/clap/blob/master/clap_builder/src/derive.rs#L31">clap/clap_builder/src/derive.rs</a></li>
-</ul>
-<p><code>clap</code>’s derive macro generates implementations of three traits. Here’s what
-each one does, translated into plain code without the macro:</p>
-<pre><code class="language-rs">use std::env;
-
-#[derive(Debug)]
-struct Args {
-    text: Vec&lt;String&gt;,
-    omit_newline: bool,
-}
-
-impl Args {
-    // equivalent of CommandFactory::command()
-    // collects raw argv, skipping the binary name
-    // In real clap this builds a Command schema first,
-    // then parses argv against it, producing ArgMatches.
-    // Here we skip the schema and return raw strings directly.
-    fn command() -&gt; Vec&lt;String&gt; {
-        env::args().skip(1).collect()
-    }
-
-    // FromArgMatches::from_arg_matches_mut()
-    // Takes the parsed input and maps it onto struct fields.
-    // In real clap the input is an ArgMatches (typed map of name → value).
-    // Here we're working directly with raw strings.
-    fn from_matches(raw: Vec&lt;String&gt;) -&gt; Result&lt;Self, String&gt; {
-        let mut text = Vec::new();
-        let mut omit_newline = false;
-
-        for arg in raw {
-            if arg == "-n" {
-                omit_newline = true;
-            } else if arg.starts_with('-') {
-                return Err(format!("unknown flag: {}", arg));
-            } else {
-                text.push(arg);
-            }
-        }
-
-        // validation
-        if text.is_empty() {
-            return Err("error: at least one argument required".to_string());
-        }
-
-        Ok(Args { text, omit_newline })
-    }
-
-    // Parser::parse()
-    // orchestrates the pipeline and handles errors
-    fn parse() -&gt; Self {
-        let raw = Self::command();
-        match Self::from_matches(raw) {
-            Ok(args) =&gt; args,
-            Err(e) =&gt; {
-                eprintln!("{e}");
-                std::process::exit(1);
-            }
-        }
-    }
-}
-
-fn main() {
-    let args = Args::parse();
-    print!(
-        "{}{}",
-        args.text.join(" "),
-        if args.omit_newline { "" } else { "\n" }
-    );
-}
-</code></pre>
-<p>Real <code>clap</code>’s pipeline has one more step our version compresses out:</p>
-<pre><code class="language-sh">argv
-  → CommandFactory::command()     builds a schema, parses argv into ArgMatches
-  → ArgMatches                    a generic typed map of name → value
-  → FromArgMatches::from_arg_matches_mut()   maps ArgMatches onto your struct
-  → Args
-</code></pre>
-<p>Ours goes straight from raw strings to <code>Args</code>, skipping <code>ArgMatches</code>. The reason
-<code>clap</code> separates these is flexibility, you can use <code>ArgMatches</code> directly without
-a struct if you want, or implement <code>FromArgMatches</code> on your own type. The derive
-macro just generates all three trait implementations from your struct
-definition.</p>
-<p>The traits <code>clap</code> splits this across:</p>
-<ul>
-<li><a href="https://docs.rs/clap/latest/clap/trait.CommandFactory.html">CommandFactory</a>:
-builds the Command schema</li>
-<li><a href="https://docs.rs/clap/latest/clap/trait.FromArgMatches.html">FromArgMatches</a>:
-converts <code>ArgMatches</code> into your struct</li>
-<li><a href="https://docs.rs/clap/latest/clap/trait.Parser.html">Parser</a>: orchestrates
-both and handles errors</li>
-</ul>
-<hr>
-<h3 id="structs-vs-enums-choosing-the-right-shape"><a class="header" href="#structs-vs-enums-choosing-the-right-shape">Structs vs enums: choosing the right shape</a></h3>
-<p>Use a struct when your program has one mode and all arguments apply to every run
-(<code>echo</code>, <code>cat</code>, <code>ls</code>).</p>
-<p>Use an enum when your program has multiple modes with different arguments per
-mode:</p>
-<pre><code class="language-rs">#[derive(Parser)]
-struct Cli {
-    #[command(subcommand)]
-    command: Option&lt;Commands&gt;,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Add a file
-    Add { path: PathBuf },
-    /// Remove a file
-    Remove { path: PathBuf, #[arg(short)] force: bool },
-    /// List files
-    List,
-}
-</code></pre>
-<p><code>Add</code>, <code>Remove</code>, and <code>List</code> each have different arguments. You can’t represent
-this cleanly in a flat struct because a struct implies all fields exist for
-every invocation. An enum variant is exclusive: only one runs at a time.</p>
-<p>Then in <code>main</code> you match on it:</p>
-<pre><code class="language-rs">match cli.command {
-    Commands::Add { path } =&gt; { ... }
-    Commands::Remove { path, force } =&gt; { ... }
-    Commands::List =&gt; { ... }
-}
-</code></pre>
-<p>Most real tools combine both. A top-level struct for global flags (like
-<code>--verbose</code>, <code>--config</code>) with an enum field inside it for the subcommand,
-exactly like the example above.</p>
-<hr>
-<h3 id="resources"><a class="header" href="#resources">Resources</a></h3>
-<ul>
-<li>
-<p><a href="https://docs.rs/clap/latest/clap/index.html">docs.rs clap</a></p>
-</li>
-<li>
-<p><a href="https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html">derive tutorial</a></p>
-</li>
-<li>
-<p><a href="https://docs.rs/clap/latest/clap/_tutorial/index.html">builder tutorial</a></p>
-</li>
-</ul>
-<p><strong>Looking at tools you’re familiar with can help drive concepts home</strong></p>
-<ul>
-<li>
-<p><a href="https://docs.rs/clap/latest/clap/_cookbook/git_derive/index.html">Example: git-like CLI (Derive API)</a></p>
-</li>
-<li>
-<p><a href="https://docs.rs/clap/latest/clap/_cookbook/pacman/index.html">Example: pacman-like CLI (Derive API)</a></p>
-</li>
-<li>
-<p><a href="https://betterdev.blog/command-line-arguments-anatomy-explained/">betterdev cli arguments anatomy</a></p>
-</li>
-</ul>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>The Rust Programming Language book teaches you the language. It does not teach
+you how to use it.</p>
+<p>You’ll finish it knowing what an iterator is, but not how to read a file line by
+line. You’ll understand ownership, but not why your CLI tool needs <code>BufReader</code>.
+You’ll know traits exist, but not which ones actually show up in real code and
+what they’re for.</p>
+<p>This book fills those gaps. Each chapter takes something the standard resources
+gloss over: a crate with poor documentation, a CS concept that Rust exposes
+directly, a type whose behavior only makes sense once you’ve seen it break, and
+works through it from the ground up with practical examples.</p>
+<p>Topics include argument parsing with <code>clap</code>, I/O and the filesystem, and deep
+dives into the types and crates you’ll actually reach for once the tutorial
+projects are behind you.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
+                            <a rel="next prefetch" href="third_party_crates/clap_derive.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -599,6 +205,9 @@ exactly like the example above.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
+                    <a rel="next prefetch" href="third_party_crates/clap_derive.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>
