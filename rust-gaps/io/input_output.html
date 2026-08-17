@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - rust-gaps</title>
+        <title>Input and Output (I/O) - rust-gaps</title>
 
 
         <!-- Custom HTML head -->
@@ -12,33 +12,33 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="favicon-de23e50b.svg">
-        <link rel="shortcut icon" href="favicon-8114d1fc.png">
-        <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-e96d0476.css">
-        <link rel="stylesheet" href="css/chrome-d279d366.css">
-        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
-        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
-        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
 
 
         <!-- Provide site root and default themes to javascript -->
         <script>
-            const path_to_root = "";
+            const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-137191b6.js";
+            window.path_to_searchindex_js = "../searchindex-137191b6.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6131833a.js"></script>
+        <script src="../toc-6131833a.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -105,7 +105,7 @@
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -140,7 +140,7 @@
                     <h1 class="menu-title">rust-gaps</h1>
 
                     <div class="right-buttons">
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
                         </a>
 
@@ -174,27 +174,204 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>The Rust Programming Language book teaches you the language. It does not teach
-you how to use it.</p>
-<p>You’ll finish it knowing what an iterator is, but not how to read a file line by
-line. You’ll understand ownership, but not why your CLI tool needs <code>BufReader</code>.
-You’ll know traits exist, but not which ones actually show up in real code and
-what they’re for.</p>
-<p>This book fills those gaps. Each chapter takes something the standard resources
-gloss over: a crate with poor documentation, a CS concept that Rust exposes
-directly, a type whose behavior only makes sense once you’ve seen it break, and
-works through it from the ground up with practical examples.</p>
-<p>Topics include argument parsing with <code>clap</code>, I/O and the filesystem, and deep
-dives into the types and crates you’ll actually reach for once the tutorial
-projects are behind you.</p>
+                        <h1 id="input-and-output-io"><a class="header" href="#input-and-output-io">Input and Output (I/O)</a></h1>
+<p>Before writing any Rust, it helps to understand what I/O actually is at the
+operating system level, because <code>std::io</code> is just a safe wrapper around these
+primitives.</p>
+<h2 id="what-io-is"><a class="header" href="#what-io-is">What I/O Is</a></h2>
+<p>Every program that runs on your system gets three open “channels” from the OS
+automatically:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left"><strong>Stream</strong></th><th style="text-align: left"><strong>Number</strong></th><th style="text-align: left"><strong>Purpose</strong></th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><strong>stdin</strong></td><td style="text-align: left">O</td><td style="text-align: left">Data coming <em>into</em> your program</td></tr>
+<tr><td style="text-align: left"><strong>stdout</strong></td><td style="text-align: left">1</td><td style="text-align: left">Normal output going <em>out</em></td></tr>
+<tr><td style="text-align: left"><strong>stderr</strong></td><td style="text-align: left">2</td><td style="text-align: left">Errors and diagnostics going <em>out</em></td></tr>
+</tbody>
+</table>
+</div>
+<p>These are called <strong>file descriptors</strong>, and despite the name, they don’t have to
+be files. They can be your terminal, a file on disk, a network socket, or the
+output of another program. The OS abstracts all of that away behind a uniform
+interface.</p>
+<p><strong>The Terminal is the Default</strong></p>
+<p>When you run a program in your shell without doing anything special, all three
+streams connect to your terminal:</p>
+<ul>
+<li>You type → that goes to <strong>stdin</strong></li>
+<li>The program prints → that goes to <strong>stdout</strong> → you see it</li>
+<li>The program errors → that goes to <strong>stderr</strong> → you also see it (but
+separately)</li>
+</ul>
+<p>This is why you can see both normal output and error messages in the same
+terminal window. They’re two distinct streams that just happen to both display
+there by default.</p>
+<h2 id="redirection-and-pipes"><a class="header" href="#redirection-and-pipes">Redirection and Pipes</a></h2>
+<p>The shell lets you rewire these streams. This is where I/O becomes composable:</p>
+<pre><code class="language-sh"># Send stdout to a file instead of the terminal
+echo "hello" &gt; output.txt
+
+# Feed a file into stdin instead of the keyboard
+sort &lt; names.txt
+
+# Pipe stdout of one program into stdin of another
+cat names.txt | sort | uniq
+</code></pre>
+<p>That last example chains three programs together. Each one reads from stdin and
+writes to stdout.None of them know or care what’s on the other end. This is the
+Unix philosophy: small programs that do one thing, composable via streams.</p>
+<h3 id="stderr-stays-separate"><a class="header" href="#stderr-stays-separate">stderr Stays Separate</a></h3>
+<p>Notice that <code>&gt;</code> only redirects stdout. stderr keeps going to your terminal:</p>
+<pre><code class="language-sh"># This saves stdout to a file, but errors still print to your screen
+cargo build &gt; build_output.txt
+
+# To redirect stderr too:
+cargo build &gt; build_output.txt 2&gt; errors.txt
+
+# Or merge both into one file:
+cargo build &gt; all_output.txt 2&gt;&amp;1
+</code></pre>
+<p>This separation matters: tools that process your output (like <code>grep</code> or <code>awk</code>)
+read from stdout. You don’t want error messages polluting that stream.</p>
+<h2 id="io-in-rust"><a class="header" href="#io-in-rust">I/O in Rust</a></h2>
+<p>Rust’s <code>std::io</code> module gives you handles to those three OS streams you just
+read about. The mapping is direct:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left"><strong>OS Stream</strong></th><th style="text-align: left"><strong>Rust</strong></th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">stdin (0)</td><td style="text-align: left"><code>std::io::stdin()</code></td></tr>
+<tr><td style="text-align: left">stdout (1)</td><td style="text-align: left"><code>std::io::stdout()</code></td></tr>
+<tr><td style="text-align: left">stderr (2)</td><td style="text-align: left"><code>std::io::stderr()</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>stdin Is Not Your Command-Line Arguments</strong></p>
+<p>This trips up a lot of newcomers. When you run:</p>
+<pre><code class="language-sh">cargo run myfile.txt
+</code></pre>
+<p><code>myfile.txt</code> does not arrive via stdin. It’s a command-line argument. A string
+passed to your program by the shell before it even starts. You access those
+through <code>std::env::args()</code>, which we’ll cover in the next section.</p>
+<p>stdin is a stream: data that flows into your program while it’s running. That
+happens through pipes and redirection:</p>
+<pre><code class="language-sh"># This sends data through stdin
+echo "hello" | cargo run
+
+# So does this
+cargo run &lt; myfile.txt
+
+# This does NOT: "myfile.txt" is an argument, not stdin
+cargo run myfile.txt
+</code></pre>
+<p>A program like <code>cat</code> handles both: if you give it a filename as an argument it
+opens that file itself, but if you pipe data in it reads from stdin. That dual
+behavior is a common Unix convention, and you’ll implement exactly that pattern
+later when we get to argument parsing.</p>
+<h3 id="reading-from-stdin"><a class="header" href="#reading-from-stdin">Reading from stdin</a></h3>
+<p>The simplest case: read a line the user types.</p>
+<pre><code class="language-rs">use std::io;
+use std::io::BufRead;
+
+fn main() {
+    let stdin = io::stdin();
+    let mut line = String::new();
+
+    stdin.lock().read_line(&amp;mut line).expect("failed to read line");
+
+    println!("You typed: {line}");
+}
+</code></pre>
+<p>A few things worth noticing:</p>
+<ul>
+<li><code>stdin()</code> returns a handle to the stdin stream</li>
+<li><code>.lock()</code> gives you exclusive access to it, stdin is shared across threads, so
+you lock it before reading</li>
+<li><code>read_line</code> appends into a <code>String</code> and includes the trailing <code>\n</code>. You’ll
+often want <code>.trim()</code> when you use the value</li>
+<li>The <code>BufRead</code> trait is what provides <code>read_line</code>. It has to be in scope for
+the method to be available</li>
+</ul>
+<p><strong>Why BufRead?</strong></p>
+<p>Reading from a stream one byte at a time is expensive. Each read is a syscall
+into the OS kernel.Buffering solves this by reading a chunk at a time into
+memory, then serving your code from that buffer.</p>
+<p><code>stdin()</code> is already buffered by default. When you call <code>.lock()</code> you get a
+<code>StdinLock</code>, which implements <code>BufRead</code>. For files and other readers you’ll
+often wrap them yourself:</p>
+<pre class="playground"><code class="language-rust">use std::io::{self, BufRead, BufReader};
+use std::fs::File;
+
+fn main() {
+    let file = File::open("names.txt").expect("could not open file");
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let line = line.expect("failed to read line");
+        println!("{line}");
+    }
+}</code></pre>
+<p>The same <code>BufRead</code> trait works whether you’re reading from stdin, a file, or
+anything else that implements Read. That’s the point, your code doesn’t need to
+care what’s on the other end.</p>
+<h2 id="writing-to-stdout-and-stderr"><a class="header" href="#writing-to-stdout-and-stderr">Writing to stdout and stderr</a></h2>
+<p><code>println!</code> and <code>eprintln!</code> cover most cases, but you can also write to the
+handles directly:</p>
+<pre class="playground"><code class="language-rust">use std::io::{self, Write};
+
+fn main() {
+    let mut stdout = io::stdout();
+    let mut stderr = io::stderr();
+
+    writeln!(stdout, "this goes to stdout").unwrap();
+    writeln!(stderr, "this goes to stderr").unwrap();
+}</code></pre>
+<p>One gotcha with stdout: it’s line-buffered by default when connected to a
+terminal. Output is flushed when a newline is written. If you need output to
+appear immediately without a newline. Like a prompt, you have to flush manually:</p>
+<pre class="playground"><code class="language-rust">use std::io::{self, Write};
+
+fn main() {
+    print!("Enter your name: ");
+    io::stdout().flush().unwrap();
+
+    let mut name = String::new();
+    io::stdin().lock().read_line(&amp;mut name).unwrap();
+    println!("Hello, {}!", name.trim());
+}</code></pre>
+<p>Without the <code>flush()</code> call the prompt might not appear before the program blocks
+waiting for input.</p>
+<h2 id="reading-all-of-stdin"><a class="header" href="#reading-all-of-stdin">Reading All of stdin</a></h2>
+<p>When your program is used in a pipe, you often want to process everything coming
+in rather than one line at a time:</p>
+<pre class="playground"><code class="language-rust">use std::io::{self, Read};
+
+fn main() {
+    let mut input = String::new();
+    io::stdin().lock().read_to_string(&amp;mut input).unwrap();
+
+    println!("Got {} bytes", input.len());
+}</code></pre>
+<p>You can test this directly from the shell:</p>
+<pre><code class="language-sh">echo "hello world" | cargo run
+</code></pre>
+<p>This is the pattern most Unix-style Rust tools are built on. Read from stdin,
+write to stdout, report errors to stderr.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
 
-                            <a rel="next prefetch" href="io/input_output.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../third_party_crates/clap_derive.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -204,8 +381,11 @@ projects are behind you.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
 
-                    <a rel="next prefetch" href="io/input_output.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../third_party_crates/clap_derive.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
@@ -225,13 +405,13 @@ projects are behind you.</p>
         </script>
 
 
-        <script src="elasticlunr-ef4e11c1.min.js"></script>
-        <script src="mark-09e88c2c.min.js"></script>
-        <script src="searcher-09f2665d.js"></script>
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
-        <script src="clipboard-1626706a.min.js"></script>
-        <script src="highlight-abc7f01d.js"></script>
-        <script src="book-609e4cb8.js"></script>
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 
