@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b213026e.js";
+            window.path_to_searchindex_js = "searchindex-f97ab267.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6131833a.js"></script>
+        <script src="toc-76377b4f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -204,7 +204,7 @@ automatically:</p>
 <tr><th style="text-align: left"><strong>Stream</strong></th><th style="text-align: left"><strong>Number</strong></th><th style="text-align: left"><strong>Purpose</strong></th></tr>
 </thead>
 <tbody>
-<tr><td style="text-align: left"><strong>stdin</strong></td><td style="text-align: left">O</td><td style="text-align: left">Data coming <em>into</em> your program</td></tr>
+<tr><td style="text-align: left"><strong>stdin</strong></td><td style="text-align: left">0</td><td style="text-align: left">Data coming <em>into</em> your program</td></tr>
 <tr><td style="text-align: left"><strong>stdout</strong></td><td style="text-align: left">1</td><td style="text-align: left">Normal output going <em>out</em></td></tr>
 <tr><td style="text-align: left"><strong>stderr</strong></td><td style="text-align: left">2</td><td style="text-align: left">Errors and diagnostics going <em>out</em></td></tr>
 </tbody>
@@ -214,7 +214,7 @@ automatically:</p>
 be files. They can be your terminal, a file on disk, a network socket, or the
 output of another program. The OS abstracts all of that away behind a uniform
 interface.</p>
-<p><strong>The Terminal is the Default</strong></p>
+<h3 id="the-terminal-is-the-default"><a class="header" href="#the-terminal-is-the-default">The Terminal is the Default</a></h3>
 <p>When you run a program in your shell without doing anything special, all three
 streams connect to your terminal:</p>
 <ul>
@@ -238,7 +238,7 @@ sort &lt; names.txt
 cat names.txt | sort | uniq
 </code></pre>
 <p>That last example chains three programs together. Each one reads from stdin and
-writes to stdout.None of them know or care what’s on the other end. This is the
+writes to stdout. None of them know or care what’s on the other end. This is the
 Unix philosophy: small programs that do one thing, composable via streams.</p>
 <h3 id="stderr-stays-separate"><a class="header" href="#stderr-stays-separate">stderr Stays Separate</a></h3>
 <p>Notice that <code>&gt;</code> only redirects stdout. stderr keeps going to your terminal:</p>
@@ -274,7 +274,7 @@ read about. The mapping is direct:</p>
 </code></pre>
 <p><code>myfile.txt</code> does not arrive via stdin. It’s a command-line argument. A string
 passed to your program by the shell before it even starts. You access those
-through <code>std::env::args()</code>, which we’ll cover in the next section.</p>
+through <code>std::env::args()</code>, which we’ll cover in the next chapter.</p>
 <p>stdin is a stream: data that flows into your program while it’s running. That
 happens through pipes and redirection:</p>
 <pre><code class="language-sh"># This sends data through stdin
@@ -316,7 +316,7 @@ the method to be available</li>
 </ul>
 <p><strong>Why BufRead?</strong></p>
 <p>Reading from a stream one byte at a time is expensive. Each read is a syscall
-into the OS kernel.Buffering solves this by reading a chunk at a time into
+into the OS kernel. Buffering solves this by reading a chunk at a time into
 memory, then serving your code from that buffer.</p>
 <p><code>stdin()</code> is already buffered by default. When you call <code>.lock()</code> you get a
 <code>StdinLock</code>, which implements <code>BufRead</code>. For files and other readers you’ll
@@ -379,6 +379,99 @@ fn main() {
 </code></pre>
 <p>This is the pattern most Unix-style Rust tools are built on. Read from stdin,
 write to stdout, report errors to stderr.</p>
+<h3 id="further-reading"><a class="header" href="#further-reading">Further Reading</a></h3>
+<ul>
+<li><a href="https://doc.rust-lang.org/std/io/"><code>std::io</code> stdlib docs</a></li>
+<li><a href="https://man7.org/linux/man-pages/man3/stdin.3.html"><code>man 3 stdin</code> manual page</a></li>
+<li><a href="https://man7.org/tlpi/">The Linux Programming Interface, Kerrisk</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="command-line-arguments-stdioargs"><a href="#command-line-arguments-stdioargs" class="header">Command-Line Arguments std::io::args()</a></h1>
+<h2 id="command-line-arguments-stdenvargs"><a class="header" href="#command-line-arguments-stdenvargs">Command-Line Arguments: <code>std::env::args()</code></a></h2>
+<p>As we covered, stdin is the stream, data flowing into your program through
+pipes. Command-line arguments are different: they’re strings the shell hands to
+your program at startup, before it runs a single line of code.</p>
+<p>When you type:</p>
+<pre><code class="language-sh">cargo run -- hello world
+</code></pre>
+<p>The OS passes [“hello”, “world”] to your program as a list of strings. Rust
+exposes these through <code>std::env::args()</code>.</p>
+<h3 id="the-basics"><a class="header" href="#the-basics">The Basics</a></h3>
+<pre><code class="language-rs">use std::env;
+
+fn main() {
+    let args: Vec&lt;String&gt; = env::args().collect();
+    println!("{args:?}");
+}
+</code></pre>
+<p>Run it:</p>
+<pre><code class="language-rs">cargo run -- hello world
+</code></pre>
+<p>Output:</p>
+<pre><code class="language-sh">["target/debug/myprogram", "hello", "world"]
+</code></pre>
+<p>☝️</p>
+<blockquote>
+<p>This is the argument vector: <code>argv</code> in C terminology. The name comes from C’s
+<code>main(int argc, char *argv[])</code>, where <code>argc</code> is the count and <code>argv</code> is the
+array of argument strings. Rust inherits this convention: the binary path is
+always first, your arguments follow. You’ll see <code>argv</code> referenced in shell
+docs and system programming literature, so it’s worth knowing the term.</p>
+</blockquote>
+<p>The first element as stated above, is always the binary itself. Your actual
+arguments start at index <code>1</code>. This is a Unix convention inherited from C.</p>
+<h3 id="args-returns-an-iterator"><a class="header" href="#args-returns-an-iterator"><code>args()</code> Returns an Iterator</a></h3>
+<p><code>env::args()</code> doesn’t return a <code>Vec</code>, it returns an iterator. Calling
+<code>collect()</code> is what pulls it into a <code>Vec</code>. You can also work with it directly:</p>
+<pre><code class="language-rs">use std::env;
+
+fn main() {
+    for arg in env::args().skip(1) {
+        println!("{arg}");
+    }
+}
+</code></pre>
+<p><code>.skip(1)</code> drops the binary name so you’re only iterating your actual arguments.
+This is a common pattern.</p>
+<h3 id="accessing-specific-arguments"><a class="header" href="#accessing-specific-arguments">Accessing Specific Arguments</a></h3>
+<pre><code class="language-rs">use std::env;
+
+fn main() {
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    if args.len() &lt; 2 {
+        eprintln!("usage: {} &lt;name&gt;", args[0]);
+        std::process::exit(1);
+    }
+
+    let name = &amp;args[1];
+    println!("Hello, {name}!");
+}
+</code></pre>
+<p>A few things to notice:</p>
+<ul>
+<li>Error messages go to stderr via <code>eprintln!</code>; tools that consume your stdout
+won’t get garbage mixed in</li>
+<li><code>args[0]</code> in the usage message is a nice touch, it automatically uses whatever
+the binary is named</li>
+<li><code>std::process::exit(1)</code> signals failure to the shell; 0 means success,
+anything else means failure</li>
+<li><code>env::args()</code> panics if any argument contains invalid UTF-8. In those cases,
+use <code>env::args_os()</code> instead, which returns <code>OsString</code> rather than <code>String</code>.</li>
+</ul>
+<h4 id="where-this-leads"><a class="header" href="#where-this-leads">Where This Leads</a></h4>
+<p>Accessing <code>args()</code> directly works fine for simple tools, but once you have more
+than two or three arguments you’ll want structure: named flags, optional values,
+help text. That’s where argument parsing crates come in, <code>clap</code> being the most
+common. We’ll cover that in a later chapter.</p>
+<p>For now the mental model is: stdin is the stream, args are the words after the
+command, and <code>env::args()</code> is how Rust hands you those words.</p>
+<h3 id="further-reading-1"><a class="header" href="#further-reading-1">Further Reading</a></h3>
+<ul>
+<li><a href="https://doc.rust-lang.org/std/env/fn.args.html"><code>std::env::args</code> stdlib docs</a></li>
+<li><a href="https://man7.org/linux/man-pages/man2/execve.2.html"><code>man 2 execve</code> how the OS sets up argv</a></li>
+<li><a href="https://man7.org/tlpi/">The Linux Programming Interface, Kerrisk</a></li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="clap-derive"><a class="header" href="#clap-derive">Clap Derive</a></h1>
 <h2 id="understanding-clap-by-building-it-yourself"><a class="header" href="#understanding-clap-by-building-it-yourself">Understanding <code>clap</code> by Building It Yourself</a></h2>
