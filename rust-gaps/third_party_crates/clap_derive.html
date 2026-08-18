@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c7aa5b33.js";
+            window.path_to_searchindex_js = "../searchindex-b213026e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-6131833a.js"></script>
@@ -266,6 +266,15 @@ structure: parse, validate, run is implicit. The next pass makes it explicit.</p
 <pre><code class="language-rs">use std::{env, error::Error};
 type Result&lt;T&gt; = std::result::Result&lt;T, Box&lt;dyn Error&gt;&gt;;
 
+const USAGE: &amp;str = "\
+      Usage: echors [OPTIONS] &lt;TEXT&gt;...
+      Arguments:\n &lt;TEXT&gt;... Input text
+      Options:\n
+      -V, --version       Print version
+      -h, --help          Print help
+      -n                  Do not print newline
+";
+
 #[derive(Debug)]
 struct Args {
     /// The text values to be printed to standard output
@@ -289,16 +298,21 @@ impl Args {
         for arg in env::args().skip(1) {
             if arg == "-n" {
                 args.omit_newline = true;
+            } else if arg == "-h" || arg == "--help" {
+                println!("{USAGE}");
+                process::exit(0)
+            } else if arg == "-V" || arg == "-version" {
+                println!("echors {}", env!("CARGO_PKG_VERSION"));
+                process::exit(0)
             } else {
                 args.text.push(arg);
             }
         }
-
         // Validate that required arguments are present
         if args.text.is_empty() {
-            return Err("error: at least one argument required".into());
+            eprintln!("{USAGE}");
+            return Err("at least one argument required".into());
         }
-
         Ok(args)
     }
 }
@@ -315,15 +329,24 @@ fn main() -&gt; Result&lt;()&gt; {
     Ok(())
 }
 </code></pre>
-<p>The code does exactly the same thing as Pass 1. What changed is the structure:</p>
+<p>The code does basically the same thing as Pass 1. What changed is the structure:</p>
 <ul>
-<li>The shape of valid input is now explicit. <code>Args</code> documents what the program
-expects just by existing</li>
-<li><code>build()</code> returns <code>Result</code>, so errors are values your program can handle
-rather than panics or silent failures</li>
-<li><code>main</code> is now only responsible for error handling and output. The three phases
-are cleanly separated</li>
+<li><code>Args</code> is now a type. The shape of valid input is declared once and reused
+everywhere. In Pass 1, <code>omit_newline</code> and <code>text</code> were local variables that
+only existed inside <code>main</code>. Here they’re fields on a struct, which means the
+compiler can check that you’re using them correctly, and any function that
+receives an <code>Args</code> knows exactly what it’s working with.</li>
+<li><code>build()</code> owns the parse-and-validate phase. It returns <code>Result&lt;Args&gt;</code>, so
+errors are values your program can handle rather than panics or
+<code>process::exit</code> calls scattered through <code>main</code>. By the time <code>build()</code> returns
+<code>Ok</code>, the args are guaranteed valid, the same guarantee clap provides.</li>
+<li><code>main</code> is reduced to three lines. Call <code>build()</code>, propagate any error with
+<code>?</code>, run the logic. The three phases: (parse, validate, and run) are now
+enforced by the structure of the code rather than just implied by comments.</li>
 </ul>
+<p>This is exactly the shape clap’s derive API generates for you. In Pass 3,
+<code>build()</code> disappears and <code>#[derive(Parser)]</code> takes its place. But <code>Args</code>,
+<code>main</code>, and the <code>Result</code>-based error flow stay identical.</p>
 <h2 id="pass-3-clap-derive"><a class="header" href="#pass-3-clap-derive">Pass 3: <code>clap</code> derive</a></h2>
 <p>Now replace <code>build</code> with <code>#[derive(Parser)]</code>:</p>
 <pre><code class="language-rs">use clap::Parser;
@@ -350,14 +373,13 @@ fn main() {
     );
 }
 </code></pre>
-<blockquote class="blockquote-tag blockquote-tag-note">
-<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
-<p>Notice that <code>main</code> now receives a clean <code>Args</code> value with no <code>Option</code> or
-<code>Result</code> to unwrap. This is the pattern <code>clap</code> enforces: by the time you reach
-your logic, parsing and validation are already done.</p>
+<blockquote>
+<p>[!NOTE] Notice that <code>main</code> now receives a clean <code>Args</code> value with no <code>Option</code>
+or <code>Result</code> to unwrap. This is the pattern <code>clap</code> enforces: by the time you
+reach your logic, parsing and validation are already done.</p>
 </blockquote>
 <p>The struct is identical. <code>main</code> is very similar, besides the above note. The
-only things that disappeared are <code>build()</code> and the <code>unwrap_or_else</code>, <code>clap</code>
+only things that disappeared are <code>build()</code> and the error propagation, <code>clap</code>
 handles both. What you get in exchange:</p>
 <ul>
 <li>Automatic <code>--help</code> and <code>--version</code> flags</li>
@@ -506,9 +528,8 @@ fn main() {
     );
 }
 </code></pre>
-<blockquote class="blockquote-tag blockquote-tag-note">
-<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
-<p>argv is short for argument vector</p>
+<blockquote>
+<p>[!NOTE] argv is short for argument vector</p>
 </blockquote>
 <p>Real <code>clap</code>’s pipeline has one more step our version compresses out:</p>
 <pre><code class="language-sh">argv
