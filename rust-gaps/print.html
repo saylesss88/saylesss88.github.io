@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-137191b6.js";
+            window.path_to_searchindex_js = "searchindex-c7aa5b33.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6131833a.js"></script>
@@ -469,7 +469,8 @@ validation, and the output logic are all tangled together. That three-phase
 structure: parse, validate, run is implicit. The next pass makes it explicit.</p>
 <h2 id="pass-2-typed-struct-with-build"><a class="header" href="#pass-2-typed-struct-with-build">Pass 2: Typed struct with <code>build()</code></a></h2>
 <p>The same logic, reorganized around a struct:</p>
-<pre><code class="language-rs">use std::{env, process};
+<pre><code class="language-rs">use std::{env, error::Error};
+type Result&lt;T&gt; = std::result::Result&lt;T, Box&lt;dyn Error&gt;&gt;;
 
 #[derive(Debug)]
 struct Args {
@@ -484,7 +485,7 @@ impl Args {
     ///
     /// # Errors
     /// Returns a string slice error message if no text arguments are provided
-    fn build() -&gt; Result&lt;Args, &amp;'static str&gt; {
+    fn build() -&gt; Result&lt;Args&gt; {
         let mut args = Args {
             text: Vec::new(),
             omit_newline: false,
@@ -501,25 +502,23 @@ impl Args {
 
         // Validate that required arguments are present
         if args.text.is_empty() {
-            return Err("error: at least one argument required");
+            return Err("error: at least one argument required".into());
         }
 
         Ok(args)
     }
 }
 
-fn main() {
+fn main() -&gt; Result&lt;()&gt; {
     // Parse arguments and handle validation errors
-    let args = Args::build().unwrap_or_else(|err| {
-        eprintln!("{err}");
-        process::exit(1);
-    });
+    let args = Args::build()?;
     // Print the joined text, appending a newline unless `-n` was specified
     print!(
         "{}{}",
         args.text.join(" "),
         if args.omit_newline { "" } else { "\n" }
-    )
+    );
+    Ok(())
 }
 </code></pre>
 <p>The code does exactly the same thing as Pass 1. What changed is the structure:</p>
@@ -557,10 +556,11 @@ fn main() {
     );
 }
 </code></pre>
-<blockquote>
-<p>[!NOTE] Notice that <code>main</code> now receives a clean <code>Args</code> value with no <code>Option</code>
-or <code>Result</code> to unwrap. This is the pattern <code>clap</code> enforces: by the time you
-reach your logic, parsing and validation are already done.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Notice that <code>main</code> now receives a clean <code>Args</code> value with no <code>Option</code> or
+<code>Result</code> to unwrap. This is the pattern <code>clap</code> enforces: by the time you reach
+your logic, parsing and validation are already done.</p>
 </blockquote>
 <p>The struct is identical. <code>main</code> is very similar, besides the above note. The
 only things that disappeared are <code>build()</code> and the <code>unwrap_or_else</code>, <code>clap</code>
@@ -795,6 +795,9 @@ exactly like the example above.</p>
 </li>
 <li>
 <p><a href="https://betterdev.blog/command-line-arguments-anatomy-explained/">betterdev cli arguments anatomy</a></p>
+</li>
+<li>
+<p><a href="https://rust-cli.github.io/book/index.html">Command line apps in Rust</a></p>
 </li>
 </ul>
 
