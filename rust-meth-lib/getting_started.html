@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2d62b5c0.js";
+            window.path_to_searchindex_js = "searchindex-265e5ce0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d5174adc.js"></script>
+        <script src="toc-07be3eda.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -178,12 +178,14 @@
 <p>Runnable examples covering the main ways to embed <code>rust-meth-lib</code> in your own
 tooling. Each file is self-contained and documents its own <code>[dependencies]</code>
 snippet.</p>
-<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
-<p><code>rust-analyzer</code> must be on your <code>PATH</code> or installed as a rustup component:</p>
-<pre><code class="language-sh">rustup component add rust-analyzer
-</code></pre>
-<p>Clone the repo:</p>
+<h2 id="running-the-examples"><a class="header" href="#running-the-examples">Running the Examples</a></h2>
+<p>To run the examples locally, clone the repo:</p>
 <pre><code class="language-sh">git clone https://github.com/saylesss88/rust-meth.git
+cd rust-meth/lib
+cargo run --example basic_query
+</code></pre>
+<p>The examples require <code>rust-analyzer</code> on your <code>PATH</code>:</p>
+<pre><code class="language-sh">rustup component add rust-analyzer
 </code></pre>
 <h3 id="basic_queryrs"><a class="header" href="#basic_queryrs"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/basic_query.rs"><code>basic_query.rs</code></a></a></h3>
 <p>This example first locates the <code>rust-analyzer</code> binary, then it queries the
@@ -238,6 +240,46 @@ method names.</p>
   try_into
   undo_leak
 </code></pre>
+<h3 id="limit-number-of-methods-returned-from-standard-api"><a class="header" href="#limit-number-of-methods-returned-from-standard-api">Limit Number of Methods Returned from Standard API</a></h3>
+<pre><code class="language-rs">use rust_meth_lib::analyzer::{Method, find_rust_analyzer, query_methods};
+
+fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
+    // Step 1: locate the rust-analyzer binary.
+    //
+    // find_rust_analyzer checks `PATH` first, then falls back to the rustup
+    // component directory (~/.rustup/toolchains/&lt;active&gt;/bin/rust-analyzer).
+    // Returns `RustMethError::RustAnalyzerNotFound` if neither exists.
+    let ra_path = find_rust_analyzer()?;
+
+    // Step 2: query methods.
+    //
+    // query_methods spins up an ephemeral LSP session, synthesises a
+    // temporary Cargo project with `let _x: RefCell&lt;u8&gt; = todo!();`, triggers
+    // a completion request at the dot position, and tears everything down.
+    //
+    // The third argument is `deps: Option&lt;&amp;str&gt;`: `None` means stdlib only.
+    let methods = query_methods("RefCell&lt;u8&gt;", &amp;ra_path, None)?;
+
+    let top5: Vec&lt;Method&gt; = methods.into_iter().take(5).collect();
+
+    // println!("Methods on RefCell&lt;u8&gt; ({} total):", methods.len());
+    println!("First 5 methods on RefCell&lt;u8&gt;:");
+    // for method in &amp;methods {
+    for method in &amp;top5 {
+        println!("  {}", method.name);
+    }
+
+    Ok(())
+}
+</code></pre>
+<p><strong>Output</strong></p>
+<pre><code>First 5 methods on RefCell&lt;u8&gt;:
+  as_ptr
+  borrow
+  borrow_mut
+  clamp
+  clone
+</code></pre>
 <h3 id="using-the-builder-api"><a class="header" href="#using-the-builder-api">Using the Builder API</a></h3>
 <p>The same query using [<code>MethodQuery</code>], equivalent to the above but chainable:</p>
 <pre><code class="language-rs">use rust_meth_lib::analyzer::find_rust_analyzer;
@@ -268,6 +310,36 @@ resolving source locations without separate function calls:</p>
   try_borrow
   try_borrow_mut
   try_borrow_unguarded
+</code></pre>
+<h3 id="limit-the-number-of-methods-returned"><a class="header" href="#limit-the-number-of-methods-returned">Limit the Number of Methods Returned</a></h3>
+<p>You can use the <code>.limit()</code> method to return <code>N</code> methods. For example, a <code>Vec&lt;u8&gt;</code>,
+returns over 200 methods. To only return the first 10 sorted alphabetically:</p>
+<pre><code class="language-rs">use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = MethodQuery::new("Vec&lt;u8&gt;").limit(10).run(&amp;ra_path)?;
+
+    println!("First 10 methods on Vec&lt;u8&gt;:");
+    for method in &amp;methods {
+        println!("  {}", method.name);
+    }
+    Ok(())
+}
+</code></pre>
+<p><strong>Output</strong></p>
+<pre><code>First 10 methods on Vec&lt;u8&gt;:
+  align_to
+  align_to_mut
+  allocator
+  append
+  array_windows
+  as_array
+  as_ascii
+  as_ascii_unchecked
+  as_chunks
+  as_chunks_mut
 </code></pre>
 
                     </main>

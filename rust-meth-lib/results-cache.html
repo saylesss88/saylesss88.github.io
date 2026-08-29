@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Filtering - rust-meth-lib</title>
+        <title>Results Cache - rust-meth-lib</title>
 
 
         <!-- Custom HTML head -->
@@ -174,164 +174,94 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="filtering"><a class="header" href="#filtering">Filtering</a></h1>
-<p>Filters and ranks methods against a query string without re-querying
-<code>rust-analyzer</code>. Useful if you already have a <code>Vec&lt;Method&gt;</code> and want to narrow
-results. Exact matches score highest, then prefix, then substring. Non-matching
-methods are excluded entirely.</p>
-<h3 id="filter_methodsrs"><a class="header" href="#filter_methodsrs"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/filter_methods.rs">filter_methods.rs</a></a></h3>
+                        <h1 id="results-cache"><a class="header" href="#results-cache">Results Cache</a></h1>
+<p>The results_cache example demonstrates the caching mechanism introduced in
+version 0.4.0.</p>
+<p>When querying methods for a type, the library normally spins up a
+<code>rust-analyzer</code> LSP session, which can take a few seconds. The results cache
+stores these outputs as JSON in <code>$XDG_CACHE_HOME/rust-meth/results/</code>. Subsequent
+calls, even across separate process runs, retrieve the data instantly with zero
+LSP overhead.</p>
+<h3 id="results_cachers"><a class="header" href="#results_cachers"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/results_cache.rs">results_cache.rs</a></a></h3>
 <pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
-use rust_meth_lib::query::filter_methods;
+use rust_meth_lib::results_cache::results_cache_entries;
+use std::time::Instant;
 
 fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
     let ra_path = find_rust_analyzer()?;
-    let methods = query_methods("HashMap&lt;String, u32&gt;", &amp;ra_path, None)?;
-    let filtered = filter_methods(&amp;methods, "get");
-    println!("HashMap&lt;String, u32&gt; methods matching \"get\":\n");
-    for m in filtered {
-        println!("{}", m.name);
+
+    // Uncomment to clear the cache on every run
+    // rust_meth_lib::results_cache::clear_results_cache().ok();
+
+    // -- First call -- cold results cache --
+    println!("First call (cold cache)...");
+    let t1 = Instant::now();
+    let methods = query_methods("Vec&lt;u8&gt;", &amp;ra_path, None)?;
+    let elapsed1 = t1.elapsed();
+
+    println!("  {} methods found in {:.2?}\n", methods.len(), elapsed1);
+
+    // Inspect what was saved
+    let entries = results_cache_entries();
+    println!("Results cache now has {} entry:", entries.len());
+    for e in &amp;entries {
+        println!(
+            "  {} : {} methods (ra: {})",
+            e.type_name, e.method_count, e.ra_version
+        );
     }
+    println!();
+
+    // -- Second call -- results cache hit --
+    println!("Second call (warm cache)...");
+    let t2 = Instant::now();
+    let methods2 = query_methods("Vec&lt;u8&gt;", &amp;ra_path, None)?;
+    let elapsed2 = t2.elapsed();
+
+    println!("  {} methods found in {:.2?}\n", methods2.len(), elapsed2);
+
+    // Summary
+    let speedup = elapsed1.as_secs_f64() / elapsed2.as_secs_f64();
+    println!("Speedup: {speedup:.0}x faster on cache hit");
+    println!("\nRun this example again to see the persistent cache kick in");
+    println!(
+        "on the very first call (~0ms instead of ~{}s).",
+        elapsed1.as_secs()
+    );
+
     Ok(())
 }
 </code></pre>
 <h3 id="output"><a class="header" href="#output">Output</a></h3>
-<pre><code>HashMap&lt;String, u32&gt; methods matching "get":
+<pre><code>First call (cold cache)...
+  229 methods found in 3.66s
 
-get
-get_disjoint_mut
-get_disjoint_unchecked_mut
-get_key_value
-get_mut
+Results cache now has 1 entry:
+  Vec&lt;u8&gt; : 229 methods (ra: rust-analyzer 1.100.0-nightly (34baba5 2026-08-16))
+
+Second call (warm cache)...
+  229 methods found in 17.29ms
+
+Speedup: 212x faster on cache hit
+
+Run this example again to see the persistent cache kick in
+on the very first call (~0ms instead of ~3s).
 </code></pre>
-<h3 id="fuzzy_filterrs"><a class="header" href="#fuzzy_filterrs"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/fuzzy_filter.rs">fuzzy_filter.rs</a></a></h3>
-<p><code>query_methods</code> returns a plain <code>Vec&lt;Method&gt;</code>: already sorted and deduplicated,
-ready to filter however you like. This example shows a few patterns: substring
-match, signature grep, and a simple ranked scorer. If you’re building a TUI or
-editor plugin on top of the library, this is the pattern to follow.</p>
-<pre><code class="language-rs">use rust_meth_lib::analyzer::{Method, find_rust_analyzer, query_methods};
-
-fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
-    let ra_path = find_rust_analyzer()?;
-    let methods = query_methods("HashMap&lt;String, u32&gt;", &amp;ra_path, None)?;
-
-    let query = "get";
-
-    println!("All methods containing \"{query}\":");
-    println!("{}", "-".repeat(40));
-
-    // -- 1. Simple substring filter --
-    let matched: Vec&lt;&amp;Method&gt; = methods.iter().filter(|m| m.name.contains(query)).collect();
-
-    for m in &amp;matched {
-        println!("  {}", m.name);
-    }
-
-    println!();
-
-    // -- 2. Signature grep --
-    //
-    // Filter on the `detail` field to find methods with a specific return type.
-    // Useful when you want to narrow results by type, not just name.
-
-    let returns_option: Vec&lt;&amp;Method&gt; = methods
-        .iter()
-        .filter(|m| {
-            m.detail
-                .as_deref()
-                .is_some_and(|sig| sig.contains("-&gt; Option"))
-        })
-        .collect();
-
-    println!("Methods returning Option&lt;_&gt;:");
-    println!("{}", "-".repeat(40));
-    for m in &amp;returns_option {
-        println!(
-            "  {}  →  {}",
-            m.name,
-            m.detail.as_deref().unwrap_or("(no signature)")
-        );
-    }
-
-    println!();
-
-    // -- 3. Simple ranked scorer --
-    //
-    // Score each method by how closely it matches the query: prefix match
-    // scores higher than substring match, exact match highest. This gives
-    // you a starting point for building fuzzy ranking without pulling in
-    // a whole fuzzy-matching crate.
-
-    println!("Ranked results for \"{query}\":");
-    println!("{}", "-".repeat(40));
-
-    let mut scored: Vec&lt;(u8, &amp;Method)&gt; = methods
-        .iter()
-        .filter_map(|m| {
-            let score = if m.name == query {
-                3 // exact
-            } else if m.name.starts_with(query) {
-                2 // prefix
-            } else if m.name.contains(query) {
-                1 // substring
-            } else {
-                return None;
-            };
-            Some((score, m))
-        })
-        .collect();
-
-    // Sort descending by score; stable within each tier (already alpha-sorted
-    // from query_methods).
-    scored.sort_by_key(|item| std::cmp::Reverse(item.0));
-
-    for (score, m) in scored {
-        let label = match score {
-            3 =&gt; "exact ",
-            2 =&gt; "prefix",
-            _ =&gt; "substr",
-        };
-        println!("  [{label}]  {}", m.name);
-    }
-
-    Ok(())
-}
-</code></pre>
-<h3 id="output-1"><a class="header" href="#output-1">Output</a></h3>
-<pre><code>All methods containing "get":
-----------------------------------------
-  get
-  get_disjoint_mut
-  get_disjoint_unchecked_mut
-  get_key_value
-  get_mut
-
-Methods returning Option&lt;_&gt;:
-----------------------------------------
-  get  →  fn(&amp;self, &amp;Q) -&gt; Option&lt;&amp;V&gt;
-  get_key_value  →  fn(&amp;self, &amp;Q) -&gt; Option&lt;(&amp;K, &amp;V)&gt;
-  get_mut  →  fn(&amp;mut self, &amp;Q) -&gt; Option&lt;&amp;mut V&gt;
-  insert  →  fn(&amp;mut self, K, V) -&gt; Option&lt;V&gt;
-  remove  →  fn(&amp;mut self, &amp;Q) -&gt; Option&lt;V&gt;
-  remove_entry  →  fn(&amp;mut self, &amp;Q) -&gt; Option&lt;(K, V)&gt;
-
-Ranked results for "get":
-----------------------------------------
-  [exact ]  get
-  [prefix]  get_disjoint_mut
-  [prefix]  get_disjoint_unchecked_mut
-  [prefix]  get_key_value
-  [prefix]  get_mut
-</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Running this example a second time will yield a warm cache on both queries,
+dropping the first call’s time down to fractions of a millisecond.</p>
+</blockquote>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="third-party-crates.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="batch-query.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="definitions.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="third-party-crates.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -341,11 +271,11 @@ Ranked results for "get":
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="third-party-crates.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="batch-query.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="definitions.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="third-party-crates.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2d62b5c0.js";
+            window.path_to_searchindex_js = "searchindex-265e5ce0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d5174adc.js"></script>
+        <script src="toc-07be3eda.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,6 +175,37 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h1>
+<p>All fallible functions in <code>rust-meth-lib</code> return <code>rust_meth_lib::Result&lt;T&gt;</code>, a
+type alias over a single [<code>RustMethError</code>] enum. This makes it easy to propagate
+errors with <code>?</code> in your own code, and to convert them into your application’s
+own error type when you need custom messages or behaviour.</p>
+<h2 id="rustmetherror-variants"><a class="header" href="#rustmetherror-variants"><code>RustMethError</code> variants</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variant</th><th>Cause</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RustAnalyzerNotFound</code></td><td><code>rust-analyzer</code> not on <code>PATH</code> or in rustup component directory</td></tr>
+<tr><td><code>TypeNotFound</code></td><td>The probed type doesn’t exist or isn’t in scope</td></tr>
+<tr><td><code>FeatureGated</code></td><td>Type exists but requires a feature flag not enabled in the probe</td></tr>
+<tr><td><code>Timeout</code></td><td><code>rust-analyzer</code> failed to respond within the retry budget</td></tr>
+<tr><td><code>Io</code></td><td>OS or filesystem error</td></tr>
+<tr><td><code>Json</code></td><td>JSON serialization or deserialization failure</td></tr>
+<tr><td><code>UnexpectedResponseShape</code></td><td>Structurally valid JSON but missing expected fields</td></tr>
+<tr><td><code>RecvExhausted</code></td><td>Message loop hit its limit without matching a response</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="custom-error-types"><a class="header" href="#custom-error-types">Custom error types</a></h2>
+<p>The most common embedding pattern is wrapping <code>RustMethError</code> in your own
+<code>thiserror</code> enum. Since <code>RustMethError</code> implements <code>std::error::Error</code>, it
+converts with <code>?</code> directly, but a manual <code>From</code> impl lets you intercept
+specific variants for custom messages before falling through to a generic
+wrapper for everything else.</p>
+<p>The example below intercepts <code>RustAnalyzerNotFound</code> and <code>TypeNotFound</code> to give
+actionable error messages, while passing everything else through as a generic
+<code>QueryFailed</code>.</p>
 <h3 id="custom_errorrs"><a class="header" href="#custom_errorrs"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/custom_error.rs">custom_error.rs</a></a></h3>
 <pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
 use rust_meth_lib::error::RustMethError;
