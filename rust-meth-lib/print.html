@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-265e5ce0.js";
+            window.path_to_searchindex_js = "searchindex-27649dce.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-07be3eda.js"></script>
+        <script src="toc-55849954.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1131,249 +1131,131 @@ VecDeque&lt;u8&gt; unique methods (31):
   truncate_to_range
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="results-cache"><a class="header" href="#results-cache">Results Cache</a></h1>
-<p>The results_cache example demonstrates the caching mechanism introduced in
-version 0.4.0.</p>
-<p>When querying methods for a type, the library normally spins up a
-<code>rust-analyzer</code> LSP session, which can take a few seconds. The results cache
-stores these outputs as JSON in <code>$XDG_CACHE_HOME/rust-meth/results/</code>. Subsequent
-calls, even across separate process runs, retrieve the data instantly with zero
-LSP overhead.</p>
-<h3 id="results_cachers"><a class="header" href="#results_cachers"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/results_cache.rs">results_cache.rs</a></a></h3>
+<h1 id="error-handling-1"><a class="header" href="#error-handling-1">Error Handling</a></h1>
+<p>All fallible functions in <code>rust-meth-lib</code> return <code>rust_meth_lib::Result&lt;T&gt;</code>, a
+type alias over a single [<code>RustMethError</code>] enum. This makes it easy to propagate
+errors with <code>?</code> in your own code, and to convert them into your application’s
+own error type when you need custom messages or behaviour.</p>
+<h2 id="rustmetherror-variants"><a class="header" href="#rustmetherror-variants"><code>RustMethError</code> variants</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variant</th><th>Cause</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RustAnalyzerNotFound</code></td><td><code>rust-analyzer</code> not on <code>PATH</code> or in rustup component directory</td></tr>
+<tr><td><code>TypeNotFound</code></td><td>The probed type doesn’t exist or isn’t in scope</td></tr>
+<tr><td><code>FeatureGated</code></td><td>Type exists but requires a feature flag not enabled in the probe</td></tr>
+<tr><td><code>Timeout</code></td><td><code>rust-analyzer</code> failed to respond within the retry budget</td></tr>
+<tr><td><code>Io</code></td><td>OS or filesystem error</td></tr>
+<tr><td><code>Json</code></td><td>JSON serialization or deserialization failure</td></tr>
+<tr><td><code>UnexpectedResponseShape</code></td><td>Structurally valid JSON but missing expected fields</td></tr>
+<tr><td><code>RecvExhausted</code></td><td>Message loop hit its limit without matching a response</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="custom-error-types"><a class="header" href="#custom-error-types">Custom error types</a></h2>
+<p>The most common embedding pattern is wrapping <code>RustMethError</code> in your own
+<code>thiserror</code> enum. Since <code>RustMethError</code> implements <code>std::error::Error</code>, it
+converts with <code>?</code> directly, but a manual <code>From</code> impl lets you intercept
+specific variants for custom messages before falling through to a generic
+wrapper for everything else.</p>
+<p>The example below intercepts <code>RustAnalyzerNotFound</code> and <code>TypeNotFound</code> to give
+actionable error messages, while passing everything else through as a generic
+<code>QueryFailed</code>.</p>
+<h3 id="custom_errorrs-1"><a class="header" href="#custom_errorrs-1"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/custom_error.rs">custom_error.rs</a></a></h3>
 <pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
-use rust_meth_lib::results_cache::results_cache_entries;
-use std::time::Instant;
+use rust_meth_lib::error::RustMethError;
 
-fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
+// -- Your application's error type --
+
+#[derive(Debug, thiserror::Error)]
+enum AppError {
+    /// rust-analyzer isn't installed, give a helpful message.
+    #[error("rust-analyzer not found. Install it with: rustup component add rust-analyzer")]
+    RustAnalyzerMissing,
+
+    /// The type the user asked about doesn't exist.
+    #[error(
+        "Unknown type `{type_name}`. Check the spelling and that any required crate is listed in deps."
+    )]
+    UnknownType { type_name: String },
+
+    /// Anything else from the library becomes a generic query failure.
+    #[error("LSP query failed: {0}")]
+    QueryFailed(RustMethError),
+}
+
+// -- Conversion --
+//
+// We can't use `#[from]` for everything because we want to intercept specific
+// variants. Instead, write a manual `From` impl that matches the cases we care
+// about and falls through to the generic wrapper for everything else.
+
+impl From&lt;RustMethError&gt; for AppError {
+    fn from(err: RustMethError) -&gt; Self {
+        match err {
+            RustMethError::RustAnalyzerNotFound =&gt; Self::RustAnalyzerMissing,
+            RustMethError::TypeNotFound { type_name, .. } =&gt; Self::UnknownType { type_name },
+            other =&gt; Self::QueryFailed(other),
+        }
+    }
+}
+
+// -- Application logic --
+
+fn lookup(type_name: &amp;str) -&gt; Result&lt;(), AppError&gt; {
+    // find_rust_analyzer() returns RustMethError::RustAnalyzerNotFound on
+    // failure, which our From impl converts to AppError::RustAnalyzerMissing.
     let ra_path = find_rust_analyzer()?;
 
-    // Uncomment to clear the cache on every run
-    // rust_meth_lib::results_cache::clear_results_cache().ok();
+    // query_methods() returns RustMethError::TypeNotFound for bad type names,
+    // which our From impl converts to AppError::UnknownType.
+    let methods = query_methods(type_name, &amp;ra_path, None)?;
 
-    // -- First call -- cold results cache --
-    println!("First call (cold cache)...");
-    let t1 = Instant::now();
-    let methods = query_methods("Vec&lt;u8&gt;", &amp;ra_path, None)?;
-    let elapsed1 = t1.elapsed();
-
-    println!("  {} methods found in {:.2?}\n", methods.len(), elapsed1);
-
-    // Inspect what was saved
-    let entries = results_cache_entries();
-    println!("Results cache now has {} entry:", entries.len());
-    for e in &amp;entries {
-        println!(
-            "  {} : {} methods (ra: {})",
-            e.type_name, e.method_count, e.ra_version
-        );
+    println!("{type_name}: {} methods", methods.len());
+    for m in methods.iter().take(5) {
+        println!("  {}", m.name);
     }
+    if methods.len() &gt; 5 {
+        println!("  ...and {} more", methods.len() - 5);
+    }
+    Ok(())
+}
+
+fn main() {
+    // Use a type that will succeed.
+    match lookup("Vec&lt;u8&gt;") {
+        Ok(()) =&gt; {}
+        Err(e) =&gt; eprintln!("error: {e}"),
+    }
+
     println!();
 
-    // -- Second call -- results cache hit --
-    println!("Second call (warm cache)...");
-    let t2 = Instant::now();
-    let methods2 = query_methods("Vec&lt;u8&gt;", &amp;ra_path, None)?;
-    let elapsed2 = t2.elapsed();
-
-    println!("  {} methods found in {:.2?}\n", methods2.len(), elapsed2);
-
-    // Summary
-    let speedup = elapsed1.as_secs_f64() / elapsed2.as_secs_f64();
-    println!("Speedup: {speedup:.0}x faster on cache hit");
-    println!("\nRun this example again to see the persistent cache kick in");
-    println!(
-        "on the very first call (~0ms instead of ~{}s).",
-        elapsed1.as_secs()
-    );
-
-    Ok(())
+    // Use a type that will fail with `TypeNotFound`, demonstrates the
+    // custom error message path.
+    match lookup("NonExistentType") {
+        Ok(()) =&gt; {}
+        Err(AppError::UnknownType { type_name }) =&gt; {
+            eprintln!("Type not found: `{type_name}`");
+            eprintln!("Tip: check spelling, or pass deps for third-party crates.");
+        }
+        Err(e) =&gt; eprintln!("error: {e}"),
+    }
 }
 </code></pre>
 <h3 id="output-3"><a class="header" href="#output-3">Output</a></h3>
-<pre><code>First call (cold cache)...
-  229 methods found in 3.66s
-
-Results cache now has 1 entry:
-  Vec&lt;u8&gt; : 229 methods (ra: rust-analyzer 1.100.0-nightly (34baba5 2026-08-16))
-
-Second call (warm cache)...
-  229 methods found in 17.29ms
-
-Speedup: 212x faster on cache hit
-
-Run this example again to see the persistent cache kick in
-on the very first call (~0ms instead of ~3s).
-</code></pre>
-<blockquote class="blockquote-tag blockquote-tag-note">
-<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
-<p>Running this example a second time will yield a warm cache on both queries,
-dropping the first call’s time down to fractions of a millisecond.</p>
-</blockquote>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="third-party-crates"><a class="header" href="#third-party-crates">Third Party Crates</a></h1>
-<p>Querying methods on types from external crates.</p>
-<blockquote class="blockquote-tag blockquote-tag-note">
-<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
-<p>The first time you query a third-party type, Cargo must download and compile
-the crate inside the ephemeral probe project. This can take 10-30
-seconds on a cold cache. Subsequent queries still require Cargo to resolve
-dependencies inside the ephemeral probe project, so expect similar times on
-every invocation until persistent probe caching is implemented.</p>
-</blockquote>
-<h3 id="third_party_craters-1"><a class="header" href="#third_party_craters-1"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/third_party_crate.rs">third_party_crate.rs</a></a></h3>
-<pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
-
-fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
-    let ra_path = find_rust_analyzer()?;
-
-    // ── Single external crate ────────────────────────────────────────────────
-
-    let serde_deps = r#"serde_json = "1.0""#;
-
-    println!("Querying serde_json::Value methods (may be slow on first run)...");
-    let methods = query_methods("serde_json::Value", &amp;ra_path, Some(serde_deps))?;
-
-    println!("serde_json::Value has {} methods:", methods.len());
-    for m in &amp;methods {
-        println!("  {}", m.name);
-    }
-
-    println!();
-
-    // ── Multiple dependencies ────────────────────────────────────────────────
-    //
-    // If your type requires more than one crate (e.g. a type that uses serde
-    // traits), pass all deps as a single newline-separated string. This maps
-    // directly to what Cargo expects under [dependencies].
-
-    let multi_deps = "serde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"";
-
-    println!("Querying serde_json::Map with serde + serde_json...");
-    let map_methods = query_methods(
-        "serde_json::Map&lt;String, serde_json::Value&gt;",
-        &amp;ra_path,
-        Some(multi_deps),
-    )?;
-
-    println!("serde_json::Map has {} methods:", map_methods.len());
-    for m in &amp;map_methods {
-        println!("  {}", m.name);
-    }
-
-    Ok(())
-}
-</code></pre>
-<h3 id="output-4"><a class="header" href="#output-4">Output</a></h3>
-<pre><code>Querying serde_json::Value methods (may be slow on first run)...
-serde_json::Value has 37 methods:
-  as_array
-  as_array_mut
-  as_bool
-  as_f64
-  as_i64
-  as_null
-  as_number
-  as_object
-  as_object_mut
-  as_str
-  as_u64
-  clone
-  clone_from
-  clone_into
-  eq
-  get
-  get_mut
-  index
-  index_mut
-  into
-  is_array
-  is_boolean
-  is_f64
-  is_i64
-  is_null
-  is_number
-  is_object
-  is_string
-  is_u64
-  ne
-  pointer
-  pointer_mut
-  sort_all_objects
-  take
-  to_owned
-  to_string
-  try_into
-
-Querying serde_json::Map with serde + serde_json...
-serde_json::Map has 34 methods:
+<pre><code>Vec&lt;u8&gt;: 229 methods
+  align_to
+  align_to_mut
+  allocator
   append
-  clear
-  clone
-  clone_from
-  clone_into
-  contains_key
-  entry
-  eq
-  extend
-  extend_one
-  extend_reserve
-  get
-  get_key_value
-  get_mut
-  index
-  index_mut
-  insert
-  into
-  into_iter
-  into_values
-  is_empty
-  iter
-  iter_mut
-  keys
-  len
-  ne
-  remove
-  remove_entry
-  retain
-  sort_keys
-  to_owned
-  try_into
-  values
-  values_mut
+  array_windows
+  ...and 224 more
+
+Type not found: `NonExistentType`
+Tip: check spelling, or pass deps for third-party crates.
 </code></pre>
-<h3 id="using-the-builder-api-1"><a class="header" href="#using-the-builder-api-1">Using the Builder API</a></h3>
-<p>The same queries using <code>MethodQuery</code>, the <code>.deps()</code> call keeps the dependency
-string attached to the type it belongs to:</p>
-<pre><code class="language-rs">use rust_meth_lib::analyzer::find_rust_analyzer;
-use rust_meth_lib::query::MethodQuery;
-
-fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
-    let ra_path = find_rust_analyzer()?;
-
-    let methods = MethodQuery::new("serde_json::Value")
-        .deps(r#"serde_json = "1.0""#)
-        .run(&amp;ra_path)?;
-
-    println!("serde_json::Value has {} methods:", methods.len());
-    for m in &amp;methods {
-        println!("  {}", m.name);
-    }
-
-    println!();
-
-    let map_methods = MethodQuery::new("serde_json::Map&lt;String, serde_json::Value&gt;")
-        .deps("serde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"")
-        .run(&amp;ra_path)?;
-
-    println!("serde_json::Map has {} methods:", map_methods.len());
-    for m in &amp;map_methods {
-        println!("  {}", m.name);
-    }
-
-    Ok(())
-}
-</code></pre>
-<p>Output is identical to the above.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="filtering"><a class="header" href="#filtering">Filtering</a></h1>
 <p>Filters and ranks methods against a query string without re-querying
@@ -1395,7 +1277,7 @@ fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
     Ok(())
 }
 </code></pre>
-<h3 id="output-5"><a class="header" href="#output-5">Output</a></h3>
+<h3 id="output-4"><a class="header" href="#output-4">Output</a></h3>
 <pre><code>HashMap&lt;String, u32&gt; methods matching "get":
 
 get
@@ -1584,7 +1466,7 @@ fn print_definition(
     Ok(())
 }
 </code></pre>
-<h3 id="output-6"><a class="header" href="#output-6">Output</a></h3>
+<h3 id="output-5"><a class="header" href="#output-5">Output</a></h3>
 <pre><code>Vec&lt;u8&gt;::push  →  library/alloc/src/vec/mod.rs:995
        full: /home/jr/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs
 
@@ -1665,132 +1547,6 @@ serde_json::Value methods matching "as_str" with source locations:
   as_str  →  src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/value/mod.rs:492
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="error-handling-1"><a class="header" href="#error-handling-1">Error Handling</a></h1>
-<p>All fallible functions in <code>rust-meth-lib</code> return <code>rust_meth_lib::Result&lt;T&gt;</code>, a
-type alias over a single [<code>RustMethError</code>] enum. This makes it easy to propagate
-errors with <code>?</code> in your own code, and to convert them into your application’s
-own error type when you need custom messages or behaviour.</p>
-<h2 id="rustmetherror-variants"><a class="header" href="#rustmetherror-variants"><code>RustMethError</code> variants</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Variant</th><th>Cause</th></tr>
-</thead>
-<tbody>
-<tr><td><code>RustAnalyzerNotFound</code></td><td><code>rust-analyzer</code> not on <code>PATH</code> or in rustup component directory</td></tr>
-<tr><td><code>TypeNotFound</code></td><td>The probed type doesn’t exist or isn’t in scope</td></tr>
-<tr><td><code>FeatureGated</code></td><td>Type exists but requires a feature flag not enabled in the probe</td></tr>
-<tr><td><code>Timeout</code></td><td><code>rust-analyzer</code> failed to respond within the retry budget</td></tr>
-<tr><td><code>Io</code></td><td>OS or filesystem error</td></tr>
-<tr><td><code>Json</code></td><td>JSON serialization or deserialization failure</td></tr>
-<tr><td><code>UnexpectedResponseShape</code></td><td>Structurally valid JSON but missing expected fields</td></tr>
-<tr><td><code>RecvExhausted</code></td><td>Message loop hit its limit without matching a response</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="custom-error-types"><a class="header" href="#custom-error-types">Custom error types</a></h2>
-<p>The most common embedding pattern is wrapping <code>RustMethError</code> in your own
-<code>thiserror</code> enum. Since <code>RustMethError</code> implements <code>std::error::Error</code>, it
-converts with <code>?</code> directly, but a manual <code>From</code> impl lets you intercept
-specific variants for custom messages before falling through to a generic
-wrapper for everything else.</p>
-<p>The example below intercepts <code>RustAnalyzerNotFound</code> and <code>TypeNotFound</code> to give
-actionable error messages, while passing everything else through as a generic
-<code>QueryFailed</code>.</p>
-<h3 id="custom_errorrs-1"><a class="header" href="#custom_errorrs-1"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/custom_error.rs">custom_error.rs</a></a></h3>
-<pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
-use rust_meth_lib::error::RustMethError;
-
-// -- Your application's error type --
-
-#[derive(Debug, thiserror::Error)]
-enum AppError {
-    /// rust-analyzer isn't installed, give a helpful message.
-    #[error("rust-analyzer not found. Install it with: rustup component add rust-analyzer")]
-    RustAnalyzerMissing,
-
-    /// The type the user asked about doesn't exist.
-    #[error(
-        "Unknown type `{type_name}`. Check the spelling and that any required crate is listed in deps."
-    )]
-    UnknownType { type_name: String },
-
-    /// Anything else from the library becomes a generic query failure.
-    #[error("LSP query failed: {0}")]
-    QueryFailed(RustMethError),
-}
-
-// -- Conversion --
-//
-// We can't use `#[from]` for everything because we want to intercept specific
-// variants. Instead, write a manual `From` impl that matches the cases we care
-// about and falls through to the generic wrapper for everything else.
-
-impl From&lt;RustMethError&gt; for AppError {
-    fn from(err: RustMethError) -&gt; Self {
-        match err {
-            RustMethError::RustAnalyzerNotFound =&gt; Self::RustAnalyzerMissing,
-            RustMethError::TypeNotFound { type_name, .. } =&gt; Self::UnknownType { type_name },
-            other =&gt; Self::QueryFailed(other),
-        }
-    }
-}
-
-// -- Application logic --
-
-fn lookup(type_name: &amp;str) -&gt; Result&lt;(), AppError&gt; {
-    // find_rust_analyzer() returns RustMethError::RustAnalyzerNotFound on
-    // failure, which our From impl converts to AppError::RustAnalyzerMissing.
-    let ra_path = find_rust_analyzer()?;
-
-    // query_methods() returns RustMethError::TypeNotFound for bad type names,
-    // which our From impl converts to AppError::UnknownType.
-    let methods = query_methods(type_name, &amp;ra_path, None)?;
-
-    println!("{type_name}: {} methods", methods.len());
-    for m in methods.iter().take(5) {
-        println!("  {}", m.name);
-    }
-    if methods.len() &gt; 5 {
-        println!("  ...and {} more", methods.len() - 5);
-    }
-    Ok(())
-}
-
-fn main() {
-    // Use a type that will succeed.
-    match lookup("Vec&lt;u8&gt;") {
-        Ok(()) =&gt; {}
-        Err(e) =&gt; eprintln!("error: {e}"),
-    }
-
-    println!();
-
-    // Use a type that will fail with `TypeNotFound`, demonstrates the
-    // custom error message path.
-    match lookup("NonExistentType") {
-        Ok(()) =&gt; {}
-        Err(AppError::UnknownType { type_name }) =&gt; {
-            eprintln!("Type not found: `{type_name}`");
-            eprintln!("Tip: check spelling, or pass deps for third-party crates.");
-        }
-        Err(e) =&gt; eprintln!("error: {e}"),
-    }
-}
-</code></pre>
-<h3 id="output-7"><a class="header" href="#output-7">Output</a></h3>
-<pre><code>Vec&lt;u8&gt;: 229 methods
-  align_to
-  align_to_mut
-  allocator
-  append
-  array_windows
-  ...and 224 more
-
-Type not found: `NonExistentType`
-Tip: check spelling, or pass deps for third-party crates.
-</code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="builder-api-1"><a class="header" href="#builder-api-1">Builder API</a></h1>
 <h2 id="builder-options"><a class="header" href="#builder-options">Builder options</a></h2>
 <div class="table-wrapper">
@@ -1825,11 +1581,255 @@ fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
     Ok(())
 }
 </code></pre>
-<h3 id="output-8"><a class="header" href="#output-8">Output</a></h3>
+<h3 id="output-6"><a class="header" href="#output-6">Output</a></h3>
 <pre><code>String methods matching "push":
   push  →  fn(&amp;mut self, char)
   push_str  →  fn(&amp;mut self, &amp;str)
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="results-cache"><a class="header" href="#results-cache">Results Cache</a></h1>
+<p>The results_cache example demonstrates the caching mechanism introduced in
+version 0.4.0.</p>
+<p>When querying methods for a type, the library normally spins up a
+<code>rust-analyzer</code> LSP session, which can take a few seconds. The results cache
+stores these outputs as JSON in <code>$XDG_CACHE_HOME/rust-meth/results/</code>. Subsequent
+calls, even across separate process runs, retrieve the data instantly with zero
+LSP overhead.</p>
+<h3 id="results_cachers"><a class="header" href="#results_cachers"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/results_cache.rs">results_cache.rs</a></a></h3>
+<pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+use rust_meth_lib::results_cache::results_cache_entries;
+use std::time::Instant;
+
+fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    // Uncomment to clear the cache on every run
+    // rust_meth_lib::results_cache::clear_results_cache().ok();
+
+    // -- First call -- cold results cache --
+    println!("First call (cold cache)...");
+    let t1 = Instant::now();
+    let methods = query_methods("Vec&lt;u8&gt;", &amp;ra_path, None)?;
+    let elapsed1 = t1.elapsed();
+
+    println!("  {} methods found in {:.2?}\n", methods.len(), elapsed1);
+
+    // Inspect what was saved
+    let entries = results_cache_entries();
+    println!("Results cache now has {} entry:", entries.len());
+    for e in &amp;entries {
+        println!(
+            "  {} : {} methods (ra: {})",
+            e.type_name, e.method_count, e.ra_version
+        );
+    }
+    println!();
+
+    // -- Second call -- results cache hit --
+    println!("Second call (warm cache)...");
+    let t2 = Instant::now();
+    let methods2 = query_methods("Vec&lt;u8&gt;", &amp;ra_path, None)?;
+    let elapsed2 = t2.elapsed();
+
+    println!("  {} methods found in {:.2?}\n", methods2.len(), elapsed2);
+
+    // Summary
+    let speedup = elapsed1.as_secs_f64() / elapsed2.as_secs_f64();
+    println!("Speedup: {speedup:.0}x faster on cache hit");
+    println!("\nRun this example again to see the persistent cache kick in");
+    println!(
+        "on the very first call (~0ms instead of ~{}s).",
+        elapsed1.as_secs()
+    );
+
+    Ok(())
+}
+</code></pre>
+<h3 id="output-7"><a class="header" href="#output-7">Output</a></h3>
+<pre><code>First call (cold cache)...
+  229 methods found in 3.66s
+
+Results cache now has 1 entry:
+  Vec&lt;u8&gt; : 229 methods (ra: rust-analyzer 1.100.0-nightly (34baba5 2026-08-16))
+
+Second call (warm cache)...
+  229 methods found in 17.29ms
+
+Speedup: 212x faster on cache hit
+
+Run this example again to see the persistent cache kick in
+on the very first call (~0ms instead of ~3s).
+</code></pre>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Running this example a second time will yield a warm cache on both queries,
+dropping the first call’s time down to fractions of a millisecond.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="third-party-crates"><a class="header" href="#third-party-crates">Third Party Crates</a></h1>
+<p>Querying methods on types from external crates.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The first time you query a third-party type, Cargo must download and compile
+the crate inside the ephemeral probe project. This can take 10-30
+seconds on a cold cache. Subsequent queries still require Cargo to resolve
+dependencies inside the ephemeral probe project, so expect similar times on
+every invocation until persistent probe caching is implemented.</p>
+</blockquote>
+<h3 id="third_party_craters-1"><a class="header" href="#third_party_craters-1"><a href="https://github.com/saylesss88/rust-meth/blob/main/lib/examples/third_party_crate.rs">third_party_crate.rs</a></a></h3>
+<pre><code class="language-rs">use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+
+fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    // ── Single external crate ────────────────────────────────────────────────
+
+    let serde_deps = r#"serde_json = "1.0""#;
+
+    println!("Querying serde_json::Value methods (may be slow on first run)...");
+    let methods = query_methods("serde_json::Value", &amp;ra_path, Some(serde_deps))?;
+
+    println!("serde_json::Value has {} methods:", methods.len());
+    for m in &amp;methods {
+        println!("  {}", m.name);
+    }
+
+    println!();
+
+    // ── Multiple dependencies ────────────────────────────────────────────────
+    //
+    // If your type requires more than one crate (e.g. a type that uses serde
+    // traits), pass all deps as a single newline-separated string. This maps
+    // directly to what Cargo expects under [dependencies].
+
+    let multi_deps = "serde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"";
+
+    println!("Querying serde_json::Map with serde + serde_json...");
+    let map_methods = query_methods(
+        "serde_json::Map&lt;String, serde_json::Value&gt;",
+        &amp;ra_path,
+        Some(multi_deps),
+    )?;
+
+    println!("serde_json::Map has {} methods:", map_methods.len());
+    for m in &amp;map_methods {
+        println!("  {}", m.name);
+    }
+
+    Ok(())
+}
+</code></pre>
+<h3 id="output-8"><a class="header" href="#output-8">Output</a></h3>
+<pre><code>Querying serde_json::Value methods (may be slow on first run)...
+serde_json::Value has 37 methods:
+  as_array
+  as_array_mut
+  as_bool
+  as_f64
+  as_i64
+  as_null
+  as_number
+  as_object
+  as_object_mut
+  as_str
+  as_u64
+  clone
+  clone_from
+  clone_into
+  eq
+  get
+  get_mut
+  index
+  index_mut
+  into
+  is_array
+  is_boolean
+  is_f64
+  is_i64
+  is_null
+  is_number
+  is_object
+  is_string
+  is_u64
+  ne
+  pointer
+  pointer_mut
+  sort_all_objects
+  take
+  to_owned
+  to_string
+  try_into
+
+Querying serde_json::Map with serde + serde_json...
+serde_json::Map has 34 methods:
+  append
+  clear
+  clone
+  clone_from
+  clone_into
+  contains_key
+  entry
+  eq
+  extend
+  extend_one
+  extend_reserve
+  get
+  get_key_value
+  get_mut
+  index
+  index_mut
+  insert
+  into
+  into_iter
+  into_values
+  is_empty
+  iter
+  iter_mut
+  keys
+  len
+  ne
+  remove
+  remove_entry
+  retain
+  sort_keys
+  to_owned
+  try_into
+  values
+  values_mut
+</code></pre>
+<h3 id="using-the-builder-api-1"><a class="header" href="#using-the-builder-api-1">Using the Builder API</a></h3>
+<p>The same queries using <code>MethodQuery</code>, the <code>.deps()</code> call keeps the dependency
+string attached to the type it belongs to:</p>
+<pre><code class="language-rs">use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&gt; rust_meth_lib::error::Result&lt;()&gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    let methods = MethodQuery::new("serde_json::Value")
+        .deps(r#"serde_json = "1.0""#)
+        .run(&amp;ra_path)?;
+
+    println!("serde_json::Value has {} methods:", methods.len());
+    for m in &amp;methods {
+        println!("  {}", m.name);
+    }
+
+    println!();
+
+    let map_methods = MethodQuery::new("serde_json::Map&lt;String, serde_json::Value&gt;")
+        .deps("serde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"")
+        .run(&amp;ra_path)?;
+
+    println!("serde_json::Map has {} methods:", map_methods.len());
+    for m in &amp;map_methods {
+        println!("  {}", m.name);
+    }
+
+    Ok(())
+}
+</code></pre>
+<p>Output is identical to the above.</p>
 
                     </main>
 
