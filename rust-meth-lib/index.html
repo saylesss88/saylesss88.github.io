@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-27649dce.js";
+            window.path_to_searchindex_js = "searchindex-a3122e63.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-55849954.js"></script>
@@ -221,9 +221,6 @@ session.</p>
 display are now maintained in <a href="../cli/"><code>cli/</code></a>.</p>
 </blockquote>
 <h2 id="public-api"><a class="header" href="#public-api">Public API</a></h2>
-<pre><code class="language-toml">[dependencies]
-rust-meth-lib = "0.3.0"
-</code></pre>
 <h3 id="key-types"><a class="header" href="#key-types">Key Types</a></h3>
 <div class="table-wrapper">
 <table>
@@ -330,11 +327,15 @@ fn my_wrapper() -&gt; Result&lt;()&gt; {
 <p>Runnable examples covering the main ways to embed <code>rust-meth-lib</code> in your own
 tooling. Each file is self-contained and documents its own <code>[dependencies]</code>
 snippet.</p>
-<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
-<p><code>rust-analyzer</code> must be on your <code>PATH</code> or installed as a rustup component:</p>
+<h2 id="running-the-examples"><a class="header" href="#running-the-examples">Running the Examples</a></h2>
+<p>To run the examples locally, clone the repo:</p>
+<pre><code class="language-sh">git clone https://github.com/saylesss88/rust-meth.git
+cd rust-meth/lib
+cargo run --example basic_query
+</code></pre>
+<p>The examples require <code>rust-analyzer</code> on your <code>PATH</code>:</p>
 <pre><code class="language-sh">rustup component add rust-analyzer
 </code></pre>
-<h2 id="running-the-examples"><a class="header" href="#running-the-examples">Running the Examples</a></h2>
 <pre><code class="language-sh">cargo run --example basic_query
 cargo run --example method_info
 cargo run --example third_party_crate   # slow on first run (downloads serde_json)
@@ -343,138 +344,7 @@ cargo run --example go_to_definition
 cargo run --example custom_error
 cargo run --example batch_query
 </code></pre>
-<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<h3 id="basic_queryrs"><a class="header" href="#basic_queryrs"><a href="examples/basic_query.rs"><code>basic_query.rs</code></a></a></h3>
-<p>The minimal end-to-end path: <code>find_rust_analyzer</code> → <code>query_methods</code> → print
-method names. Start here.</p>
-<pre><code>Methods on Vec&lt;u8&gt; (73 total):
-  append
-  as_mut_ptr
-  as_mut_slice
-  ...
-</code></pre>
-<hr>
-<h3 id="method_infors"><a class="header" href="#method_infors"><a href="examples/method_info.rs"><code>method_info.rs</code></a></a></h3>
-<p>Working with <code>Method::detail</code> (full signature) and <code>Method::documentation</code>
-(<code>rustdoc</code>). Both are <code>Option&lt;String&gt;</code>, this example shows how to handle the
-cases where rust-analyzer doesn’t return them.</p>
-<pre><code>fn push_str  →  pub fn push_str(&amp;mut self, string: &amp;str)
-  doc: Appends a given string slice onto the end of this `String`.
-</code></pre>
-<hr>
-<h3 id="third_party_craters"><a class="header" href="#third_party_craters"><a href="examples/third_party_crate.rs"><code>third_party_crate.rs</code></a></a></h3>
-<p>Querying types from external crates by passing a raw TOML deps snippet.
-Shows both single-crate and multi-crate dependency strings.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Single dep
-let deps = r#"serde_json = "1.0""#;
-query_methods("serde_json::Value", &amp;ra_path, Some(deps))?;
-
-// Multiple deps (newline-separated TOML)
-let deps = "serde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"";
-query_methods("serde_json::Map&lt;String, serde_json::Value&gt;", &amp;ra_path, Some(deps))?;
-<span class="boring">}</span></code></pre>
-<blockquote class="blockquote-tag blockquote-tag-note">
-<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
-<p>The first query against a crate version requires Cargo to download
-and compile it inside the ephemeral probe project. Expect 10–30 seconds on a
-cold cache.</p>
-</blockquote>
-<hr>
-<h3 id="fuzzy_filterrs"><a class="header" href="#fuzzy_filterrs"><a href="examples/fuzzy_filter.rs"><code>fuzzy_filter.rs</code></a></a></h3>
-<p>Using <code>Vec&lt;Method&gt;</code> as a data source for your own search UI. Demonstrates
-three patterns: substring filter, signature grep (filter on return type), and
-a simple ranked scorer. The starting point for building a TUI or editor plugin
-on top of the library.</p>
-<pre><code>Ranked results for "get":
-----------------------------------------
-  [exact ]  get
-  [prefix]  get_disjoint_mut
-  [prefix]  get_disjoint_unchecked_mut
-  [prefix]  get_key_value
-  [prefix]  get_mut
-</code></pre>
-<hr>
-<h3 id="go_to_definitionrs"><a class="header" href="#go_to_definitionrs"><a href="examples/go_to_definition.rs"><code>go_to_definition.rs</code></a></a></h3>
-<p>Resolving source file locations with <code>query_definition</code>. Returns a
-<code>Definition</code> with <code>path</code> (display-friendly), <code>full_path</code> (absolute, for
-opening files), and <code>line</code> (0-indexed). Returns <code>Ok(None)</code> when no source
-location is available, not an error.</p>
-<pre><code>Vec&lt;u8&gt;::push  →  library/alloc/src/vec/mod.rs:1878
-       full: /home/user/.rustup/toolchains/stable-x86_64.../library/alloc/src/vec/mod.rs
-</code></pre>
-<hr>
-<h3 id="custom_errorrs"><a class="header" href="#custom_errorrs"><a href="examples/custom_error.rs"><code>custom_error.rs</code></a></a></h3>
-<p>Wrapping <code>RustMethError</code> into a caller-defined <code>thiserror</code> enum. Shows how to
-intercept specific variants (<code>TypeNotFound</code>, <code>RustAnalyzerNotFound</code>) for
-custom messages while falling through to a generic wrapper for everything else.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>impl From&lt;RustMethError&gt; for AppError {
-    fn from(err: RustMethError) -&gt; Self {
-        match err {
-            RustMethError::RustAnalyzerNotFound =&gt; AppError::RustAnalyzerMissing,
-            RustMethError::TypeNotFound { type_name, .. } =&gt; AppError::UnknownType { type_name },
-            other =&gt; AppError::QueryFailed(other),
-        }
-    }
-}
-<span class="boring">}</span></code></pre>
-<hr>
-<h3 id="batch_queryrs"><a class="header" href="#batch_queryrs"><a href="examples/batch_query.rs"><code>batch_query.rs</code></a></a></h3>
-<p>Querying multiple types and comparing their method sets. Demonstrates
-per-type error handling (one failure doesn’t abort the batch), finding the
-intersection of methods common to all types, and identifying methods unique
-to each type.</p>
-<pre><code>Methods common to all 3 types (12 total):
-  append
-  clamp
-  clear
-  clone
-  ...
-
-Vec&lt;u8&gt; unique methods (156):
-  align_to
-  align_to_mut
-  ...
-</code></pre>
-<h3 id="probe_cache"><a class="header" href="#probe_cache"><a href="examples/probe_cache.rs"><code>probe_cache</code></a></a></h3>
-<p><code>query_methods_batch</code> populates the cache as a side effect of running queries.
-<code>cache_entries</code> lets you inspect what’s currently cached. Useful for debugging,
-logging, or displaying cache state in your own tool. <code>clear_probe_cache</code> evicts
-all entries; each directory is deleted when its <code>Arc</code> refcount reaches zero.</p>
-<pre><code>Cache before queries: 0 entries
-
-Running batch query...
-  Vec&lt;u8&gt;: 229 methods
-  String: 145 methods
-  HashMap&lt;String, u32&gt;: 43 methods
-
-Cache after batch (3 entries):
-type                           deps                 kind         dir
-------------------------------------------------------------------------------------------
-HashMap&lt;String, u32&gt;           none                 completion   /tmp/rust-meth-probe-23708-2
-String                         none                 completion   /tmp/rust-meth-probe-23708-1
-Vec&lt;u8&gt;                        none                 completion   /tmp/rust-meth-probe-23708-0
-
-All probe dirs exist on disk: true
-
-Cache cleared.
-Cache after clear: 0 entries
-Any probe dirs still on disk: false
-</code></pre>
-<h3 id="filter_methods"><a class="header" href="#filter_methods"><a href="examples/filter_methods.rs"><code>filter_methods</code></a></a></h3>
-<p>Filters and ranks methods against a query string without re-querying <code>rust-analyzer</code>.
-Useful when you already have a <code>Vec&lt;Method&gt;</code> and want to narrow results.</p>
-<p>Methods on <code>HashMap&lt;String, u32&gt;</code> whose names match <code>"get"</code>, ranked by match
-quality:</p>
-<pre><code>get
-get_disjoint_mut
-get_disjoint_unchecked_mut
-get_key_value
-get_mut
-</code></pre>
+<p>Examples start at <a href="https://saylesss88.github.io/rust-meth-lib/getting_started.html">Getting Started</a></p>
 
                     </main>
 
