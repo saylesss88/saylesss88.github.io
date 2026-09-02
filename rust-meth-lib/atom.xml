@@ -1,0 +1,1475 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-US"><title>rust-meth-lib</title><id>https://example.com/atom.xml</id><updated>2026-08-31T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://example.com/atom.xml" rel="self"/><link href="https://example.com/" rel="alternate"/><subtitle>Description</subtitle><entry><title>Getting Started</title><id>https://example.com/getting_started.html</id><updated>2026-08-31T00:00:00+00:00</updated><author><name>saylesss87@proton.me (saylesss88)</name></author><category term="rust-analyzer"/><category term="rust-meth-lib"/><link href="https://example.com/getting_started.html" rel="alternate"/><content type="html">&lt;h1&gt;Getting Started&lt;/h1&gt;
+&lt;p&gt;Runnable examples covering the main ways to embed &lt;code&gt;rust-meth-lib&lt;/code&gt; in your own
+tooling. Each file is self-contained and documents its own &lt;code&gt;[dependencies]&lt;/code&gt;
+snippet.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/basic_query.rs&quot;&gt;&lt;code&gt;basic_query.rs&lt;/code&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;This example first locates the &lt;code&gt;rust-analyzer&lt;/code&gt; binary, then it queries the
+available methods on a &lt;code&gt;RefCell&amp;lt;u8&amp;gt;&lt;/code&gt; and prints the results.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    let methods = query_methods(&quot;RefCell&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+
+    println!(&quot;Methods on RefCell&amp;lt;u8&amp;gt; ({} total):&quot;, methods.len());
+    for method in &amp;amp;methods {
+        println!(&quot;  {}&quot;, method.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;p&gt;The minimal end-to-end path: &lt;code&gt;find_rust_analyzer&lt;/code&gt; → &lt;code&gt;query_methods&lt;/code&gt; → print
+method names.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Methods on RefCell&amp;lt;u8&amp;gt; (30 total):
+  as_ptr
+  borrow
+  borrow_mut
+  clamp
+  clone
+  clone_from
+  clone_into
+  cmp
+  eq
+  ge
+  get_mut
+  gt
+  into
+  into_inner
+  le
+  lt
+  max
+  min
+  ne
+  partial_cmp
+  replace
+  replace_with
+  swap
+  take
+  to_owned
+  try_borrow
+  try_borrow_mut
+  try_borrow_unguarded
+  try_into
+  undo_leak
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Limit Number of Methods Returned from Standard API&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{Method, find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    // Step 1: locate the rust-analyzer binary.
+    //
+    // find_rust_analyzer checks `PATH` first, then falls back to the rustup
+    // component directory (~/.rustup/toolchains/&amp;lt;active&amp;gt;/bin/rust-analyzer).
+    // Returns `RustMethError::RustAnalyzerNotFound` if neither exists.
+    let ra_path = find_rust_analyzer()?;
+
+    // Step 2: query methods.
+    //
+    // query_methods spins up an ephemeral LSP session, synthesises a
+    // temporary Cargo project with `let _x: RefCell&amp;lt;u8&amp;gt; = todo!();`, triggers
+    // a completion request at the dot position, and tears everything down.
+    //
+    // The third argument is `deps: Option&amp;lt;&amp;amp;str&amp;gt;`: `None` means stdlib only.
+    let methods = query_methods(&quot;RefCell&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+
+    let top5: Vec&amp;lt;Method&amp;gt; = methods.into_iter().take(5).collect();
+
+    // println!(&quot;Methods on RefCell&amp;lt;u8&amp;gt; ({} total):&quot;, methods.len());
+    println!(&quot;First 5 methods on RefCell&amp;lt;u8&amp;gt;:&quot;);
+    // for method in &amp;amp;methods {
+    for method in &amp;amp;top5 {
+        println!(&quot;  {}&quot;, method.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;First 5 methods on RefCell&amp;lt;u8&amp;gt;:
+  as_ptr
+  borrow
+  borrow_mut
+  clamp
+  clone
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Using the Builder API&lt;/h3&gt;
+&lt;p&gt;The same query using [&lt;code&gt;MethodQuery&lt;/code&gt;], equivalent to the above but chainable:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = MethodQuery::new(&quot;RefCell&amp;lt;u8&amp;gt;&quot;)
+        .run(&amp;amp;ra_path)?;
+
+    println!(&quot;Methods on RefCell&amp;lt;u8&amp;gt; ({} total):&quot;, methods.len());
+    for method in &amp;amp;methods {
+        println!(&quot;  {}&quot;, method.name);
+    }
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The builder becomes more useful when combining options, adding a filter or
+resolving source locations without separate function calls:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;let methods = MethodQuery::new(&quot;RefCell&amp;lt;u8&amp;gt;&quot;)
+    .filter(&quot;borrow&quot;)
+    .run(&amp;amp;ra_path)?;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With the filter above, the output is (I changed the print statement to match):&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Methods on RefCell&amp;lt;u8&amp;gt; with borrow in their name (5 total):
+  borrow
+  borrow_mut
+  try_borrow
+  try_borrow_mut
+  try_borrow_unguarded
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Limit the Number of Methods Returned&lt;/h3&gt;
+&lt;p&gt;You can use the &lt;code&gt;.limit()&lt;/code&gt; method to return &lt;code&gt;N&lt;/code&gt; methods. For example, a &lt;code&gt;Vec&amp;lt;u8&amp;gt;&lt;/code&gt;,
+returns over 200 methods. To only return the first 10 sorted alphabetically:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = MethodQuery::new(&quot;Vec&amp;lt;u8&amp;gt;&quot;).limit(10).run(&amp;amp;ra_path)?;
+
+    println!(&quot;First 10 methods on Vec&amp;lt;u8&amp;gt;:&quot;);
+    for method in &amp;amp;methods {
+        println!(&quot;  {}&quot;, method.name);
+    }
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Output&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;First 10 methods on Vec&amp;lt;u8&amp;gt;:
+  align_to
+  align_to_mut
+  allocator
+  append
+  array_windows
+  as_array
+  as_ascii
+  as_ascii_unchecked
+  as_chunks
+  as_chunks_mut
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>rust-meth-lib</title><id>https://example.com/README.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/README.html" rel="alternate"/><content type="html">&lt;h1&gt;rust-meth-lib&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&quot;https://crates.io/crates/rust-meth-lib&quot;&gt;&lt;img src=&quot;https://img.shields.io/crates/v/rust-meth-lib.svg&quot; alt=&quot;Crates.io&quot; /&gt;&lt;/a&gt;
+&lt;a href=&quot;https://docs.rs/rust-meth-lib&quot;&gt;&lt;img src=&quot;https://docs.rs/rust-meth-lib/badge.svg&quot; alt=&quot;Documentation&quot; /&gt;&lt;/a&gt;
+&lt;a href=&quot;https://opensource.org/licenses/Apache-2.0&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/License-Apache_2.0-blue.svg&quot; alt=&quot;License&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Core library powering &lt;a href=&quot;https://crates.io/crates/rust-meth&quot;&gt;&lt;code&gt;rust-meth&lt;/code&gt;&lt;/a&gt;.
+Discovers methods available on any Rust type by driving a &lt;code&gt;rust-analyzer&lt;/code&gt; LSP
+session.&lt;/p&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;rust-meth-lib&lt;/code&gt; provides the building blocks for programmatically querying
+&lt;code&gt;rust-analyzer&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Spinning up and managing an LSP session (&lt;code&gt;LspTransport&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Synthesizing a temporary Rust project and injecting the target type (&lt;code&gt;Probe&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Requesting completions and go-to-definition results from &lt;code&gt;rust-analyzer&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Fuzzy-filtering and ranking method results&lt;/li&gt;
+&lt;li&gt;Exposing utilities for embedding &lt;code&gt;rust-meth&lt;/code&gt; workflows in other tools&lt;/li&gt;
+&lt;li&gt;Full working &lt;a href=&quot;https://example.com/README.html#rust-meth-lib-examples&quot;&gt;Examples&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Please file an Issue if any problems arise.&lt;/p&gt;
+&lt;h2&gt;Workspace layout&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;rust-meth/
+├── Cargo.toml               — workspace manifest
+├── lib/                     — rust-meth-lib (this crate)
+│   ├── Cargo.toml
+│   ├── README.md
+│   ├── benches/
+│   │   └── benchmarks.rs
+│   └── src/
+│       ├── lib.rs
+│       ├── error.rs
+│       ├── lsp.rs
+│       ├── probe.rs
+│       └── analyzer/
+│           ├── mod.rs
+│           ├── discovery.rs
+│           ├── parse.rs
+│           └── session.rs
+└── cli/                     : standalone binary crate that calls into this library
+    ├── Cargo.toml
+    └── src/
+        └── main.rs
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;UI components, CLI argument parsing, interactive selection, and spinner
+display are now maintained in &lt;a href=&quot;https://example.com/../cli/&quot;&gt;&lt;code&gt;cli/&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;Public API&lt;/h2&gt;
+&lt;h3&gt;Key Types&lt;/h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Item&lt;/th&gt;&lt;th&gt;Description&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;LspTransport&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Manages the stdio JSON-RPC channel to a &lt;code&gt;rust-analyzer&lt;/code&gt; process&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Probe&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Builds a temporary Cargo project that makes the target type available for LSP queries&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;analyzer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;High-level session orchestrator, combines &lt;code&gt;Probe&lt;/code&gt; + &lt;code&gt;LspTransport&lt;/code&gt; to return method completions&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;h3&gt;Basic Usage&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-toml&quot;&gt;[dependencies]
+rust-meth-lib = &quot;0.3.0&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.rs/rust-meth-lib/latest/rust_meth_lib/index.html&quot;&gt;rust_meth_lib docs.rs&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Full working Example&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = query_methods(&quot;Result&amp;lt;u8, &amp;amp;&apos;static str&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+
+    println!(&quot;Methods available for Result&amp;lt;u8, &amp;amp;&apos;static str&amp;gt;&quot;);
+    for method in &amp;amp;methods {
+        println!(&quot;{}&quot;, method.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The exact list returned varies by toolchain.&lt;/p&gt;
+&lt;blockquote class=&quot;markdown-alert-note&quot;&gt;
+&lt;p&gt;The primary APIs are intended for embedding or extending the &lt;code&gt;rust-meth&lt;/code&gt;
+workflow.&lt;br /&gt;
+The CLI interface is maintained in a separate crate.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;Builder API&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&quot;https://example.com/examples/builder_run.rs&quot;&gt;&lt;code&gt;MethodQuery&lt;/code&gt;&lt;/a&gt; provides a chainable interface over
+&lt;code&gt;query_methods&lt;/code&gt; and &lt;code&gt;filter_methods&lt;/code&gt;. Use &lt;code&gt;.filter()&lt;/code&gt; to narrow results by
+match quality (exact &amp;gt; prefix &amp;gt; substring), and &lt;code&gt;.run_with_definitions()&lt;/code&gt; to
+also resolve source locations.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;// Query + filter
+MethodQuery::new(&quot;String&quot;)
+    .filter(&quot;push&quot;)
+    .run(&amp;amp;ra_path)?;
+
+// Query + filter + source locations
+MethodQuery::new(&quot;serde_json::Value&quot;)
+    .deps(r#&quot;serde_json = &quot;1.0&quot;&quot;#)
+    .filter(&quot;as_str&quot;)
+    .run_with_definitions(&amp;amp;ra_path)?;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;See &lt;a href=&quot;https://example.com/examples/builder_run.rs&quot;&gt;&lt;code&gt;builder_run.rs&lt;/code&gt;&lt;/a&gt; and
+&lt;a href=&quot;https://example.com/examples/builder_definitions.rs&quot;&gt;&lt;code&gt;builder_definitions.rs&lt;/code&gt;&lt;/a&gt; for full examples.&lt;/p&gt;
+&lt;h2&gt;Error Handling&lt;/h2&gt;
+&lt;p&gt;The library uses a single
+&lt;a href=&quot;https://docs.rs/rust-meth-lib/latest/rust_meth_lib/error/enum.RustMethError.html&quot;&gt;&lt;code&gt;RustMethError&lt;/code&gt;&lt;/a&gt;
+enum (via &lt;a href=&quot;https://docs.rs/thiserror&quot;&gt;&lt;code&gt;thiserror&lt;/code&gt;&lt;/a&gt;) and a &lt;code&gt;Result&amp;lt;T&amp;gt;&lt;/code&gt; alias over
+it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;pub type Result&amp;lt;T&amp;gt; = std::result::Result&amp;lt;T, RustMethError&amp;gt;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Variant&lt;/th&gt;&lt;th&gt;Cause&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Io&lt;/code&gt;&lt;/td&gt;&lt;td&gt;OS / file system errors (&lt;code&gt;std::io::Error&lt;/code&gt;)&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Json&lt;/code&gt;&lt;/td&gt;&lt;td&gt;JSON serialization or deserialization failure&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;ParseInt&lt;/code&gt;&lt;/td&gt;&lt;td&gt;String-to-integer conversion failure&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;NoContentLength&lt;/code&gt;&lt;/td&gt;&lt;td&gt;LSP response missing a &lt;code&gt;Content-Length&lt;/code&gt; header&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;RecvExhausted { limit }&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Message loop hit &lt;code&gt;limit&lt;/code&gt; without matching a response&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;UnexpectedResponseShape&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Structurally valid JSON but missing expected fields&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;RustAnalyzerNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; not on &lt;code&gt;PATH&lt;/code&gt; or in component directory&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;MissingStdin&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;stdin&lt;/code&gt; handle wasn’t captured&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;MissingStdout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;stdout&lt;/code&gt; handle wasn’t captured&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;TypeNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; diagnostic error for the probed type&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Timeout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; failed to produce a usable response within retry budget&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;FeatureGated&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Type exists but requires a feature flag that wasn’t enabled for this probe&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;All fallible functions in this crate return &lt;code&gt;rust_meth_lib::Result&amp;lt;T&amp;gt;&lt;/code&gt;. If
+you’re embedding the library, you can convert into your own error type via &lt;code&gt;?&lt;/code&gt;
+since &lt;code&gt;RustMethError&lt;/code&gt; implements &lt;code&gt;std::error::Error&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;use rust_meth_lib::{Result, analyzer::{find_rust_analyzer, query_methods}};
+
+fn my_wrapper() -&amp;gt; Result&amp;lt;()&amp;gt; {
+    // RustAnalyzerNotFound, Io, Json, etc. all propagate with ?
+    let ra_path = find_rust_analyzer()?;
+    let _methods = query_methods(&quot;Vec&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1&gt;rust-meth-lib examples&lt;/h1&gt;
+&lt;p&gt;Runnable examples covering the main ways to embed &lt;code&gt;rust-meth-lib&lt;/code&gt; in your own
+tooling. Each file is self-contained and documents its own &lt;code&gt;[dependencies]&lt;/code&gt;
+snippet.&lt;/p&gt;
+&lt;h2&gt;Running the Examples&lt;/h2&gt;
+&lt;p&gt;To run the examples locally, clone the repo:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;git clone https://github.com/saylesss88/rust-meth.git
+cd rust-meth/lib
+cargo run --example basic_query
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The examples require &lt;code&gt;rust-analyzer&lt;/code&gt; on your &lt;code&gt;PATH&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;rustup component add rust-analyzer
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;cargo run --example basic_query
+cargo run --example method_info
+cargo run --example third_party_crate   # slow on first run (downloads serde_json)
+cargo run --example fuzzy_filter
+cargo run --example go_to_definition
+cargo run --example custom_error
+cargo run --example batch_query
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Examples start at &lt;a href=&quot;https://saylesss88.github.io/rust-meth-lib/getting_started.html&quot;&gt;Getting Started&lt;/a&gt;&lt;/p&gt;
+</content></entry><entry><title>Querying Methods</title><id>https://example.com/querying-methods.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/querying-methods.html" rel="alternate"/><content type="html">&lt;h1&gt;Querying Methods&lt;/h1&gt;
+&lt;p&gt;Shows how to work with the richer fields on [&lt;code&gt;Method&lt;/code&gt;] beyond just the name:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;Method::detail&lt;/code&gt;: the full function signature as a string (e.g.
+&lt;code&gt;&quot;const fn(&amp;amp;self) -&amp;gt; *mut T&quot;&lt;/code&gt;), returned by &lt;code&gt;rust-analyzer&lt;/code&gt; as the completion
+item’s detail field. &lt;code&gt;Option&amp;lt;String&amp;gt;&lt;/code&gt;: not always present, especially for
+trait-provided methods on generic types.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;Method::documentation&lt;/code&gt;: the rustdoc string for the method, often multi-line.
+&lt;code&gt;Option&amp;lt;String&amp;gt;&lt;/code&gt;: coverage varies by crate and method.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Both fields are &lt;code&gt;None&lt;/code&gt; when &lt;code&gt;rust-analyzer&lt;/code&gt; doesn’t return them. Methods with
+neither still appear in the results from &lt;code&gt;query_methods&lt;/code&gt;. This example filters
+to only those with at least one field populated, and renders them gracefully
+when the other is absent.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/method_info.rs&quot;&gt;method_info.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{Method, find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    let methods = query_methods(&quot;Cell&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+
+    // Only print methods that have at least a signature. Methods with
+    // neither detail nor docs still exist in the list, they&apos;re just
+    // less useful for display purposes.
+    let documented: Vec&amp;lt;&amp;amp;Method&amp;gt; = methods
+        .iter()
+        .filter(|m| m.detail.is_some() || m.documentation.is_some())
+        .collect();
+
+    println!(
+        &quot;{} of {} Cell&amp;lt;u8&amp;gt; methods have signatures or docs:\n&quot;,
+        documented.len(),
+        methods.len()
+    );
+
+    for method in documented {
+        // The signature line (e.g. &quot;pub fn push_str(&amp;amp;mut self, string: &amp;amp;str)&quot;)
+        if let Some(sig) = &amp;amp;method.detail {
+            println!(&quot;fn {}  →  {sig}&quot;, method.name);
+        } else {
+            println!(&quot;fn {} (no signature)&quot;, method.name);
+        }
+
+        // Rustdoc
+        if let Some(doc) = &amp;amp;method.documentation {
+            // Just the first sentence to keep output manageable.
+            let first_line = doc.lines().next().unwrap_or(&quot;&quot;).trim();
+            if !first_line.is_empty() {
+                println!(&quot;  doc: {first_line}&quot;);
+            }
+        }
+
+        println!();
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;26 of 26 Cell&amp;lt;u8&amp;gt; methods have signatures or docs:
+
+fn as_ptr  →  const fn(&amp;amp;self) -&amp;gt; *mut T
+  doc: Returns a raw pointer to the underlying data in this cell.
+
+fn clamp  →  fn(self, Self, Self) -&amp;gt; Self
+  doc: Restrict a value to a certain interval.
+
+fn clone  →  fn(&amp;amp;self) -&amp;gt; Self
+  doc: Returns a duplicate of the value.
+
+fn clone_from  →  fn(&amp;amp;mut self, &amp;amp;Self)
+  doc: Performs copy-assignment from `source`.
+
+fn clone_into  →  fn(&amp;amp;self, &amp;amp;mut &amp;lt;Self as ToOwned&amp;gt;::Owned)
+  doc: Uses borrowed data to replace owned data, usually by cloning.
+
+fn cmp  →  fn(&amp;amp;self, &amp;amp;Self) -&amp;gt; Ordering
+  doc: This method returns an [`Ordering`] between `self` and `other`.
+
+fn eq  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; bool
+  doc: Equality operator `==`.
+
+fn ge  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; bool
+  doc: Tests greater than or equal to (for `self` and `other`) and is used by
+
+fn get  →  const fn(&amp;amp;self) -&amp;gt; T
+  doc: Returns a copy of the contained value.
+
+fn get_mut  →  const fn(&amp;amp;mut self) -&amp;gt; &amp;amp;mut T
+  doc: Returns a mutable reference to the underlying data.
+
+fn gt  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; bool
+  doc: Tests greater than (for `self` and `other`) and is used by the `&amp;gt;`
+
+fn into  →  fn(self) -&amp;gt; T
+  doc: Converts this type into the (usually inferred) input type.
+
+fn into_inner  →  const fn(self) -&amp;gt; T
+  doc: Unwraps the value, consuming the cell.
+
+fn le  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; bool
+  doc: Tests less than or equal to (for `self` and `other`) and is used by the
+
+fn lt  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; bool
+  doc: Tests less than (for `self` and `other`) and is used by the `&amp;lt;` operator.
+
+fn max  →  fn(self, Self) -&amp;gt; Self
+  doc: Compares and returns the maximum of two values.
+
+fn min  →  fn(self, Self) -&amp;gt; Self
+  doc: Compares and returns the minimum of two values.
+
+fn ne  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; bool
+  doc: Inequality operator `!=`.
+
+fn partial_cmp  →  fn(&amp;amp;self, &amp;amp;Rhs) -&amp;gt; Option&amp;lt;Ordering&amp;gt;
+  doc: This method returns an ordering between `self` and `other` values if one exists.
+
+fn replace  →  const fn(&amp;amp;self, T) -&amp;gt; T
+  doc: Replaces the contained value with `val`, and returns the old contained value.
+
+fn set  →  const fn(&amp;amp;self, T)
+  doc: Sets the contained value.
+
+fn swap  →  fn(&amp;amp;self, &amp;amp;Cell&amp;lt;T&amp;gt;)
+  doc: Swaps the values of two `Cell`s.
+
+fn take  →  const fn(&amp;amp;self) -&amp;gt; T
+  doc: Takes the value of the cell, leaving `Default::default()` in its place.
+
+fn to_owned  →  fn(&amp;amp;self) -&amp;gt; &amp;lt;Self as ToOwned&amp;gt;::Owned
+  doc: Creates owned data from borrowed data, usually by cloning.
+
+fn try_into  →  fn(self) -&amp;gt; Result&amp;lt;T, &amp;lt;Self as TryInto&amp;lt;T&amp;gt;&amp;gt;::Error&amp;gt;
+  doc: Performs the conversion.
+
+fn update  →  const fn(&amp;amp;self, impl FnOnce(T) -&amp;gt; T)
+  doc: Updates the contained value using a function.
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Batch Query</title><id>https://example.com/batch-query.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/batch-query.html" rel="alternate"/><content type="html">&lt;h1&gt;Batch Query&lt;/h1&gt;
+&lt;p&gt;Querying multiple types and aggregating the results.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;query_methods_batch&lt;/code&gt; runs each query in parallel: one thread per type,
+each with its own independent &lt;code&gt;rust-analyzer&lt;/code&gt; subprocess. Total wall time
+is roughly the cost of the slowest single query rather than the sum of all.
+Errors are per-type and do not abort the batch.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/batch_query.rs&quot;&gt;batch_query.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;For &lt;code&gt;Vec&amp;lt;u8&amp;gt;&lt;/code&gt;, &lt;code&gt;VecDeque&amp;lt;u8&amp;gt;&lt;/code&gt;, and &lt;code&gt;LinkedList&amp;lt;u8&amp;gt;&lt;/code&gt;, this example returns:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Per-type method counts: printed after all queries complete&lt;/li&gt;
+&lt;li&gt;Common methods: the intersection across all three types&lt;/li&gt;
+&lt;li&gt;Unique methods: what each type has that neither of the others does&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods_batch};
+use rust_meth_lib::error::RustMethError;
+use std::collections::{BTreeMap, BTreeSet};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    let queries: &amp;amp;[(&amp;amp;str, Option&amp;lt;&amp;amp;str&amp;gt;)] = &amp;amp;[
+        (&quot;Vec&amp;lt;u8&amp;gt;&quot;, None),
+        (&quot;VecDeque&amp;lt;u8&amp;gt;&quot;, None),
+        (&quot;LinkedList&amp;lt;u8&amp;gt;&quot;, None),
+    ];
+
+    // All three queries run in parallel. Results come back in input order.
+    let batch_results = query_methods_batch(queries, &amp;amp;ra_path);
+
+    // -- Partition into successes and failures --
+
+    let mut results: BTreeMap&amp;lt;&amp;amp;str, BTreeSet&amp;lt;String&amp;gt;&amp;gt; = BTreeMap::new();
+    let mut failures: Vec&amp;lt;(&amp;amp;str, RustMethError)&amp;gt; = Vec::new();
+
+    for (type_name, result) in batch_results {
+        match result {
+            Ok(methods) =&amp;gt; {
+                let names: BTreeSet&amp;lt;String&amp;gt; = methods.into_iter().map(|m| m.name).collect();
+                println!(&quot;{type_name}: {} methods&quot;, names.len());
+                results.insert(type_name, names);
+            }
+            Err(e) =&amp;gt; {
+                eprintln!(&quot;{type_name}: FAILED: {e}&quot;);
+                failures.push((type_name, e));
+            }
+        }
+    }
+
+    println!();
+
+    // -- Methods common to all successfully queried types --
+
+    if results.len() &amp;gt;= 2 {
+        let mut common = results.values().next().cloned().unwrap_or_default();
+        for set in results.values().skip(1) {
+            common = common.intersection(set).cloned().collect();
+        }
+
+        println!(
+            &quot;Methods common to all {} types ({} total):&quot;,
+            results.len(),
+            common.len()
+        );
+        for name in &amp;amp;common {
+            println!(&quot;  {name}&quot;);
+        }
+        println!();
+    }
+
+    // -- Per-type unique methods --
+    //
+    // What does each type have that none of the others do?
+
+    for (type_name, methods) in &amp;amp;results {
+        let others_union: BTreeSet&amp;lt;&amp;amp;String&amp;gt; = results
+            .iter()
+            .filter(|(t, _)| *t != type_name)
+            .flat_map(|(_, s)| s.iter())
+            .collect();
+
+        let unique: Vec&amp;lt;&amp;amp;String&amp;gt; = methods
+            .iter()
+            .filter(|m| !others_union.contains(m))
+            .collect();
+
+        if unique.is_empty() {
+            println!(&quot;{type_name}: no unique methods&quot;);
+        } else {
+            println!(&quot;{type_name} unique methods ({}):&quot;, unique.len());
+            for name in unique {
+                println!(&quot;  {name}&quot;);
+            }
+        }
+        println!();
+    }
+
+    // -- Summary of failures --
+
+    if !failures.is_empty() {
+        println!(&quot;Failed queries:&quot;);
+        for (type_name, err) in failures {
+            println!(&quot;  {type_name}: {err}&quot;);
+        }
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;Vec&amp;lt;u8&amp;gt;: 229 methods
+VecDeque&amp;lt;u8&amp;gt;: 114 methods
+LinkedList&amp;lt;u8&amp;gt;: 46 methods
+
+Methods common to all 3 types (32 total):
+  append
+  clamp
+  clear
+  clone
+  clone_from
+  clone_into
+  cmp
+  contains
+  eq
+  extend
+  extend_one
+  extend_reserve
+  extract_if
+  ge
+  gt
+  into
+  into_iter
+  is_empty
+  iter
+  iter_mut
+  le
+  len
+  lt
+  max
+  min
+  ne
+  partial_cmp
+  remove
+  retain
+  split_off
+  to_owned
+  try_into
+
+LinkedList&amp;lt;u8&amp;gt; unique methods (4):
+  cursor_back
+  cursor_back_mut
+  cursor_front
+  cursor_front_mut
+
+Vec&amp;lt;u8&amp;gt; unique methods (156):
+  align_to
+  align_to_mut
+  array_windows
+  as_array
+  as_ascii
+  as_ascii_unchecked
+  as_chunks
+  as_chunks_mut
+  as_chunks_unchecked
+  as_chunks_unchecked_mut
+  as_mut
+  as_mut_array
+  as_mut_ptr
+  as_mut_ptr_range
+  as_mut_slice
+  as_non_null
+  as_ptr
+  as_ptr_range
+  as_rchunks
+  as_rchunks_mut
+  as_ref
+  as_simd
+  as_simd_mut
+  as_slice
+  chunk_by
+  chunk_by_mut
+  chunks
+  chunks_exact
+  chunks_exact_mut
+  chunks_mut
+  clone_from_slice
+  concat
+  connect
+  const_make_global
+  copy_from_slice
+  copy_within
+  dedup
+  dedup_by
+  dedup_by_key
+  deref
+  deref_mut
+  element_offset
+  ends_with
+  eq_ignore_ascii_case
+  escape_ascii
+  extend_from_slice
+  fill
+  fill_with
+  first
+  first_chunk
+  first_chunk_mut
+  first_mut
+  get_disjoint_mut
+  get_disjoint_unchecked_mut
+  get_unchecked
+  get_unchecked_mut
+  into_array
+  into_boxed_slice
+  into_chunks
+  into_parts
+  into_parts_with_alloc
+  into_raw_parts
+  into_raw_parts_with_alloc
+  is_ascii
+  is_sorted
+  is_sorted_by
+  is_sorted_by_key
+  join
+  last
+  last_chunk
+  last_chunk_mut
+  last_mut
+  leak
+  make_ascii_lowercase
+  make_ascii_uppercase
+  partial_sort_unstable
+  partial_sort_unstable_by
+  partial_sort_unstable_by_key
+  partition_dedup
+  partition_dedup_by
+  partition_dedup_by_key
+  peek_mut
+  pop
+  pop_if
+  push
+  push_mut
+  push_within_capacity
+  rchunks
+  rchunks_exact
+  rchunks_exact_mut
+  rchunks_mut
+  recycle
+  repeat
+  reverse
+  rsplit
+  rsplit_mut
+  rsplit_once
+  rsplitn
+  rsplitn_mut
+  select_nth_unstable
+  select_nth_unstable_by
+  select_nth_unstable_by_key
+  set_len
+  shift_left
+  shift_right
+  sort
+  sort_by
+  sort_by_cached_key
+  sort_by_key
+  sort_unstable
+  sort_unstable_by
+  sort_unstable_by_key
+  spare_capacity_mut
+  split_at
+  split_at_checked
+  split_at_mut
+  split_at_mut_checked
+  split_at_mut_unchecked
+  split_at_spare_mut
+  split_at_unchecked
+  split_first
+  split_first_chunk
+  split_first_chunk_mut
+  split_first_mut
+  split_inclusive
+  split_inclusive_mut
+  split_last
+  split_last_chunk
+  split_last_chunk_mut
+  split_last_mut
+  split_mut
+  split_once
+  splitn
+  splitn_mut
+  starts_with
+  strip_circumfix
+  strip_prefix
+  strip_suffix
+  subslice_range
+  swap_remove
+  swap_unchecked
+  swap_with_slice
+  to_ascii_lowercase
+  to_ascii_uppercase
+  to_vec
+  to_vec_in
+  trim_ascii
+  trim_ascii_end
+  trim_ascii_start
+  trim_prefix
+  trim_suffix
+  try_remove
+  try_shrink_to
+  try_shrink_to_fit
+  utf8_chunks
+  windows
+
+VecDeque&amp;lt;u8&amp;gt; unique methods (31):
+  as_mut_slices
+  as_slices
+  consume
+  extend_front
+  fill_buf
+  has_data_left
+  is_read_vectored
+  make_contiguous
+  pop_back_if
+  pop_front_if
+  prepend
+  prepend_from_within
+  range
+  range_mut
+  read
+  read_array
+  read_be
+  read_buf
+  read_buf_exact
+  read_exact
+  read_le
+  read_line
+  read_to_end
+  read_to_string
+  read_until
+  read_vectored
+  retain_back
+  skip_until
+  swap_remove_back
+  swap_remove_front
+  truncate_to_range
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Error Handling</title><id>https://example.com/error-handling.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/error-handling.html" rel="alternate"/><content type="html">&lt;h1&gt;Error Handling&lt;/h1&gt;
+&lt;p&gt;All fallible functions in &lt;code&gt;rust-meth-lib&lt;/code&gt; return &lt;code&gt;rust_meth_lib::Result&amp;lt;T&amp;gt;&lt;/code&gt;, a
+type alias over a single [&lt;code&gt;RustMethError&lt;/code&gt;] enum. This makes it easy to propagate
+errors with &lt;code&gt;?&lt;/code&gt; in your own code, and to convert them into your application’s
+own error type when you need custom messages or behaviour.&lt;/p&gt;
+&lt;h2&gt;&lt;code&gt;RustMethError&lt;/code&gt; variants&lt;/h2&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Variant&lt;/th&gt;&lt;th&gt;Cause&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;RustAnalyzerNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; not on &lt;code&gt;PATH&lt;/code&gt; or in rustup component directory&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;TypeNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;The probed type doesn’t exist or isn’t in scope&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;FeatureGated&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Type exists but requires a feature flag not enabled in the probe&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Timeout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; failed to respond within the retry budget&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Io&lt;/code&gt;&lt;/td&gt;&lt;td&gt;OS or filesystem error&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Json&lt;/code&gt;&lt;/td&gt;&lt;td&gt;JSON serialization or deserialization failure&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;UnexpectedResponseShape&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Structurally valid JSON but missing expected fields&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;RecvExhausted&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Message loop hit its limit without matching a response&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;h2&gt;Custom error types&lt;/h2&gt;
+&lt;p&gt;The most common embedding pattern is wrapping &lt;code&gt;RustMethError&lt;/code&gt; in your own
+&lt;code&gt;thiserror&lt;/code&gt; enum. Since &lt;code&gt;RustMethError&lt;/code&gt; implements &lt;code&gt;std::error::Error&lt;/code&gt;, it
+converts with &lt;code&gt;?&lt;/code&gt; directly, but a manual &lt;code&gt;From&lt;/code&gt; impl lets you intercept
+specific variants for custom messages before falling through to a generic
+wrapper for everything else.&lt;/p&gt;
+&lt;p&gt;The example below intercepts &lt;code&gt;RustAnalyzerNotFound&lt;/code&gt; and &lt;code&gt;TypeNotFound&lt;/code&gt; to give
+actionable error messages, while passing everything else through as a generic
+&lt;code&gt;QueryFailed&lt;/code&gt;.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/custom_error.rs&quot;&gt;custom_error.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+use rust_meth_lib::error::RustMethError;
+
+// -- Your application&apos;s error type --
+
+#[derive(Debug, thiserror::Error)]
+enum AppError {
+    /// rust-analyzer isn&apos;t installed, give a helpful message.
+    #[error(&quot;rust-analyzer not found. Install it with: rustup component add rust-analyzer&quot;)]
+    RustAnalyzerMissing,
+
+    /// The type the user asked about doesn&apos;t exist.
+    #[error(
+        &quot;Unknown type `{type_name}`. Check the spelling and that any required crate is listed in deps.&quot;
+    )]
+    UnknownType { type_name: String },
+
+    /// Anything else from the library becomes a generic query failure.
+    #[error(&quot;LSP query failed: {0}&quot;)]
+    QueryFailed(RustMethError),
+}
+
+// -- Conversion --
+//
+// We can&apos;t use `#[from]` for everything because we want to intercept specific
+// variants. Instead, write a manual `From` impl that matches the cases we care
+// about and falls through to the generic wrapper for everything else.
+
+impl From&amp;lt;RustMethError&amp;gt; for AppError {
+    fn from(err: RustMethError) -&amp;gt; Self {
+        match err {
+            RustMethError::RustAnalyzerNotFound =&amp;gt; Self::RustAnalyzerMissing,
+            RustMethError::TypeNotFound { type_name, .. } =&amp;gt; Self::UnknownType { type_name },
+            other =&amp;gt; Self::QueryFailed(other),
+        }
+    }
+}
+
+// -- Application logic --
+
+fn lookup(type_name: &amp;amp;str) -&amp;gt; Result&amp;lt;(), AppError&amp;gt; {
+    // find_rust_analyzer() returns RustMethError::RustAnalyzerNotFound on
+    // failure, which our From impl converts to AppError::RustAnalyzerMissing.
+    let ra_path = find_rust_analyzer()?;
+
+    // query_methods() returns RustMethError::TypeNotFound for bad type names,
+    // which our From impl converts to AppError::UnknownType.
+    let methods = query_methods(type_name, &amp;amp;ra_path, None)?;
+
+    println!(&quot;{type_name}: {} methods&quot;, methods.len());
+    for m in methods.iter().take(5) {
+        println!(&quot;  {}&quot;, m.name);
+    }
+    if methods.len() &amp;gt; 5 {
+        println!(&quot;  ...and {} more&quot;, methods.len() - 5);
+    }
+    Ok(())
+}
+
+fn main() {
+    // Use a type that will succeed.
+    match lookup(&quot;Vec&amp;lt;u8&amp;gt;&quot;) {
+        Ok(()) =&amp;gt; {}
+        Err(e) =&amp;gt; eprintln!(&quot;error: {e}&quot;),
+    }
+
+    println!();
+
+    // Use a type that will fail with `TypeNotFound`, demonstrates the
+    // custom error message path.
+    match lookup(&quot;NonExistentType&quot;) {
+        Ok(()) =&amp;gt; {}
+        Err(AppError::UnknownType { type_name }) =&amp;gt; {
+            eprintln!(&quot;Type not found: `{type_name}`&quot;);
+            eprintln!(&quot;Tip: check spelling, or pass deps for third-party crates.&quot;);
+        }
+        Err(e) =&amp;gt; eprintln!(&quot;error: {e}&quot;),
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;Vec&amp;lt;u8&amp;gt;: 229 methods
+  align_to
+  align_to_mut
+  allocator
+  append
+  array_windows
+  ...and 224 more
+
+Type not found: `NonExistentType`
+Tip: check spelling, or pass deps for third-party crates.
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Filtering</title><id>https://example.com/filtering.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/filtering.html" rel="alternate"/><content type="html">&lt;h1&gt;Filtering&lt;/h1&gt;
+&lt;p&gt;Filters and ranks methods against a query string without re-querying
+&lt;code&gt;rust-analyzer&lt;/code&gt;. Useful if you already have a &lt;code&gt;Vec&amp;lt;Method&amp;gt;&lt;/code&gt; and want to narrow
+results. Exact matches score highest, then prefix, then substring. Non-matching
+methods are excluded entirely.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/filter_methods.rs&quot;&gt;filter_methods.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+use rust_meth_lib::query::filter_methods;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = query_methods(&quot;HashMap&amp;lt;String, u32&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+    let filtered = filter_methods(&amp;amp;methods, &quot;get&quot;);
+    println!(&quot;HashMap&amp;lt;String, u32&amp;gt; methods matching \&quot;get\&quot;:\n&quot;);
+    for m in filtered {
+        println!(&quot;{}&quot;, m.name);
+    }
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;HashMap&amp;lt;String, u32&amp;gt; methods matching &quot;get&quot;:
+
+get
+get_disjoint_mut
+get_disjoint_unchecked_mut
+get_key_value
+get_mut
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/fuzzy_filter.rs&quot;&gt;fuzzy_filter.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;query_methods&lt;/code&gt; returns a plain &lt;code&gt;Vec&amp;lt;Method&amp;gt;&lt;/code&gt;: already sorted and deduplicated,
+ready to filter however you like. This example shows a few patterns: substring
+match, signature grep, and a simple ranked scorer. If you’re building a TUI or
+editor plugin on top of the library, this is the pattern to follow.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{Method, find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = query_methods(&quot;HashMap&amp;lt;String, u32&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+
+    let query = &quot;get&quot;;
+
+    println!(&quot;All methods containing \&quot;{query}\&quot;:&quot;);
+    println!(&quot;{}&quot;, &quot;-&quot;.repeat(40));
+
+    // -- 1. Simple substring filter --
+    let matched: Vec&amp;lt;&amp;amp;Method&amp;gt; = methods.iter().filter(|m| m.name.contains(query)).collect();
+
+    for m in &amp;amp;matched {
+        println!(&quot;  {}&quot;, m.name);
+    }
+
+    println!();
+
+    // -- 2. Signature grep --
+    //
+    // Filter on the `detail` field to find methods with a specific return type.
+    // Useful when you want to narrow results by type, not just name.
+
+    let returns_option: Vec&amp;lt;&amp;amp;Method&amp;gt; = methods
+        .iter()
+        .filter(|m| {
+            m.detail
+                .as_deref()
+                .is_some_and(|sig| sig.contains(&quot;-&amp;gt; Option&quot;))
+        })
+        .collect();
+
+    println!(&quot;Methods returning Option&amp;lt;_&amp;gt;:&quot;);
+    println!(&quot;{}&quot;, &quot;-&quot;.repeat(40));
+    for m in &amp;amp;returns_option {
+        println!(
+            &quot;  {}  →  {}&quot;,
+            m.name,
+            m.detail.as_deref().unwrap_or(&quot;(no signature)&quot;)
+        );
+    }
+
+    println!();
+
+    // -- 3. Simple ranked scorer --
+    //
+    // Score each method by how closely it matches the query: prefix match
+    // scores higher than substring match, exact match highest. This gives
+    // you a starting point for building fuzzy ranking without pulling in
+    // a whole fuzzy-matching crate.
+
+    println!(&quot;Ranked results for \&quot;{query}\&quot;:&quot;);
+    println!(&quot;{}&quot;, &quot;-&quot;.repeat(40));
+
+    let mut scored: Vec&amp;lt;(u8, &amp;amp;Method)&amp;gt; = methods
+        .iter()
+        .filter_map(|m| {
+            let score = if m.name == query {
+                3 // exact
+            } else if m.name.starts_with(query) {
+                2 // prefix
+            } else if m.name.contains(query) {
+                1 // substring
+            } else {
+                return None;
+            };
+            Some((score, m))
+        })
+        .collect();
+
+    // Sort descending by score; stable within each tier (already alpha-sorted
+    // from query_methods).
+    scored.sort_by_key(|item| std::cmp::Reverse(item.0));
+
+    for (score, m) in scored {
+        let label = match score {
+            3 =&amp;gt; &quot;exact &quot;,
+            2 =&amp;gt; &quot;prefix&quot;,
+            _ =&amp;gt; &quot;substr&quot;,
+        };
+        println!(&quot;  [{label}]  {}&quot;, m.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;All methods containing &quot;get&quot;:
+----------------------------------------
+  get
+  get_disjoint_mut
+  get_disjoint_unchecked_mut
+  get_key_value
+  get_mut
+
+Methods returning Option&amp;lt;_&amp;gt;:
+----------------------------------------
+  get  →  fn(&amp;amp;self, &amp;amp;Q) -&amp;gt; Option&amp;lt;&amp;amp;V&amp;gt;
+  get_key_value  →  fn(&amp;amp;self, &amp;amp;Q) -&amp;gt; Option&amp;lt;(&amp;amp;K, &amp;amp;V)&amp;gt;
+  get_mut  →  fn(&amp;amp;mut self, &amp;amp;Q) -&amp;gt; Option&amp;lt;&amp;amp;mut V&amp;gt;
+  insert  →  fn(&amp;amp;mut self, K, V) -&amp;gt; Option&amp;lt;V&amp;gt;
+  remove  →  fn(&amp;amp;mut self, &amp;amp;Q) -&amp;gt; Option&amp;lt;V&amp;gt;
+  remove_entry  →  fn(&amp;amp;mut self, &amp;amp;Q) -&amp;gt; Option&amp;lt;(K, V)&amp;gt;
+
+Ranked results for &quot;get&quot;:
+----------------------------------------
+  [exact ]  get
+  [prefix]  get_disjoint_mut
+  [prefix]  get_disjoint_unchecked_mut
+  [prefix]  get_key_value
+  [prefix]  get_mut
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Definitions</title><id>https://example.com/definitions.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/definitions.html" rel="alternate"/><content type="html">&lt;h1&gt;Definitions&lt;/h1&gt;
+&lt;p&gt;This chapter covers how to locate the actual source code definitions for methods
+across standard library and third-party types using &lt;code&gt;rust-analyzer&lt;/code&gt;.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/go_to_definition.rs&quot;&gt;go_to_definition.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;Direct Definition Queries&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The &lt;code&gt;go_to_definition.rs&lt;/code&gt; example demonstrates how to query a specific type and
+method combination to find its absolute and relative paths on disk, alongside
+the line number.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_definition};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    // -- Stdlib method --
+
+    print_definition(&quot;Vec&amp;lt;u8&amp;gt;&quot;, &quot;push&quot;, &amp;amp;ra_path, None)?;
+    print_definition(&quot;String&quot;, &quot;push_str&quot;, &amp;amp;ra_path, None)?;
+    print_definition(&quot;HashMap&amp;lt;String, u32&amp;gt;&quot;, &quot;insert&quot;, &amp;amp;ra_path, None)?;
+
+    // -- Third-party method --
+
+    let serde_deps = r#&quot;serde_json = &quot;1.0&quot;&quot;#;
+    print_definition(&quot;serde_json::Value&quot;, &quot;as_str&quot;, &amp;amp;ra_path, Some(serde_deps))?;
+
+    Ok(())
+}
+
+fn print_definition(
+    type_name: &amp;amp;str,
+    method_name: &amp;amp;str,
+    ra_path: &amp;amp;std::path::Path,
+    deps: Option&amp;lt;&amp;amp;str&amp;gt;,
+) -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    print!(&quot;{type_name}::{method_name}  →  &quot;);
+
+    match query_definition(type_name, method_name, ra_path, deps)? {
+        Some(def) =&amp;gt; {
+            // `path` is the display-friendly shortened form:
+            //   &quot;library/core/src/num/uint_macros.rs&quot;
+            //
+            // `full_path` is the absolute path on disk, useful if you want
+            // to open the file programmatically.
+            //
+            // `line` is 0-indexed (LSP convention). Add 1 for display.
+            println!(&quot;{}:{}&quot;, def.path, def.line + 1);
+            println!(&quot;       full: {}&quot;, def.full_path);
+        }
+        None =&amp;gt; {
+            // Not an error, `rust-analyzer` just doesn&apos;t have a source
+            // location for this method. Common for compiler intrinsics.
+            println!(&quot;(no source location found)&quot;);
+        }
+    }
+
+    println!();
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;Vec&amp;lt;u8&amp;gt;::push  →  library/alloc/src/vec/mod.rs:995
+       full: /home/jr/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs
+
+String::push_str  →  library/alloc/src/string.rs:1104
+       full: /home/jr/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/string.rs
+
+HashMap&amp;lt;String, u32&amp;gt;::insert  →  library/std/src/collections/hash/map.rs:1332
+       full: /home/jr/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/map.rs
+
+serde_json::Value::as_str  →  src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/value/mod.rs:492
+       full: /home/jr/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/value/mod.rs
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/builder_definitions.rs&quot;&gt;builder_definitions.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;ol start=&quot;2&quot;&gt;
+&lt;li&gt;Builder Pattern with Definitions&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The &lt;code&gt;builder_definitions.rs&lt;/code&gt; example integrates definition lookup into the
+&lt;code&gt;MethodQuery&lt;/code&gt; builder. This allows you to filter methods and immediately
+retrieve their source locations in a single workflow.&lt;/p&gt;
+&lt;blockquote class=&quot;markdown-alert-note&quot;&gt;
+&lt;p&gt;For third-party types, each matching method runs a separate definition query.
+Use a tight filter (exact or short prefix) to limit the number of queries.
+Results are not cached by the results cache since definition queries return
+source locations rather than method lists, expect similar times on every run
+for third-party types.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    // -- Stdlib type -- fast --
+
+    let results = MethodQuery::new(&quot;Vec&amp;lt;u8&amp;gt;&quot;)
+        .filter(&quot;drain&quot;)
+        .run_with_definitions(&amp;amp;ra_path)?;
+
+    println!(&quot;Vec&amp;lt;u8&amp;gt; methods matching \&quot;drain\&quot; with source locations:&quot;);
+    for r in &amp;amp;results {
+        match &amp;amp;r.definition {
+            Some(def) =&amp;gt; println!(&quot;  {}  →  {}:{}&quot;, r.method.name, def.path, def.line + 1),
+            None =&amp;gt; println!(&quot;  {}  →  (no source location)&quot;, r.method.name),
+        }
+    }
+
+    println!();
+
+    // -- Third-party type -- use an exact filter to limit definition queries.
+    // Definition results are not cached, so this will always spin up
+    // rust-analyzer. A broad filter like &quot;as_&quot; would multiply this cost
+    // by the number of matches.
+
+    println!(&quot;Querying serde_json::Value::as_str (may be slow on first run)...&quot;);
+    let results = MethodQuery::new(&quot;serde_json::Value&quot;)
+        .deps(r#&quot;serde_json = &quot;1.0&quot;&quot;#)
+        .filter(&quot;as_str&quot;)
+        .run_with_definitions(&amp;amp;ra_path)?;
+
+    println!(&quot;serde_json::Value methods matching \&quot;as_str\&quot; with source locations:&quot;);
+    for r in &amp;amp;results {
+        match &amp;amp;r.definition {
+            Some(def) =&amp;gt; println!(&quot;  {}  →  {}:{}&quot;, r.method.name, def.path, def.line + 1),
+            None =&amp;gt; println!(&quot;  {}  →  (no source location)&quot;, r.method.name),
+        }
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;Vec&amp;lt;u8&amp;gt; methods matching &quot;drain&quot; with source locations:
+  drain  →  library/alloc/src/vec/mod.rs:3022
+
+Querying serde_json::Value::as_str (may be slow on first run)...
+serde_json::Value methods matching &quot;as_str&quot; with source locations:
+  as_str  →  src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/value/mod.rs:492
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Builder API</title><id>https://example.com/builder-api.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/builder-api.html" rel="alternate"/><content type="html">&lt;h1&gt;Builder API&lt;/h1&gt;
+&lt;h2&gt;Builder options&lt;/h2&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Method&lt;/th&gt;&lt;th&gt;Description&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;MethodQuery::new(type_name)&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Start a query for the given type&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;.deps(toml)&lt;/code&gt;&lt;/td&gt;&lt;td&gt;TOML dependency string for third-party crates&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;.filter(query)&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Narrow results by name (exact &amp;gt; prefix &amp;gt; substring)&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;.run(&amp;amp;ra_path)&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Execute and return &lt;code&gt;Vec&amp;lt;Method&amp;gt;&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;.run_with_definitions(&amp;amp;ra_path)&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Execute and return &lt;code&gt;Vec&amp;lt;MethodResult&amp;gt;&lt;/code&gt; with source locations&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/builder_run.rs&quot;&gt;builder_run.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    let methods = MethodQuery::new(&quot;String&quot;).filter(&quot;push&quot;).run(&amp;amp;ra_path)?;
+
+    println!(&quot;String methods matching \&quot;push\&quot;:&quot;);
+    for m in &amp;amp;methods {
+        let sig = m.detail.as_deref().unwrap_or(&quot;(no signature)&quot;);
+        println!(&quot;  {}  →  {sig}&quot;, m.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;String methods matching &quot;push&quot;:
+  push  →  fn(&amp;amp;mut self, char)
+  push_str  →  fn(&amp;amp;mut self, &amp;amp;str)
+&lt;/code&gt;&lt;/pre&gt;
+</content></entry><entry><title>Results Cache</title><id>https://example.com/results-cache.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/results-cache.html" rel="alternate"/><content type="html">&lt;h1&gt;Results Cache&lt;/h1&gt;
+&lt;p&gt;The results_cache example demonstrates the caching mechanism introduced in
+version 0.4.0.&lt;/p&gt;
+&lt;p&gt;When querying methods for a type, the library normally spins up a
+&lt;code&gt;rust-analyzer&lt;/code&gt; LSP session, which can take a few seconds. The results cache
+stores these outputs as JSON in &lt;code&gt;$XDG_CACHE_HOME/rust-meth/results/&lt;/code&gt;. Subsequent
+calls, even across separate process runs, retrieve the data instantly with zero
+LSP overhead.&lt;/p&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/results_cache.rs&quot;&gt;results_cache.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+use rust_meth_lib::results_cache::results_cache_entries;
+use std::time::Instant;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    // Uncomment to clear the cache on every run
+    // rust_meth_lib::results_cache::clear_results_cache().ok();
+
+    // -- First call -- cold results cache --
+    println!(&quot;First call (cold cache)...&quot;);
+    let t1 = Instant::now();
+    let methods = query_methods(&quot;Vec&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+    let elapsed1 = t1.elapsed();
+
+    println!(&quot;  {} methods found in {:.2?}\n&quot;, methods.len(), elapsed1);
+
+    // Inspect what was saved
+    let entries = results_cache_entries();
+    println!(&quot;Results cache now has {} entry:&quot;, entries.len());
+    for e in &amp;amp;entries {
+        println!(
+            &quot;  {} : {} methods (ra: {})&quot;,
+            e.type_name, e.method_count, e.ra_version
+        );
+    }
+    println!();
+
+    // -- Second call -- results cache hit --
+    println!(&quot;Second call (warm cache)...&quot;);
+    let t2 = Instant::now();
+    let methods2 = query_methods(&quot;Vec&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+    let elapsed2 = t2.elapsed();
+
+    println!(&quot;  {} methods found in {:.2?}\n&quot;, methods2.len(), elapsed2);
+
+    // Summary
+    let speedup = elapsed1.as_secs_f64() / elapsed2.as_secs_f64();
+    println!(&quot;Speedup: {speedup:.0}x faster on cache hit&quot;);
+    println!(&quot;\nRun this example again to see the persistent cache kick in&quot;);
+    println!(
+        &quot;on the very first call (~0ms instead of ~{}s).&quot;,
+        elapsed1.as_secs()
+    );
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;First call (cold cache)...
+  229 methods found in 3.66s
+
+Results cache now has 1 entry:
+  Vec&amp;lt;u8&amp;gt; : 229 methods (ra: rust-analyzer 1.100.0-nightly (34baba5 2026-08-16))
+
+Second call (warm cache)...
+  229 methods found in 17.29ms
+
+Speedup: 212x faster on cache hit
+
+Run this example again to see the persistent cache kick in
+on the very first call (~0ms instead of ~3s).
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote class=&quot;markdown-alert-note&quot;&gt;
+&lt;p&gt;Running this example a second time will yield a warm cache on both queries,
+dropping the first call’s time down to fractions of a millisecond.&lt;/p&gt;
+&lt;/blockquote&gt;
+</content></entry><entry><title>Third Party Crates</title><id>https://example.com/third-party-crates.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/third-party-crates.html" rel="alternate"/><content type="html">&lt;h1&gt;Third Party Crates&lt;/h1&gt;
+&lt;p&gt;Querying methods on types from external crates.&lt;/p&gt;
+&lt;blockquote class=&quot;markdown-alert-note&quot;&gt;
+&lt;p&gt;The first time you query a third-party type, Cargo must download and compile
+the crate inside the ephemeral probe project. This can take 10-30
+seconds on a cold cache. Subsequent queries still require Cargo to resolve
+dependencies inside the ephemeral probe project, so expect similar times on
+every invocation until persistent probe caching is implemented.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;&lt;a href=&quot;https://github.com/saylesss88/rust-meth/blob/main/lib/examples/third_party_crate.rs&quot;&gt;third_party_crate.rs&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    // ── Single external crate ────────────────────────────────────────────────
+
+    let serde_deps = r#&quot;serde_json = &quot;1.0&quot;&quot;#;
+
+    println!(&quot;Querying serde_json::Value methods (may be slow on first run)...&quot;);
+    let methods = query_methods(&quot;serde_json::Value&quot;, &amp;amp;ra_path, Some(serde_deps))?;
+
+    println!(&quot;serde_json::Value has {} methods:&quot;, methods.len());
+    for m in &amp;amp;methods {
+        println!(&quot;  {}&quot;, m.name);
+    }
+
+    println!();
+
+    // ── Multiple dependencies ────────────────────────────────────────────────
+    //
+    // If your type requires more than one crate (e.g. a type that uses serde
+    // traits), pass all deps as a single newline-separated string. This maps
+    // directly to what Cargo expects under [dependencies].
+
+    let multi_deps = &quot;serde = { version = \&quot;1.0\&quot;, features = [\&quot;derive\&quot;] }\nserde_json = \&quot;1.0\&quot;&quot;;
+
+    println!(&quot;Querying serde_json::Map with serde + serde_json...&quot;);
+    let map_methods = query_methods(
+        &quot;serde_json::Map&amp;lt;String, serde_json::Value&amp;gt;&quot;,
+        &amp;amp;ra_path,
+        Some(multi_deps),
+    )?;
+
+    println!(&quot;serde_json::Map has {} methods:&quot;, map_methods.len());
+    for m in &amp;amp;map_methods {
+        println!(&quot;  {}&quot;, m.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;Querying serde_json::Value methods (may be slow on first run)...
+serde_json::Value has 37 methods:
+  as_array
+  as_array_mut
+  as_bool
+  as_f64
+  as_i64
+  as_null
+  as_number
+  as_object
+  as_object_mut
+  as_str
+  as_u64
+  clone
+  clone_from
+  clone_into
+  eq
+  get
+  get_mut
+  index
+  index_mut
+  into
+  is_array
+  is_boolean
+  is_f64
+  is_i64
+  is_null
+  is_number
+  is_object
+  is_string
+  is_u64
+  ne
+  pointer
+  pointer_mut
+  sort_all_objects
+  take
+  to_owned
+  to_string
+  try_into
+
+Querying serde_json::Map with serde + serde_json...
+serde_json::Map has 34 methods:
+  append
+  clear
+  clone
+  clone_from
+  clone_into
+  contains_key
+  entry
+  eq
+  extend
+  extend_one
+  extend_reserve
+  get
+  get_key_value
+  get_mut
+  index
+  index_mut
+  insert
+  into
+  into_iter
+  into_values
+  is_empty
+  iter
+  iter_mut
+  keys
+  len
+  ne
+  remove
+  remove_entry
+  retain
+  sort_keys
+  to_owned
+  try_into
+  values
+  values_mut
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;Using the Builder API&lt;/h3&gt;
+&lt;p&gt;The same queries using &lt;code&gt;MethodQuery&lt;/code&gt;, the &lt;code&gt;.deps()&lt;/code&gt; call keeps the dependency
+string attached to the type it belongs to:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;use rust_meth_lib::analyzer::find_rust_analyzer;
+use rust_meth_lib::query::MethodQuery;
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+
+    let methods = MethodQuery::new(&quot;serde_json::Value&quot;)
+        .deps(r#&quot;serde_json = &quot;1.0&quot;&quot;#)
+        .run(&amp;amp;ra_path)?;
+
+    println!(&quot;serde_json::Value has {} methods:&quot;, methods.len());
+    for m in &amp;amp;methods {
+        println!(&quot;  {}&quot;, m.name);
+    }
+
+    println!();
+
+    let map_methods = MethodQuery::new(&quot;serde_json::Map&amp;lt;String, serde_json::Value&amp;gt;&quot;)
+        .deps(&quot;serde = { version = \&quot;1.0\&quot;, features = [\&quot;derive\&quot;] }\nserde_json = \&quot;1.0\&quot;&quot;)
+        .run(&amp;amp;ra_path)?;
+
+    println!(&quot;serde_json::Map has {} methods:&quot;, map_methods.len());
+    for m in &amp;amp;map_methods {
+        println!(&quot;  {}&quot;, m.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Output is identical to the above.&lt;/p&gt;
+</content></entry></feed>
