@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9bb74078.js";
+            window.path_to_searchindex_js = "searchindex-6d20e969.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-01c0b95f.js"></script>
@@ -181,30 +181,96 @@ cargo install --git https://github.com/saylesss88/jj-release.git
 cargo install jj-release
 </code></pre>
 <p>Requires <code>jj</code> on your PATH.</p>
-<p>Optional dependencies:</p>
+<hr>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<p><code>jj-release</code> uses Cargo features to keep the binary lean, only compile in
+support for the forges and publish targets you actually use.</p>
+<h2 id="default-features"><a class="header" href="#default-features">Default Features</a></h2>
+<p>The default build includes GitHub and GitLab support:</p>
+<pre><code class="language-sh">cargo install jj-release
+</code></pre>
+<h2 id="forge-features"><a class="header" href="#forge-features">Forge Features</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Enables</th><th>Requires</th></tr>
+</thead>
+<tbody>
+<tr><td><code>github</code></td><td>GitHub releases and PRs via <code>gh</code></td><td><code>gh</code> CLI</td></tr>
+<tr><td><code>gitlab</code></td><td>GitLab releases and MRs via <code>glab</code></td><td><code>glab</code> CLI</td></tr>
+<tr><td><code>gitea</code></td><td>Gitea releases and PRs via REST API</td><td><code>GITEA_TOKEN</code></td></tr>
+<tr><td><code>forgejo</code></td><td>Forgejo/Codeberg via REST API (includes <code>gitea</code>)</td><td><code>FORGEJO_TOKEN</code></td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-sh"># Forgejo/Codeberg only, no GitHub or GitLab
+cargo install jj-release --no-default-features --features forgejo
+</code></pre>
+<h2 id="publish-features"><a class="header" href="#publish-features">Publish Features</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Enables</th></tr>
+</thead>
+<tbody>
+<tr><td><code>publish-aur</code></td><td>Publishing to the Arch User Repository</td></tr>
+<tr><td><code>publish-copr</code></td><td>Publishing to Fedora COPR</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-sh"># Full build with all forges and publish targets
+cargo install jj-release --features full
+</code></pre>
+<h2 id="library-features"><a class="header" href="#library-features">Library Features</a></h2>
+<p>If you’re using <code>jj_release_core</code> as a library:</p>
+<pre><code class="language-toml">[dependencies]
+# Default: GitHub + GitLab
+jj_release_core = "0.9.0"
+
+# Forgejo/Codeberg support
+jj_release_core = { version = "0.9.0", features = ["forgejo"] }
+
+# Everything
+jj_release_core = { version = "0.9.0", features = ["full"] }
+</code></pre>
+<hr>
+<h3 id="nixos--flakes"><a class="header" href="#nixos--flakes">NixOS &amp; Flakes</a></h3>
+<p>The flake provides two packages depending on the features you need:</p>
 <ul>
-<li>For forge releases, <code>gh</code> or <code>glab</code> must also be available.</li>
-<li>For independent workspace versioning, <code>cargo-edit</code> must be installed.</li>
-<li><code>cargo-semver-checks</code> (Required by default to prevent accidental breaking
-changes. Can be disabled by setting <code>semver_checks = false</code> in
-<code>release.toml</code>).</li>
+<li><strong>Default</strong> (<code>default</code>): Includes the <code>github</code> and <code>gitlab</code> features.</li>
+<li><strong>Full</strong> (<code>jj-release-full</code>): Includes the <code>full</code> feature flag.</li>
 </ul>
-<h3 id="nixos"><a class="header" href="#nixos">NixOS</a></h3>
-<p>Try it out without installing permanently :</p>
+<p><strong>Try it out without installing:</strong></p>
+<p>Run the default package:</p>
 <pre><code class="language-bash">nix run github:saylesss88/jj-release
 </code></pre>
-<p>Flake input:</p>
+<p>Run the full package:</p>
+<pre><code class="language-bash">nix run github:saylesss88/jj-release#jj-release-full
+</code></pre>
+<p><strong>Add to your NixOS configuration via Flakes:</strong></p>
+<p>First, add the input to your <code>flake.nix</code>:</p>
 <pre><code class="language-nix"># In your flake.nix:
 inputs.jj-release.url = "github:saylesss88/jj-release";
+</code></pre>
+<p>Then, in your <code>configuration.nix</code> (assuming <code>inputs</code> is passed via <code>specialArgs</code>),
+add your preferred package to <code>environment.systemPackages</code>:</p>
+<pre><code class="language-nix">{ inputs, pkgs, ... }: {
+  environment.systemPackages = [
+    # Choose ONE of the following:
 
-# In your configuration.nix (assuming `inputs` is passed via specialArgs)
-{ inputs, pkgs, ... }: {
-inputs.jj-release.packages.${pkgs.stdenv.hostPlatform.system}.default
+    # 1. For the default build (GitHub/GitLab only):
+    inputs.jj-release.packages.${pkgs.stdenv.hostPlatform.system}.default
+
+    # 2. For the full build:
+    inputs.jj-release.packages.${pkgs.stdenv.hostPlatform.system}.jj-release-full
+  ];
 }
 </code></pre>
+<hr>
 <h3 id="arch-linux"><a class="header" href="#arch-linux">Arch Linux</a></h3>
 <pre><code class="language-bash">paru -S jj-release
 </code></pre>
+<hr>
 <h3 id="fedora"><a class="header" href="#fedora">Fedora</a></h3>
 <p>You can install <code>jj-release</code> from the unofficial COPR repository. This
 repository provides pre-compiled binaries built automatically for Fedora

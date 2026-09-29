@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9bb74078.js";
+            window.path_to_searchindex_js = "searchindex-6d20e969.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-01c0b95f.js"></script>
@@ -202,6 +202,50 @@ only validates local compilation. Server-side registry rejections (like
 invalid URLs or missing permissions) will still cause the pipeline to fail
 during the final push.</p>
 </blockquote>
+<hr>
+<h2 id="fixing-commit-messages-after-a-release-immutable-commits"><a class="header" href="#fixing-commit-messages-after-a-release-immutable-commits">Fixing commit messages after a release (Immutable Commits)</a></h2>
+<p>If you need to fix a typo in a commit message after a release is finalized
+(which marks the commit as immutable), rewriting the message will detach the Git
+tag. Because changelog generators rely on Git tags to group history, you must
+re-anchor the tag to the new timeline before regenerating the changelog.</p>
+<ol>
+<li><strong>Rewrite the commit message:</strong></li>
+</ol>
+<pre><code class="language-bash">jj --ignore-immutable desc -r &lt;commit_rev&gt; -m 'fix: your new message'
+</code></pre>
+<p>(Note: use single quotes <code>'</code> if your message contains backticks so your shell
+doesn’t execute them). 2. Find the new release commit hash: Because history is
+rewritten, the release commit generated a new hash. Find it using <code>jj log</code>. 3.
+Re-anchor the release tag (i.e. The commit <code>chore: release vX.Y.Z</code>):</p>
+<pre><code class="language-bash">jj tag set vX.Y.Z -r &lt;NEW_RELEASE_HASH&gt; --allow-move
+</code></pre>
+<p>(Note: the further back in history you go, the more tags you’ll have to
+re-anchor) 4. Regenerate your changelog. The generator will now traverse the
+corrected timeline and parse the updated messages.</p>
+<pre><code class="language-bash">rm CHANGELOG.md
+jj-release changelog --full -o CHANGELOG.md
+</code></pre>
+<ol start="5">
+<li>Push/Force-push the corrected history. Since you altered public history,
+force- push the updated branch and tag back to your remote.</li>
+</ol>
+<pre><code class="language-bash"># Push the corrected bookmark (no force need if jj handles the move)
+jj git push
+
+# Force-push each re-anchored tag via git directly
+# (jj git push doesn't support --force)
+git push origin vX.Y.Z --force
+</code></pre>
+<p>Or if you have multiple tags to re-anchor, push them all:</p>
+<pre><code class="language-bash">jj git push # pushes the bookmark
+# then for each re-anchored tag:
+git push origin v0.1.0 --force
+git push origin v0.2.0 --force
+# etc.
+</code></pre>
+<p>Force-pushing is generally considered bad practice in collaborative projects
+since others may have fetched the old tags. For a solo project it’s fine, just
+keep this in mind..</p>
 
                     </main>
 
