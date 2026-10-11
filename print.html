@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-adf1bf68.js";
+            window.path_to_searchindex_js = "searchindex-77e2b6d0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-268afc56.js"></script>
+        <script src="toc-ba122ec0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -23146,10 +23146,15 @@ compelling alternative for both new and experienced developers.</p>
 <script defer="" src="../vi-mode.js"></script>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="practical-jujutsu"><a class="header" href="#practical-jujutsu">Practical Jujutsu</a></h1>
+<blockquote>
+<p>Follow the [conventional commits
+guidelines(https://www.conventionalcommits.org/ to <em>make reviews easier</em> and
+to make the VCS logs more valuable. The structure of the commit message is:)]</p>
+</blockquote>
 <p>This post assumes basic understanding of Git and GitHub.</p>
 <p>I’ve spent enough time hovering between the familiarity of Git and the potential
-of Jujutsu. It’s time to move past a ‘primitive’ workflow. By truly mastering
-one of these tools, I want to turn version control from a chore into a way to
+of Jujutsu. t’s time to move past a ‘primitive’ workflow. By truly mastering one
+of these tools, I want to turn version control from a chore into a way to
 precisely navigate my development stages and build a history that future
 contributors can actually follow.</p>
 <p>JJ simplifies keeping a linear history and makes it easy to break down big
@@ -23171,6 +23176,22 @@ changes into smaller atomic changes.</p>
 <li>The <code>body</code> is mandatory for all commits except “doc” type commits.</li>
 <li>The <code>footer</code> is optional</li>
 </ul>
+</blockquote>
+<blockquote>
+<p>I also personally like neovims suggested commit message format in their
+<a href="https://github.com/neovim/neovim/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a>:</p>
+<p>Follow the
+<a href="https://www.conventionalcommits.org/">conventional commits guidelines</a> to
+<em>make reviews easier</em> and to make the VCS logs more valuable. The structure of
+the commit message is:</p>
+<pre><code class="language-text">type(scope): subject
+
+Problem:
+...
+
+Solution:
+...
+</code></pre>
 </blockquote>
 <ol>
 <li>Atomic Commits</li>
@@ -23547,7 +23568,8 @@ recover from this and keep our commits atomic.</p>
 <ul>
 <li>This opens up a diff editor, I’ll only press <code>y</code> for the changes related to
 username and hostname. After you pass on what you don’t want in this change
-and press <code>y</code> on what you do want, your $EDITOR will open with your previous
+and press <code>y</code> on what you do want, your
+$EDITOR will open with your previous
 commit message. Save it and another commit message will open up in $EDITOR,
 this is whatever you didn’t press <code>y</code> on i.e., the <code>configuration.nix</code>
 changes, just give the second set of changes a different description and
@@ -28475,6 +28497,314 @@ isolation of your software builds through this fundamental concept.</p>
 <script src="vi-mode-config.js"></script>
 <script defer="" src="vi-mode-keybinding-vim.js"></script>
 <script defer="" src="vi-mode.js"></script>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="exploring-nixpkgs-lib"><a class="header" href="#exploring-nixpkgs-lib">Exploring Nixpkgs lib</a></h1>
+<p>Following <a href="https://www.youtube.com/watch?v=YrjF_hfYOEg">Nix Hour 71</a></p>
+<h2 id="setup-sparse-clone-nixpkgs"><a class="header" href="#setup-sparse-clone-nixpkgs">Setup: Sparse-clone Nixpkgs</a></h2>
+<p>Nixpkgs is multi-GB, but you can pull in only what you need:</p>
+<pre><code class="language-sh">mkdir ~/src &amp;&amp; cd ~/src
+git clone --depth=1 --filter=blob:none --sparse https://github.com/NixOS/nixpkgs
+cd nixpkgs
+git sparse-checkout set lib pkgs
+</code></pre>
+<h2 id="loading-into-nix-repl"><a class="header" href="#loading-into-nix-repl">Loading into <code>nix repl</code></a></h2>
+<p>In the video, infinisil runs <code>nix repl default.nix</code> from inside <code>lib/</code>. This
+worked in older Nix but fails now:</p>
+<pre><code class="language-sh">error: path ".../lib/default.nix" is not a flake (because it's not a directory)
+</code></pre>
+<p>Modern Nix only accepts directories. The equivalent is to import from the repo
+root, which wires together <code>lib</code>, <code>pkgs</code>, and everything else in one shot:</p>
+<pre><code class="language-sh">cd ~/src/nixpkgs
+nix repl .
+nix-repl&gt; pkgs = import ./. {}
+nix-repl&gt; lib.trivial.version
+"26.11.20260902.dirty"
+nix-repl&gt; pkgs.hello
+«derivation /nix/store/vlp8xby1jjmif5hdsck5vfdq4fljpvli-hello-2.12.3.drv»
+</code></pre>
+<p><strong>Getting rid of the <code>lib.</code> and <code>pkgs.</code> prefixes</strong></p>
+<p>In the video, he can type <code>fixedPoints</code> directly instead of <code>lib.fixedPoints</code>.
+That’s because the old <code>nix repl &lt;file&gt;</code> behavior spread every key of the
+resulting attrset as a top-level repl variable. That’s gone. The manual
+equivalent is <code>inherit</code>:</p>
+<pre><code class="language-sh"># Pull sub-libraries to the top level
+nix-repl&gt; inherit (lib) attrsets strings lists fixedPoints;
+nix-repl&gt; fixedPoints.fix
+«lambda fix @ /home/jr/src2/nixpkgs/lib/fixed-points.nix:93:5»
+
+# Pull individual packages to the top level
+nix-repl&gt; inherit (pkgs) hello git;
+nix-repl&gt; hello
+«derivation /nix/store/vlp8xby1jjmif5hdsck5vfdq4fljpvli-hello-2.12.3.drv»
+</code></pre>
+<p><code>inherit (lib) attrsets</code> is just sugar for <code>attrsets = lib.attrsets</code>. It binds
+the value as a top-level repl variable.</p>
+<p>Alternatively, <code>:l &lt;nixpkgs&gt;</code> loads everything at once but takes longer:</p>
+<pre><code class="language-sh">nix-repl&gt; :l &lt;nixpkgs&gt;
+Added 17000 variables.
+</code></pre>
+<h2 id="what-lib-is"><a class="header" href="#what-lib-is">What lib is</a></h2>
+<p><code>lib</code> is Nixpkg’s standard library. A collection of pure Nix utility functions.
+It doesn’t depend on packages, so it’s self-contained. (Its tests pull in
+packages, but the functions themselves don’t.)</p>
+<p><code>nixpkgs/lib</code> is fairly narrowly focused: it’s purly utility functions for
+writing Nix expressions. Things like manipulating attrsets, lists, strings,
+generating NixOS module types, and working with file paths. Nix as a language is
+pretty minimal by design, so <code>lib</code> is where all the ergonomic helpers live that
+you’d otherwise have to rewrite constantly. Importantly, <code>lib</code> doesn’t return
+any derivations, its just operates purely at the evaluation level.</p>
+<p>The dependency chain in Nixpkgs flows one way:</p>
+<pre><code class="language-text">lib &lt;- pkgs &lt;- nixos
+</code></pre>
+<p>NixOS depends on <code>pkgs</code>, which depends on <code>lib</code>. Each layer is fairly distinct.</p>
+<p>It’s organized into sub-libraries, each corresponding to a single <code>.nix</code> file
+with a matching name. For example, <code>fixed-points.nix</code> maps to <code>lib.fixedPoints</code>:</p>
+<pre><code class="language-sh">ls ~/src/nixpkgs/lib/
+  fixed-points.nix   lists.nix   strings.nix   attrsets.nix  ...
+</code></pre>
+<pre><code class="language-sh">nix-repl&gt; lib.fixedPoints
+{
+  composeExtensions = «lambda composeExtensions @ /home/jr/src/nixpkgs/lib/fixed-points.nix:341:5»;
+  composeManyExtensions = «lambda foldr @ /home/jr/src/nixpkgs/lib/lists.nix:138:14»;
+  converge = «lambda converge @ /home/jr/src/nixpkgs/lib/fixed-points.nix:153:5»;
+  extends = «lambda extends @ /home/jr/src/nixpkgs/lib/fixed-points.nix:326:5»;
+  fix = «lambda fix @ /home/jr/src/nixpkgs/lib/fixed-points.nix:93:5»;
+  fix' = «lambda fix' @ /home/jr/src/nixpkgs/lib/fixed-points.nix:119:5»;
+  makeExtensible = «lambda makeExtensibleWithCustomName @ /home/jr/src/nixpkgs/lib/fixed-points.nix:451:19»;
+  makeExtensibleWithCustomName = «lambda makeExtensibleWithCustomName @ /home/jr/src/nixpkgs/lib/fixed-points.nix:451:5»;
+  toExtension = «lambda toExtension @ /home/jr/src/nixpkgs/lib/fixed-points.nix:513:5»;
+}
+
+nix-repl&gt; lib.fixedPoints.&lt;TAB&gt;
+lib.fixedPoints.composeExtensions             lib.fixedPoints.fix'
+lib.fixedPoints.composeManyExtensions         lib.fixedPoints.makeExtensible
+lib.fixedPoints.converge                      lib.fixedPoints.makeExtensibleWithCustomName
+lib.fixedPoints.extends                       lib.fixedPoints.toExtension
+lib.fixedPoints.fix
+</code></pre>
+<h2 id="how-libdefaultnix-wires-it-together"><a class="header" href="#how-libdefaultnix-wires-it-together">How <code>lib/default.nix</code> wires it together</a></h2>
+<p><code>default.nix</code> does two things:</p>
+<ol>
+<li>Maps sub-library names to their files:</li>
+</ol>
+<pre><code class="language-nix">fixedPoints = callLibs ./fixed-points.nix;
+</code></pre>
+<ol start="2">
+<li>Re-exposes selected symbols at the top-level <code>lib</code> namespace:</li>
+</ol>
+<pre><code class="language-nix">inherit (self.fixedPoints) fix;
+</code></pre>
+<p>This means many functions are reachable two ways. Via the sub-library or
+directly off <code>lib</code>:</p>
+<pre><code class="language-sh">nix-repl&gt; lib.fixedPoints.fix
+«lambda fix @ /home/jr/src/nixpkgs/lib/fixed-points.nix:93:5»
+
+nix-repl&gt; lib.fix
+«lambda fix @ /home/jr/src/nixpkgs/lib/fixed-points.nix:93:5»
+</code></pre>
+<h3 id="why-function-equality-comparisons-return-false"><a class="header" href="#why-function-equality-comparisons-return-false">Why function equality comparisons return <code>false</code></a></h3>
+<p>Even though both paths point to the same source location, Nix compares lambdas
+by identity, not by value:</p>
+<pre><code class="language-sh">nix-repl&gt; lib.fixedPoints.fix == lib.fix
+false
+</code></pre>
+<p>This is a known Nix quirk, functions are never structurally equal, even to
+themselves through a different binding.</p>
+<h2 id="what-isnt-at-the-top-level-and-why"><a class="header" href="#what-isnt-at-the-top-level-and-why">What isn’t at the top level, and why</a></h2>
+<p>Not every sub-library function gets re-exposed on <code>lib</code> directly. The main
+reason: name collisions. Some function names exist in multiple sub-libraries
+with different semantics.</p>
+<p><code>hasPrefix</code> is the clearest example:</p>
+<pre><code class="language-sh">
+nix-repl&gt; lib.strings.hasPrefix "foo" "foobar"
+true
+
+nix-repl&gt; lib.lists.hasPrefix [ "foo" ] [ "foobar" ]
+false
+
+nix-repl&gt; lib.lists.hasPrefix [ "foo" ] [ "foo" "bar" ]
+true
+
+nix-repl&gt; lib.path.hasPrefix /foo /foo/bar
+true
+</code></pre>
+<p>Both are legitimately named <code>hasPrefix</code>, but they operate on different types.
+Exposing one at the top level would shadow the other.</p>
+<p>Functions like <code>attrsets.unionOfDisjoint</code> are also sub-library-only:</p>
+<pre><code class="language-sh">nix-repl&gt; inherit (lib) attrsets;
+
+nix-repl&gt; attrsets.unionOfDisjoint { x = 10; } { y = 20; }
+{ x = 10; y = 20; }
+
+# Duplicate keys cause an error, not a silent merge:
+nix-repl&gt; attrsets.unionOfDisjoint { x = 10; } { y = 20; x = 10; }
+{ x = «error: unionOfDisjoint: collision on x»; y = 20; }
+
+# Not on lib directly:
+nix-repl&gt; lib.unionOfDisjoint
+error: undefined variable 'unionOfDisjoint'
+</code></pre>
+<p>If a function name could plausibly mean different things depending on the type
+it operates on, it stays namespaced under its sub-library.</p>
+<h2 id="sub-libraries"><a class="header" href="#sub-libraries">Sub-Libraries</a></h2>
+<p>Open <code>lib/default.nix</code>, these are the sub-libraries:</p>
+<pre><code class="language-nix">  lib = makeExtensible' (
+    self:
+    let
+      callLibs = file: import file { lib = self; };
+    in
+    {
+
+      # often used, or depending on very little
+      trivial = callLibs ./trivial.nix;
+      fixedPoints = callLibs ./fixed-points.nix;
+
+      # datatypes
+      attrsets = callLibs ./attrsets.nix;
+      lists = callLibs ./lists.nix;
+      strings = callLibs ./strings.nix;
+      stringsWithDeps = callLibs ./strings-with-deps.nix;
+
+      # packaging
+      customisation = callLibs ./customisation.nix;
+      derivations = callLibs ./derivations.nix;
+      maintainers = import ../maintainers/maintainer-list.nix;
+      teams = callLibs ../maintainers/computed-team-list.nix;
+      meta = callLibs ./meta.nix;
+      versions = callLibs ./versions.nix;
+
+      # module system
+      modules = callLibs ./modules.nix;
+      options = callLibs ./options.nix;
+      types = callLibs ./types.nix;
+
+      # constants
+      licenses = callLibs ./licenses;
+      sourceTypes = callLibs ./source-types.nix;
+      systems = callLibs ./systems;
+
+      # serialization
+      cli = callLibs ./cli.nix;
+      gvariant = callLibs ./gvariant.nix;
+      generators = callLibs ./generators.nix;
+
+      # misc
+      asserts = callLibs ./asserts.nix;
+      debug = callLibs ./debug.nix;
+      misc = callLibs ./deprecated/misc.nix;
+
+      # domain-specific
+      fetchers = callLibs ./fetchers.nix;
+
+      # Eval-time filesystem handling
+      path = callLibs ./path;
+      filesystem = callLibs ./filesystem.nix;
+      fileset = callLibs ./fileset;
+      sources = callLibs ./sources.nix;
+
+      # back-compat aliases
+      platforms = self.systems.doubles;
+
+      # linux kernel configuration
+      kernel = callLibs ./kernel.nix;
+
+      # network
+      network = callLibs ./network;
+
+      # flakes
+      flakes = callLibs ./flakes.nix;
+
+</code></pre>
+<p>If we look at <code>trivial.nix</code>, we see that it provides “trivial” functions for
+reuse. For example the <code>warn</code> function:</p>
+<pre><code class="language-sh">nix-repl&gt; lib.warn "Warning" true
+evaluation warning: Warning
+true
+</code></pre>
+<p><code>fixed-points.nix</code> contains nix’s lazy language if you want to do some
+self-recursive stuff <code>fixed-points</code> has some utilities for that.</p>
+<p>Support functions for packaging in the <code>customization.nix</code>. Such as
+<code>callPackageWith</code>, which passes <code>autoArgs</code> to the entire package set.</p>
+<p><code>fetchers.nix</code>, all fetchers rely on packages because you need things like
+<code>curl</code> and <code>openssl</code> to verify certificates and stuff like that.</p>
+<p><code>derivations.nix</code> doesn’t return derivations but has useful functions for
+derivations.</p>
+<pre><code class="language-sh">nix-repl&gt; lib.attrsets.toDerivation /nix/store/zia61mzfpiwp28drxsljp507d5cgw45x-derive_builder-0.20.2.drv
+«derivation»
+</code></pre>
+<pre><code class="language-sh">nix-repl&gt; d = attrsets.toDerivation /nix/store/zia61mzfpiwp28drxsljp507d5cgw45x-derive_builder-0.20.2.drv
+nix-repl&gt; d.outPath
+"/nix/store/zia61mzfpiwp28drxsljp507d5cgw45x-derive_builder-0.20.2.drv"
+nix-repl&gt; d.name
+"derive_builder-0.20.2.drv"
+</code></pre>
+<p>Then we can try to build that derivation:</p>
+<pre><code class="language-sh">nix build -E 'with import ./lib; attrsets.toDerivation /nix/store/zia61mzfpiwp28drxsljp507d5cgw45x-
+      derive_builder-0.20.2.drv
+</code></pre>
+<h2 id="working-with-pkgs-from-the-repl"><a class="header" href="#working-with-pkgs-from-the-repl">Working with <code>pkgs</code> from the repl</a></h2>
+<pre><code class="language-sh">cd src/nixpkgs/
+nix repl .
+nix-repl&gt; pkgs = import /home/jr/src/nixpkgs {}
+nix-repl&gt; lib.meta.getExe pkgs.hello
+"/nix/store/wzr035k31pmpn2caabq8qwv1npg571z9-hello-2.12.3/bin/hello"
+nix-repl&gt; :q
+nix build /nix/store/wzr035k31pmpn2caabq8qwv1npg571z9-hello-2.12.3/bin/hello
+</code></pre>
+<p>You can also use:</p>
+<pre><code class="language-sh">nix repl
+nix-repl&gt; :l &lt;nixpkgs&gt;
+nix-repl&gt; pkgs.hello
+«derivation /nix/store/gx2drhxsvkh7xr490rg7dpqyn53iw3z0-hello-2.12.3.drv»
+</code></pre>
+<h3 id="the-module-system-is-a-part-of-lib"><a class="header" href="#the-module-system-is-a-part-of-lib">The Module System is a part of <code>lib</code></a></h3>
+<p>The module system barely interacts with <code>lib</code> but is a part of it.</p>
+<p><code>default.nix</code>:</p>
+<pre><code class="language-nix">      # module system
+      modules = callLibs ./modules.nix;
+      options = callLibs ./options.nix;
+      types = callLibs ./types.nix;
+</code></pre>
+<h2 id="generators"><a class="header" href="#generators">Generators</a></h2>
+<p>You can find serialization formats here:</p>
+<pre><code class="language-sh">nix-repl&gt; lib.generators.toYAML {} { foo.bar = [ 10 "baz" ]; }
+"{\"foo\":{\"bar\":[10,\"baz\"]}}"
+
+nix-repl&gt; builtins.trace (lib.generators.toYAML {} { foo.bar = [ 10 "baz" ]; }) null
+trace: {"foo":{"bar":[10,"baz"]}}
+null
+</code></pre>
+<p>You can also use <code>pkgs.formats</code>, better for more complex:</p>
+<pre><code class="language-sh">nix-repl&gt; pkgs.format.yaml {}
+nix-repl&gt; format = pkgs.formats.yaml {}
+nix-repl&gt; format.generate "foo.yaml" { foo = [ "bar" 1 ]; }
+«derivation /nix/store/757br628kf4sb7wpi8kdyqfqpqdg7fkr-foo.yaml.drv»
+
+nix-repl&gt; :b format.generate "foo.yaml" { foo = [ "bar" 1 ]; }
+This derivation produced the following outputs:
+  out -&gt; /nix/store/2iz63y8hdqn5rn9amb2pigj5ima54215-foo.yaml
+[1 built, 20 copied (151.4 MiB), 61.4 MiB DL]
+nix-repl&gt; :q
+
+cat /nix/store/2iz63y8hdqn5rn9amb2pigj5ima54215-foo.yaml
+File: /nix/store/2iz63y8hdqn5rn9amb2pigj5ima54215-foo.yaml
+%YAML 1.1
+---
+foo:
+- bar
+- 1
+</code></pre>
+<h2 id="resources-14"><a class="header" href="#resources-14">Resources</a></h2>
+<ul>
+<li><a href="https://www.youtube.com/results?search_query=nixos+discovery">NixOS Discovery</a></li>
+</ul>
+<footer id="kanagawa-support-footer-54" style="text-align:center; margin-top: 3rem; font-size: 0.85em; opacity: 0.75;">
+<p><a href="https://github.com/saylesss88/mdbook-kanagawa-theme">Made with mdbook-kanagawa-theme</a></p>
+</footer>
+<link rel="stylesheet" href="../vi-mode.css">
+<script src="../vi-mode-config.js"></script>
+<script defer="" src="../vi-mode-keybinding-vim.js"></script>
+<script defer="" src="../vi-mode.js"></script>
 
                     </main>
 
