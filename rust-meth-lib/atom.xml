@@ -1,5 +1,159 @@
 <?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-US"><title>rust-meth-lib</title><id>https://example.com/atom.xml</id><updated>2026-08-31T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://example.com/atom.xml" rel="self"/><link href="https://example.com/" rel="alternate"/><subtitle>Description</subtitle><entry><title>Getting Started</title><id>https://example.com/getting_started.html</id><updated>2026-08-31T00:00:00+00:00</updated><author><name>saylesss87@proton.me (saylesss88)</name></author><category term="rust-analyzer"/><category term="rust-meth-lib"/><link href="https://example.com/getting_started.html" rel="alternate"/><content type="html">&lt;h1&gt;Getting Started&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>rust-meth-lib</title><id>https://example.com/atom.xml</id><updated>2000-01-01T00:00:00+00:00</updated><author><name>saylesss88</name></author><link href="https://example.com/atom.xml" rel="self"/><link href="https://example.com/" rel="alternate"/><subtitle>Description</subtitle><entry><title>rust-meth-lib</title><id>https://example.com/README.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/README.html" rel="alternate"/><content type="html">&lt;h1&gt;rust-meth-lib&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&quot;https://crates.io/crates/rust-meth-lib&quot;&gt;&lt;img src=&quot;https://img.shields.io/crates/v/rust-meth-lib.svg&quot; alt=&quot;Crates.io&quot; /&gt;&lt;/a&gt;
+&lt;a href=&quot;https://docs.rs/rust-meth-lib&quot;&gt;&lt;img src=&quot;https://docs.rs/rust-meth-lib/badge.svg&quot; alt=&quot;Documentation&quot; /&gt;&lt;/a&gt;
+&lt;a href=&quot;https://opensource.org/licenses/Apache-2.0&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/License-Apache_2.0-blue.svg&quot; alt=&quot;License&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Core library powering &lt;a href=&quot;https://crates.io/crates/rust-meth&quot;&gt;&lt;code&gt;rust-meth&lt;/code&gt;&lt;/a&gt;.
+Discovers methods available on any Rust type by driving a &lt;code&gt;rust-analyzer&lt;/code&gt; LSP
+session.&lt;/p&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;rust-meth-lib&lt;/code&gt; provides the building blocks for programmatically querying
+&lt;code&gt;rust-analyzer&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Spinning up and managing an LSP session (&lt;code&gt;LspTransport&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Synthesizing a temporary Rust project and injecting the target type (&lt;code&gt;Probe&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Requesting completions and go-to-definition results from &lt;code&gt;rust-analyzer&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Fuzzy-filtering and ranking method results&lt;/li&gt;
+&lt;li&gt;Exposing utilities for embedding &lt;code&gt;rust-meth&lt;/code&gt; workflows in other tools&lt;/li&gt;
+&lt;li&gt;Full working &lt;a href=&quot;https://example.com/README.html#rust-meth-lib-examples&quot;&gt;Examples&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Please file an Issue if any problems arise.&lt;/p&gt;
+&lt;h2&gt;Workspace layout&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;rust-meth/
+├── Cargo.toml               — workspace manifest
+├── lib/                     — rust-meth-lib (this crate)
+│   ├── Cargo.toml
+│   ├── README.md
+│   ├── benches/
+│   │   └── benchmarks.rs
+│   └── src/
+│       ├── lib.rs
+│       ├── error.rs
+│       ├── lsp.rs
+│       ├── probe.rs
+│       └── analyzer/
+│           ├── mod.rs
+│           ├── discovery.rs
+│           ├── parse.rs
+│           └── session.rs
+└── cli/                     : standalone binary crate that calls into this library
+    ├── Cargo.toml
+    └── src/
+        └── main.rs
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;UI components, CLI argument parsing, interactive selection, and spinner
+display are now maintained in &lt;a href=&quot;https://example.com/../cli/&quot;&gt;&lt;code&gt;cli/&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;Public API&lt;/h2&gt;
+&lt;h3&gt;Key Types&lt;/h3&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Item&lt;/th&gt;&lt;th&gt;Description&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;LspTransport&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Manages the stdio JSON-RPC channel to a &lt;code&gt;rust-analyzer&lt;/code&gt; process&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Probe&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Builds a temporary Cargo project that makes the target type available for LSP queries&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;analyzer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;High-level session orchestrator, combines &lt;code&gt;Probe&lt;/code&gt; + &lt;code&gt;LspTransport&lt;/code&gt; to return method completions&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;h3&gt;Basic Usage&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-toml&quot;&gt;[dependencies]
+rust-meth-lib = &quot;0.3.0&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.rs/rust-meth-lib/latest/rust_meth_lib/index.html&quot;&gt;rust_meth_lib docs.rs&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Full working Example&lt;/strong&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
+
+fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
+    let ra_path = find_rust_analyzer()?;
+    let methods = query_methods(&quot;Result&amp;lt;u8, &amp;amp;&apos;static str&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+
+    println!(&quot;Methods available for Result&amp;lt;u8, &amp;amp;&apos;static str&amp;gt;&quot;);
+    for method in &amp;amp;methods {
+        println!(&quot;{}&quot;, method.name);
+    }
+
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The exact list returned varies by toolchain.&lt;/p&gt;
+&lt;blockquote class=&quot;markdown-alert-note&quot;&gt;
+&lt;p&gt;The primary APIs are intended for embedding or extending the &lt;code&gt;rust-meth&lt;/code&gt;
+workflow.&lt;br /&gt;
+The CLI interface is maintained in a separate crate.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;Builder API&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&quot;https://example.com/examples/builder_run.rs&quot;&gt;&lt;code&gt;MethodQuery&lt;/code&gt;&lt;/a&gt; provides a chainable interface over
+&lt;code&gt;query_methods&lt;/code&gt; and &lt;code&gt;filter_methods&lt;/code&gt;. Use &lt;code&gt;.filter()&lt;/code&gt; to narrow results by
+match quality (exact &amp;gt; prefix &amp;gt; substring), and &lt;code&gt;.run_with_definitions()&lt;/code&gt; to
+also resolve source locations.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;// Query + filter
+MethodQuery::new(&quot;String&quot;)
+    .filter(&quot;push&quot;)
+    .run(&amp;amp;ra_path)?;
+
+// Query + filter + source locations
+MethodQuery::new(&quot;serde_json::Value&quot;)
+    .deps(r#&quot;serde_json = &quot;1.0&quot;&quot;#)
+    .filter(&quot;as_str&quot;)
+    .run_with_definitions(&amp;amp;ra_path)?;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;See &lt;a href=&quot;https://example.com/examples/builder_run.rs&quot;&gt;&lt;code&gt;builder_run.rs&lt;/code&gt;&lt;/a&gt; and
+&lt;a href=&quot;https://example.com/examples/builder_definitions.rs&quot;&gt;&lt;code&gt;builder_definitions.rs&lt;/code&gt;&lt;/a&gt; for full examples.&lt;/p&gt;
+&lt;h2&gt;Error Handling&lt;/h2&gt;
+&lt;p&gt;The library uses a single
+&lt;a href=&quot;https://docs.rs/rust-meth-lib/latest/rust_meth_lib/error/enum.RustMethError.html&quot;&gt;&lt;code&gt;RustMethError&lt;/code&gt;&lt;/a&gt;
+enum (via &lt;a href=&quot;https://docs.rs/thiserror&quot;&gt;&lt;code&gt;thiserror&lt;/code&gt;&lt;/a&gt;) and a &lt;code&gt;Result&amp;lt;T&amp;gt;&lt;/code&gt; alias over
+it:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;pub type Result&amp;lt;T&amp;gt; = std::result::Result&amp;lt;T, RustMethError&amp;gt;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Variant&lt;/th&gt;&lt;th&gt;Cause&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Io&lt;/code&gt;&lt;/td&gt;&lt;td&gt;OS / file system errors (&lt;code&gt;std::io::Error&lt;/code&gt;)&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Json&lt;/code&gt;&lt;/td&gt;&lt;td&gt;JSON serialization or deserialization failure&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;ParseInt&lt;/code&gt;&lt;/td&gt;&lt;td&gt;String-to-integer conversion failure&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;NoContentLength&lt;/code&gt;&lt;/td&gt;&lt;td&gt;LSP response missing a &lt;code&gt;Content-Length&lt;/code&gt; header&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;RecvExhausted { limit }&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Message loop hit &lt;code&gt;limit&lt;/code&gt; without matching a response&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;UnexpectedResponseShape&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Structurally valid JSON but missing expected fields&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;RustAnalyzerNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; not on &lt;code&gt;PATH&lt;/code&gt; or in component directory&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;MissingStdin&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;stdin&lt;/code&gt; handle wasn’t captured&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;MissingStdout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;stdout&lt;/code&gt; handle wasn’t captured&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;TypeNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; diagnostic error for the probed type&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;Timeout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; failed to produce a usable response within retry budget&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;FeatureGated&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Type exists but requires a feature flag that wasn’t enabled for this probe&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;All fallible functions in this crate return &lt;code&gt;rust_meth_lib::Result&amp;lt;T&amp;gt;&lt;/code&gt;. If
+you’re embedding the library, you can convert into your own error type via &lt;code&gt;?&lt;/code&gt;
+since &lt;code&gt;RustMethError&lt;/code&gt; implements &lt;code&gt;std::error::Error&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;use rust_meth_lib::{Result, analyzer::{find_rust_analyzer, query_methods}};
+
+fn my_wrapper() -&amp;gt; Result&amp;lt;()&amp;gt; {
+    // RustAnalyzerNotFound, Io, Json, etc. all propagate with ?
+    let ra_path = find_rust_analyzer()?;
+    let _methods = query_methods(&quot;Vec&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
+    Ok(())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1&gt;rust-meth-lib examples&lt;/h1&gt;
+&lt;p&gt;Runnable examples covering the main ways to embed &lt;code&gt;rust-meth-lib&lt;/code&gt; in your own
+tooling. Each file is self-contained and documents its own &lt;code&gt;[dependencies]&lt;/code&gt;
+snippet.&lt;/p&gt;
+&lt;h2&gt;Running the Examples&lt;/h2&gt;
+&lt;p&gt;To run the examples locally, clone the repo:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;git clone https://github.com/saylesss88/rust-meth.git
+cd rust-meth/lib
+cargo run --example basic_query
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The examples require &lt;code&gt;rust-analyzer&lt;/code&gt; on your &lt;code&gt;PATH&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;rustup component add rust-analyzer
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;cargo run --example basic_query
+cargo run --example method_info
+cargo run --example third_party_crate   # slow on first run (downloads serde_json)
+cargo run --example fuzzy_filter
+cargo run --example go_to_definition
+cargo run --example custom_error
+cargo run --example batch_query
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Examples start at &lt;a href=&quot;https://saylesss88.github.io/rust-meth-lib/getting_started.html&quot;&gt;Getting Started&lt;/a&gt;&lt;/p&gt;
+</content></entry><entry><title>Getting Started</title><id>https://example.com/getting_started.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/getting_started.html" rel="alternate"/><content type="html">&lt;h1&gt;Getting Started&lt;/h1&gt;
 &lt;p&gt;Runnable examples covering the main ways to embed &lt;code&gt;rust-meth-lib&lt;/code&gt; in your own
 tooling. Each file is self-contained and documents its own &lt;code&gt;[dependencies]&lt;/code&gt;
 snippet.&lt;/p&gt;
@@ -157,160 +311,6 @@ fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
   as_chunks
   as_chunks_mut
 &lt;/code&gt;&lt;/pre&gt;
-</content></entry><entry><title>rust-meth-lib</title><id>https://example.com/README.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/README.html" rel="alternate"/><content type="html">&lt;h1&gt;rust-meth-lib&lt;/h1&gt;
-&lt;p&gt;&lt;a href=&quot;https://crates.io/crates/rust-meth-lib&quot;&gt;&lt;img src=&quot;https://img.shields.io/crates/v/rust-meth-lib.svg&quot; alt=&quot;Crates.io&quot; /&gt;&lt;/a&gt;
-&lt;a href=&quot;https://docs.rs/rust-meth-lib&quot;&gt;&lt;img src=&quot;https://docs.rs/rust-meth-lib/badge.svg&quot; alt=&quot;Documentation&quot; /&gt;&lt;/a&gt;
-&lt;a href=&quot;https://opensource.org/licenses/Apache-2.0&quot;&gt;&lt;img src=&quot;https://img.shields.io/badge/License-Apache_2.0-blue.svg&quot; alt=&quot;License&quot; /&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Core library powering &lt;a href=&quot;https://crates.io/crates/rust-meth&quot;&gt;&lt;code&gt;rust-meth&lt;/code&gt;&lt;/a&gt;.
-Discovers methods available on any Rust type by driving a &lt;code&gt;rust-analyzer&lt;/code&gt; LSP
-session.&lt;/p&gt;
-&lt;h2&gt;Overview&lt;/h2&gt;
-&lt;p&gt;&lt;code&gt;rust-meth-lib&lt;/code&gt; provides the building blocks for programmatically querying
-&lt;code&gt;rust-analyzer&lt;/code&gt;:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Spinning up and managing an LSP session (&lt;code&gt;LspTransport&lt;/code&gt;)&lt;/li&gt;
-&lt;li&gt;Synthesizing a temporary Rust project and injecting the target type (&lt;code&gt;Probe&lt;/code&gt;)&lt;/li&gt;
-&lt;li&gt;Requesting completions and go-to-definition results from &lt;code&gt;rust-analyzer&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;Fuzzy-filtering and ranking method results&lt;/li&gt;
-&lt;li&gt;Exposing utilities for embedding &lt;code&gt;rust-meth&lt;/code&gt; workflows in other tools&lt;/li&gt;
-&lt;li&gt;Full working &lt;a href=&quot;https://example.com/README.html#rust-meth-lib-examples&quot;&gt;Examples&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Please file an Issue if any problems arise.&lt;/p&gt;
-&lt;h2&gt;Workspace layout&lt;/h2&gt;
-&lt;pre&gt;&lt;code&gt;rust-meth/
-├── Cargo.toml               — workspace manifest
-├── lib/                     — rust-meth-lib (this crate)
-│   ├── Cargo.toml
-│   ├── README.md
-│   ├── benches/
-│   │   └── benchmarks.rs
-│   └── src/
-│       ├── lib.rs
-│       ├── error.rs
-│       ├── lsp.rs
-│       ├── probe.rs
-│       └── analyzer/
-│           ├── mod.rs
-│           ├── discovery.rs
-│           ├── parse.rs
-│           └── session.rs
-└── cli/                     : standalone binary crate that calls into this library
-    ├── Cargo.toml
-    └── src/
-        └── main.rs
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;UI components, CLI argument parsing, interactive selection, and spinner
-display are now maintained in &lt;a href=&quot;https://example.com/../cli/&quot;&gt;&lt;code&gt;cli/&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h2&gt;Public API&lt;/h2&gt;
-&lt;h3&gt;Key Types&lt;/h3&gt;
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Item&lt;/th&gt;&lt;th&gt;Description&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;LspTransport&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Manages the stdio JSON-RPC channel to a &lt;code&gt;rust-analyzer&lt;/code&gt; process&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;Probe&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Builds a temporary Cargo project that makes the target type available for LSP queries&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;analyzer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;High-level session orchestrator, combines &lt;code&gt;Probe&lt;/code&gt; + &lt;code&gt;LspTransport&lt;/code&gt; to return method completions&lt;/td&gt;&lt;/tr&gt;
-&lt;/tbody&gt;&lt;/table&gt;
-&lt;h3&gt;Basic Usage&lt;/h3&gt;
-&lt;pre&gt;&lt;code class=&quot;language-toml&quot;&gt;[dependencies]
-rust-meth-lib = &quot;0.3.0&quot;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://docs.rs/rust-meth-lib/latest/rust_meth_lib/index.html&quot;&gt;rust_meth_lib docs.rs&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Full working Example&lt;/strong&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;use rust_meth_lib::analyzer::{find_rust_analyzer, query_methods};
-
-fn main() -&amp;gt; rust_meth_lib::error::Result&amp;lt;()&amp;gt; {
-    let ra_path = find_rust_analyzer()?;
-    let methods = query_methods(&quot;Result&amp;lt;u8, &amp;amp;&apos;static str&amp;gt;&quot;, &amp;amp;ra_path, None)?;
-
-    println!(&quot;Methods available for Result&amp;lt;u8, &amp;amp;&apos;static str&amp;gt;&quot;);
-    for method in &amp;amp;methods {
-        println!(&quot;{}&quot;, method.name);
-    }
-
-    Ok(())
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The exact list returned varies by toolchain.&lt;/p&gt;
-&lt;blockquote class=&quot;markdown-alert-note&quot;&gt;
-&lt;p&gt;The primary APIs are intended for embedding or extending the &lt;code&gt;rust-meth&lt;/code&gt;
-workflow.&lt;br /&gt;
-The CLI interface is maintained in a separate crate.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;Builder API&lt;/h3&gt;
-&lt;p&gt;&lt;a href=&quot;https://example.com/examples/builder_run.rs&quot;&gt;&lt;code&gt;MethodQuery&lt;/code&gt;&lt;/a&gt; provides a chainable interface over
-&lt;code&gt;query_methods&lt;/code&gt; and &lt;code&gt;filter_methods&lt;/code&gt;. Use &lt;code&gt;.filter()&lt;/code&gt; to narrow results by
-match quality (exact &amp;gt; prefix &amp;gt; substring), and &lt;code&gt;.run_with_definitions()&lt;/code&gt; to
-also resolve source locations.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;// Query + filter
-MethodQuery::new(&quot;String&quot;)
-    .filter(&quot;push&quot;)
-    .run(&amp;amp;ra_path)?;
-
-// Query + filter + source locations
-MethodQuery::new(&quot;serde_json::Value&quot;)
-    .deps(r#&quot;serde_json = &quot;1.0&quot;&quot;#)
-    .filter(&quot;as_str&quot;)
-    .run_with_definitions(&amp;amp;ra_path)?;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;See &lt;a href=&quot;https://example.com/examples/builder_run.rs&quot;&gt;&lt;code&gt;builder_run.rs&lt;/code&gt;&lt;/a&gt; and
-&lt;a href=&quot;https://example.com/examples/builder_definitions.rs&quot;&gt;&lt;code&gt;builder_definitions.rs&lt;/code&gt;&lt;/a&gt; for full examples.&lt;/p&gt;
-&lt;h2&gt;Error Handling&lt;/h2&gt;
-&lt;p&gt;The library uses a single
-&lt;a href=&quot;https://docs.rs/rust-meth-lib/latest/rust_meth_lib/error/enum.RustMethError.html&quot;&gt;&lt;code&gt;RustMethError&lt;/code&gt;&lt;/a&gt;
-enum (via &lt;a href=&quot;https://docs.rs/thiserror&quot;&gt;&lt;code&gt;thiserror&lt;/code&gt;&lt;/a&gt;) and a &lt;code&gt;Result&amp;lt;T&amp;gt;&lt;/code&gt; alias over
-it:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-rs&quot;&gt;pub type Result&amp;lt;T&amp;gt; = std::result::Result&amp;lt;T, RustMethError&amp;gt;;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Variant&lt;/th&gt;&lt;th&gt;Cause&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;Io&lt;/code&gt;&lt;/td&gt;&lt;td&gt;OS / file system errors (&lt;code&gt;std::io::Error&lt;/code&gt;)&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;Json&lt;/code&gt;&lt;/td&gt;&lt;td&gt;JSON serialization or deserialization failure&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;ParseInt&lt;/code&gt;&lt;/td&gt;&lt;td&gt;String-to-integer conversion failure&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;NoContentLength&lt;/code&gt;&lt;/td&gt;&lt;td&gt;LSP response missing a &lt;code&gt;Content-Length&lt;/code&gt; header&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;RecvExhausted { limit }&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Message loop hit &lt;code&gt;limit&lt;/code&gt; without matching a response&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;UnexpectedResponseShape&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Structurally valid JSON but missing expected fields&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;RustAnalyzerNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; not on &lt;code&gt;PATH&lt;/code&gt; or in component directory&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;MissingStdin&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;stdin&lt;/code&gt; handle wasn’t captured&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;MissingStdout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;stdout&lt;/code&gt; handle wasn’t captured&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;TypeNotFound&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; diagnostic error for the probed type&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;Timeout&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;rust-analyzer&lt;/code&gt; failed to produce a usable response within retry budget&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;code&gt;FeatureGated&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Type exists but requires a feature flag that wasn’t enabled for this probe&lt;/td&gt;&lt;/tr&gt;
-&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;All fallible functions in this crate return &lt;code&gt;rust_meth_lib::Result&amp;lt;T&amp;gt;&lt;/code&gt;. If
-you’re embedding the library, you can convert into your own error type via &lt;code&gt;?&lt;/code&gt;
-since &lt;code&gt;RustMethError&lt;/code&gt; implements &lt;code&gt;std::error::Error&lt;/code&gt;.&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-rust&quot;&gt;use rust_meth_lib::{Result, analyzer::{find_rust_analyzer, query_methods}};
-
-fn my_wrapper() -&amp;gt; Result&amp;lt;()&amp;gt; {
-    // RustAnalyzerNotFound, Io, Json, etc. all propagate with ?
-    let ra_path = find_rust_analyzer()?;
-    let _methods = query_methods(&quot;Vec&amp;lt;u8&amp;gt;&quot;, &amp;amp;ra_path, None)?;
-    Ok(())
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h1&gt;rust-meth-lib examples&lt;/h1&gt;
-&lt;p&gt;Runnable examples covering the main ways to embed &lt;code&gt;rust-meth-lib&lt;/code&gt; in your own
-tooling. Each file is self-contained and documents its own &lt;code&gt;[dependencies]&lt;/code&gt;
-snippet.&lt;/p&gt;
-&lt;h2&gt;Running the Examples&lt;/h2&gt;
-&lt;p&gt;To run the examples locally, clone the repo:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;git clone https://github.com/saylesss88/rust-meth.git
-cd rust-meth/lib
-cargo run --example basic_query
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The examples require &lt;code&gt;rust-analyzer&lt;/code&gt; on your &lt;code&gt;PATH&lt;/code&gt;:&lt;/p&gt;
-&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;rustup component add rust-analyzer
-&lt;/code&gt;&lt;/pre&gt;
-&lt;pre&gt;&lt;code class=&quot;language-sh&quot;&gt;cargo run --example basic_query
-cargo run --example method_info
-cargo run --example third_party_crate   # slow on first run (downloads serde_json)
-cargo run --example fuzzy_filter
-cargo run --example go_to_definition
-cargo run --example custom_error
-cargo run --example batch_query
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Examples start at &lt;a href=&quot;https://saylesss88.github.io/rust-meth-lib/getting_started.html&quot;&gt;Getting Started&lt;/a&gt;&lt;/p&gt;
 </content></entry><entry><title>Querying Methods</title><id>https://example.com/querying-methods.html</id><updated>2000-01-01T00:00:00+00:00</updated><link href="https://example.com/querying-methods.html" rel="alternate"/><content type="html">&lt;h1&gt;Querying Methods&lt;/h1&gt;
 &lt;p&gt;Shows how to work with the richer fields on [&lt;code&gt;Method&lt;/code&gt;] beyond just the name:&lt;/p&gt;
 &lt;ul&gt;
