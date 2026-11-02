@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c4f549f2.js";
+            window.path_to_searchindex_js = "searchindex-f5132346.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-01c0b95f.js"></script>
@@ -179,8 +179,10 @@
 <!-- prettier-ignore -->
 <blockquote class="blockquote-tag blockquote-tag-note">
 <p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
-<p>This action takes a while to finish since it compiles <code>jj</code> and <code>jj-release</code>
-from source. Use <code>jj-release</code> locally if you’re in a hurry.</p>
+<p>This workflow installs <code>jj</code> and <code>jj-release</code> as prebuilt binaries with
+<code>cargo binstall</code>, so it runs in about a minute plus your build time. If a
+prebuilt binary isn’t available for the runner, binstall falls back to
+compiling from source, which takes much longer.</p>
 </blockquote>
 <p>Add this workflow to your consumer repo at <code>.github/workflows/release.yml</code>:</p>
 <pre><code class="language-yaml">name: Release
@@ -195,6 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
 
     steps:
       - uses: actions/checkout@v4
@@ -202,6 +205,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Still needed: `cargo publish` and cargo-semver-checks run during the release.
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -211,16 +215,17 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            ~/.cargo/bin
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install jj
-        run: cargo install jj-cli --locked
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
 
-      - name: Install jj-release
-        run: cargo install jj-release --locked
+      - name: Install jj, jj-release and cargo-semver-checks
+        run:
+          cargo binstall --no-confirm --disable-telemetry jj-cli jj-release
+          cargo-semver-checks
 
       - name: Attach jj to colocated git repo
         run: jj git init --colocate
@@ -230,6 +235,101 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Build release binaries
+        if: success()
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          gh workflow run release_binaries.yml -f tag="$tag"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+</code></pre>
+<!-- prettier-ignore -->
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The last step triggers <code>release_binaries.yml</code> (see
+<a href="#cargo-binstall-support-for-your-crate">Cargo Binstall support</a> below).
+If you don’t publish prebuilt binaries, delete that step and remove
+<code>actions: write</code> from <code>permissions</code>.</p>
+</blockquote>
+<h2 id="cargo-binstall-support-for-your-crate"><a class="header" href="#cargo-binstall-support-for-your-crate">Cargo Binstall support for your Crate</a></h2>
+<p>Add the following to your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }{ archive-suffix }"
+pkg-fmt = "tgz"
+</code></pre>
+<p>Create a <code>.github/workflows/release_binaries.yml</code>:</p>
+<pre><code class="language-yaml">name: Release binaries
+
+# Builds prebuilt binaries for `cargo binstall` and attaches them to a release.
+#
+# Triggers:
+#   - release: published    -&gt; only fires if the release was created with a PAT or
+#                              GitHub App token. Releases made with GITHUB_TOKEN
+#                              don't trigger other workflows.
+#   - workflow_dispatch     -&gt; run it by hand, or call it with
+#                              `gh workflow run release_binaries.yml -f tag=vX.Y.Z`
+#                              from your release workflow (needs `actions: write`).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build and upload to (e.g. v2.0.0)"
+        required: true
+      unlocked:
+        description: "Skip --locked (only for old tags with a stale Cargo.lock)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Build the tagged source, whichever way the workflow was started.
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # --locked fails the build if Cargo.lock doesn't match Cargo.toml, so the
+      # binary uses exactly the dependency versions you committed. A published
+      # release and a normal manual run both get it; only an explicit
+      # `unlocked` opt-out skips it.
+      - name: Build
+        run:
+          cargo build --release --target ${{ matrix.target }} ${{
+          inputs.unlocked != true &amp;&amp; '--locked' || '' }}
+
+      - name: Package and upload
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          # Single-crate repos: the package name is read from Cargo. In a
+          # workspace, set `name` to your binary crate by hand.
+          name=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')
+          ext=""; [[ "$TARGET" == *windows* ]] &amp;&amp; ext=".exe"
+          cp "target/$TARGET/release/$name$ext" .
+          tar czf "$name-$TARGET.tar.gz" "$name$ext"
+          gh release upload "$TAG" "$name-$TARGET.tar.gz" --clobber
 </code></pre>
 
                     </main>

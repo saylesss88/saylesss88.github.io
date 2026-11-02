@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c4f549f2.js";
+            window.path_to_searchindex_js = "searchindex-f5132346.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-01c0b95f.js"></script>
@@ -180,13 +180,32 @@ Each release prepends a new section to <code>CHANGELOG.md</code>:</p>
 <pre><code class="language-bash"># Preview the next changelog section
 jj-release changelog
 
-# Prepend the next section to an existing CHANGELOG.md
-jj-release changelog -o CHANGELOG.md
+# Prepend the next section(s) to the configured changelog file(s)
+jj-release changelog -w
+
+# Prepend the next section to a specific file (root layout only)
+jj-release changelog -o NOTES.md
 
 # Regenerate the full changelog from all tags (useful for bootstrapping)
-jj-release changelog --full -o CHANGELOG.md
+jj-release changelog --full -w
+
+# Override to a specific layout from the command-line (root, per-member, or both)
+jj-release changelog --layout both
 </code></pre>
-<h3 id="basic-changelog-example"><a class="header" href="#basic-changelog-example">Basic Changelog Example:</a></h3>
+<p><code>-w</code> (<code>--write</code>) writes to <code>[changelog].file</code> (default <code>CHANGELOG.md</code>): at the
+repository root, in each workspace member’s directory, or both, depending on
+<a href="#workspace-layouts"><code>layout</code></a>. <code>-o</code> writes to one explicit path, so it only
+works with the root layout; <code>-o</code> and <code>-w</code> can’t be combined.</p>
+<!--prettier-ignore-->
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>Without <code>--full</code>, <code>-w</code> <strong>prepends</strong> the new section. With <code>--full</code>, it
+<strong>overwrites</strong> the file with the regenerated history.</p>
+</blockquote>
+<p>If the manifest version hasn’t been bumped past the latest tag, the preview
+renders the pending changes as <code>## [Unreleased]</code>. Once released, the section
+gets its version and the release date.</p>
+<h3 id="basic-changelog-example"><a class="header" href="#basic-changelog-example">Basic Changelog Example</a></h3>
 <pre><code class="language-markdown"># Changelog
 
 All notable changes to this project will be documented in this file.
@@ -194,6 +213,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Unreleased
 
 ## [0.2.0] - 2026-09-08
 
@@ -206,14 +227,11 @@ and this project adheres to
 
 - prevent daemon crash on empty directory
 </code></pre>
-<h2 id="customized-example-with-emoji-headers--compare-links"><a class="header" href="#customized-example-with-emoji-headers--compare-links">Customized Example with emoji headers &amp; Compare links:</a></h2>
-<pre><code class="language-markdown"># Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+<p>Scopes (<code>feat(cli): ...</code>) are shown in bold, and breaking changes (<code>feat!: ...</code>)
+are marked <strong>BREAKING</strong>.</p>
+<h3 id="emoji-headers-and-compare-links"><a class="header" href="#emoji-headers-and-compare-links">Emoji headers and compare links</a></h3>
+<p>With <code>emoji_headers = true</code> and <code>link_headers = true</code>:</p>
+<pre><code class="language-markdown">## [Unreleased](https://github.com/saylesss88/jj-release/compare/v0.2.0...HEAD)
 
 ## [0.2.0](https://github.com/saylesss88/jj-release/compare/v0.1.0...v0.2.0) - 2026-09-08
 
@@ -226,28 +244,46 @@ and this project adheres to
 
 - prevent daemon crash on empty directory
 </code></pre>
+<p>Compare links work for GitHub, GitLab, Codeberg/Forgejo, and Gitea. Self-hosted
+instances need <code>[release].forge_url</code> set.</p>
 <h2 id="changelog-configuration"><a class="header" href="#changelog-configuration">Changelog Configuration</a></h2>
-<p>You can customize how <code>jj-release</code> parses your commits and maps them to the Keep
-a Changelog format. By default, only <code>feat</code>, <code>fix</code>, <code>bug</code>, <code>perf</code>, <code>refactor</code>,
-<code>removed</code>, <code>security</code>, and <code>docs</code> commits are included.</p>
-<p>Add these options to your <code>release.toml</code> to customize the behavior:</p>
+<p>By default, these commit types are included:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Commit type</th><th>Section</th></tr>
+</thead>
+<tbody>
+<tr><td><code>feat</code></td><td>Added</td></tr>
+<tr><td><code>refactor</code></td><td>Changed</td></tr>
+<tr><td><code>perf</code></td><td>Performance</td></tr>
+<tr><td><code>deprecate</code>, <code>deprecated</code></td><td>Deprecated</td></tr>
+<tr><td><code>fix</code></td><td>Fixed</td></tr>
+<tr><td><code>bug</code></td><td>Bug</td></tr>
+<tr><td><code>docs</code></td><td>Documentation</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>style</code>, <code>chore</code>, <code>build</code>, <code>ci</code> and <code>test</code> are dropped in strict mode (the
+default). Any other type can be mapped to a section with <code>prefix_mapping</code>.</p>
 <pre><code class="language-toml">[changelog]
 enabled = true
 file = "CHANGELOG.md"
-# Add emojis to the changelog headers
+# Add emojis to the section headers
 emoji_headers = true
-# Add a link to the Compare changes page for your changelog headers
+# Link version headings to the forge's compare page
 link_headers = true
-# If true (default), commits that do not strictly match Conventional Commits
-# or your prefix_mapping are silently dropped from the changelog.
-# If false, unformatted commits are collected in an "Other Changes" section.
+# "root" (default), "per-member", or "both". See Workspace layouts below.
+layout = "per-member"
+# If true (default), commits that don't parse as Conventional Commits, or
+# whose type isn't mapped, are dropped. If false, they're collected in an
+# "Other Changes" section.
 strict = false
 
-# An array of commit types or prefixes to silently exclude from the changelog.
-# Matches against the parsed conventional type or the raw string.
+# Commit types or raw message prefixes to always exclude.
 exclude_prefixes = ["chore", "ci", "test", "WIP:"]
 
-# Override specific default emojis (keys must match the exact Header name)
+# Override default emojis (keys are section names).
 [changelog.emoji_mapping]
 Added = "🚀"
 Fixed = "✅️"
@@ -255,12 +291,102 @@ Bug = "🔥"
 Performance = "⚡️"
 Testing = "🧪"
 
-# Map conventional commit types to custom Keep a Changelog headers.
-# Standard types (feat -&gt; Added, fix -&gt; Fixed, etc.) are handled automatically.
+# Map commit types to sections. Built-in types are mapped automatically.
 [changelog.prefix_mapping]
 revert = "Reverted"
+security = "Security"
 test = "Testing"
 </code></pre>
+<p>Custom sections appear after the standard ones, sorted alphabetically.</p>
+<h2 id="workspace-layouts"><a class="header" href="#workspace-layouts">Workspace layouts</a></h2>
+<p>In a workspace, <code>layout</code> controls where changelogs are written:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th><code>layout</code></th><th>Writes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>"root"</code></td><td>One <code>CHANGELOG.md</code> at the repository root (default)</td></tr>
+<tr><td><code>"per-member"</code></td><td>One <code>CHANGELOG.md</code> in each member’s directory</td></tr>
+<tr><td><code>"both"</code></td><td>Each member’s <code>CHANGELOG.md</code> plus one at the root</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="which-commits-go-where"><a class="header" href="#which-commits-go-where">Which commits go where</a></h3>
+<p>A member’s changelog contains the commits that <strong>changed files in that member’s
+directory</strong>. The commit message’s scope doesn’t matter: <code>feat(cli):</code> lands in
+<code>lib/CHANGELOG.md</code> if it only touched files under <code>lib/</code>.</p>
+<ul>
+<li>A commit touching two members appears in both changelogs.</li>
+<li>A commit touching only files outside every member (CI, README, the workspace
+<code>Cargo.toml</code>) appears in no member changelog. Use <code>"both"</code> with unified
+versioning to keep a record of those in the root changelog.</li>
+<li>A member at the repository root (a root package, like <code>ripgrep</code> in its own
+workspace) doesn’t include the other members’ directories, even though they
+sit inside it.</li>
+</ul>
+<p>To check what a member’s next changelog will contain, run the same query
+<code>jj-release</code> uses:</p>
+<pre><code class="language-bash">jj log -r 'v0.10.0..@ &amp; files(root:"lib")'
+</code></pre>
+<h3 id="the-root-changelog-with-both"><a class="header" href="#the-root-changelog-with-both">The root changelog with <code>"both"</code></a></h3>
+<ul>
+<li>
+<p><strong>Unified versioning:</strong> the root changelog gets a normal section listing every
+commit in the release, including changes outside any member.</p>
+</li>
+<li>
+<p><strong>Independent versioning:</strong> the root changelog gets one named section per
+released member:</p>
+<pre><code class="language-markdown">## globset [0.5.0] - 2026-11-02
+
+### Added
+
+- **(glob)** support brace expansion
+
+## ignore [0.4.35] - 2026-11-02
+
+### Dependencies
+
+- Updated `globset` to 0.5.0
+</code></pre>
+</li>
+</ul>
+<p>A member located at the repository root shares the root changelog instead of
+getting a second file in the same place.</p>
+<h3 id="dependency-updates"><a class="header" href="#dependency-updates">Dependency updates</a></h3>
+<p>In an independent workspace, when a member’s new version no longer satisfies a
+dependent’s version requirement, the dependent is released too, with a patch
+bump. Its changelog section lists the dependency change under
+<code>### Dependencies</code>, even if it has no commits of its own.</p>
+<h3 id="previewing-and-writing-workspace-changelogs"><a class="header" href="#previewing-and-writing-workspace-changelogs">Previewing and writing workspace changelogs</a></h3>
+<p>With <code>"per-member"</code> or <code>"both"</code>, the preview prints each file under a header so
+you can check them before writing:</p>
+<pre><code class="language-bash">jj-release changelog
+</code></pre>
+<pre><code class="language-text">==&gt; CHANGELOG.md &lt;==
+## [0.11.0] - 2026-11-02
+...
+==&gt; lib/CHANGELOG.md &lt;==
+## [0.11.0] - 2026-11-02
+...
+==&gt; cli/CHANGELOG.md &lt;==
+...
+</code></pre>
+<pre><code class="language-bash"># Prepend the next sections to every configured file
+jj-release changelog -w
+
+# Regenerate every configured file from history
+jj-release changelog --full -w
+</code></pre>
+<!--prettier-ignore-->
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The preview doesn’t include <code>### Dependencies</code> notes or members released only
+because of a dependency update; those are added during the release itself.
+With independent versioning, <code>--full</code> regenerates each member’s changelog but
+not the aggregated root changelog.</p>
+</blockquote>
 
                     </main>
 
