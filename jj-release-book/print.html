@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f5132346.js";
+            window.path_to_searchindex_js = "searchindex-1a94d6d3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-01c0b95f.js"></script>
@@ -412,6 +412,14 @@ jj-release -p
 # Print the next version that would be released
 jj-release next-version
 
+# Override next bump
+jj-release --bump major
+
+# Release candidates
+jj-release --bump major --pre rc   # 1.0.0-rc.1
+jj-release --pre rc                # 1.0.0-rc.2
+jj-release                         # 1.0.0
+
 # Preview the next changelog section
 jj-release changelog
 
@@ -639,29 +647,33 @@ jobs:
 <p>Drop a <code>release.toml</code> in your repo root, or run <code>jj-release init</code> to generate
 one automatically. All fields are optional, defaults work for most GitHub + Rust
 projects out of the box:</p>
-<pre><code class="language-toml">[release]
+<pre><code class="language-toml">manifest_backend = "cargo"           # manifest format: cargo, npm, go
+
+[release]
 trigger = "Release: please"          # commit message substring that kicks off a release
 tag_prefix = "v"                     # prefix for version tags, e.g. v1.2.3
 bookmark = "main"                    # bookmark to advance after release
-forge = "github"                     # forge for releases and PRs: github, gitlab, forgejo, or none
+forge = "github"                     # github, gitlab, forgejo, gitea, or none
 create_release = false               # create a release on the forge after tagging
 forge_url = ""                       # base URL for self-hosted forges
 
 [bump]
 # force = "minor"                    # override commit analysis: "major", "minor", or "patch"
+# pre = "rc"                         # release pre-releases on this channel: 1.0.0-rc.1, -rc.2, …
+features_bump_patch_before_1_0 = false  # before 1.0, release features as patches (0.4.1 → 0.4.2)
 
 [publish]
 cargo = false                        # set to true to publish to crates.io
 cargo_flags = []                     # extra flags forwarded to `cargo publish`
 semver_checks = true                 # run cargo-semver-checks before publishing
-semver_checks_upgrade_major = false  # auto-upgrade to major (default: only post-1.0)
+semver_checks_upgrade_major = false  # also upgrade pre-1.0 crates to a breaking bump
 
 [changelog]
 enabled = true                       # write a CHANGELOG.md entry on each release
 file = "CHANGELOG.md"                # path to the changelog file
 strict = true                        # drop unmapped/unformatted commits (false = "Other Changes")
-# layout = "per-member"  # "root" (default) or "both"
-
+link_headers = false                 # link each version heading to a forge compare view
+layout = "root"                      # "root", "per-member", or "both" (workspaces)
 
 # [aur]
 # Required: The exact name of your package on the AUR
@@ -680,9 +692,11 @@ strict = true                        # drop unmapped/unformatted commits (false 
 
 # Optional: wait for the COPR build to finish (default: false)
 # wait = true
-
-manifest_backend = "cargo"           # manifest format: cargo, npm, go
 </code></pre>
+<p><code>manifest_backend</code> is a top-level key, so it must come before the first
+<code>[table]</code> header. TOML puts any key written after a header inside that table.</p>
+<p>The <code>forgejo</code> and <code>gitea</code> forges are behind Cargo features of the same name.</p>
+<h2 id="publishing"><a class="header" href="#publishing">Publishing</a></h2>
 <p>By default, <code>jj-release</code> only handles versioning, changelogs, tags, and forge
 releases. To automatically publish to crates.io, explicitly enable it in your
 configuration:</p>
@@ -691,11 +705,102 @@ cargo = true
 </code></pre>
 <p>Publishing can also be skipped per-run with <code>--no-publish</code> without editing
 <code>release.toml</code>, useful for testing the release pipeline or in scripts that
-handle publishing separately.</p>
-<h3 id="changelog-configuration"><a class="header" href="#changelog-configuration">Changelog Configuration</a></h3>
+handle publishing separately. <code>--publish-cargo</code> (<code>-p</code>) does the opposite.</p>
+<p>Pre-releases are never sent to the AUR or COPR. Distro packages are only
+updated for stable versions.</p>
+<h2 id="per-run-overrides"><a class="header" href="#per-run-overrides">Per-run overrides</a></h2>
+<p>These flags override <code>release.toml</code> for a single run, so there’s nothing to
+change and change back:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flag</th><th>Overrides</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>--bump &lt;LEVEL&gt;</code></td><td><code>bump.force</code></td><td><code>--bump major</code> releases 1.0.0 from 0.x</td></tr>
+<tr><td><code>--pre &lt;CHANNEL&gt;</code></td><td><code>bump.pre</code></td><td><code>--pre rc</code> releases 1.0.0-rc.1, then -rc.2, …</td></tr>
+<tr><td><code>--layout &lt;LAYOUT&gt;</code></td><td><code>changelog.layout</code></td><td><code>--layout both</code></td></tr>
+<tr><td><code>--no-publish</code> / <code>-p</code></td><td><code>publish.cargo</code></td><td><code>--no-publish</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="versioning-before-10"><a class="header" href="#versioning-before-10">Versioning before 1.0</a></h2>
+<p>Before 1.0.0, Cargo treats the minor version as the breaking position, and
+<code>jj-release</code> follows it: a breaking change (<code>feat!:</code>, <code>BREAKING CHANGE:</code>)
+bumps the minor version (0.10.0 → 0.11.0), never the major. Moving to 1.0.0
+is always your call:</p>
+<pre><code class="language-sh">jj-release --bump major
+</code></pre>
+<p>Features bump the minor version by default (0.4.21 → 0.5.0). For a library
+other crates depend on, release them as patches instead, so dependents
+requiring <code>"0.4"</code> pick them up without a requirement change:</p>
+<pre><code class="language-toml">[bump]
+features_bump_patch_before_1_0 = true
+</code></pre>
+<h2 id="pre-releases"><a class="header" href="#pre-releases">Pre-releases</a></h2>
+<p><code>--pre &lt;channel&gt;</code> (or <code>bump.pre</code>) releases the next pre-release instead of a
+stable version. A run without it promotes the latest pre-release to stable:</p>
+<pre><code class="language-sh">jj-release --bump major --pre rc   # 0.11.0 → 1.0.0-rc.1
+jj-release --pre rc                # 1.0.0-rc.2
+jj-release --pre beta              # refused: beta sorts below rc
+jj-release                         # 1.0.0
+</code></pre>
+<p>Moving up a channel (<code>alpha</code> → <code>beta</code> → <code>rc</code>) restarts the number at <code>.1</code>.</p>
+<h2 id="workspaces"><a class="header" href="#workspaces">Workspaces</a></h2>
+<p><code>jj-release init</code> detects a Cargo workspace and writes this section for you:</p>
+<pre><code class="language-toml">[workspace]
+enabled = true
+versioning = "independent"           # "unified": one version for every member
+
+[[workspace.members]]
+name = "globset"
+path = "crates/globset"
+tag_prefix = "globset-"              # tags look like globset-0.4.22
+
+[[workspace.members]]
+name = "ignore"
+path = "crates/ignore"
+tag_prefix = "ignore-"
+depends_on = ["globset"]             # members it depends on: sets publish order
+</code></pre>
+<p>With independent versioning, each member is released from its own tags and
+only when its files changed. When a member’s new version no longer satisfies
+another member’s requirement on it, that dependent is released too.</p>
+<h2 id="version-bumps-in-other-files"><a class="header" href="#version-bumps-in-other-files">Version bumps in other files</a></h2>
+<p><code>jj-release</code> bumps <code>version = "..."</code> in a <code>flake.nix</code> at the repo root
+automatically. For anything else, such as install snippets in a README, add a
+replacement:</p>
+<pre><code class="language-toml">[[replacements]]
+file = "README.md"
+search = 'my-crate = "[0-9.]+"'
+replace = 'my-crate = "{{version}}"'
+exactly_one = true                   # fail unless the pattern matches exactly once
+</code></pre>
+<p><code>replace</code> can use <code>{{version}}</code>, <code>{{crate_name}}</code>, and <code>{{date}}</code>.</p>
+<h2 id="changelog-configuration"><a class="header" href="#changelog-configuration">Changelog Configuration</a></h2>
 <p>You can customize how <code>jj-release</code> parses your commits and maps them to the Keep
-a Changelog format. By default, only <code>feat</code>, <code>fix</code>, <code>bug</code>, <code>perf</code>, <code>refactor</code>,
-<code>removed</code>, <code>security</code>, and <code>docs</code> commits are included.</p>
+a Changelog format. By default, these commit types are included:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Commit type</th><th>Changelog section</th></tr>
+</thead>
+<tbody>
+<tr><td><code>feat</code></td><td>Added</td></tr>
+<tr><td><code>refactor</code></td><td>Changed</td></tr>
+<tr><td><code>perf</code></td><td>Performance</td></tr>
+<tr><td><code>deprecate</code>, <code>deprecated</code></td><td>Deprecated</td></tr>
+<tr><td><code>remove</code>, <code>removed</code></td><td>Removed</td></tr>
+<tr><td><code>fix</code></td><td>Fixed</td></tr>
+<tr><td><code>bug</code></td><td>Bug</td></tr>
+<tr><td><code>security</code></td><td>Security</td></tr>
+<tr><td><code>docs</code></td><td>Documentation</td></tr>
+</tbody>
+</table>
+</div>
+<p>Anything else (<code>chore</code>, <code>ci</code>, <code>test</code>, unknown types, and messages that aren’t
+Conventional Commits) is dropped, or collected under “Other Changes” with
+<code>strict = false</code>. Breaking changes are marked <code>**BREAKING**</code> in their section.</p>
 <p>Add these options to your <code>release.toml</code> to customize the behavior:</p>
 <pre><code class="language-toml">[changelog]
 enabled = true
@@ -708,8 +813,9 @@ emoji_headers = true
 # If false, unformatted commits are collected in an "Other Changes" section.
 strict = false
 
-# An array of commit types or prefixes to silently exclude from the changelog.
-# Matches against the parsed conventional type or the raw string.
+# Commits to leave out of the changelog, matched as a whole word at the start
+# of the message: "fix" excludes `fix: …`, `fix(cli): …` and `fix!: …`, but not
+# "fixed a typo". Use "chore(deps)" to exclude only that scope.
 exclude_prefixes = ["chore", "ci", "test", "WIP:"]
 
 # Override specific default emojis (keys must match the exact Header name)
@@ -721,7 +827,8 @@ Performance = "⚡️"
 Testing = "🧪"
 
 # Map conventional commit types to custom Keep a Changelog headers.
-# Standard types (feat -&gt; Added, fix -&gt; Fixed, etc.) are handled automatically.
+# A mapped type is included even with strict = true. Custom headers appear
+# after the standard ones, in alphabetical order.
 [changelog.prefix_mapping]
 revert = "Reverted"
 test = "Testing"
@@ -1084,7 +1191,7 @@ annotated git tags but <code>jj</code> creates lightweight tags. Keep <code>crea
 </table>
 </div>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="workspaces"><a class="header" href="#workspaces">Workspaces</a></h1>
+<h1 id="workspaces-1"><a class="header" href="#workspaces-1">Workspaces</a></h1>
 <p><code>jj-release</code> supports Rust workspaces with two versioning strategies. Run
 <code>jj-release init</code> to auto-detect which one your workspace uses.</p>
 <h3 id="unified-versioning"><a class="header" href="#unified-versioning">Unified Versioning</a></h3>
