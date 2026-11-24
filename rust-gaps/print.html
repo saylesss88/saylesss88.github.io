@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f1d30f48.js";
+            window.path_to_searchindex_js = "searchindex-bc1c8c08.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-384b3cbd.js"></script>
+        <script src="toc-cbb5c06e.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -535,6 +535,135 @@ command, and <code>env::args()</code> is how Rust hands you those words.</p>
 <script src="https://unpkg.com/bluesky-comments@0.8.0/dist/bluesky-comments.js" type="module"></script>
 <p><bluesky-comments handle="saylesss88.bsky.social"></bluesky-comments></p>
 </details>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="option"><a class="header" href="#option">Option</a></h1>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="map"><a class="header" href="#map">map</a></h1>
+<h2 id="decoding-the-map-signature"><a class="header" href="#decoding-the-map-signature">Decoding the <code>map</code> Signature</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn map&lt;U, F&gt;(self, f: F) -&gt; Option&lt;U&gt;
+where
+    F: FnOnce(T) -&gt; U,
+<span class="boring">}</span></code></pre>
+<ul>
+<li><code>self</code> (by value): It takes ownership of the <code>Option&lt;T&gt;</code>. Because it consumes
+it, you can’t use the original <code>Option</code> afterward, it gets transformed into
+the new one.</li>
+<li><code>f: F</code> where <code>F: FnOnce(T) -&gt; U</code>: It takes any closure or function that
+accepts <code>T</code> (the inner value) and spits out a <code>U</code>. <code>FnOnce</code> is the most
+permissive closure trait; it just means “you only need to be able to call this
+once”.</li>
+<li><code>-&gt; Option&lt;U&gt;</code>: Generic type parameters (<code>T</code> and <code>U</code>) are independent, not
+distinct. <code>U</code> can be a different type (like turning <code>Option&lt;i32&gt;</code> into
+<code>Option&lt;String&gt;</code>), or <code>U</code> can resolve to the same type as <code>T</code>.</li>
+</ul>
+<h2 id="naive-map-implementation-without-generics"><a class="header" href="#naive-map-implementation-without-generics">Naive <code>map</code> Implementation without Generics</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, PartialEq)]
+pub enum IntOption {
+    Some(i32),
+    None,
+}
+
+impl IntOption {
+    // Takes `self` by value (consumes it) and a function `f`
+    pub fn map&lt;F&gt;(self, f: F) -&gt; IntOption
+    where
+        F: FnOnce(i32) -&gt; i32,
+    {
+        match self {
+            IntOption::Some(x) =&gt; IntOption::Some(f(x)),
+            IntOption::None =&gt; IntOption::None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_same_type() {
+        let num = IntOption::Some(10);
+        let doubled = num.map(|x| x * 2);
+        assert_eq!(doubled, IntOption::Some(20));
+    }
+
+    #[test]
+    fn maps_none_without_running_closure() {
+        let empty = IntOption::None;
+        let result = empty.map(|_| panic!("This should never execute"));
+        assert_eq!(result, IntOption::None);
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>Notice how <code>f</code> is just a variable holding a function or closure. In the
+<code>Some(x)</code> arm, you call <code>f(x)</code> and wrap the result back into
+<code>IntOption::Some(...)</code>. In the <code>None</code> arm, <code>f</code> is never called and gets dropped
+when the method exits.</p>
+<h2 id="the-generic-version-t-to-u"><a class="header" href="#the-generic-version-t-to-u">The Generic Version (<code>T</code> to <code>U</code>)</a></h2>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, PartialEq)]
+pub enum MyOption&lt;T&gt; {
+    Some(T),
+    None,
+}
+
+impl&lt;T&gt; MyOption&lt;T&gt; {
+    // `&lt;U, F&gt;` introduces two new generic types local to this method:
+    // U = whatever type the closure returns
+    // F = the specific closure type being passed in
+    pub fn map&lt;U, F&gt;(self, f: F) -&gt; MyOption&lt;U&gt;
+    where
+        F: FnOnce(T) -&gt; U,
+    {
+        match self {
+            MyOption::Some(val) =&gt; MyOption::Some(f(val)),
+            MyOption::None =&gt; MyOption::None,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<ul>
+<li>The first <code>&lt;T&gt;</code> (after <code>impl</code>) declares that <code>T</code> is a generic type parameter,
+not a concrete struct named <code>T</code>.</li>
+<li>The second <code>&lt;T&gt;</code> (after <code>MyOption</code>) uses that parameter to specify which type
+you are implementing methods for.</li>
+</ul>
+<h2 id="verify-with-unit-tests"><a class="header" href="#verify-with-unit-tests">Verify with Unit Tests</a></h2>
+<p>Add a <code>tests</code> module at the bottom of <code>src/lib.rs</code> and run <code>cargo test</code>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_same_type() {
+        let num = MyOption::Some(10);
+        let doubled = num.map(|x| x * 2);
+        assert_eq!(doubled, MyOption::Some(20));
+    }
+
+    #[test]
+    fn maps_different_type() {
+        let num = MyOption::Some(42);
+        // Here T is i32, and U becomes String
+        let text = num.map(|x| format!("Answer: {x}"));
+        assert_eq!(text, MyOption::Some(String::from("Answer: 42")));
+    }
+
+    #[test]
+    fn maps_none_without_running_closure() {
+        let empty: MyOption&lt;i32&gt; = MyOption::None;
+        let result = empty.map(|_| panic!("This should never execute"));
+        assert_eq!(result, MyOption::None);
+    }
+}
+<span class="boring">}</span></code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="clap-derive-1"><a href="#clap-derive-1" class="header">Clap Derive</a></h1>
 <h2 id="table-of-contents-2"><a class="header" href="#table-of-contents-2">Table of Contents</a></h2>
@@ -1102,6 +1231,41 @@ you more control.</p>
 <p><bluesky-comments handle="saylesss88.bsky.social"></bluesky-comments></p>
 </details>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="error-handling-basics"><a class="header" href="#error-handling-basics">Error handling basics</a></h1>
+<h2 id="library-crates"><a class="header" href="#library-crates">Library crates</a></h2>
+<ul>
+<li>Library crates should return typed errors (usually built with <code>thiserror</code>).
+Callers need to match on them to decide what to do.</li>
+</ul>
+<h2 id="binary-crates"><a class="header" href="#binary-crates">Binary crates</a></h2>
+<ul>
+<li>Binaries and CLI tools can use <code>anyhow</code> (or <code>color-eyre</code>) and stop there.
+Usually nobody matches on the error. It gets printed with context and the
+program exits.</li>
+</ul>
+<h2 id="mixed-crates-lib--bin"><a class="header" href="#mixed-crates-lib--bin">Mixed crates (lib + bin)</a></h2>
+<ul>
+<li>Use typed errors in the lib and <code>anyhow</code> in <code>main.rs</code>.</li>
+</ul>
+<h2 id="single-errorrs-vs-one-error-enum-per-module"><a class="header" href="#single-errorrs-vs-one-error-enum-per-module">Single <code>error.rs</code> vs. one error enum per module</a></h2>
+<p>The problem with one giant crate-wide enum is that every function returns the
+full set of variants, even ones it can never produce.</p>
+<p>The fix is to scope errors to a unit of failure: a module, or even a single
+operation (<code>ParseError</code>, <code>FetchError</code>). A higher-level error can wrap the lower
+ones:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, thiserror::Error)]
+pub enum ReleaseError {
+    #[error("failed to parse commit log")]
+    Parse(#[from] ParseError),
+    #[error("failed to write changelog to {path}")]
+    Write { path: PathBuf, #[source] source: io::Error },
+}
+<span class="boring">}</span></code></pre>
+<p>For a small crate, one <code>error.rs</code> is fine. Split it up once the variants clearly
+divide into groups that never overlap.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="writing-your-own-error-type-1"><a href="#writing-your-own-error-type-1" class="header">Writing your own Error type</a></h1>
 <h2 id="table-of-contents-4"><a class="header" href="#table-of-contents-4">Table of Contents</a></h2>
 <ul>
@@ -1112,10 +1276,7 @@ you more control.</p>
 <li><a href="#adding-context-to-your-errors">Adding Context to Your Errors</a></li>
 <li><a href="#whats-the-point-if-they-all-resolve-to-stderrorerror-types">What’s the Point if they all resolve to <code>std::error::Error</code> types</a></li>
 </ul>
-<blockquote>
-<p>⏱ ~4 min read</p>
-</blockquote>
-<h1 id="writing-your-own-error-type"><a class="header" href="#writing-your-own-error-type">Writing your own Error type</a></h1>
+<h2 id="writing-your-own-error-type"><a class="header" href="#writing-your-own-error-type">Writing your own Error type</a></h2>
 <pre><code class="language-rs">#[non_exhaustive] // callers outside this crate must include a `_ =&gt;` arm
 #[derive(Debug)]
 pub enum AppError {
@@ -1133,6 +1294,14 @@ messages.</p>
 <h3 id="implement-display-"><a class="header" href="#implement-display-">Implement <code>Display</code> 🤘</a></h3>
 <pre><code class="language-rs">use std::fmt;
 
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum AppError {
+    Io(std::io::Error),
+    ParseInt(std::num::ParseIntError),
+    Custom(String),
+}
+
 impl fmt::Display for AppError {
     fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
         match self {
@@ -1144,7 +1313,15 @@ impl fmt::Display for AppError {
 }
 </code></pre>
 <h3 id="implement-stderrorerror"><a class="header" href="#implement-stderrorerror">Implement <code>std::error::Error</code></a></h3>
-<pre><code class="language-rs">impl std::error::Error for AppError {
+<pre><code class="language-rs">#[non_exhaustive]
+#[derive(Debug)]
+pub enum AppError {
+    Io(std::io::Error),
+    ParseInt(std::num::ParseIntError),
+    Custom(String),
+}
+
+impl std::error::Error for AppError {
     fn source(&amp;self) -&gt; Option&lt;&amp;(dyn std::error::Error + 'static)&gt; {
         match self {
             AppError::Io(e)       =&gt; Some(e),
@@ -1158,6 +1335,41 @@ impl fmt::Display for AppError {
 optional: the trait has a default impl that returns <code>None</code>, but you should
 implement it when you’re wrapping another error. Tools and libraries use it to
 walk the cause chain.</p>
+<ul>
+<li>In the <code>Io</code> arm, <code>e</code> is a <code>&amp;std::io::Error</code>.</li>
+<li>Returning it as <code>&amp;dyn Error</code> is an <em>unsizing coercion</em>. The compiler wraps the
+reference in a fat pointer: one half points to the data, the other to a vtable
+of <code>io::Error</code>’s <code>Error</code> trait methods.</li>
+</ul>
+<p><code>Option</code> means “is there an underlying cause?”:</p>
+<ul>
+<li><code>Some(e)</code>: this error was caused by another error, and here it is.</li>
+<li><code>None</code>: this is the root of the chain. <code>Custom(String)</code> has no cause. It’s
+just a message you made up.</li>
+</ul>
+<p>The <code>'static</code> bound means the underlying error type holds no borrowed
+references. That’s what makes <code>downcast_ref</code> possible, so a caller can recover
+the concrete type if they really want it:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>if let Some(io_err) = err.source().and_then(|e| e.downcast_ref::&lt;std::io::Error&gt;()) {
+    // it's an io::Error again
+}
+<span class="boring">}</span></code></pre>
+<p>Because each error can point to the next one, reporters like <code>anyhow</code> can walk
+the whole chain:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let mut cur: Option&lt;&amp;dyn Error&gt; = Some(&amp;err);
+while let Some(e) = cur {
+    eprintln!("{e}");
+    cur = e.source();
+}
+<span class="boring">}</span></code></pre>
+<p>That loop is what produces the “Caused by:” lines you saw earlier.</p>
+<p>One side note: <code>Custom(String)</code> works, but it’s a stringly-typed escape hatch.
+Callers can’t match on what went wrong, only read the text. That’s fine in an
+app. In a library, a named variant is better.</p>
 <h3 id="implement-from-for-each-wrapped-type"><a class="header" href="#implement-from-for-each-wrapped-type">Implement <code>From</code> for each wrapped type</a></h3>
 <pre><code class="language-rs">impl From&lt;std::io::Error&gt; for AppError {
     fn from(e: std::io::Error) -&gt; Self {
@@ -1249,11 +1461,141 @@ You’ve thrown away the type information.</p>
 <p>A custom enum lets a function fail in multiple distinct ways while giving
 callers exhaustive, typed, matchable error handling. <code>Box&lt;dyn Error&gt;</code> trades
 that away for convenience.</p>
-<details>
-<summary>Comments</summary>
-<script src="https://unpkg.com/bluesky-comments@0.8.0/dist/bluesky-comments.js" type="module"></script>
-<p><bluesky-comments handle="saylesss88.bsky.social"></bluesky-comments></p>
-</details>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="error-handling-methods"><a class="header" href="#error-handling-methods">Error handling methods</a></h1>
+<h2 id="map_err"><a class="header" href="#map_err"><code>.map_err()</code></a></h2>
+<p><code>.map_err</code> changes the error inside a <code>Result</code> and leaves a success value
+untouched.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn map_err&lt;F, O&gt;(self, op: O) -&gt; Result&lt;T, F&gt;
+where
+    O: FnOnce(E) -&gt; F,
+<span class="boring">}</span></code></pre>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn stringify(x: u32) -&gt; String { format!("error code: {x}") }
+
+let x: Result&lt;u32, u32&gt; = Ok(2);
+assert_eq!(x.map_err(stringify), Ok(2));
+
+let x: Result&lt;u32, u32&gt; = Err(13);
+assert_eq!(x.map_err(stringify), Err("error code: 13".to_string()));
+<span class="boring">}</span></code></pre>
+<p>Maps a <code>Result&lt;T, E&gt;</code> to <code>Result&lt;T, F&gt;</code> by applying a function to a contained
+<code>Err</code> value, leaving an <code>Ok</code> value untouched.</p>
+<ul>
+<li>If it’s <code>Ok(value)</code>, nothing happens. The closure never runs.</li>
+<li>If it’s <code>Err(e)</code>, the closure gets <code>e</code> and whatever it returns becomes the new
+error.</li>
+</ul>
+<p>It’s the mirror of <code>.map()</code>, which changes the <code>Ok</code> value and leaves errors
+alone.</p>
+<p>These two are equivalent:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let r = some_result.map_err(|e| convert(e));
+
+let r = match some_result {
+    Ok(v) =&gt; Ok(v),
+    Err(e) =&gt; Err(convert(e)),
+}
+<span class="boring">}</span></code></pre>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<ol>
+<li>Wrapping your error type</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn read_file(path: &amp;str) -&gt; Result&lt;String, AppError&gt; {
+    std::fs::read_to_string(path).map_err(|e| AppError::Io(e))
+}
+<span class="boring">}</span></code></pre>
+<p><code>read_to_string</code> returns <code>Result&lt;String, io::Error&gt;</code>, but the function promises
+<code>AppError</code>, <code>.map_err</code> bridges the gap.</p>
+<p>A tuple variant like <code>AppError::Io</code> is already a function that takes an
+<code>io::Error</code> and returns an <code>AppError</code>. So you can pass it directly without
+writing a closure:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>std::fs::read_to_string(path).map_err(AppError::Io)
+<span class="boring">}</span></code></pre>
+<ol start="2">
+<li>Combining it with <code>?</code></li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn parse_port(s: &amp;str) -&gt; Result&lt;u16, AppError&gt; {
+    let port = s.trim().parse::&lt;u16&gt;().map_err(AppError::ParseInt)?;
+    Ok(port)
+}
+<span class="boring">}</span></code></pre>
+<p>Read it left to right: try to parse; if that fails, turn the error into an
+<code>AppError</code>; then <code>?</code> returns early. On success, <code>port</code> is just a <code>u16</code>.</p>
+<ol start="3">
+<li>Adding context</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let text = fs::read_to_string(path).map_err(|source| ConfigError::Read {
+    path: path.to_owned(),
+    source,
+})?;
+<span class="boring">}</span></code></pre>
+<h2 id="unwrap_or_else"><a class="header" href="#unwrap_or_else"><code>.unwrap_or_else()</code></a></h2>
+<ul>
+<li><a href="https://doc.rust-lang.org/core/option/enum.Option.html#method.unwrap_or_else">Option::unwrap_or_else</a></li>
+</ul>
+<blockquote>
+<p>Returns the contained <code>Some</code> value or computes it from a closure.</p>
+</blockquote>
+<p><code>.unwrap_or_else</code> handles the error right there rather than passing it up.</p>
+<ul>
+<li>
+<p><code>.map_err</code> keeps you inside the <code>Result</code>. The error is changed, then passed
+up with <code>?</code>. The caller deals with it.</p>
+</li>
+<li>
+<p><code>.unwrap_or_else</code> gets you out of the <code>Result</code>. On <code>Ok(v)</code> you get <code>v</code>. On
+<code>Err(e)</code> the closure runs and must return a fallback value of the same type <code>T</code>.
+Either way you end up with a plain value, not a <code>Result</code>.</p>
+</li>
+</ul>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn unwrap_or_else&lt;F&gt;(self, op: F) -&gt; T
+where
+    F: FnOnce(E) -&gt; T,
+<span class="boring">}</span></code></pre>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let k = 10;
+assert_eq!(Some(4).unwrap_or_else(|| 2 * k), 4);
+assert_eq!(None.unwrap_or_else(|| 2 * k), 20);
+<span class="boring">}</span></code></pre>
+<ol>
+<li>Fall back to a default</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let port: u16 = env::var("PORT")
+    .ok()
+    .and_then(|s| s.parse().ok())
+    .unwrap_or_else(|| 8080);
+<span class="boring">}</span></code></pre>
+<p>That chain ends on an <code>Option</code>, so this closure takes no argument. On a <code>Result</code>,
+the closure receives the error.</p>
+<ol start="2">
+<li>Log the error and carry on</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let config = load_config(&amp;path).unwrap_or_else(|e| {
+    eprintln!("warning: {e}, using defaults");
+    Config::default()
+});
+<span class="boring">}</span></code></pre>
 
                     </main>
 

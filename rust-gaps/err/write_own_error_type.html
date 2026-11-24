@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f1d30f48.js";
+            window.path_to_searchindex_js = "../searchindex-bc1c8c08.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-384b3cbd.js"></script>
+        <script src="../toc-cbb5c06e.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,10 +183,7 @@
 <li><a href="#adding-context-to-your-errors">Adding Context to Your Errors</a></li>
 <li><a href="#whats-the-point-if-they-all-resolve-to-stderrorerror-types">What’s the Point if they all resolve to <code>std::error::Error</code> types</a></li>
 </ul>
-<blockquote>
-<p>⏱ ~4 min read</p>
-</blockquote>
-<h1 id="writing-your-own-error-type"><a class="header" href="#writing-your-own-error-type">Writing your own Error type</a></h1>
+<h2 id="writing-your-own-error-type"><a class="header" href="#writing-your-own-error-type">Writing your own Error type</a></h2>
 <pre><code class="language-rs">#[non_exhaustive] // callers outside this crate must include a `_ =&gt;` arm
 #[derive(Debug)]
 pub enum AppError {
@@ -204,6 +201,14 @@ messages.</p>
 <h3 id="implement-display-"><a class="header" href="#implement-display-">Implement <code>Display</code> 🤘</a></h3>
 <pre><code class="language-rs">use std::fmt;
 
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum AppError {
+    Io(std::io::Error),
+    ParseInt(std::num::ParseIntError),
+    Custom(String),
+}
+
 impl fmt::Display for AppError {
     fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
         match self {
@@ -215,7 +220,15 @@ impl fmt::Display for AppError {
 }
 </code></pre>
 <h3 id="implement-stderrorerror"><a class="header" href="#implement-stderrorerror">Implement <code>std::error::Error</code></a></h3>
-<pre><code class="language-rs">impl std::error::Error for AppError {
+<pre><code class="language-rs">#[non_exhaustive]
+#[derive(Debug)]
+pub enum AppError {
+    Io(std::io::Error),
+    ParseInt(std::num::ParseIntError),
+    Custom(String),
+}
+
+impl std::error::Error for AppError {
     fn source(&amp;self) -&gt; Option&lt;&amp;(dyn std::error::Error + 'static)&gt; {
         match self {
             AppError::Io(e)       =&gt; Some(e),
@@ -229,6 +242,41 @@ impl fmt::Display for AppError {
 optional: the trait has a default impl that returns <code>None</code>, but you should
 implement it when you’re wrapping another error. Tools and libraries use it to
 walk the cause chain.</p>
+<ul>
+<li>In the <code>Io</code> arm, <code>e</code> is a <code>&amp;std::io::Error</code>.</li>
+<li>Returning it as <code>&amp;dyn Error</code> is an <em>unsizing coercion</em>. The compiler wraps the
+reference in a fat pointer: one half points to the data, the other to a vtable
+of <code>io::Error</code>’s <code>Error</code> trait methods.</li>
+</ul>
+<p><code>Option</code> means “is there an underlying cause?”:</p>
+<ul>
+<li><code>Some(e)</code>: this error was caused by another error, and here it is.</li>
+<li><code>None</code>: this is the root of the chain. <code>Custom(String)</code> has no cause. It’s
+just a message you made up.</li>
+</ul>
+<p>The <code>'static</code> bound means the underlying error type holds no borrowed
+references. That’s what makes <code>downcast_ref</code> possible, so a caller can recover
+the concrete type if they really want it:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>if let Some(io_err) = err.source().and_then(|e| e.downcast_ref::&lt;std::io::Error&gt;()) {
+    // it's an io::Error again
+}
+<span class="boring">}</span></code></pre>
+<p>Because each error can point to the next one, reporters like <code>anyhow</code> can walk
+the whole chain:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let mut cur: Option&lt;&amp;dyn Error&gt; = Some(&amp;err);
+while let Some(e) = cur {
+    eprintln!("{e}");
+    cur = e.source();
+}
+<span class="boring">}</span></code></pre>
+<p>That loop is what produces the “Caused by:” lines you saw earlier.</p>
+<p>One side note: <code>Custom(String)</code> works, but it’s a stringly-typed escape hatch.
+Callers can’t match on what went wrong, only read the text. That’s fine in an
+app. In a library, a named variant is better.</p>
 <h3 id="implement-from-for-each-wrapped-type"><a class="header" href="#implement-from-for-each-wrapped-type">Implement <code>From</code> for each wrapped type</a></h3>
 <pre><code class="language-rs">impl From&lt;std::io::Error&gt; for AppError {
     fn from(e: std::io::Error) -&gt; Self {
@@ -320,20 +368,18 @@ You’ve thrown away the type information.</p>
 <p>A custom enum lets a function fail in multiple distinct ways while giving
 callers exhaustive, typed, matchable error handling. <code>Box&lt;dyn Error&gt;</code> trades
 that away for convenience.</p>
-<details>
-<summary>Comments</summary>
-<script src="https://unpkg.com/bluesky-comments@0.8.0/dist/bluesky-comments.js" type="module"></script>
-<p><bluesky-comments handle="saylesss88.bsky.social"></bluesky-comments></p>
-</details>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../fs/fs_in_rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../err/error_basics.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="../err/error_methods.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -341,10 +387,13 @@ that away for convenience.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../fs/fs_in_rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../err/error_basics.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="../err/error_methods.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>
