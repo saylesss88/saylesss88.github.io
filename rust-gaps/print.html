@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9f9d6040.js";
+            window.path_to_searchindex_js = "searchindex-a8252731.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-e6c125c0.js"></script>
@@ -1967,7 +1967,8 @@ pub fn derive_mini_error(input: TokenStream) -&gt; TokenStream {
 }</code></pre>
 <p>Replace <code>thiserror::Error</code> with <code>MiniError</code> in Pass 3 and the program behaves
 identically:</p>
-<pre class="playground"><code class="language-rust">use mini_error::MiniError;
+<pre class="playground"><code class="language-rust"><span class="boring">use std::{error::Error, fs, io, num::ParseIntError};
+</span>use mini_error::MiniError;
 
 #[derive(Debug, MiniError)]
 pub enum ConfigError {
@@ -1985,8 +1986,8 @@ pub enum ConfigError {
 </span>}
 <span class="boring">
 </span><span class="boring">
-</span>#pub fn load_port(path: &amp;str) -&gt; Result&lt;u16, ConfigError&gt; {
-<span class="boring">   let text = fs::read_to_string(path).map_err(|source| ConfigError::Read {
+</span><span class="boring">pub fn load_port(path: &amp;str) -&gt; Result&lt;u16, ConfigError&gt; {
+</span><span class="boring">   let text = fs::read_to_string(path).map_err(|source| ConfigError::Read {
 </span><span class="boring">       path: path.to_string(),
 </span><span class="boring">       source,
 </span><span class="boring">   })?;
@@ -2004,19 +2005,19 @@ pub enum ConfigError {
 </span><span class="boring">           })?;
 </span><span class="boring">
 </span><span class="boring">   Ok(value.parse::&lt;u16&gt;()?) // From&lt;ParseIntError&gt; kicks in here
-</span>#}
-<span class="boring">
-</span>#fn report(e: &amp;dyn Error) {
-<span class="boring">   eprintln!("error: {e}");
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn report(e: &amp;dyn Error) {
+</span><span class="boring">   eprintln!("error: {e}");
 </span><span class="boring">   let mut source = e.source();
 </span><span class="boring">   while let Some(cause) = source {
 </span><span class="boring">       eprintln!("  caused by: {cause}");
 </span><span class="boring">       source = cause.source();
 </span><span class="boring">   }
-</span>#}
-<span class="boring">
-</span>#fn main() {
-<span class="boring">   let path = std::env::args().nth(1).unwrap_or_else(|| "app.conf".into());
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">   let path = std::env::args().nth(1).unwrap_or_else(|| "app.conf".into());
 </span><span class="boring">   match load_port(&amp;path) {
 </span><span class="boring">       Ok(port) =&gt; println!("listening on {port}"),
 </span><span class="boring">       Err(ConfigError::MissingKey(_)) =&gt; println!("no port set, using 8080"),
@@ -2025,7 +2026,7 @@ pub enum ConfigError {
 </span><span class="boring">           std::process::exit(1);
 </span><span class="boring">       }
 </span><span class="boring">   }
-</span>#}</code></pre>
+</span><span class="boring">}</span></code></pre>
 <p>Things to notice:</p>
 <ul>
 <li><strong>Inline format args do the heavy lifting.</strong> The macro binds each field to a
