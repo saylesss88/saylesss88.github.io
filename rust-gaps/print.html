@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-bc1c8c08.js";
+            window.path_to_searchindex_js = "searchindex-8168cd07.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cbb5c06e.js"></script>
+        <script src="toc-99db00d2.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1461,6 +1461,598 @@ You’ve thrown away the type information.</p>
 <p>A custom enum lets a function fail in multiple distinct ways while giving
 callers exhaustive, typed, matchable error handling. <code>Box&lt;dyn Error&gt;</code> trades
 that away for convenience.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="thiserror"><a class="header" href="#thiserror">thiserror</a></h1>
+<h2 id="understanding-thiserror-by-building-it-yourself"><a class="header" href="#understanding-thiserror-by-building-it-yourself">Understanding <code>thiserror</code> by Building It Yourself</a></h2>
+<p>This chapter builds a small config loader, <code>load_port</code>, three times:</p>
+<ol>
+<li>With <code>String</code> errors and <code>map_err</code> everywhere</li>
+<li>With a hand-written error enum: <code>Display</code>, <code>Error</code>, and <code>From</code> impls</li>
+<li>With <code>#[derive(thiserror::Error)]</code></li>
+</ol>
+<p>After that, we write a stripped-down version of the derive macro so you can see
+there’s nothing magic going on.</p>
+<blockquote>
+<p>Writing the impls by hand first shows you exactly what <code>thiserror</code> writes for
+you. It’s code you <em>could</em> write yourself; you just don’t want to write it for
+every variant of every error type you ever make.</p>
+</blockquote>
+<hr>
+<h2 id="what-problem-does-thiserror-solve"><a class="header" href="#what-problem-does-thiserror-solve">What problem does <code>thiserror</code> solve?</a></h2>
+<p>In Rust, “being an error” is a contract made of a few separate pieces:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Piece</th><th>Trait</th><th>Who uses it</th></tr>
+</thead>
+<tbody>
+<tr><td>A debug representation</td><td><code>Debug</code></td><td><code>unwrap()</code>, <code>{:?}</code>, <code>fn main() -&gt; Result&lt;..&gt;</code></td></tr>
+<tr><td>A human-readable message</td><td><code>Display</code></td><td><code>{}</code>, logs, error output for users</td></tr>
+<tr><td>A link to the underlying cause</td><td><code>Error::source()</code></td><td>error reporters walking the chain</td></tr>
+<tr><td>Automatic conversion for <code>?</code></td><td><code>From&lt;E&gt;</code></td><td>the <code>?</code> operator</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>std::error::Error</code> itself is almost empty. It requires <code>Debug + Display</code> and
+gives you an optional <code>source()</code> method. Everything else is boilerplate you
+write around it, and that boilerplate is what <code>thiserror</code> generates.</p>
+<p>Our running example reads a file like this:</p>
+<pre><code class="language-text">port = 8080
+</code></pre>
+<p>and returns the port as a <code>u16</code>. Several things can go wrong:</p>
+<ul>
+<li>the file can’t be read (<code>io::Error</code>)</li>
+<li>there’s no <code>port</code> line</li>
+<li>the line has no <code>=</code></li>
+<li>the value isn’t a valid <code>u16</code> (<code>ParseIntError</code>)</li>
+</ul>
+<hr>
+<h2 id="pass-1-string-errors"><a class="header" href="#pass-1-string-errors">Pass 1: <code>String</code> errors</a></h2>
+<p>The quickest thing that works is turning every failure into a <code>String</code>:</p>
+<pre class="playground"><code class="language-rust">use std::fs;
+
+fn load_port(path: &amp;str) -&gt; Result&lt;u16, String&gt; {
+    let text = fs::read_to_string(path)
+        .map_err(|e| format!("failed to read {path}: {e}"))?;
+
+    let line = text
+        .lines()
+        .find(|l| l.trim_start().starts_with("port"))
+        .ok_or_else(|| "missing `port` key".to_string())?;
+
+    let value = line
+        .split_once('=')
+        .map(|(_, v)| v.trim())
+        .ok_or_else(|| format!("malformed line: {line}"))?;
+
+    value
+        .parse::&lt;u16&gt;()
+        .map_err(|e| format!("invalid port {value:?}: {e}"))
+}
+
+fn main() {
+    let path = std::env::args().nth(1).unwrap_or_else(|| "app.conf".into());
+    match load_port(&amp;path) {
+        Ok(port) =&gt; println!("listening on {port}"),
+        Err(e) =&gt; {
+            eprintln!("error: {e}");
+            std::process::exit(1);
+        }
+    }
+}</code></pre>
+<pre><code class="language-text">$ portcfg bad.conf
+error: invalid port "80x": invalid digit found in string
+</code></pre>
+<p>For a tiny binary this is honestly fine. The problems show up once someone else
+<em>calls</em> <code>load_port</code>:</p>
+<ul>
+<li><strong>The caller can’t match on the failure.</strong> Say the caller wants to fall back
+to port 8080 when the key is missing. The only way to do that is to compare
+strings, and that breaks as soon as someone changes the wording.</li>
+<li><strong>The cause chain is gone.</strong> The original <code>io::Error</code> got flattened into text.
+The caller can’t check <code>e.kind() == NotFound</code>.</li>
+<li><strong>Every <code>?</code> needs a <code>map_err</code>.</strong> <code>String</code> has no <code>From&lt;io::Error&gt;</code>, so you
+have to convert by hand at every call site.</li>
+</ul>
+<blockquote>
+<p><code>Box&lt;dyn Error&gt;</code> fixes the third problem, since <code>?</code> converts into it
+automatically. But the caller still can’t match on a variant without
+downcasting.</p>
+</blockquote>
+<hr>
+<h2 id="pass-2-a-hand-written-error-enum"><a class="header" href="#pass-2-a-hand-written-error-enum">Pass 2: A hand-written error enum</a></h2>
+<p>The idiomatic fix is an enum where each variant is one way things can fail.
+Variants that wrap a lower-level error keep it as data rather than flattening it
+into a string:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::{error::Error, fmt, fs, io, num::ParseIntError};
+
+#[derive(Debug)]
+pub enum ConfigError {
+    Read { path: String, source: io::Error },
+    MissingKey(&amp;'static str),
+    Malformed { line: String },
+    InvalidPort(ParseIntError),
+}
+
+// 1. Display: the human-readable message for *this* layer only.
+impl fmt::Display for ConfigError {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
+        match self {
+            ConfigError::Read { path, .. } =&gt; write!(f, "failed to read {path}"),
+            ConfigError::MissingKey(key) =&gt; write!(f, "missing `{key}` key"),
+            ConfigError::Malformed { line } =&gt; write!(f, "malformed line: {line}"),
+            ConfigError::InvalidPort(_) =&gt; write!(f, "invalid port number"),
+        }
+    }
+}
+
+// 2. Error: mostly just `source()`, which links to the underlying cause.
+impl Error for ConfigError {
+    fn source(&amp;self) -&gt; Option&lt;&amp;(dyn Error + 'static)&gt; {
+        match self {
+            ConfigError::Read { source, .. } =&gt; Some(source),
+            ConfigError::InvalidPort(e) =&gt; Some(e),
+            _ =&gt; None,
+        }
+    }
+}
+
+// 3. From: lets `?` convert a ParseIntError into a ConfigError automatically.
+impl From&lt;ParseIntError&gt; for ConfigError {
+    fn from(e: ParseIntError) -&gt; Self {
+        ConfigError::InvalidPort(e)
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>The function now returns a real type:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn load_port(path: &amp;str) -&gt; Result&lt;u16, ConfigError&gt; {
+    let text = fs::read_to_string(path).map_err(|source| ConfigError::Read {
+        path: path.to_string(),
+        source,
+    })?;
+
+    let line = text
+        .lines()
+        .find(|l| l.trim_start().starts_with("port"))
+        .ok_or(ConfigError::MissingKey("port"))?;
+
+    let value = line
+        .split_once('=')
+        .map(|(_, v)| v.trim())
+        .ok_or_else(|| ConfigError::Malformed { line: line.to_string() })?;
+
+    Ok(value.parse::&lt;u16&gt;()?) // From&lt;ParseIntError&gt; kicks in here
+}
+<span class="boring">}</span></code></pre>
+<p>And the caller can finally act on specific failures and walk the cause chain:</p>
+<pre class="playground"><code class="language-rust">fn report(e: &amp;dyn Error) {
+    eprintln!("error: {e}");
+    let mut source = e.source();
+    while let Some(cause) = source {
+        eprintln!("  caused by: {cause}");
+        source = cause.source();
+    }
+}
+
+fn main() {
+    let path = std::env::args().nth(1).unwrap_or_else(|| "app.conf".into());
+    match load_port(&amp;path) {
+        Ok(port) =&gt; println!("listening on {port}"),
+        Err(ConfigError::MissingKey(_)) =&gt; println!("no port set, using 8080"),
+        Err(e) =&gt; {
+            report(&amp;e);
+            std::process::exit(1);
+        }
+    }
+}</code></pre>
+<pre><code class="language-text">$ portcfg missing.conf
+error: failed to read missing.conf
+  caused by: No such file or directory (os error 2)
+
+$ portcfg nokey.conf
+no port set, using 8080
+</code></pre>
+<h3 id="why-read-uses-map_err-but-invalidport-uses-from"><a class="header" href="#why-read-uses-map_err-but-invalidport-uses-from">Why <code>Read</code> uses <code>map_err</code> but <code>InvalidPort</code> uses <code>From</code></a></h3>
+<p>This tradeoff matters more than any of the syntax.</p>
+<ul>
+<li><code>InvalidPort</code> holds <strong>only</strong> the source error, so a <code>From</code> impl can build it:
+<code>?</code> hands you a <code>ParseIntError</code> and you wrap it. Convenient.</li>
+<li><code>Read</code> also holds the <code>path</code>. A <code>From&lt;io::Error&gt;</code> impl has no way to know
+which path failed, because <code>?</code> only gives it the <code>io::Error</code>. So you attach
+that context yourself with <code>map_err</code>.</li>
+</ul>
+<p>The cost of convenience is lost context. Our <code>InvalidPort</code> message can’t say
+<em>which</em> value was bad, because <code>From</code> never saw it. Pass 1 could
+(<code>invalid port "80x"</code>). If that detail matters, make it a struct variant with a
+<code>value</code> field and use <code>map_err</code>.</p>
+<blockquote>
+<p><strong>Rule of thumb:</strong> use <code>From</code> (and later <code>#[from]</code>) when the source error
+alone says everything. Use <code>map_err</code> when the caller needs to know <em>what you
+were doing</em> when it failed.</p>
+</blockquote>
+<h3 id="notice-the-display-messages-dont-include-the-source"><a class="header" href="#notice-the-display-messages-dont-include-the-source">Notice the <code>Display</code> messages don’t include the source</a></h3>
+<p><code>Read</code> prints <code>failed to read missing.conf</code>, <strong>not</strong>
+<code>failed to read missing.conf: No such file or directory</code>. The cause is reached
+through <code>source()</code>, and the reporter prints it. If you include it in <code>Display</code>
+too, every error reporter (<code>anyhow</code>, <code>eyre</code>, your own loop) prints it twice:</p>
+<pre><code class="language-text">error: failed to read missing.conf: No such file or directory (os error 2)
+  caused by: No such file or directory (os error 2)
+</code></pre>
+<p>Pick one: put the cause in the message <strong>or</strong> return it from <code>source()</code>, never
+both. Returning it from <code>source()</code> is the more flexible choice.</p>
+<p>That’s about 35 lines of impls for a four-variant enum, and it grows with every
+variant you add. It’s all mechanical, and that’s exactly what a derive macro is
+for.</p>
+<hr>
+<h2 id="pass-3-thiserror-derive"><a class="header" href="#pass-3-thiserror-derive">Pass 3: <code>thiserror</code> derive</a></h2>
+<pre><code class="language-toml">[dependencies]
+thiserror = "2"
+</code></pre>
+<pre><code class="language-rust noplayground">use std::{fs, io, num::ParseIntError};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("failed to read {path}")]
+    Read { path: String, source: io::Error },
+
+    #[error("missing `{0}` key")]
+    MissingKey(&amp;'static str),
+
+    #[error("malformed line: {line}")]
+    Malformed { line: String },
+
+    #[error("invalid port number")]
+    InvalidPort(#[from] ParseIntError),
+}</code></pre>
+<p>That’s the whole change. <code>load_port</code>, <code>report</code>, and <code>main</code> stay exactly as they
+were in Pass 2, and the output is the same byte for byte. The three hand-written
+impls collapse into attributes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Pass 2 (by hand)</th><th>Pass 3 (<code>thiserror</code>)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>impl Display</code> with a <code>match</code></td><td><code>#[error("...")]</code> on each variant</td></tr>
+<tr><td><code>source()</code> arm for <code>Read</code></td><td>a field <strong>named</strong> <code>source</code> is picked up automatically</td></tr>
+<tr><td><code>source()</code> arm + <code>impl From</code> for <code>InvalidPort</code></td><td><code>#[from]</code> on the field (implies <code>#[source]</code>)</td></tr>
+<tr><td><code>#[derive(Debug)]</code></td><td>still yours to write; <code>thiserror</code> doesn’t derive <code>Debug</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>As with clap’s derive, Pass 2 is arguably <em>clearer</em> to read, since nothing is
+hidden. Pass 3 wins because it’s hard to get wrong: you can’t forget a
+<code>source()</code> arm or let a <code>Display</code> arm drift out of sync with the variant.</p>
+<h3 id="attribute-reference"><a class="header" href="#attribute-reference">Attribute reference</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Attribute</th><th>Where</th><th>What it generates</th></tr>
+</thead>
+<tbody>
+<tr><td><code>#[error("msg {field}")]</code></td><td>variant or struct</td><td><code>Display</code> arm using inline format args</td></tr>
+<tr><td><code>#[error("{0}")]</code></td><td>tuple variant</td><td>positional fields by index</td></tr>
+<tr><td><code>#[error("{path:?}")]</code></td><td>any</td><td>format specs work as usual (<code>:?</code>, <code>:&gt;8</code>, …)</td></tr>
+<tr><td><code>#[error(transparent)]</code></td><td>single-field variant/struct</td><td>forwards <strong>both</strong> <code>Display</code> and <code>source()</code> to the inner error</td></tr>
+<tr><td><code>#[source]</code></td><td>field</td><td>returns this field from <code>source()</code></td></tr>
+<tr><td><code>source</code> (field name)</td><td>field</td><td>same as <code>#[source]</code>, no attribute needed</td></tr>
+<tr><td><code>#[from]</code></td><td>field</td><td><code>impl From&lt;FieldType&gt;</code> <strong>and</strong> <code>#[source]</code></td></tr>
+<tr><td><code>#[backtrace]</code></td><td>field</td><td>provides a backtrace (needs nightly)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="errortransparent"><a class="header" href="#errortransparent"><code>#[error(transparent)]</code></a></h3>
+<p>Use this when a variant should be “invisible” and look exactly like the error it
+wraps:</p>
+<pre><code class="language-rust noplayground">#[derive(Debug, Error)]
+pub enum AppError {
+    #[error(transparent)]
+    Config(#[from] ConfigError),
+
+    #[error("server failed to start")]
+    Server(#[source] io::Error),
+}</code></pre>
+<p><code>AppError::Config</code> prints whatever the inner <code>ConfigError</code> prints and reports
+the inner error’s <code>source()</code> as its own, so the chain doesn’t gain an extra
+uninformative layer.</p>
+<p>A common use is hiding implementation details behind an opaque public type:</p>
+<pre><code class="language-rust noplayground">// Public API: callers see `Error`, not your internal enum.
+#[derive(Debug, Error)]
+#[error(transparent)]
+pub struct Error(#[from] ErrorKind);
+
+#[derive(Debug, Error)]
+enum ErrorKind {
+    // free to change without a semver break
+}</code></pre>
+<h3 id="structs-work-too"><a class="header" href="#structs-work-too">Structs work too</a></h3>
+<p>Not every error needs variants. If there’s only one way to fail, use a struct:</p>
+<pre><code class="language-rust noplayground">#[derive(Debug, Error)]
+#[error("line {line}: expected `key = value`")]
+pub struct ParseError {
+    pub line: usize,
+}</code></pre>
+<hr>
+<h2 id="what-thiserror-is-actually-doing-a-naive-implementation"><a class="header" href="#what-thiserror-is-actually-doing-a-naive-implementation">What <code>thiserror</code> is actually doing: a naive implementation</a></h2>
+<p><code>#[derive(Error)]</code> is a <strong>procedural macro</strong>. At compile time it gets your
+enum’s tokens, parses them with <a href="https://docs.rs/syn"><code>syn</code></a>, and emits new impls with <a href="https://docs.rs/quote"><code>quote</code></a>. The
+output is ordinary Rust, essentially what you wrote in Pass 2. Run <a href="https://github.com/dtolnay/cargo-expand"><code>cargo expand</code></a> on Pass 3 to see the real expansion.</p>
+<p>Here’s a toy version, <code>MiniError</code>, that handles everything our <code>ConfigError</code>
+needs: <code>#[error("...")]</code> on unit, tuple, and named variants, a field named
+<code>source</code>, and <code>#[from]</code>.</p>
+<p>A proc-macro has to live in its own crate:</p>
+<pre><code class="language-toml"># mini_error/Cargo.toml
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
+</code></pre>
+<pre><code class="language-rust noplayground">// mini_error/src/lib.rs
+use proc_macro::TokenStream;
+use quote::{format_ident, quote};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, LitStr};
+
+#[proc_macro_derive(MiniError, attributes(error, from))]
+pub fn derive_mini_error(input: TokenStream) -&gt; TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &amp;input.ident;
+
+    let Data::Enum(data) = &amp;input.data else {
+        panic!("MiniError only supports enums");
+    };
+
+    let mut display_arms = Vec::new();
+    let mut source_arms = Vec::new();
+    let mut from_impls = Vec::new();
+
+    for variant in &amp;data.variants {
+        let v = &amp;variant.ident;
+
+        // 1. Find `#[error("...")]` and grab the string literal.
+        let msg: LitStr = variant
+            .attrs
+            .iter()
+            .find(|a| a.path().is_ident("error"))
+            .expect("every variant needs #[error(\"...\")]")
+            .parse_args()
+            .unwrap();
+
+        match &amp;variant.fields {
+            Fields::Unit =&gt; {
+                display_arms.push(quote! { #name::#v =&gt; write!(f, #msg) });
+            }
+
+            // Named fields: bind each by name so `{path}` in the
+            // message just works via inline format args.
+            Fields::Named(fields) =&gt; {
+                let idents: Vec&lt;_&gt; = fields
+                    .named
+                    .iter()
+                    .map(|f| f.ident.clone().unwrap())
+                    .collect();
+                display_arms.push(quote! {
+                    #[allow(unused_variables)]
+                    #name::#v { #(#idents),* } =&gt; write!(f, #msg)
+                });
+                if idents.iter().any(|i| i == "source") {
+                    source_arms.push(quote! { #name::#v { source, .. } =&gt; Some(source) });
+                }
+            }
+
+            // Tuple fields: bind as _0, _1, ... and rewrite "{0}" to "{_0}".
+            Fields::Unnamed(fields) =&gt; {
+                let binds: Vec&lt;_&gt; = (0..fields.unnamed.len())
+                    .map(|i| format_ident!("_{}", i))
+                    .collect();
+                let mut text = msg.value();
+                for i in 0..binds.len() {
+                    text = text.replace(&amp;format!("{{{i}"), &amp;format!("{{_{i}"));
+                }
+                let rewritten = LitStr::new(&amp;text, msg.span());
+                display_arms.push(quote! {
+                    #[allow(unused_variables)]
+                    #name::#v ( #(#binds),* ) =&gt; write!(f, #rewritten)
+                });
+
+                // `#[from]` on a single-field variant: generate From + source.
+                let first = fields.unnamed.first().unwrap();
+                if first.attrs.iter().any(|a| a.path().is_ident("from")) {
+                    let ty = &amp;first.ty;
+                    from_impls.push(quote! {
+                        impl ::core::convert::From&lt;#ty&gt; for #name {
+                            fn from(source: #ty) -&gt; Self { #name::#v(source) }
+                        }
+                    });
+                    source_arms.push(quote! { #name::#v(source) =&gt; Some(source) });
+                }
+            }
+        }
+    }
+
+    quote! {
+        impl ::core::fmt::Display for #name {
+            fn fmt(&amp;self, f: &amp;mut ::core::fmt::Formatter&lt;'_&gt;) -&gt; ::core::fmt::Result {
+                match self { #(#display_arms,)* }
+            }
+        }
+
+        impl ::std::error::Error for #name {
+            fn source(&amp;self) -&gt; Option&lt;&amp;(dyn ::std::error::Error + 'static)&gt; {
+                match self {
+                    #(#source_arms,)*
+                    _ =&gt; None,
+                }
+            }
+        }
+
+        #(#from_impls)*
+    }
+    .into()
+}</code></pre>
+<p>Replace <code>thiserror::Error</code> with <code>MiniError</code> in Pass 3 and the program behaves
+identically:</p>
+<pre><code class="language-rust noplayground">use mini_error::MiniError;
+
+#[derive(Debug, MiniError)]
+pub enum ConfigError {
+    #[error("failed to read {path}")]
+    Read { path: String, source: io::Error },
+    // ...same as before
+    ~#[error("missing `{0}` key")]
+    ~MissingKey(&amp;'static str),
+~
+    ~#[error("malformed line: {line}")]
+    ~Malformed { line: String },
+~
+    ~#[error("invalid port number")]
+    ~InvalidPort(#[from] ParseIntError),
+}
+
+~pub fn load_port(path: &amp;str) -&gt; Result&lt;u16, ConfigError&gt; {
+~    let text = fs::read_to_string(path).map_err(|source| ConfigError::Read {
+~        path: path.to_string(),
+~        source,
+~    })?;
+~
+~    let line = text
+~        .lines()
+~        .find(|l| l.trim_start().starts_with("port"))
+~        .ok_or(ConfigError::MissingKey("port"))?;
+~
+~    let value =
+~        line.split_once('=')
+~            .map(|(_, v)| v.trim())
+~            .ok_or_else(|| ConfigError::Malformed {
+~                line: line.to_string(),
+~            })?;
+~
+~    Ok(value.parse::&lt;u16&gt;()?) // From&lt;ParseIntError&gt; kicks in here
+~}
+~
+~fn report(e: &amp;dyn Error) {
+~    eprintln!("error: {e}");
+~    let mut source = e.source();
+~    while let Some(cause) = source {
+~        eprintln!("  caused by: {cause}");
+~        source = cause.source();
+~    }
+~}
+~
+~fn main() {
+~    let path = std::env::args().nth(1).unwrap_or_else(|| "app.conf".into());
+~    match load_port(&amp;path) {
+~        Ok(port) =&gt; println!("listening on {port}"),
+~        Err(ConfigError::MissingKey(_)) =&gt; println!("no port set, using 8080"),
+~        Err(e) =&gt; {
+~            report(&amp;e);
+~            std::process::exit(1);
+~        }
+~    }
+~}</code></pre>
+<p>Things to notice:</p>
+<ul>
+<li><strong>Inline format args do the heavy lifting.</strong> The macro binds each field to a
+local variable with the same name, then passes your string straight to
+<code>write!</code>. <code>{path}</code> works because a variable named <code>path</code> is in scope. That’s a
+normal Rust 2021+ feature, not macro magic.</li>
+<li><strong>Tuple fields need a rename.</strong> <code>{0}</code> inside <code>write!</code> means “the first extra
+argument”, not “field 0”. The real <code>thiserror</code> handles this the same way: it
+binds fields as <code>_0</code>, <code>_1</code>, and rewrites the format string.</li>
+<li><strong><code>#[allow(unused_variables)]</code></strong> exists because a message like
+<code>"invalid port number"</code> doesn’t mention the field it binds.</li>
+<li><strong>There’s no runtime component.</strong> The macro runs once at compile time, and
+your binary contains plain <code>impl</code> blocks. <code>thiserror</code> deliberately doesn’t
+show up in your public API: switching back to hand-written impls is not a
+breaking change for your users.</li>
+</ul>
+<p>What the real crate adds on top of this toy: struct support, <code>#[source]</code> on any
+field name, <code>#[error(transparent)]</code>, extra format arguments, <code>#[backtrace]</code>,
+generics with correct trait bounds, <code>no_std</code> support (2.x), and useful compile
+errors instead of <code>panic!</code>s.</p>
+<hr>
+<h2 id="thiserror-vs-anyhow-choosing-the-right-tool"><a class="header" href="#thiserror-vs-anyhow-choosing-the-right-tool"><code>thiserror</code> vs <code>anyhow</code>: choosing the right tool</a></h2>
+<p>These two crates are by the same author (David Tolnay) and are meant to be used
+together, at different layers:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th><code>thiserror</code></th><th><code>anyhow</code></th></tr>
+</thead>
+<tbody>
+<tr><td>Gives you</td><td>Your own concrete error <strong>types</strong></td><td>One catch-all <code>anyhow::Error</code></td></tr>
+<tr><td>Callers can <code>match</code> variants</td><td>Yes</td><td>No (only <code>downcast_ref</code>)</td></tr>
+<tr><td>Adding context</td><td>A field on the variant + <code>map_err</code></td><td><code>.context("reading config")?</code></td></tr>
+<tr><td>Best for</td><td><strong>Libraries</strong>, and modules with an API boundary</td><td><strong>Binaries</strong>, <code>main</code>, glue code</td></tr>
+</tbody>
+</table>
+</div>
+<p>The usual pattern:</p>
+<ul>
+<li>Library crates (or a <code>config</code> module inside a binary) define precise errors
+with <code>thiserror</code>, because their callers need to <em>handle</em> failures.</li>
+<li>The application’s top level returns <code>anyhow::Result&lt;()&gt;</code>, because at that
+point the only thing left to do is <em>report</em> the error.</li>
+</ul>
+<pre><code class="language-rust noplayground">// main.rs of a binary that uses our config module
+use anyhow::Context;
+
+fn main() -&gt; anyhow::Result&lt;()&gt; {
+    let port = load_port("app.conf").context("loading configuration")?;
+    println!("listening on {port}");
+    Ok(())
+}</code></pre>
+<pre><code class="language-text">Error: loading configuration
+
+Caused by:
+    0: failed to read app.conf
+    1: No such file or directory (os error 2)
+</code></pre>
+<p><code>anyhow</code> walked the <code>source()</code> chain that <code>thiserror</code> generated. This is also
+why keeping the cause out of your <code>Display</code> message matters.</p>
+<h3 id="one-enum-or-many"><a class="header" href="#one-enum-or-many">One enum or many?</a></h3>
+<ul>
+<li><strong>One enum per crate</strong> (<code>crate::Error</code>) is simple and common for small
+libraries. The downside is that every function appears able to return every
+variant.</li>
+<li><strong>One enum per operation or module</strong> (<code>ConfigError</code>, <code>NetError</code>) tells callers
+exactly what can go wrong where. Combine them at the top with
+<code>#[error(transparent)] Config(#[from] ConfigError)</code>.</li>
+</ul>
+<p>Start with one, and split it when a function’s signature starts lying about what
+it can return.</p>
+<hr>
+<h2 id="common-mistakes"><a class="header" href="#common-mistakes">Common mistakes</a></h2>
+<ul>
+<li><strong>Printing the source twice.</strong> <code>#[error("read failed: {source}")]</code> <em>plus</em> a
+<code>source</code> field gives you a duplicated line in every reporter. Choose one.</li>
+<li><strong><code>#[from]</code> on two variants with the same type.</strong> That would mean two
+<code>impl From&lt;io::Error&gt;</code> blocks, which conflict. Use <code>map_err</code> for at least one
+of them, ideally adding context that tells them apart.</li>
+<li><strong>Reaching for <code>#[from]</code> by reflex.</strong> It’s convenient, but <code>?</code> then quietly
+drops what you were doing. A bare <code>Io(#[from] io::Error)</code> variant gives you
+<code>error: No such file or directory</code>, with no hint of <em>which</em> file.</li>
+<li><strong>Forgetting <code>Debug</code>.</strong> <code>thiserror</code> requires it but doesn’t derive it.</li>
+<li><strong>Using <code>thiserror</code> in <code>main</code>.</strong> You can, but if nothing ever matches on the
+variants, <code>anyhow</code> gets you there with less ceremony.</li>
+</ul>
+<hr>
+<h2 id="resources-1"><a class="header" href="#resources-1">Resources</a></h2>
+<ul>
+<li><a href="https://docs.rs/thiserror"><code>thiserror</code> docs</a></li>
+<li><a href="https://github.com/dtolnay/thiserror"><code>thiserror</code> README and examples</a></li>
+<li><a href="https://docs.rs/anyhow"><code>anyhow</code> docs</a></li>
+<li><a href="https://doc.rust-lang.org/std/error/trait.Error.html"><code>std::error::Error</code></a></li>
+<li><a href="https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html">Rust Book: Recoverable Errors with <code>Result</code></a></li>
+<li><a href="https://github.com/dtolnay/cargo-expand"><code>cargo expand</code></a> to see the code any derive macro generates</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="error-handling-methods"><a class="header" href="#error-handling-methods">Error handling methods</a></h1>
 <h2 id="map_err"><a class="header" href="#map_err"><code>.map_err()</code></a></h2>
